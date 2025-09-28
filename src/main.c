@@ -1,4 +1,5 @@
 #include <psp2/kernel/processmgr.h>
+#include <stdlib.h>
 #include <mujs.h>
 #include <raylib.h>
 
@@ -14,12 +15,11 @@ static struct {
 static void console_append_line(const char *text) {
 	if (!text) return;
 	// Keep a bounded list of lines; drop oldest when full
-	if (g_console.count >= CONSOLE_MAX_LINES) {
-		// free oldest and shift
-		NOB_UNUSED(0); // no-op placeholder if free is not needed
-		for (int i = 1; i < g_console.count; ++i) g_console.lines[i-1] = g_console.lines[i];
-		g_console.count = CONSOLE_MAX_LINES - 1;
-	}
+    if (g_console.count >= CONSOLE_MAX_LINES) {
+        // free oldest and shift
+        for (int i = 1; i < g_console.count; ++i) g_console.lines[i-1] = g_console.lines[i];
+        g_console.count = CONSOLE_MAX_LINES - 1;
+    }
 	// Duplicate string for storage
 	int len = 0; while (text[len] != '\0') len++;
 	char *copy = (char*)malloc((size_t)len + 1);
