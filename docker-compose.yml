@@ -1,0 +1,10 @@
+services:
+  vitasdk:
+    image: gnuton/vitasdk-docker
+    platform: linux/amd64
+    volumes:
+      - ./:/build/git
+    working_dir: /build/git
+    stdin_open: true
+    tty: true
+    restart: "no"
