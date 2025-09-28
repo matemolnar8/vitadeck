@@ -19,8 +19,21 @@
 #define GCC_CMD "arm-vita-eabi-gcc"
 #define GCC_FLAGS "-Wall", "-Wextra", "-Wno-unused-parameter", "-Wl,-q"
 #define INCLUDE_DIRS "-I./common", "-I./"MUJS_FOLDER
-#define SOURCE_FILES "common/debugScreen.c", "src/main.c"
-#define LIBRARIES "-lSceDisplay_stub", "-lm"
+// NOTE: debugScreen is no longer used; switch to Raylib rendering
+#define SOURCE_FILES "src/main.c"
+// Link Raylib and common Vita stubs required by the Raylib VitaGL backend
+#define LIBRARIES \
+    "-lraylib", \
+    "-lvitaGL", \
+    "-lSceGxm_stub", \
+    "-lSceDisplay_stub", \
+    "-lSceCtrl_stub", \
+    "-lSceTouch_stub", \
+    "-lSceCommonDialog_stub", \
+    "-lScePgf_stub", \
+    "-lSceGxt_stub", \
+    "-lSceSysmodule_stub", \
+    "-lm"
 
 Cmd cmd = {0};
 
