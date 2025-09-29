@@ -1,6 +1,6 @@
 services:
   vitasdk:
-    image: gnuton/vitasdk-docker
+    build: .
     platform: linux/amd64
     volumes:
       - ./:/build/git
