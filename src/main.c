@@ -3,10 +3,15 @@
 #include <raylib.h>
 #include <mujs.h>
 
+#define FONT_SIZE 48
+
+int line_count = 0;
+
 void print(js_State *J) {
 	const char *str = js_tostring(J, 1);
 	
-	DrawText(str, 10, 10, 20, RED);
+	DrawText(str, 10, 10 + line_count * FONT_SIZE, FONT_SIZE, RED);
+	line_count++;
 
 	js_pushundefined(J);
 }
@@ -24,10 +29,13 @@ int main(int argc, char *argv[]) {
 	SetTargetFPS(60);
 
 	while (!WindowShouldClose()) {
+		line_count = 0;
 		BeginDrawing();
 		ClearBackground(WHITE);
+		
 		js_dostring(J, "print('Hello, world!');");
 		js_dostring(J, "print(34 + 35);");
+
 		EndDrawing();
 	}
 

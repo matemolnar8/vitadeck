@@ -13,7 +13,7 @@ project(vitadeck)
 include("${VITASDK}/share/vita.cmake" REQUIRED)
 
 set(VITA_APP_NAME "VitaDeck")
-set(PSVITAIP "192.168.0.170" CACHE STRING "PSVita IP (for FTP access)")
+set(PSVITAIP "192.168.1.191" CACHE STRING "PSVita IP (for FTP access)")
 set(VITA_TITLEID  "PGRI00001")
 set(VITA_VERSION  "01.00")
 set(VITA_MKSFOEX_FLAGS "${VITA_MKSFOEX_FLAGS} -d PARENTAL_LEVEL=1")
@@ -81,10 +81,16 @@ vita_create_vpk(${PROJECT_NAME}.vpk ${VITA_TITLEID} eboot.bin
     FILE module module
 )
 
-if(false)#change to true to send eboot.bin to vita [make sure to edit the ip of ps vita] (requires vitacompanion)
+if(true)#change to true to send eboot.bin to vita [make sure to edit the ip of ps vita] (requires vitacompanion)
   add_custom_command(TARGET ${PROJECT_NAME}.vpk-vpk POST_BUILD
+    COMMAND echo "Destroy running apps"
     COMMAND echo destroy | nc ${PSVITAIP} 1338
+    # COMMAND echo "Sending ${PROJECT_NAME}.vpk to vita"
+    # COMMAND curl -T ${PROJECT_NAME}.vpk ftp://${PSVITAIP}:1337/ux0:/download/
+    COMMAND echo "Sending ${VITA_TITLEID}/eboot.bin to vita"
     COMMAND curl -T eboot.bin ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/
+    COMMAND echo "Launching ${VITA_TITLEID}"
     COMMAND echo launch ${VITA_TITLEID} | nc ${PSVITAIP} 1338
+    COMMAND echo "Done"
   )
 endif()
