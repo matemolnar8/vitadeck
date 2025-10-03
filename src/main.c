@@ -3,6 +3,8 @@
 #include <raylib.h>
 #include <mujs.h>
 
+#define SCREEN_WIDTH 960
+#define SCREEN_HEIGHT 544
 #define FONT_SIZE 48
 
 int line_count = 0;
@@ -25,17 +27,17 @@ int main(int argc, char *argv[]) {
 	js_newcfunction(J, print, "print", 0);
 	js_setglobal(J, "print");
 
-	InitWindow(960, 544, "Raylib");	
+	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Raylib");	
 	SetTargetFPS(60);
 
 	while (!WindowShouldClose()) {
 		line_count = 0;
 		BeginDrawing();
-		ClearBackground(WHITE);
-		
-		js_dostring(J, "print('Hello, world!');");
-		js_dostring(J, "print(34 + 35);");
-
+			ClearBackground(WHITE);
+			DrawFPS(SCREEN_WIDTH - 100, 10); // top right corner
+			
+			js_dostring(J, "print('Hello, world!');");
+			js_dostring(J, "print(34 + 35);");
 		EndDrawing();
 	}
 
