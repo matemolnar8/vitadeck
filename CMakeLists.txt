@@ -111,21 +111,43 @@ if(DEFINED ENV{VITASDK})
       FILE js/dist/main.js js/main.js
   )
 
-  if(true)#change to true to send eboot.bin to vita [make sure to edit the ip of ps vita] (requires vitacompanion)
-    add_custom_command(TARGET ${PROJECT_NAME}.vpk-vpk POST_BUILD
-      COMMAND echo "Destroy running apps"
-      COMMAND echo destroy | nc ${PSVITAIP} 1338
-      # COMMAND echo "Sending ${PROJECT_NAME}.vpk to vita"
-      # COMMAND curl -T ${PROJECT_NAME}.vpk ftp://${PSVITAIP}:1337/ux0:/download/
-      COMMAND echo "Sending ${VITA_TITLEID}/eboot.bin to vita"
-      COMMAND curl -T eboot.bin ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/
-      COMMAND echo "Sending ${VITA_TITLEID}/js/main.js to vita"
-      COMMAND curl -T ${CMAKE_SOURCE_DIR}/js/dist/main.js ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/js/main.js
-      COMMAND echo "Launching ${VITA_TITLEID}"
-      COMMAND echo launch ${VITA_TITLEID} | nc ${PSVITAIP} 1338
-      COMMAND echo "Done"
-    )
-  endif()
+  # Create an explicit `upload_vpk` target to upload the VPK file to Vita's download folder
+  add_custom_target(upload_vpk
+    DEPENDS ${PROJECT_NAME}.vpk-vpk
+    COMMAND echo "Sending ${PROJECT_NAME}.vpk to vita download folder"
+    COMMAND curl -T ${PROJECT_NAME}.vpk ftp://${PSVITAIP}:1337/ux0:/download/
+    COMMAND echo "VPK uploaded to ux0:/download/"
+    COMMENT "Upload VPK file to Vita download folder"
+    VERBATIM
+  )
+
+  # Create an explicit `upload_vita` target so uploads only run when requested.
+  add_custom_target(upload_vita
+    DEPENDS ${PROJECT_NAME}.vpk-vpk
+    # Destroy running apps
+    COMMAND echo "Destroy running apps"
+    COMMAND echo destroy | nc ${PSVITAIP} 1338
+    # Upload eboot.bin
+    COMMAND echo "Sending ${VITA_TITLEID}/eboot.bin to vita"
+    COMMAND curl -T eboot.bin ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/
+    # Upload js/main.js
+    COMMAND echo "Sending ${VITA_TITLEID}/js/main.js to vita"
+    COMMAND curl -T ${CMAKE_SOURCE_DIR}/js/dist/main.js ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/js/main.js
+    # Launch the app
+    COMMAND echo "Launching ${VITA_TITLEID}"
+    COMMAND echo launch ${VITA_TITLEID} | nc ${PSVITAIP} 1338
+    COMMAND echo "Done"
+    COMMENT "Upload built files to Vita and launch"
+    VERBATIM
+  )
+
+  # Add a convenience target `run` that depends on upload_vita so `make run` will
+  # build, upload, and launch the app on the Vita.
+  add_custom_target(run
+    DEPENDS upload_vita
+    COMMENT "Build, upload, and launch on Vita"
+    VERBATIM
+  )
 else()
   # Copy js folder to build directory
   add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
