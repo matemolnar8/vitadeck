@@ -1,7 +1,11 @@
 FROM gnuton/vitasdk-docker
 
-RUN apt-get update \
-    && apt-get install -y file libarchive-tools git 
+RUN apt-get update
+RUN apt-get install -y \
+    file \
+    libarchive-tools \
+    git \
+    netcat
 
 # vitaGL
 WORKDIR /build

@@ -1,0 +1,12 @@
+---
+alwaysApply: true
+description: PSVita build instructions using docker-compose
+---
+# PSVita Build Steps
+
+Always build the project inside the Docker Compose environment.
+
+- Run configuration + build in one shot: `docker-compose run --rm vitasdk bash -lc "cmake -S . -B out && cmake --build out"`
+- To rebuild after changes: `docker-compose run --rm vitasdk bash -lc "cmake --build out"`
+- The working directory inside the container is `/build/git`, which maps to the repo root.
+- Outputs (e.g. `vitadeck.vpk`) are written to `out/` in the host workspace.
