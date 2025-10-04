@@ -1,0 +1,15 @@
+{
+  "name": "vitadeck-js",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "main.js",
+  "scripts": {
+    "build": "tsgo --noEmit main.ts && rollup --config rollup.config.js"
+  },
+  "devDependencies": {
+    "@rollup/plugin-typescript": "^12.1.4",
+    "@typescript/native-preview": "^7.0.0-dev.20251004.1",
+    "rollup": "^4.52.4"
+  }
+}

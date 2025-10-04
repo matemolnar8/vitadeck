@@ -1,3 +1,7 @@
 out
 out-macos
+
 module/*.suprx
+
+js/dist
+js/node_modules

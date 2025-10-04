@@ -17,17 +17,19 @@ void print(js_State *J) {
 	js_pushundefined(J);
 }
 
-static int call_function(js_State *J, const char *name)
+static int call_render(js_State *J)
 {
 	int result;
 
-	js_getglobal(J, name);
+	js_getglobal(J, "vitadeck");
+	js_getproperty(J, -1, "render");
 
 	// push the this value
 	js_pushnull(J);
 	
 	if (js_pcall(J, 0)) {
 		fprintf(stderr, "an exception occurred in the javascript function\n");
+		fprintf(stderr, "%s\n", js_tostring(J, -1));
 		js_pop(J, 1);
 		return -1;
 	}
@@ -56,7 +58,7 @@ int main(int argc, char *argv[]) {
 		BeginDrawing();
 			ClearBackground(WHITE);
 			DrawFPS(SCREEN_WIDTH - 100, 10); // top right corner
-			call_function(J, "render");
+			call_render(J);
 		EndDrawing();
 	}
 

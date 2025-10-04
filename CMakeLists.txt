@@ -108,7 +108,7 @@ if(DEFINED ENV{VITASDK})
       VERSION ${VITA_VERSION}
       NAME ${VITA_APP_NAME}
       FILE module module
-      FILE src/js/main.js js/main.js
+      FILE js/dist/main.js js/main.js
   )
 
   if(true)#change to true to send eboot.bin to vita [make sure to edit the ip of ps vita] (requires vitacompanion)
@@ -120,7 +120,7 @@ if(DEFINED ENV{VITASDK})
       COMMAND echo "Sending ${VITA_TITLEID}/eboot.bin to vita"
       COMMAND curl -T eboot.bin ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/
       COMMAND echo "Sending ${VITA_TITLEID}/js/main.js to vita"
-      COMMAND curl -T ../src/js/main.js ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/js/main.js
+      COMMAND curl -T ${CMAKE_SOURCE_DIR}/js/dist/main.js ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/js/main.js
       COMMAND echo "Launching ${VITA_TITLEID}"
       COMMAND echo launch ${VITA_TITLEID} | nc ${PSVITAIP} 1338
       COMMAND echo "Done"
@@ -129,6 +129,7 @@ if(DEFINED ENV{VITASDK})
 else()
   # Copy js folder to build directory
   add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND cp -r ../src/js .
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/js
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/js/dist ${CMAKE_BINARY_DIR}/js
   )
 endif()
