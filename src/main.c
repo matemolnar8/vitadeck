@@ -1,11 +1,12 @@
 #include <psp2/kernel/threadmgr.h>
 #include <psp2/kernel/processmgr.h>
 #include <raylib.h>
+#include <stdio.h>
 #include <mujs.h>
 
 #define SCREEN_WIDTH 960
 #define SCREEN_HEIGHT 544
-#define FONT_SIZE 48
+#define FONT_SIZE 30
 
 int line_count = 0;
 
@@ -16,6 +17,26 @@ void print(js_State *J) {
 	line_count++;
 
 	js_pushundefined(J);
+}
+
+static int call_function(js_State *J, const char *name)
+{
+	int result;
+
+	js_getglobal(J, name);
+
+	// push the this value
+	js_pushnull(J);
+	
+	if (js_pcall(J, 0)) {
+		fprintf(stderr, "an exception occurred in the javascript function\n");
+		js_pop(J, 1);
+		return -1;
+	}
+
+	js_pop(J, 1);
+
+	return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -30,14 +51,14 @@ int main(int argc, char *argv[]) {
 	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Raylib");	
 	SetTargetFPS(60);
 
+	js_dofile(J, "js/main.js");
+
 	while (!WindowShouldClose()) {
 		line_count = 0;
 		BeginDrawing();
 			ClearBackground(WHITE);
 			DrawFPS(SCREEN_WIDTH - 100, 10); // top right corner
-			
-			js_dostring(J, "print('Hello, world!');");
-			js_dostring(J, "print(34 + 35);");
+			call_function(J, "render");
 		EndDrawing();
 	}
 
