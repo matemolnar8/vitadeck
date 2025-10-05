@@ -34,7 +34,7 @@ static int call_render(js_State *J)
 		return -1;
 	}
 
-	js_pop(J, 1);
+	js_pop(J, 2);
 
 	return 0;
 }
@@ -42,6 +42,7 @@ static int call_render(js_State *J)
 int main(int argc, char *argv[]) {
 	js_State *J = js_newstate(NULL, NULL, 0);
 	if (!J) {
+		fprintf(stderr, "Could not initialize MuJS state.\n");
 		return 1;
 	} 
 
@@ -51,7 +52,10 @@ int main(int argc, char *argv[]) {
 	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Raylib");	
 	SetTargetFPS(60);
 
-	js_dofile(J, "js/main.js");
+	if (js_dofile(J, "js/main.js")) {
+		fprintf(stderr, "Could not load main.js.\n");
+		return 1;
+	}
 
 	while (!WindowShouldClose()) {
 		line_count = 0;
@@ -62,8 +66,8 @@ int main(int argc, char *argv[]) {
 		EndDrawing();
 	}
 
-	js_freestate(J);
 	CloseWindow();
+	js_freestate(J);
 
 	return 0;
 }
