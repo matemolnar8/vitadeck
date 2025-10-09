@@ -99,8 +99,24 @@ endif()
 
 target_link_libraries(${PROJECT_NAME} ${VITADECK_LIBRARIES})
 
+add_custom_target(js_build
+  COMMAND pnpm build
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/js
+  COMMENT "Building JavaScript with pnpm"
+  VERBATIM
+)
+
+add_custom_target(js_copy
+  COMMENT "Copying js/dist to ${CMAKE_BINARY_DIR}/js"
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/js
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/js/dist ${CMAKE_BINARY_DIR}/js
+  BYPRODUCTS ${CMAKE_BINARY_DIR}/js
+)
+
 if(DEFINED ENV{VITASDK})
   set(VITA_ELF_CREATE_FLAGS "${VITA_ELF_CREATE_FLAGS}")
+
+  add_dependencies(${PROJECT_NAME} js_copy)
 
   vita_create_self(eboot.bin ${PROJECT_NAME} UNSAFE NOSTRIP)
 
@@ -149,9 +165,6 @@ if(DEFINED ENV{VITASDK})
     VERBATIM
   )
 else()
-  # Copy js folder to build directory
-  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/js
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/js/dist ${CMAKE_BINARY_DIR}/js
-  )
+  add_dependencies(js_copy js_build)
+  add_dependencies(${PROJECT_NAME} js_copy)
 endif()
