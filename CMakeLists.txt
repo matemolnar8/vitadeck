@@ -113,6 +113,11 @@ add_custom_target(js_copy
   BYPRODUCTS ${CMAKE_BINARY_DIR}/js
 )
 
+add_custom_target(js
+  DEPENDS js_build ${PROJECT_NAME}
+  COMMENT "Build JavaScript and everything"
+)
+
 if(DEFINED ENV{VITASDK})
   set(VITA_ELF_CREATE_FLAGS "${VITA_ELF_CREATE_FLAGS}")
 
@@ -165,6 +170,10 @@ if(DEFINED ENV{VITASDK})
     VERBATIM
   )
 else()
-  add_dependencies(js_copy js_build)
   add_dependencies(${PROJECT_NAME} js_copy)
+  add_custom_target(run
+    DEPENDS ${PROJECT_NAME}
+    VERBATIM
+    COMMAND ${CMAKE_BINARY_DIR}/${PROJECT_NAME}
+  )
 endif()
