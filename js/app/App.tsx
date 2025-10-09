@@ -1,26 +1,22 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 export const App = () => {
-  const [updates, setUpdates] = useState(0);
+  const [count, setCount] = useState(0);
+
+  const doTimeout = useCallback(() => {
+    setTimeout(() => {
+      setCount((count) => count + 1);
+      doTimeout();
+    }, 1000);
+  }, []);
 
   useEffect(() => {
-    setUpdates((updates) => updates + 1);
-  });
-
-  const fizzBuzz = useMemo(() => {
-    return updates % 15 === 0
-      ? "FizzBuzz"
-      : updates % 3 === 0
-      ? "Fizz"
-      : updates % 5 === 0
-      ? "Buzz"
-      : null;
-  }, [updates]);
+    doTimeout();
+  }, []);
 
   return (
     <>
-      <vita-text>Hello, VitaDeck! Updates: {updates}</vita-text>
-      {fizzBuzz && <vita-text>{fizzBuzz}</vita-text>}
+      <vita-text>Hello, VitaDeck! Updates: {count}</vita-text>
     </>
   );
 };

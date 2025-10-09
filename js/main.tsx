@@ -23,37 +23,6 @@ function renderVitadeckElement(container: Container) {
   }
 }
 
-const root = VitadeckRenderer.createContainer(
-  { children: [] },
-  0,
-  null,
-  true,
-  null,
-  "vitadeck_react_",
-  () => {},
-  null
-);
-
-
-export function updateContainer() {
-  try {
-    VitadeckRenderer.updateContainer(
-      <App />,
-      root
-    );
-  } catch (error: unknown) {
-    logError(error);
-  }
-}
-
-export function render() {
-  try {
-    renderVitadeckElement(root.containerInfo as Container);
-  } catch (error: unknown) {
-    logError(error);
-  }
-}
-
 function logError(error: unknown) {
   if (!error) {
     debug("Error: unknown");
@@ -69,3 +38,32 @@ function logError(error: unknown) {
     debug((error as Error).stack);
   }
 }
+
+export function updateContainer() {
+  try {
+    VitadeckRenderer.updateContainer(<App />, root);
+  } catch (error: unknown) {
+    logError(error);
+  }
+}
+
+export function render() {
+  try {
+    renderVitadeckElement(root.containerInfo as Container);
+  } catch (error: unknown) {
+    logError(error);
+  }
+}
+
+const root = VitadeckRenderer.createContainer(
+  { children: [] },
+  0,
+  null,
+  true,
+  null,
+  "vitadeck_react_",
+  (error: unknown) => {
+    logError(error);
+  },
+  null
+);

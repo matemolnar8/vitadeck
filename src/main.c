@@ -1,6 +1,9 @@
 #include <raylib.h>
 #include <stdio.h>
 #include <mujs.h>
+#define STB_DS_IMPLEMENTATION
+#include "stb_ds.h"
+#include "jslib.c"
 
 #define SCREEN_WIDTH 960
 #define SCREEN_HEIGHT 544
@@ -20,34 +23,6 @@ static const char *stacktrace_js =
 static const char *console_js =
 	"var console = { log: debug, debug: debug, warn: debug, error: debug };"
 ;
-
-void print(js_State *J) {
-	const char *str = js_tostring(J, 1);
-	
-	DrawText(str, 10, 10 + line_count * FONT_SIZE, FONT_SIZE, RED);
-	line_count++;
-
-	js_pushundefined(J);
-}
-
-void debug(js_State *J) {
-	int i, top = js_gettop(J);
-	for (i = 1; i < top; ++i) {
-		const char *s = js_tostring(J, i);
-		if (i > 1) putchar(' ');
-		fputs(s, stderr);
-	}
-	putchar('\n');
-	js_pushundefined(J);
-}
-
-void set_timeout(js_State *J) {
-	const int delay = js_tointeger(J, 2);
-	
-	fprintf(stderr, "set_timeout: %d\n", delay);
-
-	js_pushundefined(J);
-}
 
 static int render(js_State *J)
 {
@@ -115,19 +90,13 @@ int main(int argc, char *argv[]) {
 	}
 
 	update_container(J);
-	float last_update = 0;
 
 	while (!WindowShouldClose()) {
-		line_count = 0;
-		last_update += GetFrameTime();
-		if (last_update >= 1.0f) {
-			last_update = 0;
-			update_container(J);
-		}
-
 		BeginDrawing();
+			line_count = 0;
 			ClearBackground(WHITE);
 			DrawFPS(SCREEN_WIDTH - 100, 10); // top right corner
+			run_timeout_queue(J);
 			render(J);
 		EndDrawing();
 	}
