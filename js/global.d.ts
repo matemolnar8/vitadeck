@@ -56,7 +56,8 @@ declare global {
     border?: boolean
   ): void;
 
-  function setTimeout(callback: () => void, delay: number): void;
+  function setTimeout(callback: () => void, delay: number): number;
+  function clearTimeout(id: number): void;
 
   var console: {
     log: (...args: any[]) => void;

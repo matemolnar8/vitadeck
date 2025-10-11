@@ -4,6 +4,7 @@
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
 #include "jslib.c"
+#include "jstimeout.c"
 #include "jsglobals.c"
 
 #define SCREEN_WIDTH 960
@@ -59,6 +60,8 @@ int main(int argc, char *argv[]) {
 		return 1;
 	} 
 	
+	register_js_lib(J);
+	register_js_timeout(J);
 	register_js_globals(J);
 
 	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "VitaDeck");	
