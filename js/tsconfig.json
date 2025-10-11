@@ -3,7 +3,7 @@
     "module": "esnext",
     "target": "es5",
     "types": [],
-    "lib": ["es5"],
+    "lib": ["es5", "es2015"],
     "noEmit": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,

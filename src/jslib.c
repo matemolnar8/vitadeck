@@ -14,38 +14,12 @@ typedef struct {
 static TimeoutItem* timeout_queue = NULL;
 
 /*
-    print(message: string)
-*/
-void print(js_State *J) {
-	const char *str = js_tostring(J, 1);
-
-	DrawText(str, 10, 10 + line_count * FONT_SIZE, FONT_SIZE, RED);
-	line_count++;
-
-	js_pushundefined(J);
-}
-
-/*
-    debug(...args: any[])
-*/
-void debug(js_State *J) {
-	int i, top = js_gettop(J);
-	for (i = 1; i < top; ++i) {
-		const char *s = js_tostring(J, i);
-		if (i > 1) putchar(' ');
-		fputs(s, stderr);
-	}
-	putchar('\n');
-	js_pushundefined(J);
-}
-
-/*
     setTimeout(func: Function, delay: number)
 */
 void set_timeout(js_State *J) {
     if(js_isundefined(J, 1)) {
         TraceLog(LOG_WARNING, "set_timeout: Function is undefined");
-        js_dostring(J, "debug(new Error().stack);");
+        js_dostring(J, "console.error(new Error().stack);");
         js_pushundefined(J);
         return;
     }
@@ -169,15 +143,22 @@ void draw_rect_outline(js_State *J) {
 }
 
 /*
-    drawText(x: number, y: number, fontSize: number, text: string, color?: Color)
+    drawText(x: number, y: number, fontSize: number, text: string, color?: Color, border?: boolean)
 */
 void draw_text(js_State *J) {
     const int x = js_tointeger(J, 1);
     const int y = js_tointeger(J, 2);
     const int font_size = js_tointeger(J, 3);
     const char *str = js_tostring(J, 4);
-
+    const bool border = js_toboolean(J, 6);
     const Color color = parse_color_arg_or_default(J, 5, BLACK);
+
+    int text_width = MeasureText(str, font_size);
+    if (border) {
+        int border_padding = 4;
+        Rectangle rect = { x - border_padding, y - border_padding, text_width + border_padding * 2, font_size + border_padding * 2 };
+        DrawRectangleLinesEx(rect, 2, color);
+    }
 
     DrawText(str, x, y, font_size, color);
 

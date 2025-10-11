@@ -33,9 +33,6 @@ declare global {
 
   var Colors: { [K in ColorName]: Color };
 
-  function print(message: string): void;
-  function debug(...args: any[]): void;
-
   function drawRect(
     x: number,
     y: number,
@@ -55,13 +52,15 @@ declare global {
     y: number,
     fontSize: number,
     text: string,
-    color?: Color
+    color?: Color,
+    border?: boolean
   ): void;
 
   function setTimeout(callback: () => void, delay: number): void;
 
   var console: {
     log: (...args: any[]) => void;
+    info: (...args: any[]) => void;
     debug: (...args: any[]) => void;
     warn: (...args: any[]) => void;
     error: (...args: any[]) => void;

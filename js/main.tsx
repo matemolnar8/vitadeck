@@ -1,27 +1,27 @@
 import React from "react";
-import { VitadeckRenderer } from "./react-renderer";
-import { renderVitadeckElement } from "./renderer";
+import { VitadeckReactReconciler } from "./vitadeck-react-reconciler";
+import { renderVitadeckElement } from "./raylib-renderer";
 import { App } from "./app/App";
 
 function logError(error: unknown) {
   if (!error) {
-    debug("Error: unknown");
+    console.error("Error: unknown");
     return;
   }
 
-  debug(
+  console.error(
     "Error: " + (typeof error === "object")
       ? error.toString?.() || String(error)
       : String(error)
   );
   if ((error as Error).stack) {
-    debug((error as Error).stack);
+    console.error((error as Error).stack);
   }
 }
 
 export function updateContainer() {
   try {
-    VitadeckRenderer.updateContainer(<App />, root);
+    VitadeckReactReconciler.updateContainer(<App />, root);
   } catch (error: unknown) {
     logError(error);
   }
@@ -35,7 +35,7 @@ export function render() {
   }
 }
 
-const root = VitadeckRenderer.createContainer(
+const root = VitadeckReactReconciler.createContainer(
   { children: [] },
   0,
   null,
@@ -47,3 +47,5 @@ const root = VitadeckRenderer.createContainer(
   },
   null
 );
+
+console.debug("main.tsx loaded");
