@@ -97,7 +97,7 @@ type VitadeckHostConfig = HostConfig<
 // Based on Tsoding's Murayact: https://github.com/tsoding/Murayact/
 // =============================================================================
 
-const TRACE = true;
+const TRACE = false;
 const logReconcilerFunction = (name: string, ...args: any[]) => {
   if (TRACE) console.debug(`[Reconciler]: ${name}`);
 };

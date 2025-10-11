@@ -6,7 +6,7 @@ export const App = () => {
     setTimeout(() => {
       setCount((count) => count + 1);
       doTimeout();
-    }, 1000);
+    }, 500);
   }, []);
 
   useEffect(() => {
@@ -30,11 +30,11 @@ export const App = () => {
             const i = row * 4 + col;
             if (i >= count) return null;
             if (count - 8 > i) return null;
-            const PAD = 20;
-            const cellWidth = (960 - 80 - PAD * 3) / 4;
-            const cellHeight = (544 - 80 - PAD * 1) / 2;
-            const x = col * (cellWidth + PAD);
-            const y = row * (cellHeight + PAD);
+            const padding = 20;
+            const cellWidth = (960 - 80 - padding * 3) / 4;
+            const cellHeight = (544 - 80 - padding * 1) / 2;
+            const x = col * (cellWidth + padding);
+            const y = row * (cellHeight + padding);
             const color =
               (row * 4 + col) % 2 === 0 ? Colors.LIGHTGRAY : Colors.GRAY;
             return (

@@ -48,3 +48,12 @@ const root = VitadeckReactReconciler.createContainer(
 );
 
 console.debug("main.tsx loaded");
+
+setTimeout(() => {
+  console.log("setTimeout 500");
+  clearTimeout(timeoutId2);
+}, 500);
+
+const timeoutId2 = setTimeout(() => {
+  console.log("setTimeout 1000");
+}, 1000);

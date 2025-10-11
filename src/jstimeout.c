@@ -3,9 +3,12 @@ typedef struct {
     const char* func_ref;
     double scheduled_at;
     const char* stack;
-    ptrdiff_t id;
+    unsigned int id;
 } TimeoutItem;
-static TimeoutItem* timeout_queue = NULL;
+
+static struct { unsigned int key; TimeoutItem value; }* timeout_queue_hm = NULL;
+
+unsigned int timeout_id_counter = 0;
 
 /*
     setTimeout(func: Function, delay: number): number
@@ -18,29 +21,36 @@ void set_timeout(js_State *J) {
         return;
     }
 
+    // Copy function reference to top of stack for js_ref
     js_copy(J, 1);
     const char* func_ref = js_ref(J);
 
     const int delay_in_ms = js_tointeger(J, 2);
     const double delay_in_seconds = delay_in_ms / 1000.0;
 
+    // Store stack trace for debugging
     js_getglobal(J, "Error");
     js_construct(J, 0);
     js_getproperty(J, -1, "stack");
     const char* stack = js_tostring(J, -1);
-    js_pop(J, 1);
+
+    // Prevent duplicate IDs
+    while(hmgeti(timeout_queue_hm, timeout_id_counter) >= 0) {
+        timeout_id_counter++;
+    }
 
     TimeoutItem item = {
         .func_ref = func_ref,
         .scheduled_at = GetTime() + delay_in_seconds,
         .stack = stack,
-        .id = arrlen(timeout_queue)
+        .id = timeout_id_counter
     };
     
-    arrpush(timeout_queue, item);
+    hmput(timeout_queue_hm, item.id, item);
 
-    TraceLog(LOG_DEBUG, "setTimeout(%s, %d ms) scheduled at %f, queue length: %zu", item.func_ref, delay_in_ms, item.scheduled_at, arrlen(timeout_queue));
+    TraceLog(LOG_DEBUG, "setTimeout(%s, %d ms) ID: %zu, scheduled at %f, queue length: %zu", item.func_ref, delay_in_ms, item.id, item.scheduled_at, hmlen(timeout_queue_hm));
 
+    // return value is the timeout ID
 	js_pushnumber(J, item.id);
 }
 
@@ -49,56 +59,63 @@ void set_timeout(js_State *J) {
 */
 void clear_timeout(js_State *J) {
     const int id = js_tointeger(J, 1);
-    if(id < 0) {
-        TraceLog(LOG_WARNING, "clearTimeout: Invalid ID: %d", id);
+
+    if(hmgeti(timeout_queue_hm, id) < 0) {
+        TraceLog(LOG_DEBUG, "clearTimeout: Timeout with ID: %zu not found, ignoring", id);
         js_pushundefined(J);
         return;
     }
-    
-    for(int i = 0; i < arrlen(timeout_queue); i++) {
-        if(timeout_queue[i].id == id) {
-            arrdel(timeout_queue, i);
-            js_unref(J, timeout_queue[i].func_ref);
-            i--;
-            TraceLog(LOG_DEBUG, "clearTimeout: Cleared timeout with ID: %d", id);
-            break;
-        }
-    }
-    
+
+    TimeoutItem item = hmget(timeout_queue_hm, id);
+    hmdel(timeout_queue_hm, id);
+    js_unref(J, item.func_ref);
+
+    TraceLog(LOG_DEBUG, "clearTimeout: Cleared timeout with ID: %zu", id);
     js_pushundefined(J);
 }
 
 void run_timeout_queue(js_State *J) {
     double current_time = GetTime();
 
-    for (int i = 0; i < arrlen(timeout_queue); i++) {
-        TimeoutItem item = timeout_queue[i];
+    // Collect expired timeout IDs
+    unsigned int *expired_ids = NULL;
+    for (int i = 0; i < hmlen(timeout_queue_hm); i++) {
+        TimeoutItem item = timeout_queue_hm[i].value;
         if (item.scheduled_at <= current_time) {
-            js_getregistry(J, item.func_ref);
-            if(js_isundefined(J, -1)) {
-                TraceLog(LOG_WARNING, "Function is undefined: %s", item.func_ref);
-                TraceLog(LOG_WARNING, "Creation stack: %s", item.stack);
-            } else {
-                js_pushnull(J);
-                
-                if(js_try(J)) {
-                    TraceLog(LOG_ERROR, "Error calling function: %s", js_trystring(J, -1, "Unknown error"));
-                    TraceLog(LOG_ERROR, "Creation stack: %s", item.stack);
-                    js_pop(J, 1);
-                    arrdel(timeout_queue, i);
-                    i--;
-                    continue;
-                }
-                    TraceLog(LOG_DEBUG, "Calling function: %s", item.func_ref);
-                    js_call(J, 0);
-                js_endtry(J);
-            }
-
-            arrdel(timeout_queue, i);
-            i--;
-            js_unref(J, item.func_ref);
+            arrput(expired_ids, item.id);
         }
     }
+
+    // Execute and remove expired timeouts
+    for (size_t j = 0; j < arrlen(expired_ids); j++) {
+        unsigned int id = expired_ids[j];
+
+        TimeoutItem item = hmget(timeout_queue_hm, id);
+
+        js_getregistry(J, item.func_ref);
+        if(js_isundefined(J, -1)) {
+            TraceLog(LOG_WARNING, "Function is undefined: %s", item.func_ref);
+            TraceLog(LOG_WARNING, "Creation stack: %s", item.stack);
+        } else {
+            js_pushnull(J);
+
+            if(js_try(J)) {
+                TraceLog(LOG_ERROR, "Error calling function: %s", js_trystring(J, -1, "Unknown error"));
+                TraceLog(LOG_ERROR, "Creation stack: %s", item.stack);
+                js_pop(J, 1);
+            } else {
+                TraceLog(LOG_DEBUG, "Calling function: %s", item.func_ref);
+                js_call(J, 0);
+            }
+            js_endtry(J);
+        }
+
+        // Clean up the timeout regardless of execution result
+        hmdel(timeout_queue_hm, item.id);
+        js_unref(J, item.func_ref);
+    }
+
+    arrfree(expired_ids);
 }
 
 void register_js_timeout(js_State *J) {
