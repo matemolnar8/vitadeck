@@ -26,23 +26,30 @@ static void log_with_level(js_State *J, int level)
 	buffer[0] = '\0';
 
 	for (int i = 1; i < top; i++) {
-		const char *s = js_tostring(J, i);
+		const char *s;
+
+		if(js_isstring(J, i)) {
+			s = js_tostring(J, i);
+		} else {
+			s = js_torepr(J, i);
+		}
+		
 		if (s == NULL) s = "";
 
 		if (i > 1) {
-			if (pos < (int)sizeof(buffer) - 2) {
+			if (pos < sizeof(buffer) - 2) {
 				buffer[pos++] = ' ';
 				buffer[pos] = '\0';
 			}
 		}
 
-		int written = snprintf(buffer + pos, sizeof(buffer) - (size_t)pos, "%s", s);
+		int written = snprintf(buffer + pos, sizeof(buffer) - pos, "%s", s);
 		if (written < 0) {
 			break;
 		}
 		pos += written;
-		if (pos >= (int)sizeof(buffer) - 1) {
-			pos = (int)sizeof(buffer) - 1;
+		if (pos >= sizeof(buffer) - 1) {
+			pos = sizeof(buffer) - 1;
 			break;
 		}
 	}

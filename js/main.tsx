@@ -5,10 +5,9 @@ import { App } from "./app/App";
 
 function logError(error: unknown) {
   if (!error) {
-    console.error("Error: unknown");
+    console.error("Error: empty error");
     return;
   }
-
   console.error(
     "Error: " + (typeof error === "object")
       ? error.toString?.() || String(error)

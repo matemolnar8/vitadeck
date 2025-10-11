@@ -66,6 +66,7 @@ void run_timeout_queue(js_State *J) {
                 
                 if(js_try(J)) {
                     TraceLog(LOG_ERROR, "Error calling function: %s", js_trystring(J, -1, "Unknown error"));
+                    TraceLog(LOG_ERROR, "Creation stack: %s", item.stack);
                     js_pop(J, 1);
                     arrdel(timeout_queue, i);
                     i--;

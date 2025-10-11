@@ -25,8 +25,11 @@ export const App = () => {
         height={544 - 80}
         color={Colors.RAYWHITE}
       >
-        {Array.from({ length: 2 }).map((_, row) =>
-          Array.from({ length: 4 }).map((_, col) => {
+        {Array.from({ length: Math.min(count, 2) }).map((_, row) =>
+          Array.from({ length: Math.min(count, 4) }).map((_, col) => {
+            const i = row * 4 + col;
+            if (i >= count) return null;
+            if (count - 8 > i) return null;
             const PAD = 20;
             const cellWidth = (960 - 80 - PAD * 3) / 4;
             const cellHeight = (544 - 80 - PAD * 1) / 2;

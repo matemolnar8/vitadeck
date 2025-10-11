@@ -75,9 +75,9 @@ int main(int argc, char *argv[]) {
 		BeginDrawing();
 			line_count = 0;
 			ClearBackground(WHITE);
-			DrawFPS(SCREEN_WIDTH - 100, 10); // top right corner
 			run_timeout_queue(J);
 			render(J);
+			DrawFPS(SCREEN_WIDTH - 100, 10); // top right corner
 		EndDrawing();
 	}
 

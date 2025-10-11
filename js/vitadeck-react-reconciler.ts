@@ -69,7 +69,6 @@ type PublicInstance = Instance | TextInstance;
 type HostContext = { root: boolean };
 type UpdatePayload = {
   props: string[];
-  style: string[];
 };
 type ChildSet = {
   children: (Instance | TextInstance)[];
@@ -98,7 +97,10 @@ type VitadeckHostConfig = HostConfig<
 // Based on Tsoding's Murayact: https://github.com/tsoding/Murayact/
 // =============================================================================
 
-const TRACE = false;
+const TRACE = true;
+const logReconcilerFunction = (name: string, ...args: any[]) => {
+  if (TRACE) console.debug(`[Reconciler]: ${name}`);
+};
 
 // React reconciler host configuration
 const hostConfig = {
@@ -109,34 +111,34 @@ const hostConfig = {
   supportsHydration: false,
   supportsMicrotasks: false,
   getRootHostContext: (...args) => {
-    if (TRACE) console.debug("getRootHostContext", args);
+    logReconcilerFunction("getRootHostContext", args);
     return { root: true };
   },
   prepareForCommit: (...args) => {
-    if (TRACE) console.debug("prepareForCommit", args);
+    logReconcilerFunction("prepareForCommit", args);
     return null;
   },
   resetAfterCommit: (...args) => {
-    if (TRACE) console.debug("resetAfterCommit", args);
+    logReconcilerFunction("resetAfterCommit", args);
   },
   getChildHostContext: (...args) => {
-    if (TRACE) console.debug("getChildHostContext", args);
+    logReconcilerFunction("getChildHostContext", args);
     return { root: false };
   },
   shouldSetTextContent(type, props) {
-    if (TRACE) console.debug("shouldSetTextContent", type, props);
+    logReconcilerFunction("shouldSetTextContent", type, props);
     // TODO: Maybe set to true for some elements like button
     return false;
   },
   createTextInstance(text, _rootContainerInstance, _hostContext) {
-    if (TRACE) console.debug("createTextInstance");
+    logReconcilerFunction("createTextInstance");
     return {
       type: "RawText",
       text,
     };
   },
   createInstance(type, props: Props, _rootContainerInstance, _hostContext) {
-    if (TRACE) console.debug("createInstance");
+    logReconcilerFunction("createInstance");
     const element = {
       type,
       props: { ...props },
@@ -145,62 +147,59 @@ const hostConfig = {
     return element;
   },
   appendInitialChild(parentInstance, child) {
-    if (TRACE) console.debug("appendInitialChild");
+    logReconcilerFunction("appendInitialChild");
     parentInstance.children.push(child);
   },
   finalizeInitialChildren(...args) {
-    if (TRACE) console.debug("finalizeInitialChildren", args);
+    logReconcilerFunction("finalizeInitialChildren", args);
     return true;
   },
   createContainerChildSet: (...args) => {
-    if (TRACE) console.debug("createContainerChildSet", args);
+    logReconcilerFunction("createContainerChildSet", args);
     return { children: [] };
   },
   appendChildToContainerChildSet: (containerChildSet, child) => {
-    if (TRACE)
-      console.debug("appendChildToContainerChildSet", containerChildSet, child);
+    logReconcilerFunction(
+      "appendChildToContainerChildSet",
+      containerChildSet,
+      child
+    );
     containerChildSet.children.push(child);
   },
-  finalizeContainerChildren: (...args) => {
-    if (TRACE) console.debug("finalizeContainerChildren", args);
-    return { children: [] };
+  finalizeContainerChildren: (container, newChildren) => {
+    logReconcilerFunction("finalizeContainerChildren", container, newChildren);
+    container.children = newChildren.children;
   },
   clearContainer(rootContainerInstance) {
-    if (TRACE) console.debug("clearContainer", rootContainerInstance);
+    logReconcilerFunction("clearContainer", rootContainerInstance);
     rootContainerInstance.children = [];
   },
   replaceContainerChildren(container, newChildren) {
-    if (TRACE)
-      console.debug("replaceContainerChildren", container, newChildren);
+    logReconcilerFunction("replaceContainerChildren", container, newChildren);
     container.children = newChildren.children;
   },
   prepareUpdate(
-    instance,
-    type,
+    _instance,
+    _type,
     oldProps,
     newProps,
     _rootContainerInstance,
     _hostContext
   ) {
-    if (TRACE) console.debug("prepareUpdate");
+    logReconcilerFunction("prepareUpdate");
     const changes = {
       props: [] as string[],
-      style: [] as string[],
     };
-    const oldP: any = oldProps as any;
-    const newP: any = newProps as any;
-    for (let key in { ...oldP, ...newP }) {
-      if (oldP[key] !== newP[key]) {
+    const keys = Object.keys({ ...oldProps, ...newProps });
+    for (let key of keys) {
+      if (
+        (oldProps as Record<string, unknown>)[key] !==
+        (newProps as Record<string, unknown>)[key]
+      ) {
         changes.props.push(key);
       }
     }
-    for (let key in { ...(oldP.style || {}), ...(newP.style || {}) }) {
-      if ((oldP.style || {})[key] !== (newP.style || {})[key]) {
-        changes.style.push(key);
-      }
-    }
-    // const updatePayload = changes.props.length || changes.style.length ? { changes } : null;
-    return changes;
+    return changes.props.length ? { props: changes.props } : null;
   },
   cloneInstance(
     instance,
@@ -211,15 +210,14 @@ const hostConfig = {
     _internalInstanceHandle,
     keepChildren
   ) {
-    if (TRACE)
-      console.debug(
-        "cloneInstance",
-        instance,
-        updatePayload,
-        type,
-        oldProps,
-        newProps
-      );
+    logReconcilerFunction(
+      "cloneInstance",
+      instance,
+      updatePayload,
+      type,
+      oldProps,
+      newProps
+    );
     const clonedProps: any = { ...newProps } as any;
     for (let prop of updatePayload.props) {
       if (prop !== "children") {
@@ -233,7 +231,7 @@ const hostConfig = {
     } as unknown as Instance;
   },
   cloneHiddenInstance(instance, type, props, _internalInstanceHandle) {
-    if (TRACE) console.debug("cloneHiddenInstance", instance, type, props);
+    logReconcilerFunction("cloneHiddenInstance", instance, type, props);
     return {
       type,
       props: { ...props },
@@ -241,21 +239,17 @@ const hostConfig = {
     } as unknown as Instance;
   },
   cloneHiddenTextInstance(instance, text, _internalInstanceHandle) {
-    if (TRACE) console.debug("cloneHiddenTextInstance", instance, text);
+    logReconcilerFunction("cloneHiddenTextInstance", instance, text);
     return {
       type: "RawText",
       text: text,
     } as TextInstance;
   },
-  detachDeletedInstance(instance) {
-    if (TRACE) console.debug("detachDeletedInstance", instance);
-  },
   commitMount(instance, type, newProps) {
-    if (TRACE) console.debug("commitMount", instance, type, newProps);
+    logReconcilerFunction("commitMount", instance, type, newProps);
   },
-  getPublicInstance(instance) {
-    if (TRACE) console.debug("getPublicInstance", instance);
-    return instance;
+  detachDeletedInstance(instance) {
+    logReconcilerFunction("detachDeletedInstance", instance);
   },
 } satisfies Partial<VitadeckHostConfig>;
 
