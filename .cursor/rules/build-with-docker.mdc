@@ -1,10 +1,10 @@
 ---
-alwaysApply: true
 description: PSVita build instructions using docker-compose
+alwaysApply: false
 ---
 # PSVita Build Steps
 
-Always build the project inside the Docker Compose environment.
+Whenever C code was changed, build the project inside the Docker Compose environment.
 
 - Run configuration + build in one shot: `docker-compose run --rm vitasdk bash -lc "cmake -S . -B out && cmake --build out"`
 - To rebuild after changes: `docker-compose run --rm vitasdk bash -lc "cmake --build out"`

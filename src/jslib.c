@@ -9,6 +9,7 @@ extern int line_count;
 typedef struct {
     const char* func_ref;
     double scheduled_at;
+    const char* stack;
 } TimeoutItem;
 static TimeoutItem* timeout_queue = NULL;
 
@@ -43,7 +44,7 @@ void debug(js_State *J) {
 */
 void set_timeout(js_State *J) {
     if(js_isundefined(J, 1)) {
-        printf("set_timeout: Function is undefined");
+        TraceLog(LOG_WARNING, "set_timeout: Function is undefined");
         js_dostring(J, "debug(new Error().stack);");
         js_pushundefined(J);
         return;
@@ -55,17 +56,26 @@ void set_timeout(js_State *J) {
     const int delay_in_ms = js_tointeger(J, 2);
     const double delay_in_seconds = delay_in_ms / 1000.0;
 
+    js_getglobal(J, "Error");
+    js_construct(J, 0);
+    js_getproperty(J, -1, "stack");
+    const char* stack = js_tostring(J, -1);
+    js_pop(J, 1);
+
     TimeoutItem item = {
         .func_ref = func_ref,
-        .scheduled_at = GetTime() + delay_in_seconds
+        .scheduled_at = GetTime() + delay_in_seconds,
+        .stack = stack
     };
     
     arrpush(timeout_queue, item);
 
-    printf("setTimeout(%s, %d ms) scheduled at %f, queue length: %zu\n", item.func_ref, delay_in_ms, item.scheduled_at, arrlen(timeout_queue));
+    TraceLog(LOG_DEBUG, "setTimeout(%s, %d ms) scheduled at %f, queue length: %zu", item.func_ref, delay_in_ms, item.scheduled_at, arrlen(timeout_queue));
 
 	js_pushundefined(J);
 }
+
+// TODO: clearTimeout(id: number)
 
 void run_timeout_queue(js_State *J) {
     double current_time = GetTime();
@@ -74,22 +84,102 @@ void run_timeout_queue(js_State *J) {
         TimeoutItem item = timeout_queue[i];
         if (item.scheduled_at <= current_time) {
             js_getregistry(J, item.func_ref);
-	        js_pushnull(J);
-            
-            if(js_try(J)) {
-                printf("Error calling function: %s\n", js_trystring(J, -1, "Unknown error"));
-                js_pop(J, 1);
-                arrdel(timeout_queue, i);
-                i--;
-                continue;
+            if(js_isundefined(J, -1)) {
+                TraceLog(LOG_WARNING, "Function is undefined: %s", item.func_ref);
+                TraceLog(LOG_WARNING, "Creation stack: %s", item.stack);
+            } else {
+                js_pushnull(J);
+                
+                if(js_try(J)) {
+                    TraceLog(LOG_ERROR, "Error calling function: %s", js_trystring(J, -1, "Unknown error"));
+                    js_pop(J, 1);
+                    arrdel(timeout_queue, i);
+                    i--;
+                    continue;
+                }
+                    TraceLog(LOG_DEBUG, "Calling function: %s", item.func_ref);
+                    js_call(J, 0);
+                js_endtry(J);
             }
-                printf("Calling function: %s\n", item.func_ref);
-                js_call(J, 0);
-            js_endtry(J);
 
             arrdel(timeout_queue, i);
             i--;
             js_unref(J, item.func_ref);
         }
     }
+}
+
+static Color parse_color_arg_or_default(js_State *J, int index, Color fallback)
+{
+    if (js_isundefined(J, index) || !js_isobject(J, index)) {
+        return fallback;
+    }
+
+    Color c = fallback;
+
+    js_getproperty(J, index, "r");
+    if (js_isnumber(J, -1)) c.r = (unsigned char)js_tointeger(J, -1);
+    js_pop(J, 1);
+
+    js_getproperty(J, index, "g");
+    if (js_isnumber(J, -1)) c.g = (unsigned char)js_tointeger(J, -1);
+    js_pop(J, 1);
+
+    js_getproperty(J, index, "b");
+    if (js_isnumber(J, -1)) c.b = (unsigned char)js_tointeger(J, -1);
+    js_pop(J, 1);
+
+    js_getproperty(J, index, "a");
+    if (js_isnumber(J, -1)) c.a = (unsigned char)js_tointeger(J, -1);
+    js_pop(J, 1);
+
+    return c;
+}
+
+/*
+    drawRect(x: number, y: number, width: number, height: number, color?: Color)
+*/
+void draw_rect(js_State *J) {
+    const int x = js_tointeger(J, 1);
+    const int y = js_tointeger(J, 2);
+    const int w = js_tointeger(J, 3);
+    const int h = js_tointeger(J, 4);
+
+    const Color color = parse_color_arg_or_default(J, 5, LIGHTGRAY);
+
+    DrawRectangle(x, y, w, h, color);
+
+    js_pushundefined(J);
+}
+
+/*
+    drawRectOutline(x: number, y: number, width: number, height: number, color?: Color)
+*/
+void draw_rect_outline(js_State *J) {
+    const int x = js_tointeger(J, 1);
+    const int y = js_tointeger(J, 2);
+    const int w = js_tointeger(J, 3);
+    const int h = js_tointeger(J, 4);
+
+    const Color color = parse_color_arg_or_default(J, 5, DARKGRAY);
+
+    DrawRectangleLines(x, y, w, h, color);
+
+    js_pushundefined(J);
+}
+
+/*
+    drawText(x: number, y: number, fontSize: number, text: string, color?: Color)
+*/
+void draw_text(js_State *J) {
+    const int x = js_tointeger(J, 1);
+    const int y = js_tointeger(J, 2);
+    const int font_size = js_tointeger(J, 3);
+    const char *str = js_tostring(J, 4);
+
+    const Color color = parse_color_arg_or_default(J, 5, BLACK);
+
+    DrawText(str, x, y, font_size, color);
+
+    js_pushundefined(J);
 }

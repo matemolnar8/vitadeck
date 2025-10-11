@@ -1,27 +1,7 @@
 import React from "react";
-import { Container, VitadeckRenderer } from "./renderer";
+import { VitadeckRenderer } from "./react-renderer";
+import { renderVitadeckElement } from "./renderer";
 import { App } from "./app/App";
-
-const TRACE = false;
-
-function renderVitadeckElement(container: Container) {
-  if (TRACE) debug("renderVitadeckElement: " + JSON.stringify(container));
-  for (const child of container.children) {
-    if (TRACE) debug("child: " + JSON.stringify(child));
-
-    if (child.type === "vita-text") {
-      let text = "";
-      child.children.forEach((child) => {
-        if (child.type === "RawText") {
-          text += child.text;
-        }
-      });
-      print(text);
-    } else {
-      throw "TODO child.type: " + child.type;
-    }
-  }
-}
 
 function logError(error: unknown) {
   if (!error) {
@@ -49,7 +29,7 @@ export function updateContainer() {
 
 export function render() {
   try {
-    renderVitadeckElement(root.containerInfo as Container);
+    renderVitadeckElement(root.containerInfo.children);
   } catch (error: unknown) {
     logError(error);
   }

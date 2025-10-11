@@ -1,225 +1,63 @@
-import Reconciler, { HostConfig } from "react-reconciler";
-
-type TextChild = string | number | boolean | null | undefined;
-
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      "vita-text": {
-        children: TextChild | TextChild[];
-      };
-    }
-  }
-}
-
-export type Type = "vita-text"; // TODO: Implement more types, like rect, button, etc.
-export type Props = Record<string, any>;
-export type Container = {
-  children: (Instance | TextInstance)[];
-};
-export type Instance = {
-  type: Type;
-  props: Props;
-  children: (Instance | TextInstance)[];
-};
-export type TextInstance = {
-  type: "RawText";
-  text: string;
-};
-export type SuspenseInstance = never;
-export type HydratableInstance = never;
-export type PublicInstance = Instance | TextInstance;
-export type HostContext = { root: boolean };
-export type UpdatePayload = {
-  props: string[];
-  style: string[];
-};
-export type ChildSet = {
-  children: (Instance | TextInstance)[];
-};
-export type TimeoutHandle = number;
-export type NoTimeout = -1;
-
-export type VitadeckHostConfig = HostConfig<
-  Type,
-  Props,
-  Container,
-  Instance,
-  TextInstance,
-  SuspenseInstance,
-  HydratableInstance,
-  PublicInstance,
-  HostContext,
-  UpdatePayload,
-  ChildSet,
-  TimeoutHandle,
-  NoTimeout
->;
+import { Instance, TextInstance } from "./react-renderer";
 
 const TRACE = false;
 
-// Renderer based on Tsoding's Murayact https://github.com/tsoding/Murayact/
-const hostConfig = {
-  noTimeout: -1,
-  isPrimaryRenderer: true,
-  supportsMutation: false,
-  supportsPersistence: true,
-  supportsHydration: false,
-  supportsMicrotasks: false,
-  getRootHostContext: (...args) => {
-    if (TRACE) console.log("getRootHostContext", args);
-    return { root: true };
-  },
-  prepareForCommit: (...args) => {
-    if (TRACE) console.log("prepareForCommit", args);
-    return null;
-  },
-  resetAfterCommit: (...args) => {
-    if (TRACE) console.log("resetAfterCommit", args);
-  },
-  getChildHostContext: (...args) => {
-    if (TRACE) console.log("getChildHostContext", args);
-    return { root: false };
-  },
-  shouldSetTextContent(type, props) {
-    if (TRACE) console.log("shouldSetTextContent", type, props);
-    // TODO: Maybe set to true for some elements like button
-    return false;
-  },
-  createTextInstance(text, _rootContainerInstance, _hostContext) {
-    if (TRACE) console.log("createTextInstance");
-    return {
-      type: "RawText",
-      text,
-    };
-  },
-  createInstance(
-    type,
-    props: Record<string, any>,
-    _rootContainerInstance,
-    _hostContext
-  ) {
-    if (TRACE) console.log("createInstance");
-    const elementProps = { ...props };
-    const element = {
-      type,
-      props: elementProps,
-      children: [],
-    } satisfies Instance;
-    return element;
-  },
-  appendInitialChild(parentInstance, child) {
-    if (TRACE) console.log("appendInitialChild");
-    parentInstance.children.push(child);
-  },
-  finalizeInitialChildren(...args) {
-    if (TRACE) console.log("finalizeInitialChildren", args);
-    return true;
-  },
-  createContainerChildSet: (...args) => {
-    if (TRACE) console.log("createContainerChildSet", args);
-    return { children: [] };
-  },
-  appendChildToContainerChildSet: (containerChildSet, child) => {
-    if (TRACE)
-      console.log("appendChildToContainerChildSet", containerChildSet, child);
-    containerChildSet.children.push(child);
-  },
-  finalizeContainerChildren: (...args) => {
-    if (TRACE) console.log("finalizeContainerChildren", args);
-    return { children: [] };
-  },
-  clearContainer(rootContainerInstance) {
-    if (TRACE) console.log("clearContainer", rootContainerInstance);
-    rootContainerInstance.children = [];
-  },
-  replaceContainerChildren(container, newChildren) {
-    if (TRACE) console.log("replaceContainerChildren", container, newChildren);
-    container.children = newChildren.children;
-  },
-  prepareUpdate(
-    instance,
-    type,
-    oldProps,
-    newProps,
-    _rootContainerInstance,
-    _hostContext
-  ) {
-    if (TRACE) console.log("prepareUpdate");
-    const changes = {
-      props: [] as string[],
-      style: [] as string[],
-    };
-    for (let key in { ...oldProps, ...newProps }) {
-      if (oldProps[key] !== newProps[key]) {
-        changes.props.push(key);
-      }
-    }
-    for (let key in { ...oldProps.style, ...newProps.style }) {
-      if (oldProps.style[key] !== newProps.style[key]) {
-        changes.style.push(key);
-      }
-    }
-    // const updatePayload = changes.props.length || changes.style.length ? { changes } : null;
-    return changes;
-  },
-  cloneInstance(
-    instance,
-    updatePayload,
-    type,
-    oldProps,
-    newProps,
-    _internalInstanceHandle,
-    keepChildren
-  ) {
-    if (TRACE)
-      console.log(
-        "cloneInstance",
-        instance,
-        updatePayload,
-        type,
-        oldProps,
-        newProps
-      );
-    const clonedProps = { ...newProps };
-    for (let prop of updatePayload.props) {
-      if (prop !== "children") {
-        clonedProps[prop] = newProps[prop];
-      }
-    }
-    return {
-      type,
-      props: clonedProps,
-      children: keepChildren ? [...instance.children] : [],
-    };
-  },
-  cloneHiddenInstance(instance, type, props) {
-    if (TRACE) console.log("cloneHiddenInstance", instance, type, props);
-    return {
-      type,
-      props: { ...props },
-      children: [],
-    };
-  },
-  cloneHiddenTextInstance(instance, text) {
-    if (TRACE) console.log("cloneHiddenTextInstance", instance, text);
-    return {
-      type: "RawText",
-      text: text,
-    };
-  },
-  detachDeletedInstance(instance) {
-    if (TRACE) console.log("detachDeletedInstance", instance);
-  },
-  commitMount(instance, type, newProps) {
-    if (TRACE) console.log("commitMount", instance, type, newProps);
-  },
-  getPublicInstance(instance) {
-    if (TRACE) console.log("getPublicInstance", instance);
-    return instance;
-  },
-} satisfies Partial<VitadeckHostConfig>;
+type RectContext = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  textIndex: number; // line index for text layout inside this rect
+};
 
-export const VitadeckRenderer = Reconciler(
-  hostConfig as unknown as VitadeckHostConfig
-);
+export function renderVitadeckElement(
+  children: (Instance | TextInstance)[],
+  rectCtx: RectContext = { x: 0, y: 0, width: 960, height: 544, textIndex: 0 }
+) {
+  if (TRACE) debug("renderVitadeckElement: " + JSON.stringify(children));
+  for (const child of children) {
+    if (TRACE) debug("child: " + JSON.stringify(child));
+
+    if (child.type === "vita-text") {
+      let text = "";
+      child.children.forEach((grandChild) => {
+        if (grandChild.type === "RawText") {
+          text += grandChild.text;
+        }
+      });
+      const padding = 8;
+      const fontSize = 30; // align with native default; could be prop later
+      drawText(
+        rectCtx.x + padding,
+        rectCtx.y + padding + rectCtx.textIndex * fontSize,
+        fontSize,
+        text,
+        child.props.color
+      );
+      rectCtx.textIndex++;
+      continue;
+    }
+
+    if (child.type === "vita-rect") {
+      const { x, y, width, height, variant, color } = child.props;
+
+      if (variant === "outline") {
+        drawRectOutline(x, y, width, height, color);
+      } else {
+        drawRect(x, y, width, height, color);
+      }
+
+      const childRectCtx: RectContext = {
+        x,
+        y,
+        width,
+        height,
+        textIndex: 0,
+      };
+      renderVitadeckElement(child.children, childRectCtx);
+      continue;
+    }
+
+    throw "TODO child.type: " + child.type;
+  }
+}

@@ -4,25 +4,13 @@
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
 #include "jslib.c"
+#include "jsglobals.c"
 
 #define SCREEN_WIDTH 960
 #define SCREEN_HEIGHT 544
 #define FONT_SIZE 30
 
 int line_count = 0;
-
-static const char *stacktrace_js =
-	"Error.prototype.toString = function() {\n"
-	"var s = this.name;\n"
-	"if ('message' in this) s += ': ' + this.message;\n"
-	"if ('stack' in this) s += this.stack;\n"
-	"return s;\n"
-	"};\n"
-;
-
-static const char *console_js =
-	"var console = { log: debug, debug: debug, warn: debug, error: debug };"
-;
 
 static int render(js_State *J)
 {
@@ -33,8 +21,8 @@ static int render(js_State *J)
 	js_pushnull(J);
 	
 	if (js_pcall(J, 0)) {
-		fprintf(stderr, "an exception occurred in the javascript function\n");
-		fprintf(stderr, "%s\n", js_tostring(J, -1));
+		TraceLog(LOG_ERROR, "an exception occurred in the javascript function");
+		TraceLog(LOG_ERROR, "%s", js_tostring(J, -1));
 		js_pop(J, 1);
 		return -1;
 	}
@@ -51,8 +39,8 @@ int update_container(js_State *J) {
 	js_pushnull(J);
 
 	if (js_pcall(J, 0)) {
-		fprintf(stderr, "an exception occurred in the javascript function\n");
-		fprintf(stderr, "%s\n", js_tostring(J, -1));
+		TraceLog(LOG_ERROR, "an exception occurred in the javascript function");
+		TraceLog(LOG_ERROR, "%s", js_tostring(J, -1));
 		js_pop(J, 1);
 		return -1;
 	}
@@ -63,29 +51,21 @@ int update_container(js_State *J) {
 }
 
 int main(int argc, char *argv[]) {
+	// SetTraceLogLevel(LOG_DEBUG);
+
 	js_State *J = js_newstate(NULL, NULL, 0);
 	if (!J) {
-		fprintf(stderr, "Could not initialize MuJS state.\n");
+		TraceLog(LOG_ERROR, "Could not initialize MuJS state.");
 		return 1;
 	} 
 	
-	js_newcfunction(J, debug, "debug", 0);
-	js_setglobal(J, "debug");
-
-	js_newcfunction(J, print, "print", 0);
-	js_setglobal(J, "print");
-
-	js_newcfunction(J, set_timeout, "setTimeout", 0);
-	js_setglobal(J, "setTimeout");
-
-	js_dostring(J, console_js);
-	js_dostring(J, stacktrace_js);
+	register_js_globals(J);
 
 	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "VitaDeck");	
 	SetTargetFPS(60);
 
 	if (js_dofile(J, "js/main.js")) {
-		fprintf(stderr, "Could not load main.js.\n");
+		TraceLog(LOG_ERROR, "Could not load main.js.");
 		return 1;
 	}
 
