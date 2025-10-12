@@ -34,7 +34,7 @@ if(NOT DEFINED ENV{VITASDK})
 endif()
 
 # Set up include directories
-set(VITADECK_INCLUDE_DIRS mujs-1.3.7)
+set(VITADECK_INCLUDE_DIRS vendor vendor/mujs-1.3.7)
 
 if(DEFINED ENV{VITASDK})
   list(APPEND VITADECK_INCLUDE_DIRS
@@ -51,7 +51,7 @@ link_directories(${VITADECK_LIBRARY_DIRS})
 
 add_executable(${PROJECT_NAME}
     src/main.c
-    mujs-1.3.7/one.c
+    vendor/mujs-1.3.7/one.c
 )
 
 set(VITADECK_LIBRARIES)
@@ -116,6 +116,12 @@ add_custom_target(js_copy
 add_custom_target(js
   DEPENDS js_build ${PROJECT_NAME}
   COMMENT "Build JavaScript and everything"
+)
+
+add_custom_target(cloc
+  COMMENT "Count lines of code in ${CMAKE_SOURCE_DIR}"
+  COMMAND cloc ${CMAKE_SOURCE_DIR} --match-d=src "--not-match-d=(out|node_modules)"
+  VERBATIM
 )
 
 if(DEFINED ENV{VITASDK})

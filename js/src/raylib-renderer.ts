@@ -1,4 +1,9 @@
-import { Instance, TextInstance, VitaTextInstance, VitaRectInstance } from "./vitadeck-react-reconciler";
+import {
+  Instance,
+  TextInstance,
+  VitaTextInstance,
+  VitaRectInstance,
+} from "./vitadeck-react-reconciler";
 
 type RectContext = {
   x: number;
@@ -52,7 +57,6 @@ export function renderVitadeckElement(
   rectCtx: RectContext = { x: 0, y: 0, width: 960, height: 544, textIndex: 0 }
 ) {
   for (const child of children) {
-
     switch (child.type) {
       case "vita-text":
         renderVitaText(child as VitaTextInstance, rectCtx);

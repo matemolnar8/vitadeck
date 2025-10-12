@@ -7,7 +7,7 @@ import { corejsPlugin } from "rollup-plugin-corejs";
 
 export default defineConfig({
   input: {
-    main: "./main.tsx",
+    main: "./src/main.tsx",
   },
   output: {
     dir: "dist",
