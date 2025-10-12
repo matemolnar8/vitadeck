@@ -58,6 +58,8 @@ declare global {
 
   function setTimeout(callback: () => void, delay: number): number;
   function clearTimeout(id: number): void;
+  function setInterval(callback: () => void, delay: number): number;
+  function clearInterval(id: number): void;
 
   var console: {
     log: (...args: any[]) => void;

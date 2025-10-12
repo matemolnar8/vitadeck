@@ -1,3 +1,4 @@
+import "./lib/setInterval";
 import React from "react";
 import { VitadeckReactReconciler } from "./vitadeck-react-reconciler";
 import { renderVitadeckElement } from "./raylib-renderer";
@@ -48,12 +49,3 @@ const root = VitadeckReactReconciler.createContainer(
 );
 
 console.debug("main.tsx loaded");
-
-setTimeout(() => {
-  console.log("setTimeout 500");
-  clearTimeout(timeoutId2);
-}, 500);
-
-const timeoutId2 = setTimeout(() => {
-  console.log("setTimeout 1000");
-}, 1000);
