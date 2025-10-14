@@ -2,6 +2,7 @@
 
 out
 out-macos
+out-linux
 
 module/*.suprx
 
