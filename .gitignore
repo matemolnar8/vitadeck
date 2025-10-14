@@ -1,8 +1,7 @@
 .DS_Store
 
 out
-out-macos
-out-linux
+out-vita
 
 module/*.suprx
 
