@@ -164,12 +164,12 @@ void run_timeouts(js_State *J) {
             if(js_try(J)) {
                 TraceLog(LOG_ERROR, "[run_timeouts] %d ID: %zu Error calling function: %s", tick_count, id, js_trystring(J, -1, "Unknown error"));
                 TraceLog(LOG_ERROR, "[run_timeouts] Creation stack: %s", item.stack);
-                js_pop(J, 1);
             } else {
                 TraceLog(LOG_DEBUG, "[run_timeouts] %d ID: %zu Calling function: %s Scheduled at: %f, current time: %f", tick_count, id, item.func_ref, item.next_scheduled_at, current_time);
                 js_call(J, 0);
             }
             js_endtry(J);
+            js_pop(J, 1);
         }
 
         // reschedule interval
