@@ -1,4 +1,3 @@
-import "./lib/setInterval";
 import React from "react";
 import { VitadeckReactReconciler } from "./vitadeck-react-reconciler";
 import { renderVitadeckElement } from "./raylib-renderer";
