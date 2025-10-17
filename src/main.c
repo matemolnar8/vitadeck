@@ -5,7 +5,7 @@
 #include "stb_ds.h"
 #include "jslib.c"
 #include "jstimeout.c"
-#include "jsglobals.c"
+#include "jsdraw.c"
 
 #define SCREEN_WIDTH 960
 #define SCREEN_HEIGHT 544
@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
 	
 	register_js_lib(J);
 	register_js_timeout(J);
-	register_js_globals(J);
+	register_js_draw(J);
 
 	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "VitaDeck");	
 	SetTargetFPS(60);
