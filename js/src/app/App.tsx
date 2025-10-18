@@ -24,10 +24,8 @@ export const App = () => {
         height={30}
         color={Colors.DARKGREEN}
         messages={[
-          "Hello, VitaDeck!",
-          "React renderer on PS Vita",
-          "Made with raylib",
-          "Enjoy!",
+          "This is the second typewriter!",
+          "It has different messages.",
         ]}
       />
     </vita-rect>
