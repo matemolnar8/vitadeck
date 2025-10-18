@@ -69,7 +69,7 @@ type PublicInstance = Instance | TextInstance;
 type HostContext = { root: boolean };
 type UpdatePayload = {
   props: string[];
-};
+} | null;
 type ChildSet = {
   children: (Instance | TextInstance)[];
 };
@@ -219,8 +219,9 @@ const hostConfig = {
       newProps
     );
     const clonedProps: any = { ...newProps } as any;
-    for (let prop of updatePayload.props) {
+    for (let prop of updatePayload?.props || []) {
       if (prop !== "children") {
+        // TODO: fix type safety
         (clonedProps as any)[prop] = (newProps as any)[prop];
       }
     }
@@ -228,7 +229,7 @@ const hostConfig = {
       type,
       props: clonedProps,
       children: keepChildren ? [...instance.children] : [],
-    } as unknown as Instance;
+    } satisfies Instance;
   },
   cloneHiddenInstance(instance, type, props, _internalInstanceHandle) {
     logReconcilerFunction("cloneHiddenInstance", instance, type, props);
