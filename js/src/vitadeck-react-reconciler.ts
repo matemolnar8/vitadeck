@@ -1,5 +1,14 @@
 import Reconciler, { HostConfig } from "react-reconciler";
 
+const idGenerator = () => {
+  return (
+    Math.random().toString(36).substring(2, 15) +
+    Math.random().toString(36).substring(2, 15) +
+    Math.random().toString(36).substring(2, 15) +
+    Math.random().toString(36).substring(2, 15)
+  );
+};
+
 // =============================================================================
 // Element and Instance Types
 // =============================================================================
@@ -49,6 +58,7 @@ type PropsByType = { [K in Type]: VitadeckElementsProps[K] };
 // Core instance types
 export type Instance = {
   [K in Type]: {
+    id: string;
     type: K;
     props: PropsByType[K];
     children: (Instance | TextInstance)[];
@@ -145,10 +155,12 @@ const hostConfig = {
   createInstance(type, props: Props, _rootContainerInstance, _hostContext) {
     logReconcilerFunction("createInstance");
     const element = {
+      id: idGenerator(),
       type,
       props: { ...props },
       children: [],
-    } as unknown as Instance;
+    } as Instance;
+
     return element;
   },
   appendInitialChild(parentInstance, child) {
@@ -231,6 +243,7 @@ const hostConfig = {
       }
     }
     return {
+      id: instance.id,
       type,
       props: clonedProps,
       children: keepChildren ? [...instance.children] : [],
@@ -239,10 +252,11 @@ const hostConfig = {
   cloneHiddenInstance(instance, type, props, _internalInstanceHandle) {
     logReconcilerFunction("cloneHiddenInstance", instance, type, props);
     return {
+      id: instance.id,
       type,
       props: { ...props },
       children: [],
-    } as unknown as Instance;
+    } as Instance;
   },
   cloneHiddenTextInstance(instance, text, _internalInstanceHandle) {
     logReconcilerFunction("cloneHiddenTextInstance", instance, text);

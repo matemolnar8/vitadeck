@@ -62,6 +62,7 @@ declare global {
   function isMouseButtonReleased(button: number): boolean;
   function getMouseX(): number;
   function getMouseY(): number;
+  function getTouchPositions(): { x: number; y: number }[];
 
   function setTimeout(callback: () => void, delay: number): number;
   function clearTimeout(id: number): void;

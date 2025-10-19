@@ -1,6 +1,7 @@
 import React from "react";
 import { VitadeckReactReconciler } from "./vitadeck-react-reconciler";
-import { renderVitadeckElement, processClicks } from "./raylib-renderer";
+import { renderVitadeckElement } from "./raylib-renderer";
+import { processInput } from "./input";
 import { App } from "./app/App";
 
 function logError(error: unknown) {
@@ -29,7 +30,7 @@ export function updateContainer() {
 export function render() {
   try {
     renderVitadeckElement(root.containerInfo.children);
-    processClicks();
+    processInput();
   } catch (error: unknown) {
     logError(error);
   }

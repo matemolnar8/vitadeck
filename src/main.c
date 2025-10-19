@@ -69,6 +69,11 @@ int main(int argc, char *argv[]) {
 	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "VitaDeck");	
 	SetTargetFPS(60);
 
+	BeginDrawing();
+		ClearBackground(BLACK);
+		DrawText("Loading...", 10, 10, 20, WHITE);
+	EndDrawing();
+
 	if (js_dofile(J, "js/main.js")) {
 		TraceLog(LOG_ERROR, "Could not load main.js.");
 		return 1;
@@ -79,10 +84,16 @@ int main(int argc, char *argv[]) {
 	while (!WindowShouldClose()) {
 		BeginDrawing();
 			line_count = 0;
-			ClearBackground(WHITE);
+			ClearBackground(BLACK);
 			run_timeouts(J);
 			render(J);
 			DrawFPS(SCREEN_WIDTH - 100, 10); // top right corner
+
+			// Debug: draw the touch positions
+			for (int i = 0; i < GetTouchPointCount(); i++) {
+				Vector2 position = GetTouchPosition(i);
+				DrawCircle(position.x, position.y, 10, RED);
+			}
 		EndDrawing();
 	}
 

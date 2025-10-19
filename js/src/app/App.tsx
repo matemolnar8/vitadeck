@@ -4,9 +4,9 @@ import { Button } from "./components/Button";
 
 export const App = () => {
   const [count, setCount] = useState(0);
-  
+
   const handleClick = useCallback(() => {
-    setCount(count => count + 1);
+    setCount((count) => count + 1);
   }, []);
 
   return (
@@ -24,17 +24,6 @@ export const App = () => {
           "Enjoy!",
         ]}
       />
-      <Typewriter
-        x={0}
-        y={30}
-        width={960}
-        height={30}
-        color={Colors.DARKGREEN}
-        messages={[
-          "This is the second typewriter!",
-          "It has different messages.",
-        ]}
-      />
       <Button
         x={20}
         y={80}
@@ -44,8 +33,18 @@ export const App = () => {
         onClick={handleClick}
       />
       <vita-rect x={20} y={120} width={180} height={40} color={Colors.DARKBLUE}>
-        <vita-text fontSize={20} color={Colors.RAYWHITE}>Count: {count}</vita-text>
+        <vita-text fontSize={20} color={Colors.RAYWHITE}>
+          Count: {count}
+        </vita-text>
       </vita-rect>
+      <Button
+        x={20}
+        y={160}
+        width={180}
+        height={40}
+        label={"Click Me 2"}
+        onClick={handleClick}
+      />
     </vita-rect>
   );
 };
