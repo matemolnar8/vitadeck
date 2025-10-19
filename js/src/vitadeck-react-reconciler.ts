@@ -24,6 +24,11 @@ declare global {
         height: number;
         variant?: "fill" | "outline";
         color?: Color;
+        onClick?: (() => void) | undefined;
+        onMouseDown?: () => void;
+        onMouseUp?: () => void;
+        onMouseEnter?: () => void;
+        onMouseLeave?: () => void;
         children?: React.ReactNode | React.ReactNode[];
       }>;
     }

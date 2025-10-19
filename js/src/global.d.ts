@@ -56,6 +56,13 @@ declare global {
     border?: boolean
   ): void;
 
+  // Input bridge (raylib)
+  function isMouseButtonPressed(button: number): boolean;
+  function isMouseButtonDown(button: number): boolean;
+  function isMouseButtonReleased(button: number): boolean;
+  function getMouseX(): number;
+  function getMouseY(): number;
+
   function setTimeout(callback: () => void, delay: number): number;
   function clearTimeout(id: number): void;
   function setInterval(callback: () => void, delay: number): number;

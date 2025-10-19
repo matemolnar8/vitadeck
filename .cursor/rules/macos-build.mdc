@@ -8,7 +8,7 @@ Build the project natively on macOS for development and testing.
 
 - Run configuration + build in one shot: `cmake -S . -B out && cmake --build out --target js`
 - To rebuild after changes: `cmake --build out`
-- To build only JavaScript: `cmake --build out --target js`
+- To build and typecheck TypeScript code: `cmake --build out --target js`
 - The build output directory is `out/`
 - Executable will be `out/vitadeck`
 - JavaScript files are copied to `out/js/`
