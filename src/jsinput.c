@@ -93,10 +93,12 @@ void call_input_event_from_native(js_State *J, const char *id, const char *event
     }
 }
 
-static bool prev_is_mouse_down = false;
-static char *hovered_id = NULL;
-static char *mouse_down_id = NULL;
+
 void process_mouse_input(js_State *J) {
+    static bool prev_is_mouse_down = false;
+    static char *hovered_id = NULL;
+    static char *mouse_down_id = NULL;
+    
     const int x = GetMouseX();
     const int y = GetMouseY();
 
@@ -162,7 +164,81 @@ void process_mouse_input(js_State *J) {
 }
 
 void process_touch_input(js_State *J) {
-    TraceLog(LOG_DEBUG, "process_touch_input TODO");
+    static bool prev_touch_down = false;
+    static char *touch_hovered_id = NULL;
+    static char *touch_down_id = NULL;
+
+    const int count = GetTouchPointCount();
+    const bool is_down = count > 0;
+
+    int x = 0;
+    int y = 0;
+    if (is_down) {
+        Vector2 pos = GetTouchPosition(0);
+        x = (int)pos.x;
+        y = (int)pos.y;
+    }
+
+    const char *top_id = is_down ? top_rect_id_at(x, y) : NULL;
+
+    if (touch_hovered_id && !rect_id_exists(touch_hovered_id)) {
+        free(touch_hovered_id);
+        touch_hovered_id = NULL;
+    }
+
+    // Hover enter/leave while finger is down
+    if (is_down) {
+        bool hover_changed = false;
+        if ((touch_hovered_id == NULL && top_id != NULL) ||
+            (touch_hovered_id != NULL && (top_id == NULL || strcmp(touch_hovered_id, top_id) != 0))) {
+            hover_changed = true;
+        }
+
+        if (hover_changed) {
+            if (touch_hovered_id) {
+                call_input_event_from_native(J, touch_hovered_id, "mouseleave");
+                free(touch_hovered_id);
+                touch_hovered_id = NULL;
+            }
+            if (top_id) {
+                touch_hovered_id = strdup(top_id);
+                call_input_event_from_native(J, touch_hovered_id, "mouseenter");
+            }
+        }
+    }
+
+    const bool just_pressed = is_down && !prev_touch_down;
+    const bool just_released = !is_down && prev_touch_down;
+
+    // Touch down -> mousedown
+    if (just_pressed) {
+        if (top_id) {
+            if (touch_down_id) { free(touch_down_id); touch_down_id = NULL; }
+            touch_down_id = strdup(top_id);
+            call_input_event_from_native(J, touch_down_id, "mousedown");
+        }
+    }
+
+    // Touch up -> mouseup (+ click if released over same target)
+    if (just_released) {
+        if (touch_down_id) {
+            call_input_event_from_native(J, touch_down_id, "mouseup");
+
+            if (touch_hovered_id && strcmp(touch_down_id, touch_hovered_id) == 0) {
+                call_input_event_from_native(J, touch_down_id, "click");
+            }
+
+        }
+
+        if (touch_hovered_id) {
+            call_input_event_from_native(J, touch_hovered_id, "mouseleave");
+        }
+
+        if (touch_down_id) { free(touch_down_id); touch_down_id = NULL; }
+        if (touch_hovered_id) { free(touch_hovered_id); touch_hovered_id = NULL; }
+    }
+
+    prev_touch_down = is_down;
 }
 
 void register_js_input(js_State *J) {
