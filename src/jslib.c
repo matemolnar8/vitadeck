@@ -4,8 +4,6 @@
 
 #define FONT_SIZE 30
 
-extern int line_count;
-
 /*
 	Log helpers wired to raylib TraceLog. Joins all args with spaces using js_tryrepr.
 */

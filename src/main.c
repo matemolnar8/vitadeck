@@ -12,8 +12,6 @@
 #define SCREEN_HEIGHT 544
 #define FONT_SIZE 30
 
-int line_count = 0;
-
 static int render(js_State *J)
 {
 	js_getglobal(J, "vitadeck");
@@ -82,13 +80,13 @@ int main(int argc, char *argv[]) {
 	update_container(J);
 
 	while (!WindowShouldClose()) {
+		process_mouse_input(J);
+		process_touch_input(J);
+		run_timeouts(J);
+
 		BeginDrawing();
-			line_count = 0;
 			ClearBackground(BLACK);
-			run_timeouts(J);
 			render(J);
-			process_mouse_input(J);
-			process_touch_input(J);
 			DrawFPS(SCREEN_WIDTH - 100, 10); // top right corner
 
 			// Debug: draw the touch positions
