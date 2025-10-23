@@ -6,7 +6,6 @@
     "lib": ["es5", "es2015"],
     "noEmit": true,
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
     "strict": true,
     "jsx": "react",
     "isolatedModules": true,

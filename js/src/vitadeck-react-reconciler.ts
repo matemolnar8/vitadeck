@@ -1,4 +1,5 @@
 import Reconciler, { HostConfig } from "react-reconciler";
+import { syncInteractiveRectsFromContainer } from "./input";
 
 const idGenerator = () => {
   return (
@@ -77,10 +78,10 @@ export type TextInstance = {
 // React Reconciler Infrastructure Types
 // =============================================================================
 
-type Container = { children: (Instance | TextInstance)[] };
+export type VitadeckContainer = { children: (Instance | TextInstance)[] };
 type SuspenseInstance = never;
 type HydratableInstance = never;
-type PublicInstance = Instance | TextInstance;
+export type VitadeckPublicInstance = Instance | TextInstance;
 type HostContext = { root: boolean };
 type UpdatePayload = {
   props: string[];
@@ -94,12 +95,12 @@ type NoTimeout = -1;
 type VitadeckHostConfig = HostConfig<
   Type,
   Props,
-  Container,
+  VitadeckContainer,
   Instance,
   TextInstance,
   SuspenseInstance,
   HydratableInstance,
-  PublicInstance,
+  VitadeckPublicInstance,
   HostContext,
   UpdatePayload,
   ChildSet,
@@ -186,6 +187,7 @@ const hostConfig = {
   finalizeContainerChildren: (container, newChildren) => {
     logReconcilerFunction("finalizeContainerChildren", container, newChildren);
     container.children = newChildren.children;
+    syncInteractiveRectsFromContainer(container);
   },
   clearContainer(rootContainerInstance) {
     logReconcilerFunction("clearContainer", rootContainerInstance);

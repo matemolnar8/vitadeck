@@ -4,20 +4,6 @@ import {
   VitaTextInstance,
   VitaRectInstance,
 } from "./vitadeck-react-reconciler";
-import { clearInteractiveRects, registerInteractiveRect } from "./input";
-
-type InteractiveRect = {
-  id: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  onClick?: () => void;
-  onMouseDown?: () => void;
-  onMouseUp?: () => void;
-  onMouseEnter?: () => void;
-  onMouseLeave?: () => void;
-};
 
 type RectContext = {
   x: number;
@@ -56,33 +42,12 @@ function renderVitaRect(child: VitaRectInstance, rectCtx: RectContext) {
     height,
     variant,
     color,
-    onClick,
-    onMouseDown,
-    onMouseUp,
-    onMouseEnter,
-    onMouseLeave,
   } = child.props;
 
   if (variant === "outline") {
     drawRectOutline(rectCtx.x + x, rectCtx.y + y, width, height, color);
   } else {
     drawRect(rectCtx.x + x, rectCtx.y + y, width, height, color);
-  }
-
-  if (onClick || onMouseDown || onMouseUp || onMouseEnter || onMouseLeave) {
-    const rect: InteractiveRect = {
-      id: child.id,
-      x: rectCtx.x + x,
-      y: rectCtx.y + y,
-      width,
-      height,
-    };
-    if (onClick) rect.onClick = onClick;
-    if (onMouseDown) rect.onMouseDown = onMouseDown;
-    if (onMouseUp) rect.onMouseUp = onMouseUp;
-    if (onMouseEnter) rect.onMouseEnter = onMouseEnter;
-    if (onMouseLeave) rect.onMouseLeave = onMouseLeave;
-    registerInteractiveRect(rect);
   }
 
   const childRectCtx: RectContext = {
@@ -107,10 +72,6 @@ export function renderVitadeckElement(
     root: true,
   }
 ) {
-  if (rectCtx.root) {
-    clearInteractiveRects();
-  }
-
   for (const child of children) {
     switch (child.type) {
       case "vita-text":

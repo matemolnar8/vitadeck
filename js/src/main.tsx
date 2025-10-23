@@ -1,8 +1,8 @@
 import React from "react";
 import { VitadeckReactReconciler } from "./vitadeck-react-reconciler";
 import { renderVitadeckElement } from "./raylib-renderer";
-import { processInput } from "./input";
 import { App } from "./app/App";
+import { interactiveRects, onInputEventFromNative } from "./input";
 
 function logError(error: unknown) {
   if (!error) {
@@ -30,11 +30,15 @@ export function updateContainer() {
 export function render() {
   try {
     renderVitadeckElement(root.containerInfo.children);
-    processInput();
   } catch (error: unknown) {
     logError(error);
   }
 }
+
+export const input = {
+  interactiveRects,
+  onInputEventFromNative: onInputEventFromNative,
+};
 
 const root = VitadeckReactReconciler.createContainer(
   { children: [] },

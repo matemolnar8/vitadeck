@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <mujs.h>
 #define STB_DS_IMPLEMENTATION
-#include "stb_ds.h"
+#include "../vendor/stb_ds.h"
 #include "jslib.c"
 #include "jstimeout.c"
 #include "jsdraw.c"
@@ -87,6 +87,8 @@ int main(int argc, char *argv[]) {
 			ClearBackground(BLACK);
 			run_timeouts(J);
 			render(J);
+			process_mouse_input(J);
+			process_touch_input(J);
 			DrawFPS(SCREEN_WIDTH - 100, 10); // top right corner
 
 			// Debug: draw the touch positions

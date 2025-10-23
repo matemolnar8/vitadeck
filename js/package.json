@@ -15,7 +15,7 @@
     "@rollup/plugin-typescript": "^12.1.4",
     "@types/react": "^18.3.10",
     "@types/react-reconciler": "^0.28.8",
-    "@typescript/native-preview": "^7.0.0-dev.20251004.1",
+    "@typescript/native-preview": "^7.0.0-dev.20251023.1",
     "rollup": "^4.52.4",
     "rollup-plugin-corejs": "^1.0.1"
   },
