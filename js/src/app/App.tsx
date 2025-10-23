@@ -1,50 +1,18 @@
-import React, { useCallback, useState } from "react";
-import { Typewriter } from "./components/Typewriter";
-import { Button } from "./components/Button";
+import React from "react";
+import { Counter } from "./components/Counter";
 
 export const App = () => {
-  const [count, setCount] = useState(0);
-
-  const handleClick = useCallback(() => {
-    setCount((count) => count + 1);
-  }, []);
-
   return (
     <vita-rect x={0} y={0} width={960} height={544} color={Colors.BLACK}>
-      <Typewriter
-        x={0}
-        y={0}
-        width={960}
-        height={30}
-        color={Colors.BLUE}
-        messages={[
-          "Hello, VitaDeck!",
-          "React renderer on PS Vita",
-          "Made with raylib",
-          "Enjoy!",
-        ]}
-      />
-      <Button
-        x={20}
-        y={80}
-        width={180}
-        height={40}
-        label={"Click Me"}
-        onClick={handleClick}
-      />
-      <vita-rect x={20} y={120} width={180} height={40} color={Colors.DARKBLUE}>
-        <vita-text fontSize={20} color={Colors.RAYWHITE}>
-          Count: {count}
-        </vita-text>
-      </vita-rect>
-      <Button
-        x={20}
-        y={160}
-        width={180}
-        height={40}
-        label={"Click Me 2"}
-        onClick={handleClick}
-      />
+      {/* First row of 3 counters */}
+      <Counter x={30} y={30} />
+      <Counter x={360} y={30} />
+      <Counter x={690} y={30} />
+
+      {/* Second row of 3 counters */}
+      <Counter x={30} y={270} />
+      <Counter x={360} y={270} />
+      <Counter x={690} y={270} />
     </vita-rect>
   );
 };
