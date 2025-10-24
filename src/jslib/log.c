@@ -1,11 +1,6 @@
-#include <raylib.h>
-#include <stdio.h>
-#include <mujs.h>
-
-#define FONT_SIZE 30
-
 /*
-	Log helpers wired to raylib TraceLog. Joins all args with spaces using js_tryrepr.
+	Log helpers wired to raylib TraceLog. 
+	Joins all args with spaces, converts them to "repr" (string representation).
 */
 static void log_with_level(js_State *J, int level)
 {
@@ -57,16 +52,7 @@ static void logError(js_State *J) { log_with_level(J, LOG_ERROR); }
 static const char *console_js =
 	"var console = { log: logInfo, info: logInfo, debug: logDebug, warn: logWarn, error: logError };";
 
-static const char *stacktrace_js =
-	"Error.prototype.toString = function() {\n"
-	"var s = this.name;\n"
-	"if ('message' in this) s += ': ' + this.message;\n"
-	"if ('stack' in this) s += this.stack;\n"
-	"return s;\n"
-	"};\n";
-
-
-void register_js_lib(js_State *J) {
+void register_js_log(js_State *J) {
     js_newcfunction(J, logInfo, "logInfo", 0);
 	js_setglobal(J, "logInfo");
 
@@ -80,5 +66,4 @@ void register_js_lib(js_State *J) {
 	js_setglobal(J, "logError");
 
     js_dostring(J, console_js);
-	js_dostring(J, stacktrace_js);
 }

@@ -11,9 +11,10 @@ project(vitadeck)
 if(DEFINED ENV{VITASDK})
   message(STATUS "VITA is ON")
   include("${VITASDK}/share/vita.cmake" REQUIRED)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -ffast-math -flto")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -flto")
 else()
   message(STATUS "VITA is OFF")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Og -g -flto")
 endif()
 
 set(VITA_APP_NAME "VitaDeck")
@@ -52,6 +53,7 @@ link_directories(${VITADECK_LIBRARY_DIRS})
 
 add_executable(${PROJECT_NAME}
     src/main.c
+    src/jslib/jslib.c
     vendor/mujs-1.3.7/one.c
 )
 

@@ -13,7 +13,6 @@ static void push_color_object(js_State *J, Color c) {
     js_setproperty(J, -2, "a");
 }
 
-
 static Color parse_color_arg_or_default(js_State *J, int index, Color fallback)
 {
     if (js_isundefined(J, index) || !js_isobject(J, index)) {
@@ -44,7 +43,7 @@ static Color parse_color_arg_or_default(js_State *J, int index, Color fallback)
 /*
     drawRect(x: number, y: number, width: number, height: number, color?: Color)
 */
-void draw_rect(js_State *J) {
+static void draw_rect(js_State *J) {
     const int x = js_tointeger(J, 1);
     const int y = js_tointeger(J, 2);
     const int w = js_tointeger(J, 3);
@@ -60,7 +59,7 @@ void draw_rect(js_State *J) {
 /*
     drawRectOutline(x: number, y: number, width: number, height: number, color?: Color)
 */
-void draw_rect_outline(js_State *J) {
+static void draw_rect_outline(js_State *J) {
     const int x = js_tointeger(J, 1);
     const int y = js_tointeger(J, 2);
     const int w = js_tointeger(J, 3);
@@ -76,7 +75,7 @@ void draw_rect_outline(js_State *J) {
 /*
     drawText(x: number, y: number, fontSize: number, text: string, color?: Color, border?: boolean)
 */
-void draw_text(js_State *J) {
+static void draw_text(js_State *J) {
     const int x = js_tointeger(J, 1);
     const int y = js_tointeger(J, 2);
     const int font_size = js_tointeger(J, 3);

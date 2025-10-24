@@ -2,26 +2,23 @@
 #include <stdio.h>
 #include <mujs.h>
 #define STB_DS_IMPLEMENTATION
-#include "../vendor/stb_ds.h"
-#include "jslib.c"
-#include "jstimeout.c"
-#include "jsdraw.c"
-#include "jsinput.c"
+#include "stb_ds.h"
+#include "jslib/jslib.h"
 
 #define SCREEN_WIDTH 960
 #define SCREEN_HEIGHT 544
 #define FONT_SIZE 30
 
-static int render(js_State *J)
+static int run_function(js_State *J, const char *func_name)
 {
 	js_getglobal(J, "vitadeck");
-	js_getproperty(J, -1, "render");
+	js_getproperty(J, -1, func_name);
 
 	// push the this value
 	js_pushnull(J);
 	
 	if (js_pcall(J, 0)) {
-		TraceLog(LOG_ERROR, "an exception occurred in the javascript function");
+		TraceLog(LOG_ERROR, "%s: an exception occurred in the javascript function", func_name);
 		TraceLog(LOG_ERROR, "%s", js_tostring(J, -1));
 		js_pop(J, 1);
 		return -1;
@@ -32,22 +29,13 @@ static int render(js_State *J)
 	return 0;
 }
 
-int update_container(js_State *J) {
-	js_getglobal(J, "vitadeck");
-	js_getproperty(J, -1, "updateContainer");
+static int render(js_State *J)
+{
+	return run_function(J, "render");
+}
 
-	js_pushnull(J);
-
-	if (js_pcall(J, 0)) {
-		TraceLog(LOG_ERROR, "an exception occurred in the javascript function");
-		TraceLog(LOG_ERROR, "%s", js_tostring(J, -1));
-		js_pop(J, 1);
-		return -1;
-	}
-
-	js_pop(J, 2);
-
-	return 0;
+static int update_container(js_State *J) {
+	return run_function(J, "updateContainer");
 }
 
 int main(int argc, char *argv[]) {
@@ -60,9 +48,6 @@ int main(int argc, char *argv[]) {
 	} 
 	
 	register_js_lib(J);
-	register_js_timeout(J);
-	register_js_draw(J);
-	register_js_input(J);
 
 	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "VitaDeck");	
 	SetTargetFPS(60);
@@ -77,7 +62,9 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	update_container(J);
+	if (update_container(J) > 0) {
+		return 1;
+	}
 
 	while (!WindowShouldClose()) {
 		process_mouse_input(J);
@@ -89,7 +76,6 @@ int main(int argc, char *argv[]) {
 			render(J);
 			DrawFPS(SCREEN_WIDTH - 100, 10); // top right corner
 
-			// Debug: draw the touch positions
 			for (int i = 0; i < GetTouchPointCount(); i++) {
 				Vector2 position = GetTouchPosition(i);
 				DrawCircle(position.x, position.y, 10, RED);

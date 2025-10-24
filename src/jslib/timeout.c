@@ -14,7 +14,7 @@ static unsigned int timeout_id_counter = 0;
 /*
     Get a function reference, keep track of the number of references to the function.
 */
-const char* get_func_ref(js_State *J) {
+static const char* get_func_ref(js_State *J) {
     const char* func_ref = js_ref(J);
     int ref_count = hmget(ref_count_hm, func_ref);
 
@@ -32,7 +32,7 @@ const char* get_func_ref(js_State *J) {
 /*
     Free a function reference, unref if there's no more references to it
 */
-void free_func_ref(js_State *J, const char* func_ref) {
+static void free_func_ref(js_State *J, const char* func_ref) {
     int ref_count = hmget(ref_count_hm, func_ref);
     if(ref_count < 0) {
         TraceLog(LOG_WARNING, "[free_func_ref] Function reference not found: %s", func_ref);
@@ -50,7 +50,7 @@ void free_func_ref(js_State *J, const char* func_ref) {
     TraceLog(LOG_DEBUG, "[free_func_ref] Function reference: %s, ref count decremented to: %d, not unrefing", func_ref, ref_count - 1);
 }
 
-void set_timeout_impl(js_State *J, bool is_interval) {
+static void set_timeout_impl(js_State *J, bool is_interval) {
     if(js_isundefined(J, 1)) {
         TraceLog(LOG_WARNING, "set_timeout: Function is undefined");
         js_dostring(J, "console.error(new Error().stack);");
@@ -104,21 +104,21 @@ void set_timeout_impl(js_State *J, bool is_interval) {
 /*
     setTimeout(func: Function, delay: number): number
 */
-void set_timeout(js_State *J) {
+static void set_timeout(js_State *J) {
     set_timeout_impl(J, false);
 }
 
 /*
     setInterval(func: Function, delay: number): number
 */
-void set_interval(js_State *J) {
+static void set_interval(js_State *J) {
     set_timeout_impl(J, true);
 }
 
 /*
     clearTimeout(id: number): void
 */
-void clear_timeout(js_State *J) {
+static void clear_timeout(js_State *J) {
     const int id = js_tointeger(J, 1);
 
     if(hmgeti(timeout_hm, id) < 0) {
@@ -135,8 +135,9 @@ void clear_timeout(js_State *J) {
     js_pushundefined(J);
 }
 
-static unsigned int tick_count = 0;
 void run_timeouts(js_State *J) {
+    static unsigned int tick_count = 0;
+    
     double current_time = GetTime();
     tick_count++;
 

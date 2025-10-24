@@ -14,7 +14,7 @@ static InteractiveRect *interactive_rects = NULL;
 /**
     syncInteractiveRectsToNative(): void
 */
-void sync_interactive_rects(js_State *J) {
+static void sync_interactive_rects(js_State *J) {
     arrfree(interactive_rects);
 
     js_getglobal(J, "vitadeck");
@@ -77,7 +77,7 @@ static bool rect_id_exists(const char *id)
     return false;
 }
 
-void call_input_event_from_native(js_State *J, const char *id, const char *event) {
+static void call_input_event_from_native(js_State *J, const char *id, const char *event) {
     js_getglobal(J, "vitadeck");
     js_getproperty(J, -1, "input");
     js_getproperty(J, -1, "onInputEventFromNative");
@@ -92,7 +92,6 @@ void call_input_event_from_native(js_State *J, const char *id, const char *event
         js_pop(J, 1);
     }
 }
-
 
 void process_mouse_input(js_State *J) {
     static bool prev_is_mouse_down = false;
