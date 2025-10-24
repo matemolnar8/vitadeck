@@ -44,9 +44,21 @@ static void log_with_level(js_State *J, int level)
 	js_pushundefined(J);
 }
 
+/*
+    logInfo(...args: any[]): void
+*/
 static void logInfo(js_State *J) { log_with_level(J, LOG_INFO); }
+/*
+    logDebug(...args: any[]): void
+*/
 static void logDebug(js_State *J) { log_with_level(J, LOG_DEBUG); }
+/*
+    logWarn(...args: any[]): void
+*/
 static void logWarn(js_State *J) { log_with_level(J, LOG_WARNING); }
+/*
+    logError(...args: any[]): void
+*/
 static void logError(js_State *J) { log_with_level(J, LOG_ERROR); }
 
 static const char *console_js =

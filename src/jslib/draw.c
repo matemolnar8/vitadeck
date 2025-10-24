@@ -41,7 +41,7 @@ static Color parse_color_arg_or_default(js_State *J, int index, Color fallback)
 }
 
 /*
-    drawRect(x: number, y: number, width: number, height: number, color?: Color)
+    drawRect(x: number, y: number, width: number, height: number, color?: Color): void
 */
 static void draw_rect(js_State *J) {
     const int x = js_tointeger(J, 1);
@@ -57,7 +57,7 @@ static void draw_rect(js_State *J) {
 }
 
 /*
-    drawRectOutline(x: number, y: number, width: number, height: number, color?: Color)
+    drawRectOutline(x: number, y: number, width: number, height: number, color?: Color): void
 */
 static void draw_rect_outline(js_State *J) {
     const int x = js_tointeger(J, 1);
@@ -73,7 +73,7 @@ static void draw_rect_outline(js_State *J) {
 }
 
 /*
-    drawText(x: number, y: number, fontSize: number, text: string, color?: Color, border?: boolean)
+    drawText(x: number, y: number, fontSize: number, text: string, color?: Color, border?: boolean): void
 */
 static void draw_text(js_State *J) {
     const int x = js_tointeger(J, 1);
