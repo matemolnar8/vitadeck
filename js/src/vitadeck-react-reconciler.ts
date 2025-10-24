@@ -1,5 +1,6 @@
 import Reconciler, { HostConfig } from "react-reconciler";
 import { syncInteractiveRectsFromContainer } from "./input";
+import { exhaustiveGuard } from "./utils";
 
 const idGenerator = () => {
   return (
@@ -227,7 +228,8 @@ const hostConfig = {
     oldProps: Props,
     newProps: Props,
     _internalInstanceHandle,
-    keepChildren
+    keepChildren,
+    _recyclableInstance
   ) {
     logReconcilerFunction(
       "cloneInstance",
@@ -237,19 +239,27 @@ const hostConfig = {
       oldProps,
       newProps
     );
-    const clonedProps: any = { ...newProps } as any;
-    for (let prop of updatePayload?.props || []) {
-      if (prop !== "children") {
-        // TODO: fix type safety
-        (clonedProps as any)[prop] = (newProps as any)[prop];
-      }
+    const clonedProps: Props = { ...newProps };
+
+    if (type === "vita-text") {
+      return {
+        id: instance.id,
+        type: "vita-text",
+        props: clonedProps as PropsByType["vita-text"],
+        children: keepChildren ? [...instance.children] : [],
+      } as VitaTextInstance;
     }
-    return {
-      id: instance.id,
-      type,
-      props: clonedProps,
-      children: keepChildren ? [...instance.children] : [],
-    } satisfies Instance;
+
+    if(type === "vita-rect") {
+      return {
+        id: instance.id,
+        type: "vita-rect",
+        props: clonedProps as PropsByType["vita-rect"],
+        children: keepChildren ? [...instance.children] : [],
+      } as VitaRectInstance;
+    }
+
+    exhaustiveGuard(type, "Unsupported element type: " + type);
   },
   cloneHiddenInstance(instance, type, props, _internalInstanceHandle) {
     logReconcilerFunction("cloneHiddenInstance", instance, type, props);

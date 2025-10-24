@@ -4,18 +4,16 @@ import { renderVitadeckElement } from "./raylib-renderer";
 import { App } from "./app/App";
 import { interactiveRects, onInputEventFromNative } from "./input";
 
+function toError(e: unknown): Error {
+  if (e instanceof Error) return e;
+  return new Error(typeof e === "string" ? e : String(e));
+}
+
 function logError(error: unknown) {
-  if (!error) {
-    console.error("Error: empty error");
-    return;
-  }
-  console.error(
-    "Error: " + (typeof error === "object")
-      ? error.toString?.() || String(error)
-      : String(error)
-  );
-  if ((error as Error).stack) {
-    console.error((error as Error).stack);
+  const err = toError(error);
+  console.error("Error:", err.message);
+  if (err.stack) {
+    console.error(err.stack);
   }
 }
 

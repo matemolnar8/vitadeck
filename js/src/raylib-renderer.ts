@@ -4,6 +4,7 @@ import {
   VitaTextInstance,
   VitaRectInstance,
 } from "./vitadeck-react-reconciler";
+import { exhaustiveGuard } from "./utils";
 
 type RectContext = {
   x: number;
@@ -80,8 +81,11 @@ export function renderVitadeckElement(
       case "vita-rect":
         renderVitaRect(child as VitaRectInstance, rectCtx);
         break;
+      case "RawText":
+        // Raw text is handled inside vita-text; ignore if encountered at the root.
+        break;
       default:
-        throw "TODO child.type: " + child.type;
+        exhaustiveGuard(child, "Unsupported node type: " + (child as any)?.type);
     }
   }
 }
