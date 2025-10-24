@@ -1,5 +1,4 @@
 import React, { useCallback, useState } from "react";
-import { Button } from "./Button";
 
 type Props = {
   x: number;
@@ -15,7 +14,7 @@ export const Counter = ({ x, y }: Props) => {
 
   return (
     <>
-      <Button
+      <vita-button
         x={x}
         y={y}
         width={180}

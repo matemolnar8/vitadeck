@@ -11,6 +11,16 @@ typedef struct {
 } InteractiveRect;
 static InteractiveRect *interactive_rects = NULL;
 
+// Mouse state (file-scope to share with JS getters)
+static bool prev_is_mouse_down = false;
+static char *hovered_id = NULL;
+static char *mouse_down_id = NULL;
+
+// Touch state (file-scope)
+static bool prev_touch_down = false;
+static char *touch_hovered_id = NULL;
+static char *touch_down_id = NULL;
+
 /**
     syncInteractiveRectsToNative(): void
 */
@@ -94,10 +104,6 @@ static void call_input_event_from_native(js_State *J, const char *id, const char
 }
 
 void process_mouse_input(js_State *J) {
-    static bool prev_is_mouse_down = false;
-    static char *hovered_id = NULL;
-    static char *mouse_down_id = NULL;
-    
     const int x = GetMouseX();
     const int y = GetMouseY();
 
@@ -163,10 +169,6 @@ void process_mouse_input(js_State *J) {
 }
 
 void process_touch_input(js_State *J) {
-    static bool prev_touch_down = false;
-    static char *touch_hovered_id = NULL;
-    static char *touch_down_id = NULL;
-
     const int count = GetTouchPointCount();
     const bool is_down = count > 0;
 
@@ -240,7 +242,29 @@ void process_touch_input(js_State *J) {
     prev_touch_down = is_down;
 }
 
+static void js_get_interactive_state(js_State *J)
+{
+    const char *id = js_tostring(J, 1);
+    js_newobject(J);
+    bool is_hovered = false;
+    if (id) {
+        if (hovered_id && strcmp(hovered_id, id) == 0) is_hovered = true;
+        if (touch_hovered_id && strcmp(touch_hovered_id, id) == 0) is_hovered = true;
+    }
+    js_pushboolean(J, is_hovered);
+    js_setproperty(J, -2, "hovered");
+    bool is_pressed = false;
+    if (id) {
+        if (mouse_down_id && strcmp(mouse_down_id, id) == 0) is_pressed = true;
+        if (touch_down_id && strcmp(touch_down_id, id) == 0) is_pressed = true;
+    }
+    js_pushboolean(J, is_pressed);
+    js_setproperty(J, -2, "pressed");
+}
+
 void register_js_input(js_State *J) {
     js_newcfunction(J, sync_interactive_rects, "syncInteractiveRectsToNative", 0);
     js_setglobal(J, "syncInteractiveRectsToNative");
+    js_newcfunction(J, js_get_interactive_state, "getInteractiveState", 1);
+    js_setglobal(J, "getInteractiveState");
 }

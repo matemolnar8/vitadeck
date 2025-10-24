@@ -57,6 +57,7 @@ declare global {
   ): void;
 
   function syncInteractiveRectsToNative(): void;
+  function getInteractiveState(id: string): { hovered: boolean; pressed: boolean };
 
   function setTimeout(callback: () => void, delay: number): number;
   function clearTimeout(id: number): void;

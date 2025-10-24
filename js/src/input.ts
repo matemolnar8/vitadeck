@@ -30,7 +30,7 @@ export function syncInteractiveRectsFromContainer(
   ) => {
     for (const node of nodes) {
       if (!node) continue;
-      if (node.type === "vita-rect") {
+      if (node.type === "vita-rect" || node.type === "vita-button") {
         const {
           x,
           y,

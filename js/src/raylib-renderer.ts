@@ -3,6 +3,7 @@ import {
   TextInstance,
   VitaTextInstance,
   VitaRectInstance,
+  VitaButtonInstance,
 } from "./vitadeck-react-reconciler";
 import { exhaustiveGuard } from "./utils";
 
@@ -62,6 +63,36 @@ function renderVitaRect(child: VitaRectInstance, rectCtx: RectContext) {
   renderVitadeckElement(child.children, childRectCtx);
 }
 
+function mixColor(color: Color, mixWith: Color, amount: number): Color {
+  return {
+    r: Math.round(color.r + (mixWith.r - color.r) * amount),
+    g: Math.round(color.g + (mixWith.g - color.g) * amount),
+    b: Math.round(color.b + (mixWith.b - color.b) * amount),
+    a: color.a,
+  };
+}
+
+function renderVitaButton(child: VitaButtonInstance, rectCtx: RectContext) {
+  const { x, y, width, height, color = Colors.DARKBLUE, label } = child.props;
+
+  const state = getInteractiveState(child.id);
+  const hoveredColor = mixColor(color, Colors.WHITE, 0.4);
+  const pressedColor = mixColor(color, Colors.BLACK, 0.5);
+  const visual = state.pressed ? pressedColor : state.hovered ? hoveredColor : color;
+
+  drawRect(rectCtx.x + x, rectCtx.y + y, width, height, visual);
+  const padding = 8;
+  const fontSize = 20;
+  drawText(
+    rectCtx.x + x + padding,
+    rectCtx.y + y + padding,
+    fontSize,
+    label,
+    Colors.RAYWHITE,
+    false
+  );
+}
+
 export function renderVitadeckElement(
   children: (Instance | TextInstance)[],
   rectCtx: RectContext = {
@@ -80,6 +111,9 @@ export function renderVitadeckElement(
         break;
       case "vita-rect":
         renderVitaRect(child as VitaRectInstance, rectCtx);
+        break;
+      case "vita-button":
+        renderVitaButton(child as VitaButtonInstance, rectCtx);
         break;
       case "RawText":
         // Raw text is handled inside vita-text; ignore if encountered at the root.

@@ -42,6 +42,19 @@ declare global {
         onMouseLeave?: () => void;
         children?: React.ReactNode | React.ReactNode[];
       }>;
+      "vita-button": JSXPropsWithKey<{
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        color?: Color;
+        label: string;
+        onClick?: () => void;
+        onMouseDown?: () => void;
+        onMouseUp?: () => void;
+        onMouseEnter?: () => void;
+        onMouseLeave?: () => void;
+      }>;
     }
   }
 }
@@ -49,7 +62,7 @@ declare global {
 // Element props and type mappings
 type VitadeckElementsProps = Pick<
   JSX.IntrinsicElements,
-  "vita-text" | "vita-rect"
+  "vita-text" | "vita-rect" | "vita-button"
 >;
 type Type = keyof VitadeckElementsProps;
 type Props = VitadeckElementsProps[keyof VitadeckElementsProps] & {
@@ -69,6 +82,7 @@ export type Instance = {
 
 export type VitaTextInstance = Extract<Instance, { type: "vita-text" }>;
 export type VitaRectInstance = Extract<Instance, { type: "vita-rect" }>;
+export type VitaButtonInstance = Extract<Instance, { type: "vita-button" }>;
 
 export type TextInstance = {
   type: "RawText";
@@ -257,6 +271,15 @@ const hostConfig = {
         props: clonedProps as PropsByType["vita-rect"],
         children: keepChildren ? [...instance.children] : [],
       } as VitaRectInstance;
+    }
+
+    if (type === "vita-button") {
+      return {
+        id: instance.id,
+        type: "vita-button",
+        props: clonedProps as PropsByType["vita-button"],
+        children: [],
+      } as VitaButtonInstance;
     }
 
     exhaustiveGuard(type, "Unsupported element type: " + type);
