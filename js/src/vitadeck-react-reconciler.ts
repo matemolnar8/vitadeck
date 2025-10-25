@@ -94,9 +94,9 @@ export type TextInstance = {
 // =============================================================================
 
 export type VitadeckContainer = { children: (Instance | TextInstance)[] };
+export type VitadeckPublicInstance = Instance | TextInstance;
 type SuspenseInstance = never;
 type HydratableInstance = never;
-export type VitadeckPublicInstance = Instance | TextInstance;
 type HostContext = { root: boolean };
 type UpdatePayload = {
   props: string[];
@@ -130,7 +130,7 @@ type VitadeckHostConfig = HostConfig<
 
 const TRACE = false;
 const logReconcilerFunction = (name: string, ...args: any[]) => {
-  if (TRACE) console.debug(`[Reconciler]: ${name}`);
+  if (TRACE) console.log(`[Reconciler]: ${name}`, ...args);
 };
 
 // React reconciler host configuration
@@ -142,34 +142,33 @@ const hostConfig = {
   supportsHydration: false,
   supportsMicrotasks: false,
   getRootHostContext: (...args) => {
-    logReconcilerFunction("getRootHostContext", args);
+    logReconcilerFunction("getRootHostContext");
     return { root: true };
   },
   prepareForCommit: (...args) => {
-    logReconcilerFunction("prepareForCommit", args);
+    logReconcilerFunction("prepareForCommit");
     return null;
   },
   resetAfterCommit: (...args) => {
-    logReconcilerFunction("resetAfterCommit", args);
+    logReconcilerFunction("resetAfterCommit");
   },
   getChildHostContext: (...args) => {
-    logReconcilerFunction("getChildHostContext", args);
+    logReconcilerFunction("getChildHostContext");
     return { root: false };
   },
-  shouldSetTextContent(type, props) {
-    logReconcilerFunction("shouldSetTextContent", type, props);
-    // TODO: Maybe set to true for some elements like button
+  shouldSetTextContent(type) {
+    logReconcilerFunction("shouldSetTextContent", type);
     return false;
   },
   createTextInstance(text, _rootContainerInstance, _hostContext) {
-    logReconcilerFunction("createTextInstance");
+    logReconcilerFunction("createTextInstance", text);
     return {
       type: "RawText",
       text,
     };
   },
   createInstance(type, props: Props, _rootContainerInstance, _hostContext) {
-    logReconcilerFunction("createInstance");
+    logReconcilerFunction("createInstance", type);
     const element = {
       id: idGenerator(),
       type,
@@ -183,44 +182,40 @@ const hostConfig = {
     logReconcilerFunction("appendInitialChild");
     parentInstance.children.push(child);
   },
-  finalizeInitialChildren(...args) {
-    logReconcilerFunction("finalizeInitialChildren", args);
+  finalizeInitialChildren(_instance, type) {
+    logReconcilerFunction("finalizeInitialChildren", type);
     return true;
   },
-  createContainerChildSet: (...args) => {
-    logReconcilerFunction("createContainerChildSet", args);
+  createContainerChildSet: () => {
+    logReconcilerFunction("createContainerChildSet");
     return { children: [] };
   },
   appendChildToContainerChildSet: (containerChildSet, child) => {
-    logReconcilerFunction(
-      "appendChildToContainerChildSet",
-      containerChildSet,
-      child
-    );
+    logReconcilerFunction("appendChildToContainerChildSet");
     containerChildSet.children.push(child);
   },
   finalizeContainerChildren: (container, newChildren) => {
-    logReconcilerFunction("finalizeContainerChildren", container, newChildren);
+    logReconcilerFunction("finalizeContainerChildren");
     container.children = newChildren.children;
     syncInteractiveRectsFromContainer(container);
   },
-  clearContainer(rootContainerInstance) {
-    logReconcilerFunction("clearContainer", rootContainerInstance);
-    rootContainerInstance.children = [];
+  clearContainer(container) {
+    logReconcilerFunction("clearContainer");
+    container.children = [];
   },
   replaceContainerChildren(container, newChildren) {
-    logReconcilerFunction("replaceContainerChildren", container, newChildren);
+    logReconcilerFunction("replaceContainerChildren");
     container.children = newChildren.children;
   },
   prepareUpdate(
     _instance,
-    _type,
+    type,
     oldProps,
     newProps,
     _rootContainerInstance,
     _hostContext
   ) {
-    logReconcilerFunction("prepareUpdate");
+    logReconcilerFunction("prepareUpdate", type);
     const changes = {
       props: [] as string[],
     };
@@ -237,9 +232,9 @@ const hostConfig = {
   },
   cloneInstance(
     instance,
-    updatePayload,
+    _updatePayload,
     type,
-    oldProps: Props,
+    _oldProps: Props,
     newProps: Props,
     _internalInstanceHandle,
     keepChildren,
@@ -247,11 +242,7 @@ const hostConfig = {
   ) {
     logReconcilerFunction(
       "cloneInstance",
-      instance,
-      updatePayload,
       type,
-      oldProps,
-      newProps
     );
     const clonedProps: Props = { ...newProps };
 
@@ -285,7 +276,7 @@ const hostConfig = {
     exhaustiveGuard(type, "Unsupported element type: " + type);
   },
   cloneHiddenInstance(instance, type, props, _internalInstanceHandle) {
-    logReconcilerFunction("cloneHiddenInstance", instance, type, props);
+    logReconcilerFunction("cloneHiddenInstance", type);
     return {
       id: instance.id,
       type,
@@ -293,18 +284,18 @@ const hostConfig = {
       children: [],
     } as Instance;
   },
-  cloneHiddenTextInstance(instance, text, _internalInstanceHandle) {
-    logReconcilerFunction("cloneHiddenTextInstance", instance, text);
+  cloneHiddenTextInstance(_instance, text, _internalInstanceHandle) {
+    logReconcilerFunction("cloneHiddenTextInstance", text);
     return {
       type: "RawText",
       text: text,
     } as TextInstance;
   },
-  commitMount(instance, type, newProps) {
-    logReconcilerFunction("commitMount", instance, type, newProps);
+  commitMount(_instance, type) {
+    logReconcilerFunction("commitMount", type);
   },
-  detachDeletedInstance(instance) {
-    logReconcilerFunction("detachDeletedInstance", instance);
+  detachDeletedInstance() {
+    logReconcilerFunction("detachDeletedInstance");
   },
 } satisfies Partial<VitadeckHostConfig>;
 

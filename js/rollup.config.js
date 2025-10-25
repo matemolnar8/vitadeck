@@ -5,12 +5,7 @@ import commonjs from "@rollup/plugin-commonjs";
 import replace from "@rollup/plugin-replace";
 import babel from "@rollup/plugin-babel";
 import { corejsPlugin } from "rollup-plugin-corejs";
-
-/*
-
-TypeScript ES2015 -> Babel Es
-
-*/
+import path from "path";
 
 export default defineConfig({
   input: {
@@ -37,6 +32,33 @@ export default defineConfig({
           "babel-plugin-react-compiler",
           {
             target: "18",
+            logger: {
+              logEvent: (absoluteFilePath, event) => {
+                const relativePath = path.relative(
+                  process.cwd(),
+                  absoluteFilePath
+                );
+                if (event.kind === "CompileSuccess") {
+                  console.log(`[React Compiler] ✅ ${relativePath}`);
+                } else if (event.kind === "CompileError") {
+                  const { detail } = event;
+                  const { reason, category, description } =
+                    detail.options || detail;
+                  console.error(
+                    `[React Compiler] ❌ ${relativePath} | 🚫 (${category}) ${reason}`
+                  );
+                  if (description) {
+                    console.error(`  📝 ${description}`);
+                  }
+                  if (detail.options?.details?.[0]) {
+                    const firstError = detail.options.details[0];
+                    console.error(
+                      `  🔍 ${relativePath}:${firstError.loc.start.line}: ${firstError.message}`
+                    );
+                  }
+                }
+              },
+            },
           },
         ],
       ],
