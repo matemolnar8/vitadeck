@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "module": "esnext",
-    "target": "es5",
+    "target": "es2015",
     "types": [],
     "lib": ["es5", "es2015"],
     "noEmit": true,

@@ -10,18 +10,22 @@
     "tsc": "tsgo"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.28.5",
     "@rollup/plugin-alias": "^5.1.1",
+    "@rollup/plugin-babel": "^6.1.0",
+    "@rollup/plugin-commonjs": "^28.0.6",
     "@rollup/plugin-node-resolve": "^16.0.2",
+    "@rollup/plugin-replace": "^6.0.2",
     "@rollup/plugin-typescript": "^12.1.4",
     "@types/react": "^18.3.10",
     "@types/react-reconciler": "^0.28.8",
     "@typescript/native-preview": "^7.0.0-dev.20251023.1",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "react-compiler-runtime": "^1.0.0",
     "rollup": "^4.52.4",
     "rollup-plugin-corejs": "^1.0.1"
   },
   "dependencies": {
-    "@rollup/plugin-commonjs": "^28.0.6",
-    "@rollup/plugin-replace": "^6.0.2",
     "core-js": "^3.45.1",
     "react": "^18.3.1",
     "react-reconciler": "^0.29.2",
