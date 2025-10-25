@@ -1,31 +1,36 @@
-import React, { useState, useEffect } from "react";
-import { Counter } from "./components/Counter";
+import React, { useState } from "react";
+import { Hello } from "./pages/Hello";
+import { Counters } from "./pages/Counters";
+import { Timers } from "./pages/Timers";
+import { GamePong } from "./pages/GamePong";
+
+type Page = "hello" | "counters" | "timers" | "game";
 
 export const App = () => {
-  // Cause lag on PSVita
-  // const [_, setRender] = useState(0);
-  
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     setRender((render) => {
-  //       console.log(`render: ${render}`);
-  //       return render + 1;
-  //     });
-  //   }, 1000);
-  //   return () => clearInterval(interval);
-  // }, []);
+  const [page, setPage] = useState<Page>("hello");
+
+  const showHello = () => setPage("hello");
+  const showCounters = () => setPage("counters");
+  const showTimers = () => setPage("timers");
+  const showGame = () => setPage("game");
 
   return (
     <vita-rect x={0} y={0} width={960} height={544} color={Colors.BLACK}>
-      {/* First row of 3 counters */}
-      <Counter x={30} y={30} />
-      <Counter x={360} y={30} />
-      <Counter x={690} y={30} />
+      {/* Top navigation bar */}
+      <vita-rect x={0} y={0} width={960} height={60} color={Colors.DARKBLUE}>
+        <vita-button x={20} y={10} width={200} height={40} label={"Hello"} onClick={showHello} />
+        <vita-button x={240} y={10} width={200} height={40} label={"Counters"} onClick={showCounters} />
+        <vita-button x={460} y={10} width={200} height={40} label={"Timers"} onClick={showTimers} />
+        <vita-button x={680} y={10} width={200} height={40} label={"Pong"} onClick={showGame} />
+      </vita-rect>
 
-      {/* Second row of 3 counters */}
-      <Counter x={30} y={270} />
-      <Counter x={360} y={270} />
-      <Counter x={690} y={270} />
+      {/* Content area */}
+      <vita-rect x={0} y={60} width={960} height={484} color={Colors.BLACK}>
+        {page === "hello" && <Hello />}
+        {page === "counters" && <Counters />}
+        {page === "timers" && <Timers />}
+        {page === "game" && <GamePong />}
+      </vita-rect>
     </vita-rect>
   );
 };
