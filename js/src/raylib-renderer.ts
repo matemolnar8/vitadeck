@@ -1,11 +1,11 @@
-import {
+import { exhaustiveGuard } from "./utils";
+import type {
   Instance,
   TextInstance,
-  VitaTextInstance,
-  VitaRectInstance,
   VitaButtonInstance,
+  VitaRectInstance,
+  VitaTextInstance,
 } from "./vitadeck-react-reconciler";
-import { exhaustiveGuard } from "./utils";
 
 type RectContext = {
   x: number;
@@ -31,20 +31,13 @@ function renderVitaText(child: VitaTextInstance, rectCtx: RectContext) {
     fontSize,
     text,
     child.props.color,
-    child.props.border
+    child.props.border,
   );
   rectCtx.textIndex++;
 }
 
 function renderVitaRect(child: VitaRectInstance, rectCtx: RectContext) {
-  const {
-    x,
-    y,
-    width,
-    height,
-    variant,
-    color,
-  } = child.props;
+  const { x, y, width, height, variant, color } = child.props;
 
   if (variant === "outline") {
     drawRectOutline(rectCtx.x + x, rectCtx.y + y, width, height, color);
@@ -83,14 +76,7 @@ function renderVitaButton(child: VitaButtonInstance, rectCtx: RectContext) {
   drawRect(rectCtx.x + x, rectCtx.y + y, width, height, visual);
   const padding = 8;
   const fontSize = 20;
-  drawText(
-    rectCtx.x + x + padding,
-    rectCtx.y + y + padding,
-    fontSize,
-    label,
-    Colors.RAYWHITE,
-    false
-  );
+  drawText(rectCtx.x + x + padding, rectCtx.y + y + padding, fontSize, label, Colors.RAYWHITE, false);
 }
 
 export function renderVitadeckElement(
@@ -102,7 +88,7 @@ export function renderVitadeckElement(
     height: 544,
     textIndex: 0,
     root: true,
-  }
+  },
 ) {
   for (const child of children) {
     switch (child.type) {
@@ -119,7 +105,7 @@ export function renderVitadeckElement(
         // Raw text is handled inside vita-text; ignore if encountered at the root.
         break;
       default:
-        exhaustiveGuard(child, "Unsupported node type: " + (child as any)?.type);
+        exhaustiveGuard(child, `Unsupported node type: ${(child as unknown as Instance)?.type}`);
     }
   }
 }

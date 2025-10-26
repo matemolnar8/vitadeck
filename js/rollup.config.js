@@ -1,11 +1,11 @@
-import { defineConfig } from "rollup";
-import typescript from "@rollup/plugin-typescript";
-import nodeResolve from "@rollup/plugin-node-resolve";
-import commonjs from "@rollup/plugin-commonjs";
-import replace from "@rollup/plugin-replace";
+import path from "node:path";
 import babel from "@rollup/plugin-babel";
+import commonjs from "@rollup/plugin-commonjs";
+import nodeResolve from "@rollup/plugin-node-resolve";
+import replace from "@rollup/plugin-replace";
+import typescript from "@rollup/plugin-typescript";
+import { defineConfig } from "rollup";
 import { corejsPlugin } from "rollup-plugin-corejs";
-import path from "path";
 
 export default defineConfig({
   input: {
@@ -34,27 +34,19 @@ export default defineConfig({
             target: "18",
             logger: {
               logEvent: (absoluteFilePath, event) => {
-                const relativePath = path.relative(
-                  process.cwd(),
-                  absoluteFilePath
-                );
+                const relativePath = path.relative(process.cwd(), absoluteFilePath);
                 if (event.kind === "CompileSuccess") {
                   console.log(`[React Compiler] ✅ ${relativePath}`);
                 } else if (event.kind === "CompileError") {
                   const { detail } = event;
-                  const { reason, category, description } =
-                    detail.options || detail;
-                  console.error(
-                    `[React Compiler] ❌ ${relativePath} | 🚫 (${category}) ${reason}`
-                  );
+                  const { reason, category, description } = detail.options || detail;
+                  console.error(`[React Compiler] ❌ ${relativePath} | 🚫 (${category}) ${reason}`);
                   if (description) {
                     console.error(`  📝 ${description}`);
                   }
                   if (detail.options?.details?.[0]) {
                     const firstError = detail.options.details[0];
-                    console.error(
-                      `  🔍 ${relativePath}:${firstError.loc.start.line}: ${firstError.message}`
-                    );
+                    console.error(`  🔍 ${relativePath}:${firstError.loc.start.line}: ${firstError.message}`);
                   }
                 }
               },

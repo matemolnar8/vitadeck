@@ -1,4 +1,4 @@
-import Reconciler, { HostConfig } from "react-reconciler";
+import Reconciler, { type HostConfig } from "react-reconciler";
 import { syncInteractiveRectsFromContainer } from "./input";
 import { exhaustiveGuard } from "./utils";
 
@@ -60,10 +60,7 @@ declare global {
 }
 
 // Element props and type mappings
-type VitadeckElementsProps = Pick<
-  JSX.IntrinsicElements,
-  "vita-text" | "vita-rect" | "vita-button"
->;
+type VitadeckElementsProps = Pick<JSX.IntrinsicElements, "vita-text" | "vita-rect" | "vita-button">;
 type Type = keyof VitadeckElementsProps;
 type Props = VitadeckElementsProps[keyof VitadeckElementsProps] & {
   key?: string;
@@ -129,7 +126,7 @@ type VitadeckHostConfig = HostConfig<
 // =============================================================================
 
 const TRACE = false;
-const logReconcilerFunction = (name: string, ...args: any[]) => {
+const logReconcilerFunction = (name: string, ...args: unknown[]) => {
   if (TRACE) console.log(`[Reconciler]: ${name}`, ...args);
 };
 
@@ -141,18 +138,18 @@ const hostConfig = {
   supportsPersistence: true,
   supportsHydration: false,
   supportsMicrotasks: false,
-  getRootHostContext: (...args) => {
+  getRootHostContext: (..._args) => {
     logReconcilerFunction("getRootHostContext");
     return { root: true };
   },
-  prepareForCommit: (...args) => {
+  prepareForCommit: (..._args) => {
     logReconcilerFunction("prepareForCommit");
     return null;
   },
-  resetAfterCommit: (...args) => {
+  resetAfterCommit: (..._args) => {
     logReconcilerFunction("resetAfterCommit");
   },
-  getChildHostContext: (...args) => {
+  getChildHostContext: (..._args) => {
     logReconcilerFunction("getChildHostContext");
     return { root: false };
   },
@@ -207,24 +204,14 @@ const hostConfig = {
     logReconcilerFunction("replaceContainerChildren");
     container.children = newChildren.children;
   },
-  prepareUpdate(
-    _instance,
-    type,
-    oldProps,
-    newProps,
-    _rootContainerInstance,
-    _hostContext
-  ) {
+  prepareUpdate(_instance, type, oldProps, newProps, _rootContainerInstance, _hostContext) {
     logReconcilerFunction("prepareUpdate", type);
     const changes = {
       props: [] as string[],
     };
     const keys = Object.keys({ ...oldProps, ...newProps });
-    for (let key of keys) {
-      if (
-        (oldProps as Record<string, unknown>)[key] !==
-        (newProps as Record<string, unknown>)[key]
-      ) {
+    for (const key of keys) {
+      if ((oldProps as Record<string, unknown>)[key] !== (newProps as Record<string, unknown>)[key]) {
         changes.props.push(key);
       }
     }
@@ -238,12 +225,9 @@ const hostConfig = {
     newProps: Props,
     _internalInstanceHandle,
     keepChildren,
-    _recyclableInstance
+    _recyclableInstance,
   ) {
-    logReconcilerFunction(
-      "cloneInstance",
-      type,
-    );
+    logReconcilerFunction("cloneInstance", type);
     const clonedProps: Props = { ...newProps };
 
     if (type === "vita-text") {
@@ -255,7 +239,7 @@ const hostConfig = {
       } as VitaTextInstance;
     }
 
-    if(type === "vita-rect") {
+    if (type === "vita-rect") {
       return {
         id: instance.id,
         type: "vita-rect",
@@ -273,7 +257,7 @@ const hostConfig = {
       } as VitaButtonInstance;
     }
 
-    exhaustiveGuard(type, "Unsupported element type: " + type);
+    exhaustiveGuard(type, `Unsupported element type: ${type}`);
   },
   cloneHiddenInstance(instance, type, props, _internalInstanceHandle) {
     logReconcilerFunction("cloneHiddenInstance", type);
@@ -299,6 +283,4 @@ const hostConfig = {
   },
 } satisfies Partial<VitadeckHostConfig>;
 
-export const VitadeckReactReconciler = Reconciler(
-  hostConfig as unknown as VitadeckHostConfig
-);
+export const VitadeckReactReconciler = Reconciler(hostConfig as unknown as VitadeckHostConfig);

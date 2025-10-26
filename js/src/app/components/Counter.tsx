@@ -14,14 +14,7 @@ export const Counter = ({ x, y }: Props) => {
 
   return (
     <>
-      <vita-button
-        x={x}
-        y={y}
-        width={180}
-        height={40}
-        label={"Increment"}
-        onClick={handleClick}
-      />
+      <vita-button x={x} y={y} width={180} height={40} label={"Increment"} onClick={handleClick} />
       <vita-rect x={x} y={y + 50} width={180} height={40} color={Colors.DARKBLUE}>
         <vita-text fontSize={24} color={Colors.RAYWHITE}>
           Count: {count}

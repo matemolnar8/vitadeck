@@ -33,31 +33,15 @@ declare global {
 
   var Colors: { [K in ColorName]: Color };
 
-  function drawRect(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    color?: Color
-  ): void;
-  function drawRectOutline(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    color?: Color
-  ): void;
-  function drawText(
-    x: number,
-    y: number,
-    fontSize: number,
-    text: string,
-    color?: Color,
-    border?: boolean
-  ): void;
+  function drawRect(x: number, y: number, width: number, height: number, color?: Color): void;
+  function drawRectOutline(x: number, y: number, width: number, height: number, color?: Color): void;
+  function drawText(x: number, y: number, fontSize: number, text: string, color?: Color, border?: boolean): void;
 
   function syncInteractiveRectsToNative(): void;
-  function getInteractiveState(id: string): { hovered: boolean; pressed: boolean };
+  function getInteractiveState(id: string): {
+    hovered: boolean;
+    pressed: boolean;
+  };
 
   function setTimeout(callback: () => void, delay: number): number;
   function clearTimeout(id: number): void;
@@ -65,10 +49,10 @@ declare global {
   function clearInterval(id: number): void;
 
   var console: {
-    log: (...args: any[]) => void;
-    info: (...args: any[]) => void;
-    debug: (...args: any[]) => void;
-    warn: (...args: any[]) => void;
-    error: (...args: any[]) => void;
+    log: (...args: unknown[]) => void;
+    info: (...args: unknown[]) => void;
+    debug: (...args: unknown[]) => void;
+    warn: (...args: unknown[]) => void;
+    error: (...args: unknown[]) => void;
   };
 }

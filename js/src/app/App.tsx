@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { Hello } from "./pages/Hello";
 import { Counters } from "./pages/Counters";
-import { Timers } from "./pages/Timers";
 import { GamePong } from "./pages/GamePong";
+import { Hello } from "./pages/Hello";
+import { Timers } from "./pages/Timers";
 
 type Page = "hello" | "counters" | "timers" | "game";
 

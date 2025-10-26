@@ -1,8 +1,8 @@
 import React from "react";
-import { VitadeckReactReconciler } from "./vitadeck-react-reconciler";
-import { renderVitadeckElement } from "./raylib-renderer";
 import { App } from "./app/App";
 import { interactiveRects, onInputEventFromNative } from "./input";
+import { renderVitadeckElement } from "./raylib-renderer";
+import { VitadeckReactReconciler } from "./vitadeck-react-reconciler";
 
 function toError(e: unknown): Error {
   if (e instanceof Error) return e;
@@ -48,7 +48,7 @@ const root = VitadeckReactReconciler.createContainer(
   (error: unknown) => {
     logError(error);
   },
-  null
+  null,
 );
 
 console.debug("main.tsx loaded");

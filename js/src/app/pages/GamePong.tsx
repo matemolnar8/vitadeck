@@ -36,25 +36,16 @@ export const GamePong = () => {
   useEffect(() => {
     const id = setInterval(() => {
       // Input → player paddle
-      if (pressedRef.current.left)
-        playerXRef.current = Math.max(0, playerXRef.current - paddle.speed);
+      if (pressedRef.current.left) playerXRef.current = Math.max(0, playerXRef.current - paddle.speed);
       if (pressedRef.current.right)
-        playerXRef.current = Math.min(
-          playfield.w - paddle.w,
-          playerXRef.current + paddle.speed
-        );
+        playerXRef.current = Math.min(playfield.w - paddle.w, playerXRef.current + paddle.speed);
 
       // Simple AI follows ball with clamp
       const aiTarget = ballPosRef.current.x - paddle.w / 2;
       const aiSpeed = 8;
-      if (aiXRef.current + 2 < aiTarget)
-        aiXRef.current = Math.min(aiTarget, aiXRef.current + aiSpeed);
-      else if (aiXRef.current - 2 > aiTarget)
-        aiXRef.current = Math.max(aiTarget, aiXRef.current - aiSpeed);
-      aiXRef.current = Math.max(
-        0,
-        Math.min(playfield.w - paddle.w, aiXRef.current)
-      );
+      if (aiXRef.current + 2 < aiTarget) aiXRef.current = Math.min(aiTarget, aiXRef.current + aiSpeed);
+      else if (aiXRef.current - 2 > aiTarget) aiXRef.current = Math.max(aiTarget, aiXRef.current - aiSpeed);
+      aiXRef.current = Math.max(0, Math.min(playfield.w - paddle.w, aiXRef.current));
 
       // Move ball
       const next: Vec2 = {
@@ -117,7 +108,7 @@ export const GamePong = () => {
       setScore(scoreRef.current);
     }, 33);
     return () => clearInterval(id);
-  }, []);
+  }, [resetBall]);
 
   const onLeftDown = useCallback(() => {
     pressedRef.current.left = true;
@@ -138,21 +129,9 @@ export const GamePong = () => {
   return (
     <>
       {/* Playfield */}
-      <vita-rect
-        x={playfield.x}
-        y={playfield.y}
-        width={playfield.w}
-        height={playfield.h}
-        color={Colors.DARKGRAY}
-      >
+      <vita-rect x={playfield.x} y={playfield.y} width={playfield.w} height={playfield.h} color={Colors.DARKGRAY}>
         {/* Vertical center line dividing left/right sides */}
-        <vita-rect
-          x={0}
-          y={playfield.h / 2 - 1}
-          width={playfield.w}
-          height={2}
-          color={Colors.GRAY}
-        />
+        <vita-rect x={0} y={playfield.h / 2 - 1} width={playfield.w} height={2} color={Colors.GRAY} />
 
         {/* Scores */}
         <vita-text fontSize={24} color={Colors.RAYWHITE}>
@@ -160,22 +139,10 @@ export const GamePong = () => {
         </vita-text>
 
         {/* AI Paddle */}
-        <vita-rect
-          x={aiX}
-          y={aiY}
-          width={paddle.w}
-          height={paddle.h}
-          color={Colors.BLUE}
-        />
+        <vita-rect x={aiX} y={aiY} width={paddle.w} height={paddle.h} color={Colors.BLUE} />
 
         {/* Player Paddle */}
-        <vita-rect
-          x={playerX}
-          y={playerY}
-          width={paddle.w}
-          height={paddle.h}
-          color={Colors.GREEN}
-        />
+        <vita-rect x={playerX} y={playerY} width={paddle.w} height={paddle.h} color={Colors.GREEN} />
 
         {/* Ball */}
         <vita-rect
