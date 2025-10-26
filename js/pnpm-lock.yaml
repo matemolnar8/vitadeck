@@ -14,6 +14,9 @@ importers:
       react:
         specifier: ^18.3.1
         version: 18.3.1
+      react-compiler-runtime:
+        specifier: ^1.0.0
+        version: 1.0.0(react@18.3.1)
       react-reconciler:
         specifier: ^0.29.2
         version: 0.29.2(react@18.3.1)
@@ -57,9 +60,6 @@ importers:
       babel-plugin-react-compiler:
         specifier: ^1.0.0
         version: 1.0.0
-      react-compiler-runtime:
-        specifier: ^1.0.0
-        version: 1.0.0(react@18.3.1)
       rollup:
         specifier: ^4.52.4
         version: 4.52.4
