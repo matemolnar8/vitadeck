@@ -1,0 +1,20 @@
+---
+globs: js/**/*.ts,js/**/*.tsx,js/**/*.js
+description: JavaScript runtime build and typecheck instructions
+---
+# JavaScript Runtime Build
+
+Build and typecheck the JS runtime separately from the native app.
+
+- Install dependencies once: `pnpm install` (run inside `js/`)
+- Build JS runtime: `pnpm --dir js build`
+- Typecheck only: `pnpm --dir js tsc`
+- Watch mode (dev): `pnpm --dir js dev`
+
+Outputs:
+- Bundled files are written to `js/dist/`.
+- During native builds, CMake copies `js/dist/` to `out/js/`.
+
+Notes:
+- The CMake target `js_build` calls `pnpm build` in `js/`.
+- On macOS native runs, the executable in `out/vitadeck` loads JS from `out/js/`.

@@ -1,0 +1,57 @@
+---
+globs: *.ts,*.tsx
+description: React Compiler rules for writing components, hooks, and effects safely
+---
+
+## React Compiler Rules
+
+Follow these constraints so React Compiler can safely analyze and optimize components.
+
+### Component purity and renders
+- **Pure renders only**: Derive UI solely from props/state. No side effects in render.
+- **No non-determinism in render**: Avoid `Date.now()`, `Math.random()`, reading mutable singletons, or environment-dependent IO during render. Compute such values inside events or effects.
+- **Do not mutate inputs**: Never mutate props, state, or context values. Create new objects/arrays instead.
+- **Avoid writing refs during render**: Writing to `ref.current` must happen in effects or event handlers, not in render.
+- **Stable keys**: Use stable, unique `key` values for lists. Never use array indices if the order can change.
+
+### Hooks correctness
+- **Rules of Hooks**: Call hooks at the top level of React components/custom hooks only. No conditional/looped calls. Maintain consistent order.
+- **Accurate dependencies**: Keep `useEffect`, `useMemo`, and `useCallback` dependency arrays exhaustive and correct. Do not suppress lint rules to “fix” dependency warnings.
+- **Custom hooks are pure**: Custom hooks must obey the same purity and dependency rules as components.
+
+### Effects and side effects
+- **Side effects belong in effects**: DOM access, timers, subscriptions, logging, network calls, and mutations go inside `useEffect`/`useLayoutEffect`, not in render.
+- **Idempotent effects**: Effects should clean up and be safe to re-run. Return a cleanup function when needed.
+- **No derived state duplication**: Prefer deriving values from props/state or memoization over syncing into separate state.
+
+### Identity and memoization
+- **Prefer stable identities for values used as deps**: If you pass an object/function to children, context providers, or an effect dependency, stabilize it with `useMemo`/`useCallback` when it affects rendering or effect frequency.
+- **Context values are stable**: Wrap `Context.Provider` values in `useMemo` to avoid unnecessary downstream renders.
+- **Inline allocations in props**: Inline `{}`/`[]`/`() => {}` in props are fine when not used as deps. If used in deps or performance-critical paths, memoize.
+
+### State management
+- **Immutable updates**: Replace arrays/objects instead of mutating them (use spreads or immutable helpers). Avoid `Object.assign` on existing state objects.
+- **No module-global mutable sources for render**: Don’t read changing module-level variables during render. Put such data into React state/context.
+- **Avoid putting non-serializable, imperatively mutated objects in state**: If necessary, encapsulate mutation behind refs and expose derived, immutable views for render.
+
+### Event handlers
+- **Handlers are safe places for side effects**: Do async work and imperatively interact with systems inside event handlers.
+- **Avoid stale closures**: If a handler relies on changing values across renders and is passed to children or stored, use `useCallback` with correct deps, or compute the values inside the handler.
+
+### Performance guidance
+- **Memoize expensive computation**: Use `useMemo` for heavy, pure calculations derived from props/state.
+- **Avoid unnecessary re-renders**: Keep prop identities stable where practical; consider `memo` for pure components with heavy renders.
+
+### What to avoid
+- **No side effects in render** (including logging, subscriptions, timers, mutations).
+- **No mutation of props/state/context**.
+- **No conditional/looped hooks**; do not early-return before required hooks establish consistent order.
+- **No suppression of exhaustive-deps without a real fix**.
+- **No reading/writing mutable singletons during render** (including caches) unless they are truly immutable.
+
+### Testing and verification
+- **Type safety**: Keep the project type-clean. Run `pnpm --dir js tsc` regularly.
+- **Runtime checks**: In development, watch for repeated effect execution and re-render storms; stabilize identities or dependencies accordingly.
+
+These rules help the compiler prove component purity and dataflow, enabling safe memoization and better performance.
+

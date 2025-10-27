@@ -6,10 +6,10 @@ description: macOS build instructions for native development
 
 Build the project natively on macOS for development and testing.
 
-- Run configuration + build in one shot: `cmake -S . -B out && cmake --build out --target js`
+- Run configuration + build in one shot: `cmake -S . -B out && cmake --build out`
 - To rebuild after changes: `cmake --build out`
-- To build and typecheck TypeScript code: `cmake --build out --target js`
 - The build output directory is `out/`
 - Executable will be `out/vitadeck`
-- JavaScript files are copied to `out/js/`
 - Requires raylib to be installed via Homebrew: `brew install raylib`
+
+For JavaScript runtime build instructions, see [js-runtime-build.mdc](mdc:.cursor/rules/js-runtime-build.mdc).
