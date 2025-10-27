@@ -1,5 +1,6 @@
-import React from "react";
+import React, { StrictMode } from "react";
 import { App } from "./app/App";
+import { ThemeProvider } from "./app/theme";
 import { interactiveRects, onInputEventFromNative } from "./input";
 import { renderVitadeckElement } from "./raylib-renderer";
 import { VitadeckReactReconciler } from "./vitadeck-react-reconciler";
@@ -19,7 +20,14 @@ function logError(error: unknown) {
 
 export function updateContainer() {
   try {
-    VitadeckReactReconciler.updateContainer(<App />, root);
+    VitadeckReactReconciler.updateContainer(
+      <StrictMode>
+        <ThemeProvider>
+          <App />
+        </ThemeProvider>
+      </StrictMode>,
+      root,
+    );
   } catch (error: unknown) {
     logError(error);
   }

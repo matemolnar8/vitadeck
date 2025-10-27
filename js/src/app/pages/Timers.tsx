@@ -1,26 +1,39 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useTheme } from "../theme";
 
 export const Timers = () => {
+  const { theme } = useTheme();
   // setTimeout demo
   const [timeoutMsg, setTimeoutMsg] = useState("Idle");
   const timeoutIdRef = useRef<number | undefined>();
+  const [timeoutActive, setTimeoutActive] = useState(false);
 
   const startTimeout = () => {
-    if (timeoutIdRef.current) return;
-    setTimeoutMsg("Waiting 2s...");
-    timeoutIdRef.current = setTimeout(() => {
-      setTimeoutMsg("Timeout fired!");
-      timeoutIdRef.current = undefined;
-    }, 2000);
+    setTimeoutActive(true);
   };
 
   const cancelTimeout = () => {
-    if (timeoutIdRef.current) {
-      clearTimeout(timeoutIdRef.current);
-      timeoutIdRef.current = undefined;
-      setTimeoutMsg("Cancelled");
-    }
+    setTimeoutActive(false);
   };
+
+  useEffect(() => {
+    if (timeoutActive) {
+      setTimeoutMsg("Waiting 2s...");
+      if (!timeoutIdRef.current) {
+        timeoutIdRef.current = setTimeout(() => {
+          setTimeoutMsg("Timeout fired!");
+          timeoutIdRef.current = undefined;
+          setTimeoutActive(false);
+        }, 2000);
+      }
+    } else {
+      if (timeoutIdRef.current) {
+        clearTimeout(timeoutIdRef.current);
+        timeoutIdRef.current = undefined;
+        setTimeoutMsg("Cancelled");
+      }
+    }
+  }, [timeoutActive]);
 
   useEffect(() => {
     return () => {
@@ -31,19 +44,30 @@ export const Timers = () => {
   // setInterval demo
   const [ticks, setTicks] = useState(0);
   const intervalIdRef = useRef<number | undefined>();
+  const [intervalRunning, setIntervalRunning] = useState(false);
 
   const startInterval = () => {
-    if (intervalIdRef.current) return;
-    intervalIdRef.current = setInterval(() => {
-      setTicks((t) => t + 1);
-    }, 1000);
+    setIntervalRunning(true);
   };
 
   const stopInterval = () => {
-    if (!intervalIdRef.current) return;
-    clearInterval(intervalIdRef.current);
-    intervalIdRef.current = undefined;
+    setIntervalRunning(false);
   };
+
+  useEffect(() => {
+    if (intervalRunning) {
+      if (!intervalIdRef.current) {
+        intervalIdRef.current = setInterval(() => {
+          setTicks((t) => t + 1);
+        }, 1000);
+      }
+    } else {
+      if (intervalIdRef.current) {
+        clearInterval(intervalIdRef.current);
+        intervalIdRef.current = undefined;
+      }
+    }
+  }, [intervalRunning]);
 
   useEffect(() => {
     return () => {
@@ -53,16 +77,16 @@ export const Timers = () => {
 
   return (
     <>
-      <vita-rect x={20} y={20} width={920} height={200} color={Colors.DARKGREEN}>
-        <vita-text fontSize={24} color={Colors.RAYWHITE}>
+      <vita-rect x={20} y={20} width={920} height={200} color={theme.surface}>
+        <vita-text fontSize={24} color={theme.text}>
           setTimeout demo: {timeoutMsg}
         </vita-text>
         <vita-button x={20} y={50} width={180} height={40} label={"Start 2s"} onClick={startTimeout} />
         <vita-button x={210} y={50} width={180} height={40} label={"Cancel"} onClick={cancelTimeout} />
       </vita-rect>
 
-      <vita-rect x={20} y={240} width={920} height={200} color={Colors.DARKBLUE}>
-        <vita-text fontSize={24} color={Colors.RAYWHITE}>
+      <vita-rect x={20} y={240} width={920} height={200} color={theme.surfaceAlt}>
+        <vita-text fontSize={24} color={theme.text}>
           setInterval demo: ticks = {ticks}
         </vita-text>
         <vita-button x={20} y={50} width={180} height={40} label={"Start"} onClick={startInterval} />
