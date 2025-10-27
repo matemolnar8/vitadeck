@@ -3,6 +3,7 @@ import babel from "@rollup/plugin-babel";
 import commonjs from "@rollup/plugin-commonjs";
 import nodeResolve from "@rollup/plugin-node-resolve";
 import replace from "@rollup/plugin-replace";
+import terser from "@rollup/plugin-terser";
 import typescript from "@rollup/plugin-typescript";
 import { defineConfig } from "rollup";
 import { corejsPlugin } from "rollup-plugin-corejs";
@@ -67,9 +68,12 @@ export default defineConfig({
       ],
     }),
     replace({
-      "process.env.NODE_ENV": JSON.stringify("development"),
+      "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || "development"),
       preventAssignment: true,
     }),
     corejsPlugin(),
+    terser({
+      ecma: 5,
+    }),
   ],
 });
