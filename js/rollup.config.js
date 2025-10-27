@@ -72,8 +72,10 @@ export default defineConfig({
       preventAssignment: true,
     }),
     corejsPlugin(),
-    terser({
-      ecma: 5,
-    }),
+    process.env.NODE_ENV === "production"
+      ? terser({
+          ecma: 5,
+        })
+      : null,
   ],
 });
