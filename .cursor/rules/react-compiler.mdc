@@ -5,7 +5,7 @@ description: React Compiler rules for writing components, hooks, and effects saf
 
 ## React Compiler Rules
 
-Follow these constraints so React Compiler can safely analyze and optimize components.
+Write idiomatic React code; let the React Compiler analyze and optimize it. Avoid manual memoization unless you are integrating with non-compiled code that relies on referential equality.
 
 ### Component purity and renders
 - **Pure renders only**: Derive UI solely from props/state. No side effects in render.
@@ -16,31 +16,33 @@ Follow these constraints so React Compiler can safely analyze and optimize compo
 
 ### Hooks correctness
 - **Rules of Hooks**: Call hooks at the top level of React components/custom hooks only. No conditional/looped calls. Maintain consistent order.
-- **Accurate dependencies**: Keep `useEffect`, `useMemo`, and `useCallback` dependency arrays exhaustive and correct. Do not suppress lint rules to “fix” dependency warnings.
+- **Accurate dependencies**: Keep `useEffect` dependency arrays exhaustive and correct. Do not suppress lint rules to “fix” dependency warnings.
 - **Custom hooks are pure**: Custom hooks must obey the same purity and dependency rules as components.
 
 ### Effects and side effects
 - **Side effects belong in effects**: DOM access, timers, subscriptions, logging, network calls, and mutations go inside `useEffect`/`useLayoutEffect`, not in render.
 - **Idempotent effects**: Effects should clean up and be safe to re-run. Return a cleanup function when needed.
-- **No derived state duplication**: Prefer deriving values from props/state or memoization over syncing into separate state.
+- **No derived state duplication**: Prefer deriving values from props/state rather than syncing into separate state.
 
 ### Identity and memoization
-- **Prefer stable identities for values used as deps**: If you pass an object/function to children, context providers, or an effect dependency, stabilize it with `useMemo`/`useCallback` when it affects rendering or effect frequency.
-- **Context values are stable**: Wrap `Context.Provider` values in `useMemo` to avoid unnecessary downstream renders.
-- **Inline allocations in props**: Inline `{}`/`[]`/`() => {}` in props are fine when not used as deps. If used in deps or performance-critical paths, memoize.
+- **Do not pre-emptively memoize**: Avoid `useMemo`, `useCallback`, and `memo` by default. The compiler stabilizes identities and memoizes derived work when it can prove safety.
+- **Inline allocations are fine**: Inline `{}`, `[]`, and `() => {}` in props and JSX. Do not wrap them just to “fix” referential equality.
+- **Context values**: Do not wrap `Context.Provider` values in `useMemo` by default. Only stabilize if a non-compiled consumer depends on referential equality.
+- **Interoperability escape hatch**: Use `useMemo`/`useCallback`/`memo` only when integrating with non-compiled libraries/components that rely on referential equality or when you have a measured hotspot the compiler cannot optimize.
 
 ### State management
-- **Immutable updates**: Replace arrays/objects instead of mutating them (use spreads or immutable helpers). Avoid `Object.assign` on existing state objects.
+- **Immutable updates**: Replace arrays/objects instead of mutating them (use spreads or immutable helpers). Avoid mutating existing state objects in place.
 - **No module-global mutable sources for render**: Don’t read changing module-level variables during render. Put such data into React state/context.
 - **Avoid putting non-serializable, imperatively mutated objects in state**: If necessary, encapsulate mutation behind refs and expose derived, immutable views for render.
 
 ### Event handlers
 - **Handlers are safe places for side effects**: Do async work and imperatively interact with systems inside event handlers.
-- **Avoid stale closures**: If a handler relies on changing values across renders and is passed to children or stored, use `useCallback` with correct deps, or compute the values inside the handler.
+- **Inline handlers are encouraged**: Define handlers inline; do not add `useCallback` unless required for non-compiled interop.
+- **Avoid stale closures**: If a handler relies on changing values across renders and is passed to non-compiled consumers or stored, either compute needed values inside the handler or stabilize via `useCallback` with correct deps.
 
 ### Performance guidance
-- **Memoize expensive computation**: Use `useMemo` for heavy, pure calculations derived from props/state.
-- **Avoid unnecessary re-renders**: Keep prop identities stable where practical; consider `memo` for pure components with heavy renders.
+- **Write clear code first**: Prefer straightforward code; rely on the compiler to deduplicate and memoize where safe.
+- **Measure before optimizing**: If you identify a real bottleneck that the compiler cannot optimize (often at boundaries with non-compiled code), apply targeted memoization.
 
 ### What to avoid
 - **No side effects in render** (including logging, subscriptions, timers, mutations).
@@ -48,10 +50,13 @@ Follow these constraints so React Compiler can safely analyze and optimize compo
 - **No conditional/looped hooks**; do not early-return before required hooks establish consistent order.
 - **No suppression of exhaustive-deps without a real fix**.
 - **No reading/writing mutable singletons during render** (including caches) unless they are truly immutable.
+- **No cargo-cult memoization**: Avoid sprinkling `useMemo`, `useCallback`, or `memo` without a concrete, measured reason.
 
 ### Testing and verification
-- **Type safety**: Keep the project type-clean. Run `pnpm --dir js tsc` regularly.
-- **Runtime checks**: In development, watch for repeated effect execution and re-render storms; stabilize identities or dependencies accordingly.
+- **Type safety**: Keep the project type-clean. Run `pnpm --dir /home/partygrill/projects/vitadeck/js tsc` regularly.
+- **Runtime checks**: In development, watch for repeated effect execution and re-render storms; only add stabilization when interacting with non-compiled code.
 
-These rules help the compiler prove component purity and dataflow, enabling safe memoization and better performance.
+For JavaScript runtime build steps, see [js-runtime-build.mdc](mdc:.cursor/rules/js-runtime-build.mdc).
+
+These rules help the compiler prove component purity and dataflow, enabling safe, automatic optimizations and better performance.
 
