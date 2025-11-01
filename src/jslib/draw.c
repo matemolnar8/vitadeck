@@ -41,7 +41,10 @@ static Color parse_color_arg_or_default(js_State *J, int index, Color fallback)
 }
 
 /*
-    drawRect(x: number, y: number, width: number, height: number, color?: Color): void
+    drawRect(x: number, y: number, width: number, height: number, fillColor?: Color, outlineColor?: Color): void
+    Draws a rectangle with optional fill and/or outline in a single call.
+    If fillColor is provided, draws the filled rectangle.
+    If outlineColor is provided, draws the outline.
 */
 static void draw_rect(js_State *J) {
     const int x = js_tointeger(J, 1);
@@ -49,25 +52,31 @@ static void draw_rect(js_State *J) {
     const int w = js_tointeger(J, 3);
     const int h = js_tointeger(J, 4);
 
-    const Color color = parse_color_arg_or_default(J, 5, LIGHTGRAY);
+    // Check if fillColor is provided (not undefined/null)
+    Color fillColor;
+    bool hasFill = false;
+    if (!js_isundefined(J, 5) && js_isobject(J, 5)) {
+        fillColor = parse_color_arg_or_default(J, 5, BLANK);
+        hasFill = true;
+    }
 
-    DrawRectangle(x, y, w, h, color);
+    // Check if outlineColor is provided (not undefined/null)
+    Color outlineColor;
+    bool hasOutline = false;
+    if (!js_isundefined(J, 6) && js_isobject(J, 6)) {
+        outlineColor = parse_color_arg_or_default(J, 6, DARKGRAY);
+        hasOutline = true;
+    }
 
-    js_pushundefined(J);
-}
+    // Draw fill first (if provided)
+    if (hasFill) {
+        DrawRectangle(x, y, w, h, fillColor);
+    }
 
-/*
-    drawRectOutline(x: number, y: number, width: number, height: number, color?: Color): void
-*/
-static void draw_rect_outline(js_State *J) {
-    const int x = js_tointeger(J, 1);
-    const int y = js_tointeger(J, 2);
-    const int w = js_tointeger(J, 3);
-    const int h = js_tointeger(J, 4);
-
-    const Color color = parse_color_arg_or_default(J, 5, DARKGRAY);
-
-    DrawRectangleLines(x, y, w, h, color);
+    // Draw outline (if provided)
+    if (hasOutline) {
+        DrawRectangleLines(x, y, w, h, outlineColor);
+    }
 
     js_pushundefined(J);
 }
@@ -98,9 +107,6 @@ static void draw_text(js_State *J) {
 void register_js_draw(js_State *J) {
     js_newcfunction(J, draw_rect, "drawRect", 0);
 	js_setglobal(J, "drawRect");
-
-	js_newcfunction(J, draw_rect_outline, "drawRectOutline", 0);
-	js_setglobal(J, "drawRectOutline");
 
 	js_newcfunction(J, draw_text, "drawText", 0);
 	js_setglobal(J, "drawText");

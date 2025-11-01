@@ -1,0 +1,9 @@
+{
+  "setup-worktree": [
+    "cd js && pnpm install",
+    "cd ..",
+    "mkdir out",
+    "cd out && cmake",
+    "cd .."
+  ]
+}

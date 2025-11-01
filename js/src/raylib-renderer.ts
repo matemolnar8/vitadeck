@@ -37,13 +37,14 @@ function renderVitaText(child: VitaTextInstance, rectCtx: RectContext) {
 }
 
 function renderVitaRect(child: VitaRectInstance, rectCtx: RectContext) {
-  const { x, y, width, height, variant, color } = child.props;
+  const { x, y, width, height, variant, color, borderColor } = child.props;
 
-  if (variant === "outline") {
-    drawRectOutline(rectCtx.x + x, rectCtx.y + y, width, height, color);
-  } else {
-    drawRect(rectCtx.x + x, rectCtx.y + y, width, height, color);
-  }
+  // Determine fill and outline colors
+  const fillColor = variant !== "outline" && color ? color : undefined;
+  const outlineColor = borderColor || (variant === "outline" && color ? color : undefined);
+
+  // Draw rectangle with fill and/or outline in a single native call
+  drawRect(rectCtx.x + x, rectCtx.y + y, width, height, fillColor, outlineColor);
 
   const childRectCtx: RectContext = {
     x: rectCtx.x + x,
@@ -73,7 +74,7 @@ function renderVitaButton(child: VitaButtonInstance, rectCtx: RectContext) {
   const pressedColor = mixColor(color, Colors.BLACK, 0.5);
   const visual = state.pressed ? pressedColor : state.hovered ? hoveredColor : color;
 
-  drawRect(rectCtx.x + x, rectCtx.y + y, width, height, visual);
+  drawRect(rectCtx.x + x, rectCtx.y + y, width, height, visual, undefined);
   const padding = 8;
   const fontSize = 20;
   drawText(rectCtx.x + x + padding, rectCtx.y + y + padding, fontSize, label, Colors.RAYWHITE, false);

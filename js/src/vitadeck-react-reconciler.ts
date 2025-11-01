@@ -35,6 +35,7 @@ declare global {
         height: number;
         variant?: "fill" | "outline";
         color?: Color;
+        borderColor?: Color;
         onClick?: (() => void) | undefined;
         onMouseDown?: () => void;
         onMouseUp?: () => void;

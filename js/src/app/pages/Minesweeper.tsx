@@ -293,6 +293,7 @@ export const GameMinesweeper = () => {
                 width={cellSize.width - 2}
                 height={cellSize.height - 2}
                 color={fillColor}
+                borderColor={outline}
                 onMouseDown={() => onCellDown(r, c)}
                 onMouseUp={() => onCellUp(r, c)}
               >
@@ -302,15 +303,6 @@ export const GameMinesweeper = () => {
                     {String(cell.adjacent)}
                   </vita-text>
                 )}
-                {/* Cell border */}
-                <vita-rect
-                  x={0}
-                  y={0}
-                  width={cellSize.width - 2}
-                  height={cellSize.height - 2}
-                  variant={"outline"}
-                  color={outline}
-                />
               </vita-rect>
             );
           });

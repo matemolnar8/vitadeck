@@ -33,8 +33,7 @@ declare global {
 
   var Colors: { [K in ColorName]: Color };
 
-  function drawRect(x: number, y: number, width: number, height: number, color?: Color): void;
-  function drawRectOutline(x: number, y: number, width: number, height: number, color?: Color): void;
+  function drawRect(x: number, y: number, width: number, height: number, fillColor?: Color, outlineColor?: Color): void;
   function drawText(x: number, y: number, fontSize: number, text: string, color?: Color, border?: boolean): void;
 
   function syncInteractiveRectsToNative(): void;
