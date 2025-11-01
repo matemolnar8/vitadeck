@@ -92,8 +92,8 @@ static void draw_text(js_State *J) {
     const bool border = js_toboolean(J, 6);
     const Color color = parse_color_arg_or_default(J, 5, BLACK);
 
-    int text_width = MeasureText(str, font_size);
     if (border) {
+        int text_width = MeasureText(str, font_size);
         int border_padding = 4;
         Rectangle rect = { x - border_padding, y - border_padding, text_width + border_padding * 2, font_size + border_padding * 2 };
         DrawRectangleLinesEx(rect, 2, color);
