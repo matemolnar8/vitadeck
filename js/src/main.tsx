@@ -1,8 +1,8 @@
 import React, { StrictMode } from "react";
 import { App } from "./app/App";
 import { ThemeProvider } from "./app/theme";
+import { commands } from "./drawlist";
 import { interactiveRects, onInputEventFromNative } from "./input";
-import { renderVitadeckElement } from "./raylib-renderer";
 import { VitadeckReactReconciler } from "./vitadeck-react-reconciler";
 
 function toError(e: unknown): Error {
@@ -33,17 +33,15 @@ export function updateContainer() {
   }
 }
 
-export function render() {
-  try {
-    renderVitadeckElement(root.containerInfo.children);
-  } catch (error: unknown) {
-    logError(error);
-  }
-}
+// JS no longer renders; C side renders from synced flat draw list
 
 export const input = {
   interactiveRects,
   onInputEventFromNative: onInputEventFromNative,
+};
+
+export const draw = {
+  commands,
 };
 
 const root = VitadeckReactReconciler.createContainer(

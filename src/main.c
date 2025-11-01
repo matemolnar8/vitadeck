@@ -29,11 +29,6 @@ static int run_function(js_State *J, const char *func_name)
 	return 0;
 }
 
-static int render(js_State *J)
-{
-	return run_function(J, "render");
-}
-
 static int update_container(js_State *J) {
 	return run_function(J, "updateContainer");
 }
@@ -73,7 +68,7 @@ int main(int argc, char *argv[]) {
 
 		BeginDrawing();
 			ClearBackground(BLACK);
-			render(J);
+			render_draw_list();
 			DrawFPS(SCREEN_WIDTH - 100, 10); // top right corner
 
 			for (int i = 0; i < GetTouchPointCount(); i++) {

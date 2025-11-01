@@ -268,3 +268,19 @@ void register_js_input(js_State *J) {
     js_newcfunction(J, js_get_interactive_state, "getInteractiveState", 1);
     js_setglobal(J, "getInteractiveState");
 }
+
+bool input_is_hovered(const char *id)
+{
+    if (!id) return false;
+    if (hovered_id && strcmp(hovered_id, id) == 0) return true;
+    if (touch_hovered_id && strcmp(touch_hovered_id, id) == 0) return true;
+    return false;
+}
+
+bool input_is_pressed(const char *id)
+{
+    if (!id) return false;
+    if (mouse_down_id && strcmp(mouse_down_id, id) == 0) return true;
+    if (touch_down_id && strcmp(touch_down_id, id) == 0) return true;
+    return false;
+}

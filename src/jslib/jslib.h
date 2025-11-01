@@ -27,4 +27,11 @@ void process_touch_input(js_State *J);
  */
 void run_timeouts(js_State *J);
 
+// Draw list rendering API
+void render_draw_list(void);
+
+// Input helpers for rendering logic
+bool input_is_hovered(const char *id);
+bool input_is_pressed(const char *id);
+
 #endif /* JSLIB_H */

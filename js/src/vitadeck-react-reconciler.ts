@@ -1,5 +1,5 @@
 import Reconciler, { type HostConfig } from "react-reconciler";
-import { syncInteractiveRectsFromContainer } from "./input";
+import { buildAndSyncDrawState } from "./drawlist";
 import { exhaustiveGuard } from "./utils";
 
 const idGenerator = () => {
@@ -195,7 +195,7 @@ const hostConfig = {
   finalizeContainerChildren: (container, newChildren) => {
     logReconcilerFunction("finalizeContainerChildren");
     container.children = newChildren.children;
-    syncInteractiveRectsFromContainer(container);
+    buildAndSyncDrawState(container);
   },
   clearContainer(container) {
     logReconcilerFunction("clearContainer");

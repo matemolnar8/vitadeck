@@ -23,6 +23,11 @@ static const char *stacktrace_js =
 	"return s;\n"
 	"};\n";
 
+
+static void get_time(js_State *J) {
+	js_pushnumber(J, GetTime());
+}
+
 void register_js_lib(js_State *J) {
 	js_dostring(J, stacktrace_js);
 
@@ -30,4 +35,7 @@ void register_js_lib(js_State *J) {
 	register_js_draw(J);
 	register_js_timeout(J);
 	register_js_input(J);
+
+	js_newcfunction(J, get_time, "getTime", 0);
+	js_setglobal(J, "getTime");
 }

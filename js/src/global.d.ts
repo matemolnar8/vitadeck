@@ -37,6 +37,7 @@ declare global {
   function drawText(x: number, y: number, fontSize: number, text: string, color?: Color, border?: boolean): void;
 
   function syncInteractiveRectsToNative(): void;
+  function syncDrawListToNative(): void;
   function getInteractiveState(id: string): {
     hovered: boolean;
     pressed: boolean;
@@ -46,6 +47,8 @@ declare global {
   function clearTimeout(id: number): void;
   function setInterval(callback: () => void, delay: number): number;
   function clearInterval(id: number): void;
+
+  function getTime(): number;
 
   var console: {
     log: (...args: unknown[]) => void;

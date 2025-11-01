@@ -1,5 +1,3 @@
-import type { VitadeckContainer, VitadeckPublicInstance } from "./vitadeck-react-reconciler";
-
 type InteractiveRect = {
   id: string;
   x: number;
@@ -14,44 +12,6 @@ type InteractiveRect = {
 };
 
 export const interactiveRects: InteractiveRect[] = [];
-
-export function syncInteractiveRectsFromContainer(container: VitadeckContainer) {
-  interactiveRects.length = 0;
-
-  const traverse = (nodes: VitadeckPublicInstance[], offsetX: number, offsetY: number) => {
-    for (const node of nodes) {
-      if (!node) continue;
-      if (node.type === "vita-rect" || node.type === "vita-button") {
-        const { x, y, width, height, onClick, onMouseDown, onMouseUp, onMouseEnter, onMouseLeave } = node.props;
-
-        const absX = offsetX + x;
-        const absY = offsetY + y;
-
-        if (onClick || onMouseDown || onMouseUp || onMouseEnter || onMouseLeave) {
-          interactiveRects.push({
-            id: node.id,
-            x: absX,
-            y: absY,
-            width,
-            height,
-            onClick,
-            onMouseDown,
-            onMouseUp,
-            onMouseEnter,
-            onMouseLeave,
-          });
-        }
-
-        // Recurse into children; they render on top
-        traverse(node.children || [], absX, absY);
-      }
-    }
-  };
-
-  traverse(container.children || [], 0, 0);
-
-  syncInteractiveRectsToNative();
-}
 
 export function onInputEventFromNative(
   id: string,
