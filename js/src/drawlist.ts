@@ -6,7 +6,7 @@ import type {
   VitadeckContainer,
   VitaRectInstance,
   VitaTextInstance,
-} from "./vitadeck-react-reconciler";
+} from "./vitadeck-reconciler-shared";
 
 export type DrawRectCommand = {
   type: "rect";

@@ -5,7 +5,7 @@ import type {
   VitaButtonInstance,
   VitaRectInstance,
   VitaTextInstance,
-} from "./vitadeck-react-reconciler";
+} from "./vitadeck-reconciler-shared";
 
 type RectContext = {
   x: number;

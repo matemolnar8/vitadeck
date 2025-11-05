@@ -3,7 +3,12 @@ import { App } from "./app/App";
 import { ThemeProvider } from "./app/theme";
 import { commands } from "./drawlist";
 import { interactiveRects, onInputEventFromNative } from "./input";
-import { VitadeckReactReconciler } from "./vitadeck-react-reconciler";
+import { VitadeckReactReconciler as VitadeckPersistentReconciler } from "./vitadeck-react-reconciler";
+import { VitadeckReactMutationReconciler } from "./vitadeck-react-reconciler-mutation";
+
+const USE_MUTATION_RECONCILER = true;
+
+const ActiveReconciler = USE_MUTATION_RECONCILER ? VitadeckReactMutationReconciler : VitadeckPersistentReconciler;
 
 function toError(e: unknown): Error {
   if (e instanceof Error) return e;
@@ -20,7 +25,7 @@ function logError(error: unknown) {
 
 export function updateContainer() {
   try {
-    VitadeckReactReconciler.updateContainer(
+    ActiveReconciler.updateContainer(
       <StrictMode>
         <ThemeProvider>
           <App />
@@ -44,7 +49,7 @@ export const draw = {
   commands,
 };
 
-const root = VitadeckReactReconciler.createContainer(
+const root = ActiveReconciler.createContainer(
   { children: [] },
   0,
   null,
@@ -58,3 +63,4 @@ const root = VitadeckReactReconciler.createContainer(
 );
 
 console.debug("main.tsx loaded");
+console.debug(`Reconciler: ${USE_MUTATION_RECONCILER ? "mutation" : "persistent"}`);

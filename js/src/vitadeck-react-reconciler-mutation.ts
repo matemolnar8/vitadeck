@@ -2,7 +2,6 @@ import Reconciler, { type HostConfig } from "react-reconciler";
 import { buildAndSyncDrawState } from "./drawlist";
 import { exhaustiveGuard } from "./utils";
 import {
-  type ChildSet,
   generateInstanceId,
   type HostContext,
   type Instance,
@@ -20,6 +19,7 @@ import {
 
 type SuspenseInstance = never;
 type HydratableInstance = never;
+type ChildSet = never;
 type TimeoutHandle = number;
 type NoTimeout = -1;
 
@@ -39,22 +39,16 @@ type VitadeckHostConfig = HostConfig<
   NoTimeout
 >;
 
-// =============================================================================
-// Implementation
-// Based on Tsoding's Murayact: https://github.com/tsoding/Murayact/
-// =============================================================================
-
 const TRACE = false;
 const logReconcilerFunction = (name: string, ...args: unknown[]) => {
-  if (TRACE) console.log(`[Reconciler]: ${name}`, ...args);
+  if (TRACE) console.log(`[MutationReconciler]: ${name}`, ...args);
 };
 
-// React reconciler host configuration
 const hostConfig = {
   noTimeout: -1,
   isPrimaryRenderer: true,
-  supportsMutation: false,
-  supportsPersistence: true,
+  supportsMutation: true,
+  supportsPersistence: false,
   supportsHydration: false,
   supportsMicrotasks: false,
   getRootHostContext: (..._args) => {
@@ -65,8 +59,9 @@ const hostConfig = {
     logReconcilerFunction("prepareForCommit");
     return null;
   },
-  resetAfterCommit: (..._args) => {
+  resetAfterCommit: (container: VitadeckContainer) => {
     logReconcilerFunction("resetAfterCommit");
+    buildAndSyncDrawState(container);
   },
   getChildHostContext: (..._args) => {
     logReconcilerFunction("getChildHostContext");
@@ -81,18 +76,16 @@ const hostConfig = {
     return {
       type: "RawText",
       text,
-    };
+    } satisfies TextInstance;
   },
   createInstance(type, props: Props, _rootContainerInstance, _hostContext) {
     logReconcilerFunction("createInstance", type);
-    const element = {
+    return {
       id: generateInstanceId(),
       type,
       props: { ...props },
       children: [],
     } as Instance;
-
-    return element;
   },
   appendInitialChild(parentInstance, child) {
     logReconcilerFunction("appendInitialChild");
@@ -101,27 +94,6 @@ const hostConfig = {
   finalizeInitialChildren(_instance, type) {
     logReconcilerFunction("finalizeInitialChildren", type);
     return true;
-  },
-  createContainerChildSet: () => {
-    logReconcilerFunction("createContainerChildSet");
-    return { children: [] };
-  },
-  appendChildToContainerChildSet: (containerChildSet, child) => {
-    logReconcilerFunction("appendChildToContainerChildSet");
-    containerChildSet.children.push(child);
-  },
-  finalizeContainerChildren: (container, newChildren) => {
-    logReconcilerFunction("finalizeContainerChildren");
-    container.children = newChildren.children;
-    buildAndSyncDrawState(container);
-  },
-  clearContainer(container) {
-    logReconcilerFunction("clearContainer");
-    container.children = [];
-  },
-  replaceContainerChildren(container, newChildren) {
-    logReconcilerFunction("replaceContainerChildren");
-    container.children = newChildren.children;
   },
   prepareUpdate(_instance, type, oldProps, newProps, _rootContainerInstance, _hostContext) {
     logReconcilerFunction("prepareUpdate", type);
@@ -136,63 +108,78 @@ const hostConfig = {
     }
     return changes.props.length ? { props: changes.props } : null;
   },
-  cloneInstance(
-    instance,
-    _updatePayload,
-    type,
-    _oldProps: Props,
-    newProps: Props,
-    _internalInstanceHandle,
-    keepChildren,
-    _recyclableInstance,
-  ) {
-    logReconcilerFunction("cloneInstance", type);
-    const clonedProps: Props = { ...newProps };
+  appendChild(parentInstance, child) {
+    logReconcilerFunction("appendChild");
+    parentInstance.children.push(child);
+  },
+  appendChildToContainer(container, child) {
+    logReconcilerFunction("appendChildToContainer");
+    container.children.push(child);
+  },
+  insertBefore(parentInstance, child, beforeChild) {
+    logReconcilerFunction("insertBefore");
+    const index = parentInstance.children.indexOf(beforeChild as Instance | TextInstance);
+    if (index === -1) {
+      parentInstance.children.push(child);
+      return;
+    }
+    parentInstance.children.splice(index, 0, child);
+  },
+  insertInContainerBefore(container, child, beforeChild) {
+    logReconcilerFunction("insertInContainerBefore");
+    const index = container.children.indexOf(beforeChild as Instance | TextInstance);
+    if (index === -1) {
+      container.children.push(child);
+      return;
+    }
+    container.children.splice(index, 0, child);
+  },
+  removeChild(parentInstance, child) {
+    logReconcilerFunction("removeChild");
+    const index = parentInstance.children.indexOf(child as Instance | TextInstance);
+    if (index !== -1) {
+      parentInstance.children.splice(index, 1);
+    }
+  },
+  removeChildFromContainer(container, child) {
+    logReconcilerFunction("removeChildFromContainer");
+    const index = container.children.indexOf(child as Instance | TextInstance);
+    if (index !== -1) {
+      container.children.splice(index, 1);
+    }
+  },
+  commitTextUpdate(textInstance, _oldText, newText) {
+    logReconcilerFunction("commitTextUpdate", newText);
+    textInstance.text = newText;
+  },
+  resetTextContent(instance) {
+    logReconcilerFunction("resetTextContent");
+    instance.children = [];
+  },
+  commitUpdate(instance, _updatePayload, type, _prevProps, nextProps: Props, _internalInstanceHandle) {
+    logReconcilerFunction("commitUpdate", type);
+    const clonedProps: Props = { ...nextProps };
 
     if (type === "vita-text") {
-      return {
-        id: instance.id,
-        type: "vita-text",
-        props: clonedProps as PropsByType["vita-text"],
-        children: keepChildren ? [...instance.children] : [],
-      } as VitaTextInstance;
+      (instance as VitaTextInstance).props = clonedProps as PropsByType["vita-text"];
+      return;
     }
 
     if (type === "vita-rect") {
-      return {
-        id: instance.id,
-        type: "vita-rect",
-        props: clonedProps as PropsByType["vita-rect"],
-        children: keepChildren ? [...instance.children] : [],
-      } as VitaRectInstance;
+      (instance as VitaRectInstance).props = clonedProps as PropsByType["vita-rect"];
+      return;
     }
 
     if (type === "vita-button") {
-      return {
-        id: instance.id,
-        type: "vita-button",
-        props: clonedProps as PropsByType["vita-button"],
-        children: [],
-      } as VitaButtonInstance;
+      (instance as VitaButtonInstance).props = clonedProps as PropsByType["vita-button"];
+      return;
     }
 
     exhaustiveGuard(type, `Unsupported element type: ${type}`);
   },
-  cloneHiddenInstance(instance, type, props, _internalInstanceHandle) {
-    logReconcilerFunction("cloneHiddenInstance", type);
-    return {
-      id: instance.id,
-      type,
-      props: { ...props },
-      children: [],
-    } as Instance;
-  },
-  cloneHiddenTextInstance(_instance, text, _internalInstanceHandle) {
-    logReconcilerFunction("cloneHiddenTextInstance", text);
-    return {
-      type: "RawText",
-      text: text,
-    } as TextInstance;
+  clearContainer(container) {
+    logReconcilerFunction("clearContainer");
+    container.children = [];
   },
   commitMount(_instance, type) {
     logReconcilerFunction("commitMount", type);
@@ -202,4 +189,4 @@ const hostConfig = {
   },
 } satisfies Partial<VitadeckHostConfig>;
 
-export const VitadeckReactReconciler = Reconciler(hostConfig as unknown as VitadeckHostConfig);
+export const VitadeckReactMutationReconciler = Reconciler(hostConfig as unknown as VitadeckHostConfig);

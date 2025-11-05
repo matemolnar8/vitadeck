@@ -33,9 +33,7 @@ export const Hello = () => {
           Click the overlapping area to test which button handles the click
         </vita-text>
         <vita-text fontSize={18} color={theme.text}>
-          {clickedButton
-            ? `Last clicked: ${clickedButton} button`
-            : "No button clicked yet"}
+          {clickedButton ? `Last clicked: ${clickedButton} button` : "No button clicked yet"}
         </vita-text>
 
         {/* Bottom button (larger, rendered first) */}
