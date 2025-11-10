@@ -1,5 +1,6 @@
 import Reconciler, { type HostConfig } from "react-reconciler";
 import { buildAndSyncDrawState } from "./drawlist";
+import { instrumentHostConfig, ReconcilerMetrics } from "./reconciler-metrics";
 import { exhaustiveGuard } from "./utils";
 import {
   generateInstanceId,
@@ -44,7 +45,7 @@ const logReconcilerFunction = (name: string, ...args: unknown[]) => {
   if (TRACE) console.log(`[MutationReconciler]: ${name}`, ...args);
 };
 
-const hostConfig = {
+const rawHostConfig = {
   noTimeout: -1,
   isPrimaryRenderer: true,
   supportsMutation: true,
@@ -189,4 +190,8 @@ const hostConfig = {
   },
 } satisfies Partial<VitadeckHostConfig>;
 
+const mutationMetrics = new ReconcilerMetrics("mutation");
+const hostConfig = instrumentHostConfig(rawHostConfig, mutationMetrics, "mutation");
+
+export const mutationReconcilerMetrics = mutationMetrics;
 export const VitadeckReactMutationReconciler = Reconciler(hostConfig as unknown as VitadeckHostConfig);

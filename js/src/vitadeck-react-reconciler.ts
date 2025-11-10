@@ -1,5 +1,6 @@
 import Reconciler, { type HostConfig } from "react-reconciler";
 import { buildAndSyncDrawState } from "./drawlist";
+import { instrumentHostConfig, ReconcilerMetrics } from "./reconciler-metrics";
 import { exhaustiveGuard } from "./utils";
 import {
   type ChildSet,
@@ -50,7 +51,7 @@ const logReconcilerFunction = (name: string, ...args: unknown[]) => {
 };
 
 // React reconciler host configuration
-const hostConfig = {
+const rawHostConfig = {
   noTimeout: -1,
   isPrimaryRenderer: true,
   supportsMutation: false,
@@ -202,4 +203,8 @@ const hostConfig = {
   },
 } satisfies Partial<VitadeckHostConfig>;
 
+const persistentMetrics = new ReconcilerMetrics("persistent");
+const hostConfig = instrumentHostConfig(rawHostConfig, persistentMetrics, "persistent");
+
+export const persistentReconcilerMetrics = persistentMetrics;
 export const VitadeckReactReconciler = Reconciler(hostConfig as unknown as VitadeckHostConfig);

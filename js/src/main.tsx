@@ -1,14 +1,9 @@
 import React, { StrictMode } from "react";
-import { App } from "./app/App";
+import { MainLauncher } from "./app/MainLauncher";
 import { ThemeProvider } from "./app/theme";
 import { commands } from "./drawlist";
 import { interactiveRects, onInputEventFromNative } from "./input";
-import { VitadeckReactReconciler as VitadeckPersistentReconciler } from "./vitadeck-react-reconciler";
-import { VitadeckReactMutationReconciler } from "./vitadeck-react-reconciler-mutation";
-
-const USE_MUTATION_RECONCILER = true;
-
-const ActiveReconciler = USE_MUTATION_RECONCILER ? VitadeckReactMutationReconciler : VitadeckPersistentReconciler;
+import { getActiveReconciler, initializeReconcilerManager, updateTree } from "./reconciler-manager";
 
 function toError(e: unknown): Error {
   if (e instanceof Error) return e;
@@ -23,15 +18,22 @@ function logError(error: unknown) {
   }
 }
 
+initializeReconcilerManager({
+  identifierPrefix: "vitadeck_react_",
+  initialActiveReconciler: "mutation",
+  onError: (error: unknown) => {
+    logError(error);
+  },
+});
+
 export function updateContainer() {
   try {
-    ActiveReconciler.updateContainer(
+    updateTree(
       <StrictMode>
         <ThemeProvider>
-          <App />
+          <MainLauncher />
         </ThemeProvider>
       </StrictMode>,
-      root,
     );
   } catch (error: unknown) {
     logError(error);
@@ -49,18 +51,5 @@ export const draw = {
   commands,
 };
 
-const root = ActiveReconciler.createContainer(
-  { children: [] },
-  0,
-  null,
-  true,
-  null,
-  "vitadeck_react_",
-  (error: unknown) => {
-    logError(error);
-  },
-  null,
-);
-
 console.debug("main.tsx loaded");
-console.debug(`Reconciler: ${USE_MUTATION_RECONCILER ? "mutation" : "persistent"}`);
+console.debug(`Reconciler: ${getActiveReconciler().id}`);
