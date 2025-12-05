@@ -10,6 +10,7 @@
 
 #include "jslib.h"
 
+#include "instance_tree.c"
 #include "draw.c"
 #include "timeout.c"
 #include "input.c"
@@ -31,10 +32,11 @@ static void get_time(js_State *J) {
 void register_js_lib(js_State *J) {
 	js_dostring(J, stacktrace_js);
 
-    register_js_log(J);
+	register_js_log(J);
 	register_js_draw(J);
 	register_js_timeout(J);
 	register_js_input(J);
+	register_instance_tree(J);
 
 	js_newcfunction(J, get_time, "getTime", 0);
 	js_setglobal(J, "getTime");

@@ -1,15 +1,3 @@
-#include <raylib.h>
-#include <string.h>
-#include <stdlib.h>
-
-typedef struct {
-    const char *id;
-    int x;
-    int y;
-    int width;
-    int height;
-} InteractiveRect;
-static InteractiveRect *interactive_rects = NULL;
 
 // Mouse state (file-scope to share with JS getters)
 static bool prev_is_mouse_down = false;
@@ -21,70 +9,16 @@ static bool prev_touch_down = false;
 static char *touch_hovered_id = NULL;
 static char *touch_down_id = NULL;
 
-/**
-    syncInteractiveRectsToNative(): void
-*/
-static void sync_interactive_rects(js_State *J) {
-    arrfree(interactive_rects);
-
-    js_getglobal(J, "vitadeck");
-    js_getproperty(J, -1, "input");
-    js_getproperty(J, -1, "interactiveRects");
-
-    int length = js_getlength(J, -1);
-
-    for (int i = 0; i < length; i++) {
-        js_getindex(J, -1, i);
-
-        js_getproperty(J, -1, "id");
-        const char *id = js_tostring(J, -1);
-        js_pop(J, 1);
-        
-        js_getproperty(J, -1, "x");
-        int x = js_tointeger(J, -1);
-        js_pop(J, 1);
-        
-        js_getproperty(J, -1, "y");
-        int y = js_tointeger(J, -1);
-        js_pop(J, 1);
-        
-        js_getproperty(J, -1, "width");
-        int width = js_tointeger(J, -1);
-        js_pop(J, 1);
-        
-        js_getproperty(J, -1, "height");
-        int height = js_tointeger(J, -1);
-        js_pop(J, 1);
-
-        // TraceLog(LOG_DEBUG, "Interactive rect %d: %s: x=%d, y=%d, width=%d, height=%d", i, id, x, y, width, height);
-        
-        InteractiveRect rect = {.id = strdup(id), .x = x, .y = y, .width = width, .height = height};
-        arrput(interactive_rects, rect);
-        js_pop(J, 1);
-    }
-}
-
+// Use instance tree for hit testing
 static const char *top_rect_id_at(int x, int y)
 {
-    if (!interactive_rects) return NULL;
-    int count = arrlen(interactive_rects);
-    for (int i = count - 1; i >= 0; i--) {
-        InteractiveRect r = interactive_rects[i];
-        if (x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height) {
-            return r.id;
-        }
-    }
-    return NULL;
+    return instance_hit_test(x, y);
 }
 
+// Check if instance still exists in tree
 static bool rect_id_exists(const char *id)
 {
-    if (!id || !interactive_rects) return false;
-    int count = arrlen(interactive_rects);
-    for (int i = 0; i < count; i++) {
-        if (strcmp(interactive_rects[i].id, id) == 0) return true;
-    }
-    return false;
+    return instance_exists(id);
 }
 
 static void call_input_event_from_native(js_State *J, const char *id, const char *event) {
@@ -263,8 +197,6 @@ static void js_get_interactive_state(js_State *J)
 }
 
 void register_js_input(js_State *J) {
-    js_newcfunction(J, sync_interactive_rects, "syncInteractiveRectsToNative", 0);
-    js_setglobal(J, "syncInteractiveRectsToNative");
     js_newcfunction(J, js_get_interactive_state, "getInteractiveState", 1);
     js_setglobal(J, "getInteractiveState");
 }
