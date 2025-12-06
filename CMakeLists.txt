@@ -14,7 +14,7 @@ if(DEFINED ENV{VITASDK})
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -flto")
 else()
   message(STATUS "VITA is OFF")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Og -g -flto")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -flto")
 endif()
 
 set(VITA_APP_NAME "VitaDeck")
