@@ -48,8 +48,10 @@ static void render_rect_instance(ReactInstance *inst, RenderContext ctx)
     RenderContext child_ctx = { abs_x, abs_y, 0 };
     int count = arrlen(inst->children);
     for (int i = 0; i < count; i++) {
-        render_instance(inst->children[i], child_ctx);
-        if (inst->children[i]->type == NT_TEXT) {
+        ReactInstance *child = inst->children[i];
+        if (!child) continue;
+        render_instance(child, child_ctx);
+        if (child->type == NT_TEXT) {
             child_ctx.text_index++;
         }
     }
@@ -63,7 +65,7 @@ static void render_text_instance(ReactInstance *inst, RenderContext ctx)
     int count = arrlen(inst->children);
     for (int i = 0; i < count; i++) {
         ReactInstance *child = inst->children[i];
-        if (child->type == NT_RAW_TEXT && child->props.raw_text) {
+        if (child && child->type == NT_RAW_TEXT && child->props.raw_text) {
             strncat(text_buffer, child->props.raw_text, sizeof(text_buffer) - strlen(text_buffer) - 1);
         }
     }
@@ -126,12 +128,16 @@ static void render_instance(ReactInstance *inst, RenderContext ctx)
 
 void render_draw_list(void)
 {
+    instance_tree_render_lock();
     ReactInstance **root = instance_get_root_children();
     RenderContext ctx = { 0, 0, 0 };
     int count = arrlen(root);
     for (int i = 0; i < count; i++) {
-        render_instance(root[i], ctx);
+        if (root[i]) {
+            render_instance(root[i], ctx);
+        }
     }
+    instance_tree_render_unlock();
 }
 
 void register_js_draw(js_State *J) {

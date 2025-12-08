@@ -9,6 +9,7 @@
 #include "stb_ds.h"
 
 #include "jslib.h"
+#include "core/event_queue.h"
 
 #include "instance_tree.c"
 #include "draw.c"

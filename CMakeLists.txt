@@ -36,7 +36,7 @@ if(NOT DEFINED ENV{VITASDK})
 endif()
 
 # Set up include directories
-set(VITADECK_INCLUDE_DIRS vendor vendor/mujs-1.3.7)
+set(VITADECK_INCLUDE_DIRS src vendor vendor/mujs-1.3.7)
 
 if(DEFINED ENV{VITASDK})
   list(APPEND VITADECK_INCLUDE_DIRS
@@ -51,9 +51,18 @@ endif()
 include_directories(${VITADECK_INCLUDE_DIRS})
 link_directories(${VITADECK_LIBRARY_DIRS})
 
+set(PLATFORM_SOURCES)
+if(DEFINED ENV{VITASDK})
+  list(APPEND PLATFORM_SOURCES src/platform/thread_vita.c)
+else()
+  list(APPEND PLATFORM_SOURCES src/platform/thread_posix.c)
+endif()
+
 add_executable(${PROJECT_NAME}
     src/main.c
     src/jslib/jslib.c
+    src/core/event_queue.c
+    ${PLATFORM_SOURCES}
     vendor/mujs-1.3.7/one.c
 )
 
@@ -99,6 +108,7 @@ if(DEFINED ENV{VITASDK})
 else()
   list(APPEND VITADECK_LIBRARIES ${RAYLIB_LIBRARIES})
   list(APPEND VITADECK_LIBRARIES m)
+  list(APPEND VITADECK_LIBRARIES pthread)
 endif()
 
 target_link_libraries(${PROJECT_NAME} ${VITADECK_LIBRARIES})

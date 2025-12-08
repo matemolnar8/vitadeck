@@ -1,3 +1,5 @@
+#include "platform/thread.h"
+
 typedef enum {
     NT_RECT = 1,
     NT_TEXT = 2,
@@ -45,15 +47,156 @@ typedef struct {
     ReactInstance *value;
 } InstanceEntry;
 
-static InstanceEntry *instance_registry = NULL;
-static ReactInstance **root_children = NULL;
+// Snapshot structure for thread-safe access
+typedef struct {
+    InstanceEntry *registry;
+    ReactInstance **root_children;
+} InstanceSnapshot;
 
+// Back buffer: JS thread writes here (single-threaded access)
+static InstanceEntry *back_registry = NULL;
+static ReactInstance **back_root_children = NULL;
+
+// Front snapshot: UI thread reads from here
+static InstanceSnapshot* front_snapshot = NULL;
+
+// Mutex to protect front_snapshot access during swap
+static vd_mutex* snapshot_mutex = NULL;
+
+// Free an instance tree recursively
+static void free_instance_tree(ReactInstance* inst) {
+    if (!inst) return;
+    
+    int count = arrlen(inst->children);
+    for (int i = 0; i < count; i++) {
+        free_instance_tree(inst->children[i]);
+    }
+    
+    if (inst->id) free(inst->id);
+    if (inst->type == NT_BUTTON && inst->props.button.label) {
+        free(inst->props.button.label);
+    }
+    if (inst->type == NT_RAW_TEXT && inst->props.raw_text) {
+        free(inst->props.raw_text);
+    }
+    arrfree(inst->children);
+    free(inst);
+}
+
+// Free a snapshot
+static void free_snapshot(InstanceSnapshot* snap) {
+    if (!snap) return;
+    
+    int count = arrlen(snap->root_children);
+    for (int i = 0; i < count; i++) {
+        free_instance_tree(snap->root_children[i]);
+    }
+    arrfree(snap->root_children);
+    shfree(snap->registry);
+    free(snap);
+}
+
+// Deep copy a single instance (without children links)
+static ReactInstance* copy_instance(ReactInstance* src) {
+    if (!src) return NULL;
+    
+    ReactInstance* dst = calloc(1, sizeof(ReactInstance));
+    dst->id = src->id ? strdup(src->id) : NULL;
+    dst->type = src->type;
+    dst->children = NULL;
+    dst->parent = NULL;
+    
+    switch (src->type) {
+        case NT_RECT:
+            dst->props.rect = src->props.rect;
+            break;
+        case NT_TEXT:
+            dst->props.text = src->props.text;
+            break;
+        case NT_BUTTON:
+            dst->props.button = src->props.button;
+            dst->props.button.label = src->props.button.label ? strdup(src->props.button.label) : NULL;
+            break;
+        case NT_RAW_TEXT:
+            dst->props.raw_text = src->props.raw_text ? strdup(src->props.raw_text) : NULL;
+            break;
+    }
+    
+    return dst;
+}
+
+// Recursively copy instance and all children
+static ReactInstance* deep_copy_instance(ReactInstance* src, InstanceEntry** new_registry) {
+    if (!src) return NULL;
+    
+    ReactInstance* dst = copy_instance(src);
+    if (dst->id) {
+        shput(*new_registry, dst->id, dst);
+    }
+    
+    int child_count = arrlen(src->children);
+    for (int i = 0; i < child_count; i++) {
+        if (src->children[i]) {
+            ReactInstance* child_copy = deep_copy_instance(src->children[i], new_registry);
+            if (child_copy) {
+                child_copy->parent = dst;
+                arrput(dst->children, child_copy);
+            }
+        }
+    }
+    
+    return dst;
+}
+
+// Initialize the snapshot mutex (call once at startup)
+void instance_tree_init(void) {
+    if (!snapshot_mutex) {
+        snapshot_mutex = vd_mutex_create();
+    }
+}
+
+// Swap back buffer to front buffer (called from JS thread after mutations)
+void instance_tree_swap(void) {
+    // Create new snapshot from back buffer (outside lock)
+    InstanceSnapshot* new_snap = calloc(1, sizeof(InstanceSnapshot));
+    new_snap->registry = NULL;
+    new_snap->root_children = NULL;
+    
+    int count = arrlen(back_root_children);
+    for (int i = 0; i < count; i++) {
+        if (back_root_children[i]) {
+            ReactInstance* copy = deep_copy_instance(back_root_children[i], &new_snap->registry);
+            arrput(new_snap->root_children, copy);
+        }
+    }
+    
+    // Swap under lock
+    InstanceSnapshot* old_snap = NULL;
+    vd_mutex_lock(snapshot_mutex);
+    old_snap = front_snapshot;
+    front_snapshot = new_snap;
+    vd_mutex_unlock(snapshot_mutex);
+    
+    // Free old snapshot (outside lock, safe because UI no longer references it)
+    free_snapshot(old_snap);
+}
+
+// Called from back buffer operations (JS thread)
 static ReactInstance *find_instance(const char *id)
 {
     if (!id) return NULL;
-    int idx = shgeti(instance_registry, id);
+    int idx = shgeti(back_registry, id);
     if (idx < 0) return NULL;
-    return instance_registry[idx].value;
+    return back_registry[idx].value;
+}
+
+// For hit testing, find in front buffer (UI thread) - must be called under lock
+static ReactInstance *find_front_instance_unlocked(InstanceSnapshot* snap, const char *id)
+{
+    if (!id || !snap) return NULL;
+    int idx = shgeti(snap->registry, id);
+    if (idx < 0) return NULL;
+    return snap->registry[idx].value;
 }
 
 ReactInstance *instance_find_by_id(const char *id)
@@ -63,12 +206,26 @@ ReactInstance *instance_find_by_id(const char *id)
 
 bool instance_exists(const char *id)
 {
-    return find_instance(id) != NULL;
+    if (!id) return false;
+    vd_mutex_lock(snapshot_mutex);
+    bool exists = front_snapshot && find_front_instance_unlocked(front_snapshot, id) != NULL;
+    vd_mutex_unlock(snapshot_mutex);
+    return exists;
 }
 
 ReactInstance **instance_get_root_children(void)
 {
-    return root_children;
+    // Note: caller must hold snapshot_mutex or use instance_tree_render_lock/unlock
+    return front_snapshot ? front_snapshot->root_children : NULL;
+}
+
+// Lock/unlock for rendering - UI thread calls these around the entire render
+void instance_tree_render_lock(void) {
+    vd_mutex_lock(snapshot_mutex);
+}
+
+void instance_tree_render_unlock(void) {
+    vd_mutex_unlock(snapshot_mutex);
 }
 
 static const char *hit_test_recursive(ReactInstance **children, int x, int y, int offset_x, int offset_y);
@@ -116,7 +273,13 @@ static const char *hit_test_recursive(ReactInstance **children, int x, int y, in
 
 const char *instance_hit_test(int x, int y)
 {
-    return hit_test_recursive(root_children, x, y, 0, 0);
+    vd_mutex_lock(snapshot_mutex);
+    const char *result = NULL;
+    if (front_snapshot) {
+        result = hit_test_recursive(front_snapshot->root_children, x, y, 0, 0);
+    }
+    vd_mutex_unlock(snapshot_mutex);
+    return result;
 }
 
 static void free_instance(ReactInstance *inst)
@@ -134,7 +297,7 @@ static void free_instance(ReactInstance *inst)
 }
 
 // =============================================================================
-// Native Mutation Functions
+// Native Mutation Functions (operate on back buffer)
 // =============================================================================
 
 static void native_create_rect(js_State *J)
@@ -169,7 +332,7 @@ static void native_create_rect(js_State *J)
     inst->children = NULL;
     inst->parent = NULL;
     
-    shput(instance_registry, inst->id, inst);
+    shput(back_registry, inst->id, inst);
     js_pushundefined(J);
 }
 
@@ -194,7 +357,7 @@ static void native_create_text(js_State *J)
     inst->children = NULL;
     inst->parent = NULL;
     
-    shput(instance_registry, inst->id, inst);
+    shput(back_registry, inst->id, inst);
     js_pushundefined(J);
 }
 
@@ -220,7 +383,7 @@ static void native_create_button(js_State *J)
     inst->children = NULL;
     inst->parent = NULL;
     
-    shput(instance_registry, inst->id, inst);
+    shput(back_registry, inst->id, inst);
     js_pushundefined(J);
 }
 
@@ -236,7 +399,7 @@ static void native_create_raw_text(js_State *J)
     inst->children = NULL;
     inst->parent = NULL;
     
-    shput(instance_registry, inst->id, inst);
+    shput(back_registry, inst->id, inst);
     js_pushundefined(J);
 }
 
@@ -253,7 +416,7 @@ static void native_append_child(js_State *J)
     
     if (parent_id[0] == '\0') {
         child->parent = NULL;
-        arrput(root_children, child);
+        arrput(back_root_children, child);
     } else {
         ReactInstance *parent = find_instance(parent_id);
         if (parent) {
@@ -280,7 +443,7 @@ static void native_insert_before(js_State *J)
     
     ReactInstance **children_arr;
     if (parent_id[0] == '\0') {
-        children_arr = root_children;
+        children_arr = back_root_children;
         child->parent = NULL;
     } else {
         ReactInstance *parent = find_instance(parent_id);
@@ -304,7 +467,7 @@ static void native_insert_before(js_State *J)
     arrins(children_arr, insert_idx, child);
     
     if (parent_id[0] == '\0') {
-        root_children = children_arr;
+        back_root_children = children_arr;
     } else {
         ReactInstance *parent = find_instance(parent_id);
         if (parent) parent->children = children_arr;
@@ -326,7 +489,7 @@ static void native_remove_child(js_State *J)
     
     ReactInstance **children_arr;
     if (parent_id[0] == '\0') {
-        children_arr = root_children;
+        children_arr = back_root_children;
     } else {
         ReactInstance *parent = find_instance(parent_id);
         if (!parent) {
@@ -345,7 +508,7 @@ static void native_remove_child(js_State *J)
     }
     
     if (parent_id[0] == '\0') {
-        root_children = children_arr;
+        back_root_children = children_arr;
     } else {
         ReactInstance *parent = find_instance(parent_id);
         if (parent) parent->children = children_arr;
@@ -365,7 +528,7 @@ static void native_destroy_instance(js_State *J)
         return;
     }
     
-    shdel(instance_registry, id);
+    shdel(back_registry, id);
     free_instance(inst);
     
     js_pushundefined(J);
@@ -473,8 +636,8 @@ static void native_update_raw_text(js_State *J)
 
 static void native_clear_container(js_State *J)
 {
-    arrfree(root_children);
-    root_children = NULL;
+    arrfree(back_root_children);
+    back_root_children = NULL;
     js_pushundefined(J);
 }
 
@@ -519,5 +682,3 @@ void register_instance_tree(js_State *J)
     js_newcfunction(J, native_clear_container, "nativeClearContainer", 0);
     js_setglobal(J, "nativeClearContainer");
 }
-
-

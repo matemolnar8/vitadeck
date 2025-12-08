@@ -1,4 +1,7 @@
 
+#include "core/event_queue.h"
+#include <string.h>
+
 // Mouse state (file-scope to share with JS getters)
 static bool prev_is_mouse_down = false;
 static char *hovered_id = NULL;
@@ -21,6 +24,18 @@ static bool rect_id_exists(const char *id)
     return instance_exists(id);
 }
 
+// Push an input event to the queue (called from UI thread)
+static void push_input_event(const char *id, const char *event) {
+    InputEvent evt;
+    evt.type = EVT_INPUT;
+    strncpy(evt.id, id, sizeof(evt.id) - 1);
+    evt.id[sizeof(evt.id) - 1] = '\0';
+    strncpy(evt.event_name, event, sizeof(evt.event_name) - 1);
+    evt.event_name[sizeof(evt.event_name) - 1] = '\0';
+    event_queue_push(&evt);
+}
+
+// Called from JS thread to dispatch event to JS
 static void call_input_event_from_native(js_State *J, const char *id, const char *event) {
     js_getglobal(J, "vitadeck");
     js_getproperty(J, -1, "input");
@@ -37,7 +52,18 @@ static void call_input_event_from_native(js_State *J, const char *id, const char
     }
 }
 
-void process_mouse_input(js_State *J) {
+// Process events from queue (called from JS thread)
+void process_input_events(js_State *J) {
+    InputEvent evt;
+    while (event_queue_pop(&evt)) {
+        if (evt.type == EVT_INPUT) {
+            call_input_event_from_native(J, evt.id, evt.event_name);
+        }
+    }
+}
+
+// Poll mouse input and push events to queue (called from UI thread)
+void poll_mouse_input(void) {
     const int x = GetMouseX();
     const int y = GetMouseY();
 
@@ -58,14 +84,14 @@ void process_mouse_input(js_State *J) {
     if (hover_changed) {
         if (hovered_id) {
             TraceLog(LOG_DEBUG, "mouseleave: %s", hovered_id);
-            call_input_event_from_native(J, hovered_id, "mouseleave");
+            push_input_event(hovered_id, "mouseleave");
             free(hovered_id);
             hovered_id = NULL;
         }
         if (top_id) {
             hovered_id = strdup(top_id);
             TraceLog(LOG_DEBUG, "mouseenter: %s", hovered_id);
-            call_input_event_from_native(J, hovered_id, "mouseenter");
+            push_input_event(hovered_id, "mouseenter");
         }
     }
 
@@ -79,7 +105,7 @@ void process_mouse_input(js_State *J) {
             if (mouse_down_id) { free(mouse_down_id); mouse_down_id = NULL; }
             mouse_down_id = strdup(top_id);
             TraceLog(LOG_DEBUG, "mousedown: %s", mouse_down_id);
-            call_input_event_from_native(J, mouse_down_id, "mousedown");
+            push_input_event(mouse_down_id, "mousedown");
         }
     }
 
@@ -87,11 +113,11 @@ void process_mouse_input(js_State *J) {
     if (just_released) {
         if (mouse_down_id) {
             TraceLog(LOG_DEBUG, "mouseup: %s", mouse_down_id);
-            call_input_event_from_native(J, mouse_down_id, "mouseup");
+            push_input_event(mouse_down_id, "mouseup");
 
             if (hovered_id && strcmp(mouse_down_id, hovered_id) == 0) {
                 TraceLog(LOG_DEBUG, "click: %s", mouse_down_id);
-                call_input_event_from_native(J, mouse_down_id, "click");
+                push_input_event(mouse_down_id, "click");
             }
 
             free(mouse_down_id); 
@@ -102,7 +128,8 @@ void process_mouse_input(js_State *J) {
     prev_is_mouse_down = is_mouse_down;
 }
 
-void process_touch_input(js_State *J) {
+// Poll touch input and push events to queue (called from UI thread)
+void poll_touch_input(void) {
     const int count = GetTouchPointCount();
     const bool is_down = count > 0;
 
@@ -131,13 +158,13 @@ void process_touch_input(js_State *J) {
 
         if (hover_changed) {
             if (touch_hovered_id) {
-                call_input_event_from_native(J, touch_hovered_id, "mouseleave");
+                push_input_event(touch_hovered_id, "mouseleave");
                 free(touch_hovered_id);
                 touch_hovered_id = NULL;
             }
             if (top_id) {
                 touch_hovered_id = strdup(top_id);
-                call_input_event_from_native(J, touch_hovered_id, "mouseenter");
+                push_input_event(touch_hovered_id, "mouseenter");
             }
         }
     }
@@ -150,23 +177,23 @@ void process_touch_input(js_State *J) {
         if (top_id) {
             if (touch_down_id) { free(touch_down_id); touch_down_id = NULL; }
             touch_down_id = strdup(top_id);
-            call_input_event_from_native(J, touch_down_id, "mousedown");
+            push_input_event(touch_down_id, "mousedown");
         }
     }
 
     // Touch up -> mouseup (+ click if released over same target)
     if (just_released) {
         if (touch_down_id) {
-            call_input_event_from_native(J, touch_down_id, "mouseup");
+            push_input_event(touch_down_id, "mouseup");
 
             if (touch_hovered_id && strcmp(touch_down_id, touch_hovered_id) == 0) {
-                call_input_event_from_native(J, touch_down_id, "click");
+                push_input_event(touch_down_id, "click");
             }
 
         }
 
         if (touch_hovered_id) {
-            call_input_event_from_native(J, touch_hovered_id, "mouseleave");
+            push_input_event(touch_hovered_id, "mouseleave");
         }
 
         if (touch_down_id) { free(touch_down_id); touch_down_id = NULL; }
@@ -174,6 +201,17 @@ void process_touch_input(js_State *J) {
     }
 
     prev_touch_down = is_down;
+}
+
+// Legacy functions that call JS directly (kept for compatibility during transition)
+void process_mouse_input(js_State *J) {
+    (void)J;
+    poll_mouse_input();
+}
+
+void process_touch_input(js_State *J) {
+    (void)J;
+    poll_touch_input();
 }
 
 static void js_get_interactive_state(js_State *J)
