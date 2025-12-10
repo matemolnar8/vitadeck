@@ -4,6 +4,8 @@
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
 #include "jslib/jslib.h"
+#include "ui/instance_tree.h"
+#include "ui/input.h"
 #include "platform/thread.h"
 #include "core/event_queue.h"
 

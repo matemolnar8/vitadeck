@@ -75,11 +75,6 @@ declare global {
 
   var Colors: { [K in ColorName]: Color };
 
-  function getInteractiveState(id: string): {
-    hovered: boolean;
-    pressed: boolean;
-  };
-
   // Native instance tree mutation functions
   function nativeCreateRect(
     id: string,

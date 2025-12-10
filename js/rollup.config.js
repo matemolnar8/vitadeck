@@ -7,6 +7,8 @@ import terser from "@rollup/plugin-terser";
 import typescript from "@rollup/plugin-typescript";
 import { defineConfig } from "rollup";
 
+console.log("NODE_ENV", process.env.NODE_ENV);
+
 export default defineConfig({
   input: {
     main: "./src/main.tsx",

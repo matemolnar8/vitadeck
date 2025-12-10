@@ -1,28 +1,18 @@
-
-#include "core/event_queue.h"
+#include <stdlib.h>
 #include <string.h>
+#include <raylib.h>
+#include "instance_tree.h"
+#include "core/event_queue.h"
 
-// Mouse state (file-scope to share with JS getters)
+// Mouse state
 static bool prev_is_mouse_down = false;
 static char *hovered_id = NULL;
 static char *mouse_down_id = NULL;
 
-// Touch state (file-scope)
+// Touch state
 static bool prev_touch_down = false;
 static char *touch_hovered_id = NULL;
 static char *touch_down_id = NULL;
-
-// Use instance tree for hit testing
-static const char *top_rect_id_at(int x, int y)
-{
-    return instance_hit_test(x, y);
-}
-
-// Check if instance still exists in tree
-static bool rect_id_exists(const char *id)
-{
-    return instance_exists(id);
-}
 
 // Push an input event to the queue (called from UI thread)
 static void push_input_event(const char *id, const char *event) {
@@ -35,55 +25,13 @@ static void push_input_event(const char *id, const char *event) {
     event_queue_push(&evt);
 }
 
-// Called from JS thread to dispatch event to JS
-static void call_input_event_from_native(JSContext *ctx, const char *id, const char *event) {
-    JSValue global = JS_GetGlobalObject(ctx);
-    JSValue vitadeck = JS_GetPropertyStr(ctx, global, "vitadeck");
-    JSValue input = JS_GetPropertyStr(ctx, vitadeck, "input");
-    JSValue fn = JS_GetPropertyStr(ctx, input, "onInputEventFromNative");
-
-    JSValue args[2] = {
-        JS_NewString(ctx, id),
-        JS_NewString(ctx, event)
-    };
-
-    JSValue result = JS_Call(ctx, fn, input, 2, args);
-    
-    if (JS_IsException(result)) {
-        JSValue exc = JS_GetException(ctx);
-        const char *str = JS_ToCString(ctx, exc);
-        TraceLog(LOG_ERROR, "Error calling input event from native: %s", str ? str : "unknown");
-        JS_FreeCString(ctx, str);
-        JS_FreeValue(ctx, exc);
-    }
-
-    JS_FreeValue(ctx, result);
-    JS_FreeValue(ctx, args[0]);
-    JS_FreeValue(ctx, args[1]);
-    JS_FreeValue(ctx, fn);
-    JS_FreeValue(ctx, input);
-    JS_FreeValue(ctx, vitadeck);
-    JS_FreeValue(ctx, global);
-}
-
-// Process events from queue (called from JS thread)
-void process_input_events(JSContext *ctx) {
-    InputEvent evt;
-    while (event_queue_pop(&evt)) {
-        if (evt.type == EVT_INPUT) {
-            call_input_event_from_native(ctx, evt.id, evt.event_name);
-        }
-    }
-}
-
-// Poll mouse input and push events to queue (called from UI thread)
 void poll_mouse_input(void) {
     const int x = GetMouseX();
     const int y = GetMouseY();
 
-    const char *top_id = top_rect_id_at(x, y);
+    const char *top_id = instance_hit_test(x, y);
 
-    if (hovered_id && !rect_id_exists(hovered_id)) {
+    if (hovered_id && !instance_exists(hovered_id)) {
         free(hovered_id);
         hovered_id = NULL;
     }
@@ -142,7 +90,6 @@ void poll_mouse_input(void) {
     prev_is_mouse_down = is_mouse_down;
 }
 
-// Poll touch input and push events to queue (called from UI thread)
 void poll_touch_input(void) {
     const int count = GetTouchPointCount();
     const bool is_down = count > 0;
@@ -155,9 +102,9 @@ void poll_touch_input(void) {
         y = (int)pos.y;
     }
 
-    const char *top_id = is_down ? top_rect_id_at(x, y) : NULL;
+    const char *top_id = is_down ? instance_hit_test(x, y) : NULL;
 
-    if (touch_hovered_id && !rect_id_exists(touch_hovered_id)) {
+    if (touch_hovered_id && !instance_exists(touch_hovered_id)) {
         free(touch_hovered_id);
         touch_hovered_id = NULL;
     }
@@ -217,45 +164,6 @@ void poll_touch_input(void) {
     prev_touch_down = is_down;
 }
 
-// Legacy functions that call JS directly (kept for compatibility during transition)
-void process_mouse_input(JSContext *ctx) {
-    (void)ctx;
-    poll_mouse_input();
-}
-
-void process_touch_input(JSContext *ctx) {
-    (void)ctx;
-    poll_touch_input();
-}
-
-static JSValue js_get_interactive_state(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
-{
-    (void)this_val;
-    if (argc < 1) return JS_UNDEFINED;
-    
-    const char *id = JS_ToCString(ctx, argv[0]);
-    if (!id) return JS_UNDEFINED;
-
-    JSValue obj = JS_NewObject(ctx);
-    
-    bool is_hovered = false;
-    if (hovered_id && strcmp(hovered_id, id) == 0) is_hovered = true;
-    if (touch_hovered_id && strcmp(touch_hovered_id, id) == 0) is_hovered = true;
-    JS_SetPropertyStr(ctx, obj, "hovered", JS_NewBool(ctx, is_hovered));
-    
-    bool is_pressed = false;
-    if (mouse_down_id && strcmp(mouse_down_id, id) == 0) is_pressed = true;
-    if (touch_down_id && strcmp(touch_down_id, id) == 0) is_pressed = true;
-    JS_SetPropertyStr(ctx, obj, "pressed", JS_NewBool(ctx, is_pressed));
-
-    JS_FreeCString(ctx, id);
-    return obj;
-}
-
-void register_js_input(JSContext *ctx) {
-    js_set_global_function(ctx, "getInteractiveState", js_get_interactive_state, 1);
-}
-
 bool input_is_hovered(const char *id)
 {
     if (!id) return false;
@@ -271,3 +179,4 @@ bool input_is_pressed(const char *id)
     if (touch_down_id && strcmp(touch_down_id, id) == 0) return true;
     return false;
 }
+

@@ -6,6 +6,7 @@
   "main": "main.js",
   "scripts": {
     "build": "tsgo && rollup --config rollup.config.js",
+    "build:prod": "tsgo && NODE_ENV=production rollup --config rollup.config.js",
     "dev": "rollup --config rollup.config.js --watch",
     "tsc": "tsgo",
     "biome": "biome check",
