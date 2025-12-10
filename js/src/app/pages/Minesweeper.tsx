@@ -284,26 +284,19 @@ export const GameMinesweeper = () => {
             const baseColor = isRevealed ? theme.surfaceAlt : theme.primary;
             const mineColor = gameOver === "lost" && cell.mine ? Colors.RED : baseColor;
             const fillColor = cell.flagged ? Colors.DARKPURPLE : mineColor;
-            const outline = theme.outline;
+            const label = isRevealed && !cell.mine && cell.adjacent > 0 ? String(cell.adjacent) : "";
             return (
-              <vita-rect
+              <vita-button
                 key={cell.id}
                 x={x}
                 y={y}
                 width={cellSize.width - 2}
                 height={cellSize.height - 2}
                 color={fillColor}
-                borderColor={outline}
+                label={label}
                 onMouseDown={() => onCellDown(r, c)}
                 onMouseUp={() => onCellUp(r, c)}
-              >
-                {/* Cell content */}
-                {isRevealed && !cell.mine && cell.adjacent > 0 && (
-                  <vita-text fontSize={20} color={theme.text}>
-                    {String(cell.adjacent)}
-                  </vita-text>
-                )}
-              </vita-rect>
+              />
             );
           });
         })}
