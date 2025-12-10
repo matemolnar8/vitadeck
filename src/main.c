@@ -1,6 +1,6 @@
 #include <raylib.h>
 #include <stdio.h>
-#include <mujs.h>
+#include "quickjs.h"
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
 #include "jslib/jslib.h"
@@ -14,53 +14,100 @@
 static volatile bool js_ready = false;
 static volatile bool js_init_failed = false;
 
-static int run_function(js_State *J, const char *func_name)
+static int run_function(JSContext *ctx, const char *func_name)
 {
-	js_getglobal(J, "vitadeck");
-	js_getproperty(J, -1, func_name);
+	JSValue global = JS_GetGlobalObject(ctx);
+	JSValue vitadeck = JS_GetPropertyStr(ctx, global, "vitadeck");
+	JSValue func = JS_GetPropertyStr(ctx, vitadeck, func_name);
 
-	// push the this value
-	js_pushnull(J);
+	JSValue result = JS_Call(ctx, func, vitadeck, 0, NULL);
 	
-	if (js_pcall(J, 0)) {
+	int ret = 0;
+	if (JS_IsException(result)) {
+		JSValue exc = JS_GetException(ctx);
+		const char *str = JS_ToCString(ctx, exc);
 		TraceLog(LOG_ERROR, "%s: an exception occurred in the javascript function", func_name);
-		TraceLog(LOG_ERROR, "%s", js_tostring(J, -1));
-		js_pop(J, 1);
-		return -1;
+		TraceLog(LOG_ERROR, "%s", str ? str : "unknown error");
+		JS_FreeCString(ctx, str);
+		JS_FreeValue(ctx, exc);
+		ret = -1;
 	}
 
-	js_pop(J, 2);
+	JS_FreeValue(ctx, result);
+	JS_FreeValue(ctx, func);
+	JS_FreeValue(ctx, vitadeck);
+	JS_FreeValue(ctx, global);
 
-	return 0;
+	return ret;
 }
 
-static int update_container(js_State *J) {
-	return run_function(J, "updateContainer");
+static int update_container(JSContext *ctx) {
+	return run_function(ctx, "updateContainer");
 }
 
 #define return_defer(value) do { result = (value); goto defer; } while(0)
+
+static char *read_file(const char *filename, size_t *out_len) {
+	FILE *f = fopen(filename, "rb");
+	if (!f) return NULL;
+	fseek(f, 0, SEEK_END);
+	long len = ftell(f);
+	fseek(f, 0, SEEK_SET);
+	char *buf = malloc(len + 1);
+	if (!buf) { fclose(f); return NULL; }
+	fread(buf, 1, len, f);
+	buf[len] = '\0';
+	fclose(f);
+	if (out_len) *out_len = len;
+	return buf;
+}
 
 // JS Thread entry point
 static void* js_thread_func(void* arg) {
 	(void)arg;
 	void* result = NULL;
 	
-	js_State *J = js_newstate(NULL, NULL, 0);
-	if (!J) {
-		TraceLog(LOG_ERROR, "Could not initialize MuJS state.");
+	JSRuntime *rt = JS_NewRuntime();
+	if (!rt) {
+		TraceLog(LOG_ERROR, "Could not initialize QuickJS runtime.");
 		js_init_failed = true;
 		return NULL;
-	} 
-	
-	register_js_lib(J);
+	}
 
-	if (js_dofile(J, "js/main.js")) {
+	JSContext *ctx = JS_NewContext(rt);
+	if (!ctx) {
+		TraceLog(LOG_ERROR, "Could not initialize QuickJS context.");
+		JS_FreeRuntime(rt);
+		js_init_failed = true;
+		return NULL;
+	}
+	
+	register_js_lib(ctx);
+
+	size_t len;
+	char *code = read_file("js/main.js", &len);
+	if (!code) {
 		TraceLog(LOG_ERROR, "Could not load main.js.");
 		js_init_failed = true;
 		return_defer(NULL);
 	}
 
-	if (update_container(J) > 0) {
+	JSValue eval_result = JS_Eval(ctx, code, len, "main.js", JS_EVAL_TYPE_GLOBAL);
+	free(code);
+
+	if (JS_IsException(eval_result)) {
+		JSValue exc = JS_GetException(ctx);
+		const char *str = JS_ToCString(ctx, exc);
+		TraceLog(LOG_ERROR, "Error evaluating main.js: %s", str ? str : "unknown error");
+		JS_FreeCString(ctx, str);
+		JS_FreeValue(ctx, exc);
+		JS_FreeValue(ctx, eval_result);
+		js_init_failed = true;
+		return_defer(NULL);
+	}
+	JS_FreeValue(ctx, eval_result);
+
+	if (update_container(ctx) > 0) {
 		js_init_failed = true;
 		return_defer(NULL);
 	}
@@ -71,14 +118,15 @@ static void* js_thread_func(void* arg) {
 
 	// JS thread main loop
 	while (!event_queue_is_shutdown()) {
-		process_input_events(J);
-		run_timeouts(J);
+		process_input_events(ctx);
+		run_timeouts(ctx);
 		instance_tree_swap();
 		vd_thread_yield();
 	}
 
 defer:
-	js_freestate(J);
+	JS_FreeContext(ctx);
+	JS_FreeRuntime(rt);
 	return result;
 }
 

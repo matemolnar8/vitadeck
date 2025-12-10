@@ -36,28 +36,42 @@ static void push_input_event(const char *id, const char *event) {
 }
 
 // Called from JS thread to dispatch event to JS
-static void call_input_event_from_native(js_State *J, const char *id, const char *event) {
-    js_getglobal(J, "vitadeck");
-    js_getproperty(J, -1, "input");
-    js_getproperty(J, -1, "onInputEventFromNative");
+static void call_input_event_from_native(JSContext *ctx, const char *id, const char *event) {
+    JSValue global = JS_GetGlobalObject(ctx);
+    JSValue vitadeck = JS_GetPropertyStr(ctx, global, "vitadeck");
+    JSValue input = JS_GetPropertyStr(ctx, vitadeck, "input");
+    JSValue fn = JS_GetPropertyStr(ctx, input, "onInputEventFromNative");
 
-    js_pushnull(J);
+    JSValue args[2] = {
+        JS_NewString(ctx, id),
+        JS_NewString(ctx, event)
+    };
 
-    js_pushstring(J, id);
-    js_pushstring(J, event);
-
-    if(js_pcall(J, 2)) {
-        TraceLog(LOG_ERROR, "Error calling input event from native: %s", js_tostring(J, -1));
-        js_pop(J, 1);
+    JSValue result = JS_Call(ctx, fn, input, 2, args);
+    
+    if (JS_IsException(result)) {
+        JSValue exc = JS_GetException(ctx);
+        const char *str = JS_ToCString(ctx, exc);
+        TraceLog(LOG_ERROR, "Error calling input event from native: %s", str ? str : "unknown");
+        JS_FreeCString(ctx, str);
+        JS_FreeValue(ctx, exc);
     }
+
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, args[0]);
+    JS_FreeValue(ctx, args[1]);
+    JS_FreeValue(ctx, fn);
+    JS_FreeValue(ctx, input);
+    JS_FreeValue(ctx, vitadeck);
+    JS_FreeValue(ctx, global);
 }
 
 // Process events from queue (called from JS thread)
-void process_input_events(js_State *J) {
+void process_input_events(JSContext *ctx) {
     InputEvent evt;
     while (event_queue_pop(&evt)) {
         if (evt.type == EVT_INPUT) {
-            call_input_event_from_native(J, evt.id, evt.event_name);
+            call_input_event_from_native(ctx, evt.id, evt.event_name);
         }
     }
 }
@@ -204,39 +218,42 @@ void poll_touch_input(void) {
 }
 
 // Legacy functions that call JS directly (kept for compatibility during transition)
-void process_mouse_input(js_State *J) {
-    (void)J;
+void process_mouse_input(JSContext *ctx) {
+    (void)ctx;
     poll_mouse_input();
 }
 
-void process_touch_input(js_State *J) {
-    (void)J;
+void process_touch_input(JSContext *ctx) {
+    (void)ctx;
     poll_touch_input();
 }
 
-static void js_get_interactive_state(js_State *J)
+static JSValue js_get_interactive_state(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    const char *id = js_tostring(J, 1);
-    js_newobject(J);
+    (void)this_val;
+    if (argc < 1) return JS_UNDEFINED;
+    
+    const char *id = JS_ToCString(ctx, argv[0]);
+    if (!id) return JS_UNDEFINED;
+
+    JSValue obj = JS_NewObject(ctx);
+    
     bool is_hovered = false;
-    if (id) {
-        if (hovered_id && strcmp(hovered_id, id) == 0) is_hovered = true;
-        if (touch_hovered_id && strcmp(touch_hovered_id, id) == 0) is_hovered = true;
-    }
-    js_pushboolean(J, is_hovered);
-    js_setproperty(J, -2, "hovered");
+    if (hovered_id && strcmp(hovered_id, id) == 0) is_hovered = true;
+    if (touch_hovered_id && strcmp(touch_hovered_id, id) == 0) is_hovered = true;
+    JS_SetPropertyStr(ctx, obj, "hovered", JS_NewBool(ctx, is_hovered));
+    
     bool is_pressed = false;
-    if (id) {
-        if (mouse_down_id && strcmp(mouse_down_id, id) == 0) is_pressed = true;
-        if (touch_down_id && strcmp(touch_down_id, id) == 0) is_pressed = true;
-    }
-    js_pushboolean(J, is_pressed);
-    js_setproperty(J, -2, "pressed");
+    if (mouse_down_id && strcmp(mouse_down_id, id) == 0) is_pressed = true;
+    if (touch_down_id && strcmp(touch_down_id, id) == 0) is_pressed = true;
+    JS_SetPropertyStr(ctx, obj, "pressed", JS_NewBool(ctx, is_pressed));
+
+    JS_FreeCString(ctx, id);
+    return obj;
 }
 
-void register_js_input(js_State *J) {
-    js_newcfunction(J, js_get_interactive_state, "getInteractiveState", 1);
-    js_setglobal(J, "getInteractiveState");
+void register_js_input(JSContext *ctx) {
+    js_set_global_function(ctx, "getInteractiveState", js_get_interactive_state, 1);
 }
 
 bool input_is_hovered(const char *id)

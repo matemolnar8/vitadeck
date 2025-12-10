@@ -1,14 +1,11 @@
 
-static void push_color_object(js_State *J, Color c) {
-    js_newobject(J);
-    js_pushnumber(J, c.r);
-    js_setproperty(J, -2, "r");
-    js_pushnumber(J, c.g);
-    js_setproperty(J, -2, "g");
-    js_pushnumber(J, c.b);
-    js_setproperty(J, -2, "b");
-    js_pushnumber(J, c.a);
-    js_setproperty(J, -2, "a");
+static JSValue create_color_object(JSContext *ctx, Color c) {
+    JSValue obj = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, obj, "r", JS_NewInt32(ctx, c.r));
+    JS_SetPropertyStr(ctx, obj, "g", JS_NewInt32(ctx, c.g));
+    JS_SetPropertyStr(ctx, obj, "b", JS_NewInt32(ctx, c.b));
+    JS_SetPropertyStr(ctx, obj, "a", JS_NewInt32(ctx, c.a));
+    return obj;
 }
 
 static Color mix_color(Color c, Color mix_with, float amount)
@@ -140,33 +137,36 @@ void render_draw_list(void)
     instance_tree_render_unlock();
 }
 
-void register_js_draw(js_State *J) {
-    js_newobject(J);
-    push_color_object(J, LIGHTGRAY); js_setproperty(J, -2, "LIGHTGRAY");
-    push_color_object(J, GRAY); js_setproperty(J, -2, "GRAY");
-    push_color_object(J, DARKGRAY); js_setproperty(J, -2, "DARKGRAY");
-    push_color_object(J, YELLOW); js_setproperty(J, -2, "YELLOW");
-    push_color_object(J, GOLD); js_setproperty(J, -2, "GOLD");
-    push_color_object(J, ORANGE); js_setproperty(J, -2, "ORANGE");
-    push_color_object(J, PINK); js_setproperty(J, -2, "PINK");
-    push_color_object(J, RED); js_setproperty(J, -2, "RED");
-    push_color_object(J, MAROON); js_setproperty(J, -2, "MAROON");
-    push_color_object(J, GREEN); js_setproperty(J, -2, "GREEN");
-    push_color_object(J, LIME); js_setproperty(J, -2, "LIME");
-    push_color_object(J, DARKGREEN); js_setproperty(J, -2, "DARKGREEN");
-    push_color_object(J, SKYBLUE); js_setproperty(J, -2, "SKYBLUE");
-    push_color_object(J, BLUE); js_setproperty(J, -2, "BLUE");
-    push_color_object(J, DARKBLUE); js_setproperty(J, -2, "DARKBLUE");
-    push_color_object(J, PURPLE); js_setproperty(J, -2, "PURPLE");
-    push_color_object(J, VIOLET); js_setproperty(J, -2, "VIOLET");
-    push_color_object(J, DARKPURPLE); js_setproperty(J, -2, "DARKPURPLE");
-    push_color_object(J, BEIGE); js_setproperty(J, -2, "BEIGE");
-    push_color_object(J, BROWN); js_setproperty(J, -2, "BROWN");
-    push_color_object(J, DARKBROWN); js_setproperty(J, -2, "DARKBROWN");
-    push_color_object(J, WHITE); js_setproperty(J, -2, "WHITE");
-    push_color_object(J, BLACK); js_setproperty(J, -2, "BLACK");
-    push_color_object(J, BLANK); js_setproperty(J, -2, "BLANK");
-    push_color_object(J, MAGENTA); js_setproperty(J, -2, "MAGENTA");
-    push_color_object(J, RAYWHITE); js_setproperty(J, -2, "RAYWHITE");
-    js_setglobal(J, "Colors");
+void register_js_draw(JSContext *ctx) {
+    JSValue colors = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, colors, "LIGHTGRAY", create_color_object(ctx, LIGHTGRAY));
+    JS_SetPropertyStr(ctx, colors, "GRAY", create_color_object(ctx, GRAY));
+    JS_SetPropertyStr(ctx, colors, "DARKGRAY", create_color_object(ctx, DARKGRAY));
+    JS_SetPropertyStr(ctx, colors, "YELLOW", create_color_object(ctx, YELLOW));
+    JS_SetPropertyStr(ctx, colors, "GOLD", create_color_object(ctx, GOLD));
+    JS_SetPropertyStr(ctx, colors, "ORANGE", create_color_object(ctx, ORANGE));
+    JS_SetPropertyStr(ctx, colors, "PINK", create_color_object(ctx, PINK));
+    JS_SetPropertyStr(ctx, colors, "RED", create_color_object(ctx, RED));
+    JS_SetPropertyStr(ctx, colors, "MAROON", create_color_object(ctx, MAROON));
+    JS_SetPropertyStr(ctx, colors, "GREEN", create_color_object(ctx, GREEN));
+    JS_SetPropertyStr(ctx, colors, "LIME", create_color_object(ctx, LIME));
+    JS_SetPropertyStr(ctx, colors, "DARKGREEN", create_color_object(ctx, DARKGREEN));
+    JS_SetPropertyStr(ctx, colors, "SKYBLUE", create_color_object(ctx, SKYBLUE));
+    JS_SetPropertyStr(ctx, colors, "BLUE", create_color_object(ctx, BLUE));
+    JS_SetPropertyStr(ctx, colors, "DARKBLUE", create_color_object(ctx, DARKBLUE));
+    JS_SetPropertyStr(ctx, colors, "PURPLE", create_color_object(ctx, PURPLE));
+    JS_SetPropertyStr(ctx, colors, "VIOLET", create_color_object(ctx, VIOLET));
+    JS_SetPropertyStr(ctx, colors, "DARKPURPLE", create_color_object(ctx, DARKPURPLE));
+    JS_SetPropertyStr(ctx, colors, "BEIGE", create_color_object(ctx, BEIGE));
+    JS_SetPropertyStr(ctx, colors, "BROWN", create_color_object(ctx, BROWN));
+    JS_SetPropertyStr(ctx, colors, "DARKBROWN", create_color_object(ctx, DARKBROWN));
+    JS_SetPropertyStr(ctx, colors, "WHITE", create_color_object(ctx, WHITE));
+    JS_SetPropertyStr(ctx, colors, "BLACK", create_color_object(ctx, BLACK));
+    JS_SetPropertyStr(ctx, colors, "BLANK", create_color_object(ctx, BLANK));
+    JS_SetPropertyStr(ctx, colors, "MAGENTA", create_color_object(ctx, MAGENTA));
+    JS_SetPropertyStr(ctx, colors, "RAYWHITE", create_color_object(ctx, RAYWHITE));
+    
+    JSValue global = JS_GetGlobalObject(ctx);
+    JS_SetPropertyStr(ctx, global, "Colors", colors);
+    JS_FreeValue(ctx, global);
 }

@@ -2,13 +2,13 @@
 #define JSLIB_H
 
 #include <stdbool.h>
-#include <mujs.h>
+#include "quickjs.h"
 
 /**
  * Initialize and register all JavaScript library bindings
  * Registers: log, draw, timeout, input
  */
-void register_js_lib(js_State *J);
+void register_js_lib(JSContext *ctx);
 
 /**
  * Poll mouse input and push events to queue (UI thread)
@@ -23,23 +23,23 @@ void poll_touch_input(void);
 /**
  * Process input events from queue (JS thread)
  */
-void process_input_events(js_State *J);
+void process_input_events(JSContext *ctx);
 
 /**
  * Legacy: Process mouse input (calls poll_mouse_input internally)
  */
-void process_mouse_input(js_State *J);
+void process_mouse_input(JSContext *ctx);
 
 /**
  * Legacy: Process touch input (calls poll_touch_input internally)
  */
-void process_touch_input(js_State *J);
+void process_touch_input(JSContext *ctx);
 
 /**
  * Run all timeouts and intervals
  * Called from the main loop every frame, checks if any timeouts or intervals are due and runs them
  */
-void run_timeouts(js_State *J);
+void run_timeouts(JSContext *ctx);
 
 // Draw list rendering API
 void render_draw_list(void);

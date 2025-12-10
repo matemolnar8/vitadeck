@@ -300,118 +300,159 @@ static void free_instance(ReactInstance *inst)
 // Native Mutation Functions (operate on back buffer)
 // =============================================================================
 
-static void native_create_rect(js_State *J)
+static JSValue native_create_rect(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    const char *id = js_tostring(J, 1);
+    (void)this_val;
+    if (argc < 15) return JS_UNDEFINED;
+    
+    const char *id = JS_ToCString(ctx, argv[0]);
+    if (!id) return JS_UNDEFINED;
     
     ReactInstance *inst = calloc(1, sizeof(ReactInstance));
     inst->id = strdup(id);
     inst->type = NT_RECT;
-    inst->props.rect.x = js_tointeger(J, 2);
-    inst->props.rect.y = js_tointeger(J, 3);
-    inst->props.rect.width = js_tointeger(J, 4);
-    inst->props.rect.height = js_tointeger(J, 5);
-    inst->props.rect.has_fill = js_toboolean(J, 6);
+    
+    int32_t tmp;
+    JS_ToInt32(ctx, &tmp, argv[1]); inst->props.rect.x = tmp;
+    JS_ToInt32(ctx, &tmp, argv[2]); inst->props.rect.y = tmp;
+    JS_ToInt32(ctx, &tmp, argv[3]); inst->props.rect.width = tmp;
+    JS_ToInt32(ctx, &tmp, argv[4]); inst->props.rect.height = tmp;
+    inst->props.rect.has_fill = JS_ToBool(ctx, argv[5]);
     if (inst->props.rect.has_fill) {
-        inst->props.rect.fill_color = (Color){
-            (unsigned char)js_tointeger(J, 7),
-            (unsigned char)js_tointeger(J, 8),
-            (unsigned char)js_tointeger(J, 9),
-            (unsigned char)js_tointeger(J, 10)
-        };
+        int32_t r, g, b, a;
+        JS_ToInt32(ctx, &r, argv[6]);
+        JS_ToInt32(ctx, &g, argv[7]);
+        JS_ToInt32(ctx, &b, argv[8]);
+        JS_ToInt32(ctx, &a, argv[9]);
+        inst->props.rect.fill_color = (Color){r, g, b, a};
     }
-    inst->props.rect.has_outline = js_toboolean(J, 11);
+    inst->props.rect.has_outline = JS_ToBool(ctx, argv[10]);
     if (inst->props.rect.has_outline) {
-        inst->props.rect.border_color = (Color){
-            (unsigned char)js_tointeger(J, 12),
-            (unsigned char)js_tointeger(J, 13),
-            (unsigned char)js_tointeger(J, 14),
-            (unsigned char)js_tointeger(J, 15)
-        };
+        int32_t r, g, b, a;
+        JS_ToInt32(ctx, &r, argv[11]);
+        JS_ToInt32(ctx, &g, argv[12]);
+        JS_ToInt32(ctx, &b, argv[13]);
+        JS_ToInt32(ctx, &a, argv[14]);
+        inst->props.rect.border_color = (Color){r, g, b, a};
     }
     inst->children = NULL;
     inst->parent = NULL;
     
     shput(back_registry, inst->id, inst);
-    js_pushundefined(J);
+    JS_FreeCString(ctx, id);
+    return JS_UNDEFINED;
 }
 
-static void native_create_text(js_State *J)
+static JSValue native_create_text(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    const char *id = js_tostring(J, 1);
+    (void)this_val;
+    if (argc < 8) return JS_UNDEFINED;
+    
+    const char *id = JS_ToCString(ctx, argv[0]);
+    if (!id) return JS_UNDEFINED;
     
     ReactInstance *inst = calloc(1, sizeof(ReactInstance));
     inst->id = strdup(id);
     inst->type = NT_TEXT;
-    inst->props.text.font_size = js_tointeger(J, 2);
-    inst->props.text.has_color = js_toboolean(J, 3);
+    
+    int32_t tmp;
+    JS_ToInt32(ctx, &tmp, argv[1]); inst->props.text.font_size = tmp;
+    inst->props.text.has_color = JS_ToBool(ctx, argv[2]);
     if (inst->props.text.has_color) {
-        inst->props.text.color = (Color){
-            (unsigned char)js_tointeger(J, 4),
-            (unsigned char)js_tointeger(J, 5),
-            (unsigned char)js_tointeger(J, 6),
-            (unsigned char)js_tointeger(J, 7)
-        };
+        int32_t r, g, b, a;
+        JS_ToInt32(ctx, &r, argv[3]);
+        JS_ToInt32(ctx, &g, argv[4]);
+        JS_ToInt32(ctx, &b, argv[5]);
+        JS_ToInt32(ctx, &a, argv[6]);
+        inst->props.text.color = (Color){r, g, b, a};
     }
-    inst->props.text.border = js_toboolean(J, 8);
+    inst->props.text.border = JS_ToBool(ctx, argv[7]);
     inst->children = NULL;
     inst->parent = NULL;
     
     shput(back_registry, inst->id, inst);
-    js_pushundefined(J);
+    JS_FreeCString(ctx, id);
+    return JS_UNDEFINED;
 }
 
-static void native_create_button(js_State *J)
+static JSValue native_create_button(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    const char *id = js_tostring(J, 1);
+    (void)this_val;
+    if (argc < 11) return JS_UNDEFINED;
+    
+    const char *id = JS_ToCString(ctx, argv[0]);
+    if (!id) return JS_UNDEFINED;
     
     ReactInstance *inst = calloc(1, sizeof(ReactInstance));
     inst->id = strdup(id);
     inst->type = NT_BUTTON;
-    inst->props.button.x = js_tointeger(J, 2);
-    inst->props.button.y = js_tointeger(J, 3);
-    inst->props.button.width = js_tointeger(J, 4);
-    inst->props.button.height = js_tointeger(J, 5);
-    inst->props.button.color = (Color){
-        (unsigned char)js_tointeger(J, 6),
-        (unsigned char)js_tointeger(J, 7),
-        (unsigned char)js_tointeger(J, 8),
-        (unsigned char)js_tointeger(J, 9)
-    };
-    inst->props.button.label = strdup(js_tostring(J, 10));
-    inst->props.button.font_size = js_tointeger(J, 11);
+    
+    int32_t tmp;
+    JS_ToInt32(ctx, &tmp, argv[1]); inst->props.button.x = tmp;
+    JS_ToInt32(ctx, &tmp, argv[2]); inst->props.button.y = tmp;
+    JS_ToInt32(ctx, &tmp, argv[3]); inst->props.button.width = tmp;
+    JS_ToInt32(ctx, &tmp, argv[4]); inst->props.button.height = tmp;
+    
+    int32_t r, g, b, a;
+    JS_ToInt32(ctx, &r, argv[5]);
+    JS_ToInt32(ctx, &g, argv[6]);
+    JS_ToInt32(ctx, &b, argv[7]);
+    JS_ToInt32(ctx, &a, argv[8]);
+    inst->props.button.color = (Color){r, g, b, a};
+    
+    const char *label = JS_ToCString(ctx, argv[9]);
+    inst->props.button.label = strdup(label ? label : "");
+    JS_FreeCString(ctx, label);
+    
+    JS_ToInt32(ctx, &tmp, argv[10]); inst->props.button.font_size = tmp;
     inst->children = NULL;
     inst->parent = NULL;
     
     shput(back_registry, inst->id, inst);
-    js_pushundefined(J);
+    JS_FreeCString(ctx, id);
+    return JS_UNDEFINED;
 }
 
-static void native_create_raw_text(js_State *J)
+static JSValue native_create_raw_text(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    const char *id = js_tostring(J, 1);
-    const char *text = js_tostring(J, 2);
+    (void)this_val;
+    if (argc < 2) return JS_UNDEFINED;
+    
+    const char *id = JS_ToCString(ctx, argv[0]);
+    const char *text = JS_ToCString(ctx, argv[1]);
+    if (!id) return JS_UNDEFINED;
     
     ReactInstance *inst = calloc(1, sizeof(ReactInstance));
     inst->id = strdup(id);
     inst->type = NT_RAW_TEXT;
-    inst->props.raw_text = strdup(text);
+    inst->props.raw_text = strdup(text ? text : "");
     inst->children = NULL;
     inst->parent = NULL;
     
     shput(back_registry, inst->id, inst);
-    js_pushundefined(J);
+    JS_FreeCString(ctx, id);
+    JS_FreeCString(ctx, text);
+    return JS_UNDEFINED;
 }
 
-static void native_append_child(js_State *J)
+static JSValue native_append_child(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    const char *parent_id = js_tostring(J, 1);
-    const char *child_id = js_tostring(J, 2);
+    (void)this_val;
+    if (argc < 2) return JS_UNDEFINED;
+    
+    const char *parent_id = JS_ToCString(ctx, argv[0]);
+    const char *child_id = JS_ToCString(ctx, argv[1]);
+    if (!parent_id || !child_id) {
+        JS_FreeCString(ctx, parent_id);
+        JS_FreeCString(ctx, child_id);
+        return JS_UNDEFINED;
+    }
     
     ReactInstance *child = find_instance(child_id);
     if (!child) {
-        js_pushundefined(J);
-        return;
+        JS_FreeCString(ctx, parent_id);
+        JS_FreeCString(ctx, child_id);
+        return JS_UNDEFINED;
     }
     
     if (parent_id[0] == '\0') {
@@ -425,20 +466,34 @@ static void native_append_child(js_State *J)
         }
     }
     
-    js_pushundefined(J);
+    JS_FreeCString(ctx, parent_id);
+    JS_FreeCString(ctx, child_id);
+    return JS_UNDEFINED;
 }
 
-static void native_insert_before(js_State *J)
+static JSValue native_insert_before(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    const char *parent_id = js_tostring(J, 1);
-    const char *child_id = js_tostring(J, 2);
-    const char *before_id = js_tostring(J, 3);
+    (void)this_val;
+    if (argc < 3) return JS_UNDEFINED;
+    
+    const char *parent_id = JS_ToCString(ctx, argv[0]);
+    const char *child_id = JS_ToCString(ctx, argv[1]);
+    const char *before_id = JS_ToCString(ctx, argv[2]);
+    
+    if (!parent_id || !child_id || !before_id) {
+        JS_FreeCString(ctx, parent_id);
+        JS_FreeCString(ctx, child_id);
+        JS_FreeCString(ctx, before_id);
+        return JS_UNDEFINED;
+    }
     
     ReactInstance *child = find_instance(child_id);
     ReactInstance *before = find_instance(before_id);
     if (!child) {
-        js_pushundefined(J);
-        return;
+        JS_FreeCString(ctx, parent_id);
+        JS_FreeCString(ctx, child_id);
+        JS_FreeCString(ctx, before_id);
+        return JS_UNDEFINED;
     }
     
     ReactInstance **children_arr;
@@ -448,8 +503,10 @@ static void native_insert_before(js_State *J)
     } else {
         ReactInstance *parent = find_instance(parent_id);
         if (!parent) {
-            js_pushundefined(J);
-            return;
+            JS_FreeCString(ctx, parent_id);
+            JS_FreeCString(ctx, child_id);
+            JS_FreeCString(ctx, before_id);
+            return JS_UNDEFINED;
         }
         children_arr = parent->children;
         child->parent = parent;
@@ -473,18 +530,31 @@ static void native_insert_before(js_State *J)
         if (parent) parent->children = children_arr;
     }
     
-    js_pushundefined(J);
+    JS_FreeCString(ctx, parent_id);
+    JS_FreeCString(ctx, child_id);
+    JS_FreeCString(ctx, before_id);
+    return JS_UNDEFINED;
 }
 
-static void native_remove_child(js_State *J)
+static JSValue native_remove_child(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    const char *parent_id = js_tostring(J, 1);
-    const char *child_id = js_tostring(J, 2);
+    (void)this_val;
+    if (argc < 2) return JS_UNDEFINED;
+    
+    const char *parent_id = JS_ToCString(ctx, argv[0]);
+    const char *child_id = JS_ToCString(ctx, argv[1]);
+    
+    if (!parent_id || !child_id) {
+        JS_FreeCString(ctx, parent_id);
+        JS_FreeCString(ctx, child_id);
+        return JS_UNDEFINED;
+    }
     
     ReactInstance *child = find_instance(child_id);
     if (!child) {
-        js_pushundefined(J);
-        return;
+        JS_FreeCString(ctx, parent_id);
+        JS_FreeCString(ctx, child_id);
+        return JS_UNDEFINED;
     }
     
     ReactInstance **children_arr;
@@ -493,8 +563,9 @@ static void native_remove_child(js_State *J)
     } else {
         ReactInstance *parent = find_instance(parent_id);
         if (!parent) {
-            js_pushundefined(J);
-            return;
+            JS_FreeCString(ctx, parent_id);
+            JS_FreeCString(ctx, child_id);
+            return JS_UNDEFINED;
         }
         children_arr = parent->children;
     }
@@ -515,170 +586,187 @@ static void native_remove_child(js_State *J)
     }
     
     child->parent = NULL;
-    js_pushundefined(J);
+    JS_FreeCString(ctx, parent_id);
+    JS_FreeCString(ctx, child_id);
+    return JS_UNDEFINED;
 }
 
-static void native_destroy_instance(js_State *J)
+static JSValue native_destroy_instance(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    const char *id = js_tostring(J, 1);
+    (void)this_val;
+    if (argc < 1) return JS_UNDEFINED;
+    
+    const char *id = JS_ToCString(ctx, argv[0]);
+    if (!id) return JS_UNDEFINED;
     
     ReactInstance *inst = find_instance(id);
     if (!inst) {
-        js_pushundefined(J);
-        return;
+        JS_FreeCString(ctx, id);
+        return JS_UNDEFINED;
     }
     
     shdel(back_registry, id);
     free_instance(inst);
     
-    js_pushundefined(J);
+    JS_FreeCString(ctx, id);
+    return JS_UNDEFINED;
 }
 
-static void native_update_rect(js_State *J)
+static JSValue native_update_rect(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    const char *id = js_tostring(J, 1);
+    (void)this_val;
+    if (argc < 15) return JS_UNDEFINED;
+    
+    const char *id = JS_ToCString(ctx, argv[0]);
+    if (!id) return JS_UNDEFINED;
+    
     ReactInstance *inst = find_instance(id);
     if (!inst || inst->type != NT_RECT) {
-        js_pushundefined(J);
-        return;
+        JS_FreeCString(ctx, id);
+        return JS_UNDEFINED;
     }
     
-    inst->props.rect.x = js_tointeger(J, 2);
-    inst->props.rect.y = js_tointeger(J, 3);
-    inst->props.rect.width = js_tointeger(J, 4);
-    inst->props.rect.height = js_tointeger(J, 5);
-    inst->props.rect.has_fill = js_toboolean(J, 6);
+    int32_t tmp;
+    JS_ToInt32(ctx, &tmp, argv[1]); inst->props.rect.x = tmp;
+    JS_ToInt32(ctx, &tmp, argv[2]); inst->props.rect.y = tmp;
+    JS_ToInt32(ctx, &tmp, argv[3]); inst->props.rect.width = tmp;
+    JS_ToInt32(ctx, &tmp, argv[4]); inst->props.rect.height = tmp;
+    inst->props.rect.has_fill = JS_ToBool(ctx, argv[5]);
     if (inst->props.rect.has_fill) {
-        inst->props.rect.fill_color = (Color){
-            (unsigned char)js_tointeger(J, 7),
-            (unsigned char)js_tointeger(J, 8),
-            (unsigned char)js_tointeger(J, 9),
-            (unsigned char)js_tointeger(J, 10)
-        };
+        int32_t r, g, b, a;
+        JS_ToInt32(ctx, &r, argv[6]);
+        JS_ToInt32(ctx, &g, argv[7]);
+        JS_ToInt32(ctx, &b, argv[8]);
+        JS_ToInt32(ctx, &a, argv[9]);
+        inst->props.rect.fill_color = (Color){r, g, b, a};
     }
-    inst->props.rect.has_outline = js_toboolean(J, 11);
+    inst->props.rect.has_outline = JS_ToBool(ctx, argv[10]);
     if (inst->props.rect.has_outline) {
-        inst->props.rect.border_color = (Color){
-            (unsigned char)js_tointeger(J, 12),
-            (unsigned char)js_tointeger(J, 13),
-            (unsigned char)js_tointeger(J, 14),
-            (unsigned char)js_tointeger(J, 15)
-        };
+        int32_t r, g, b, a;
+        JS_ToInt32(ctx, &r, argv[11]);
+        JS_ToInt32(ctx, &g, argv[12]);
+        JS_ToInt32(ctx, &b, argv[13]);
+        JS_ToInt32(ctx, &a, argv[14]);
+        inst->props.rect.border_color = (Color){r, g, b, a};
     }
     
-    js_pushundefined(J);
+    JS_FreeCString(ctx, id);
+    return JS_UNDEFINED;
 }
 
-static void native_update_text(js_State *J)
+static JSValue native_update_text(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    const char *id = js_tostring(J, 1);
+    (void)this_val;
+    if (argc < 8) return JS_UNDEFINED;
+    
+    const char *id = JS_ToCString(ctx, argv[0]);
+    if (!id) return JS_UNDEFINED;
+    
     ReactInstance *inst = find_instance(id);
     if (!inst || inst->type != NT_TEXT) {
-        js_pushundefined(J);
-        return;
+        JS_FreeCString(ctx, id);
+        return JS_UNDEFINED;
     }
     
-    inst->props.text.font_size = js_tointeger(J, 2);
-    inst->props.text.has_color = js_toboolean(J, 3);
+    int32_t tmp;
+    JS_ToInt32(ctx, &tmp, argv[1]); inst->props.text.font_size = tmp;
+    inst->props.text.has_color = JS_ToBool(ctx, argv[2]);
     if (inst->props.text.has_color) {
-        inst->props.text.color = (Color){
-            (unsigned char)js_tointeger(J, 4),
-            (unsigned char)js_tointeger(J, 5),
-            (unsigned char)js_tointeger(J, 6),
-            (unsigned char)js_tointeger(J, 7)
-        };
+        int32_t r, g, b, a;
+        JS_ToInt32(ctx, &r, argv[3]);
+        JS_ToInt32(ctx, &g, argv[4]);
+        JS_ToInt32(ctx, &b, argv[5]);
+        JS_ToInt32(ctx, &a, argv[6]);
+        inst->props.text.color = (Color){r, g, b, a};
     }
-    inst->props.text.border = js_toboolean(J, 8);
+    inst->props.text.border = JS_ToBool(ctx, argv[7]);
     
-    js_pushundefined(J);
+    JS_FreeCString(ctx, id);
+    return JS_UNDEFINED;
 }
 
-static void native_update_button(js_State *J)
+static JSValue native_update_button(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    const char *id = js_tostring(J, 1);
+    (void)this_val;
+    if (argc < 11) return JS_UNDEFINED;
+    
+    const char *id = JS_ToCString(ctx, argv[0]);
+    if (!id) return JS_UNDEFINED;
+    
     ReactInstance *inst = find_instance(id);
     if (!inst || inst->type != NT_BUTTON) {
-        js_pushundefined(J);
-        return;
+        JS_FreeCString(ctx, id);
+        return JS_UNDEFINED;
     }
     
-    inst->props.button.x = js_tointeger(J, 2);
-    inst->props.button.y = js_tointeger(J, 3);
-    inst->props.button.width = js_tointeger(J, 4);
-    inst->props.button.height = js_tointeger(J, 5);
-    inst->props.button.color = (Color){
-        (unsigned char)js_tointeger(J, 6),
-        (unsigned char)js_tointeger(J, 7),
-        (unsigned char)js_tointeger(J, 8),
-        (unsigned char)js_tointeger(J, 9)
-    };
-    if (inst->props.button.label) free(inst->props.button.label);
-    inst->props.button.label = strdup(js_tostring(J, 10));
-    inst->props.button.font_size = js_tointeger(J, 11);
+    int32_t tmp;
+    JS_ToInt32(ctx, &tmp, argv[1]); inst->props.button.x = tmp;
+    JS_ToInt32(ctx, &tmp, argv[2]); inst->props.button.y = tmp;
+    JS_ToInt32(ctx, &tmp, argv[3]); inst->props.button.width = tmp;
+    JS_ToInt32(ctx, &tmp, argv[4]); inst->props.button.height = tmp;
     
-    js_pushundefined(J);
+    int32_t r, g, b, a;
+    JS_ToInt32(ctx, &r, argv[5]);
+    JS_ToInt32(ctx, &g, argv[6]);
+    JS_ToInt32(ctx, &b, argv[7]);
+    JS_ToInt32(ctx, &a, argv[8]);
+    inst->props.button.color = (Color){r, g, b, a};
+    
+    if (inst->props.button.label) free(inst->props.button.label);
+    const char *label = JS_ToCString(ctx, argv[9]);
+    inst->props.button.label = strdup(label ? label : "");
+    JS_FreeCString(ctx, label);
+    
+    JS_ToInt32(ctx, &tmp, argv[10]); inst->props.button.font_size = tmp;
+    
+    JS_FreeCString(ctx, id);
+    return JS_UNDEFINED;
 }
 
-static void native_update_raw_text(js_State *J)
+static JSValue native_update_raw_text(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    const char *id = js_tostring(J, 1);
+    (void)this_val;
+    if (argc < 2) return JS_UNDEFINED;
+    
+    const char *id = JS_ToCString(ctx, argv[0]);
+    if (!id) return JS_UNDEFINED;
+    
     ReactInstance *inst = find_instance(id);
     if (!inst || inst->type != NT_RAW_TEXT) {
-        js_pushundefined(J);
-        return;
+        JS_FreeCString(ctx, id);
+        return JS_UNDEFINED;
     }
     
     if (inst->props.raw_text) free(inst->props.raw_text);
-    inst->props.raw_text = strdup(js_tostring(J, 2));
+    const char *text = JS_ToCString(ctx, argv[1]);
+    inst->props.raw_text = strdup(text ? text : "");
+    JS_FreeCString(ctx, text);
     
-    js_pushundefined(J);
+    JS_FreeCString(ctx, id);
+    return JS_UNDEFINED;
 }
 
-static void native_clear_container(js_State *J)
+static JSValue native_clear_container(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
+    (void)ctx; (void)this_val; (void)argc; (void)argv;
     arrfree(back_root_children);
     back_root_children = NULL;
-    js_pushundefined(J);
+    return JS_UNDEFINED;
 }
 
-void register_instance_tree(js_State *J)
+void register_instance_tree(JSContext *ctx)
 {
-    js_newcfunction(J, native_create_rect, "nativeCreateRect", 0);
-    js_setglobal(J, "nativeCreateRect");
-    
-    js_newcfunction(J, native_create_text, "nativeCreateText", 0);
-    js_setglobal(J, "nativeCreateText");
-    
-    js_newcfunction(J, native_create_button, "nativeCreateButton", 0);
-    js_setglobal(J, "nativeCreateButton");
-    
-    js_newcfunction(J, native_create_raw_text, "nativeCreateRawText", 0);
-    js_setglobal(J, "nativeCreateRawText");
-    
-    js_newcfunction(J, native_append_child, "nativeAppendChild", 0);
-    js_setglobal(J, "nativeAppendChild");
-    
-    js_newcfunction(J, native_insert_before, "nativeInsertBefore", 0);
-    js_setglobal(J, "nativeInsertBefore");
-    
-    js_newcfunction(J, native_remove_child, "nativeRemoveChild", 0);
-    js_setglobal(J, "nativeRemoveChild");
-    
-    js_newcfunction(J, native_destroy_instance, "nativeDestroyInstance", 0);
-    js_setglobal(J, "nativeDestroyInstance");
-    
-    js_newcfunction(J, native_update_rect, "nativeUpdateRect", 0);
-    js_setglobal(J, "nativeUpdateRect");
-    
-    js_newcfunction(J, native_update_text, "nativeUpdateText", 0);
-    js_setglobal(J, "nativeUpdateText");
-    
-    js_newcfunction(J, native_update_button, "nativeUpdateButton", 0);
-    js_setglobal(J, "nativeUpdateButton");
-    
-    js_newcfunction(J, native_update_raw_text, "nativeUpdateRawText", 0);
-    js_setglobal(J, "nativeUpdateRawText");
-    
-    js_newcfunction(J, native_clear_container, "nativeClearContainer", 0);
-    js_setglobal(J, "nativeClearContainer");
+    js_set_global_function(ctx, "nativeCreateRect", native_create_rect, 15);
+    js_set_global_function(ctx, "nativeCreateText", native_create_text, 8);
+    js_set_global_function(ctx, "nativeCreateButton", native_create_button, 11);
+    js_set_global_function(ctx, "nativeCreateRawText", native_create_raw_text, 2);
+    js_set_global_function(ctx, "nativeAppendChild", native_append_child, 2);
+    js_set_global_function(ctx, "nativeInsertBefore", native_insert_before, 3);
+    js_set_global_function(ctx, "nativeRemoveChild", native_remove_child, 2);
+    js_set_global_function(ctx, "nativeDestroyInstance", native_destroy_instance, 1);
+    js_set_global_function(ctx, "nativeUpdateRect", native_update_rect, 15);
+    js_set_global_function(ctx, "nativeUpdateText", native_update_text, 8);
+    js_set_global_function(ctx, "nativeUpdateButton", native_update_button, 11);
+    js_set_global_function(ctx, "nativeUpdateRawText", native_update_raw_text, 2);
+    js_set_global_function(ctx, "nativeClearContainer", native_clear_container, 0);
 }

@@ -11,13 +11,13 @@ project(vitadeck)
 if(DEFINED ENV{VITASDK})
   message(STATUS "VITA is ON")
   include("${VITASDK}/share/vita.cmake" REQUIRED)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -flto")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
 else()
   message(STATUS "VITA is OFF")
   if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -flto")
   else()
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Og -g -flto")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Og -g")
   endif()
 endif()
 
@@ -40,7 +40,7 @@ if(NOT DEFINED ENV{VITASDK})
 endif()
 
 # Set up include directories
-set(VITADECK_INCLUDE_DIRS src vendor vendor/mujs-1.3.7)
+set(VITADECK_INCLUDE_DIRS src vendor vendor/quickjs)
 
 if(DEFINED ENV{VITASDK})
   list(APPEND VITADECK_INCLUDE_DIRS
@@ -62,13 +62,30 @@ else()
   list(APPEND PLATFORM_SOURCES src/platform/thread_posix.c)
 endif()
 
+# QuickJS sources
+set(QUICKJS_SOURCES
+    vendor/quickjs/quickjs.c
+    vendor/quickjs/libregexp.c
+    vendor/quickjs/libunicode.c
+    vendor/quickjs/cutils.c
+    vendor/quickjs/dtoa.c
+)
+
 add_executable(${PROJECT_NAME}
     src/main.c
     src/jslib/jslib.c
     src/core/event_queue.c
     ${PLATFORM_SOURCES}
-    vendor/mujs-1.3.7/one.c
+    ${QUICKJS_SOURCES}
 )
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    CONFIG_VERSION="2024-01-13"
+    $<$<NOT:$<BOOL:$ENV{VITASDK}>>:_GNU_SOURCE>
+)
+if(DEFINED ENV{VITASDK})
+    target_compile_definitions(${PROJECT_NAME} PRIVATE __vita__)
+endif()
 
 set(VITADECK_LIBRARIES)
 

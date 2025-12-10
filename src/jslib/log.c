@@ -1,39 +1,30 @@
 /*
 	Log helpers wired to raylib TraceLog. 
-	Joins all args with spaces, converts them to "repr" (string representation).
+	Joins all args with spaces, converts them to string representation.
 */
-static void log_with_level(js_State *J, int level)
+static JSValue log_with_level(JSContext *ctx, int level, int argc, JSValueConst *argv)
 {
-	int top = js_gettop(J);
 	char buffer[2048];
 	int pos = 0;
-
 	buffer[0] = '\0';
 
-	for (int i = 1; i < top; i++) {
-		const char *s;
-
-		if(js_isstring(J, i)) {
-			s = js_tostring(J, i);
-		} else {
-			s = js_torepr(J, i);
-		}
-		
+	for (int i = 0; i < argc; i++) {
+		const char *s = JS_ToCString(ctx, argv[i]);
 		if (s == NULL) s = "";
 
-		if (i > 1) {
-			if (pos < sizeof(buffer) - 2) {
+		if (i > 0) {
+			if (pos < (int)sizeof(buffer) - 2) {
 				buffer[pos++] = ' ';
 				buffer[pos] = '\0';
 			}
 		}
 
 		int written = snprintf(buffer + pos, sizeof(buffer) - pos, "%s", s);
-		if (written < 0) {
-			break;
-		}
+		JS_FreeCString(ctx, s);
+		
+		if (written < 0) break;
 		pos += written;
-		if (pos >= sizeof(buffer) - 1) {
+		if (pos >= (int)sizeof(buffer) - 1) {
 			pos = sizeof(buffer) - 1;
 			break;
 		}
@@ -41,41 +32,38 @@ static void log_with_level(js_State *J, int level)
 
 	buffer[pos] = '\0';
 	TraceLog(level, "%s", buffer);
-	js_pushundefined(J);
+	return JS_UNDEFINED;
 }
 
-/*
-    logInfo(...args: any[]): void
-*/
-static void logInfo(js_State *J) { log_with_level(J, LOG_INFO); }
-/*
-    logDebug(...args: any[]): void
-*/
-static void logDebug(js_State *J) { log_with_level(J, LOG_DEBUG); }
-/*
-    logWarn(...args: any[]): void
-*/
-static void logWarn(js_State *J) { log_with_level(J, LOG_WARNING); }
-/*
-    logError(...args: any[]): void
-*/
-static void logError(js_State *J) { log_with_level(J, LOG_ERROR); }
+static JSValue js_logInfo(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+	(void)this_val;
+	return log_with_level(ctx, LOG_INFO, argc, argv);
+}
+
+static JSValue js_logDebug(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+	(void)this_val;
+	return log_with_level(ctx, LOG_DEBUG, argc, argv);
+}
+
+static JSValue js_logWarn(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+	(void)this_val;
+	return log_with_level(ctx, LOG_WARNING, argc, argv);
+}
+
+static JSValue js_logError(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+	(void)this_val;
+	return log_with_level(ctx, LOG_ERROR, argc, argv);
+}
 
 static const char *console_js =
 	"var console = { log: logInfo, info: logInfo, debug: logDebug, warn: logWarn, error: logError };";
 
-void register_js_log(js_State *J) {
-    js_newcfunction(J, logInfo, "logInfo", 0);
-	js_setglobal(J, "logInfo");
+void register_js_log(JSContext *ctx) {
+	js_set_global_function(ctx, "logInfo", js_logInfo, 0);
+	js_set_global_function(ctx, "logDebug", js_logDebug, 0);
+	js_set_global_function(ctx, "logWarn", js_logWarn, 0);
+	js_set_global_function(ctx, "logError", js_logError, 0);
 
-	js_newcfunction(J, logDebug, "logDebug", 0);
-	js_setglobal(J, "logDebug");
-
-	js_newcfunction(J, logWarn, "logWarn", 0);
-	js_setglobal(J, "logWarn");
-
-	js_newcfunction(J, logError, "logError", 0);
-	js_setglobal(J, "logError");
-
-    js_dostring(J, console_js);
+	JSValue result = JS_Eval(ctx, console_js, strlen(console_js), "<console>", JS_EVAL_TYPE_GLOBAL);
+	JS_FreeValue(ctx, result);
 }
