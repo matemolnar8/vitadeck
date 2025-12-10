@@ -1,15 +1,6 @@
-#include <raylib.h>
-#include <string.h>
-#include <stdlib.h>
 
-typedef struct {
-    const char *id;
-    int x;
-    int y;
-    int width;
-    int height;
-} InteractiveRect;
-static InteractiveRect *interactive_rects = NULL;
+#include "core/event_queue.h"
+#include <string.h>
 
 // Mouse state (file-scope to share with JS getters)
 static bool prev_is_mouse_down = false;
@@ -21,72 +12,30 @@ static bool prev_touch_down = false;
 static char *touch_hovered_id = NULL;
 static char *touch_down_id = NULL;
 
-/**
-    syncInteractiveRectsToNative(): void
-*/
-static void sync_interactive_rects(js_State *J) {
-    arrfree(interactive_rects);
-
-    js_getglobal(J, "vitadeck");
-    js_getproperty(J, -1, "input");
-    js_getproperty(J, -1, "interactiveRects");
-
-    int length = js_getlength(J, -1);
-
-    for (int i = 0; i < length; i++) {
-        js_getindex(J, -1, i);
-
-        js_getproperty(J, -1, "id");
-        const char *id = js_tostring(J, -1);
-        js_pop(J, 1);
-        
-        js_getproperty(J, -1, "x");
-        int x = js_tointeger(J, -1);
-        js_pop(J, 1);
-        
-        js_getproperty(J, -1, "y");
-        int y = js_tointeger(J, -1);
-        js_pop(J, 1);
-        
-        js_getproperty(J, -1, "width");
-        int width = js_tointeger(J, -1);
-        js_pop(J, 1);
-        
-        js_getproperty(J, -1, "height");
-        int height = js_tointeger(J, -1);
-        js_pop(J, 1);
-
-        // TraceLog(LOG_DEBUG, "Interactive rect %d: %s: x=%d, y=%d, width=%d, height=%d", i, id, x, y, width, height);
-        
-        InteractiveRect rect = {.id = strdup(id), .x = x, .y = y, .width = width, .height = height};
-        arrput(interactive_rects, rect);
-        js_pop(J, 1);
-    }
-}
-
+// Use instance tree for hit testing
 static const char *top_rect_id_at(int x, int y)
 {
-    if (!interactive_rects) return NULL;
-    int count = arrlen(interactive_rects);
-    for (int i = count - 1; i >= 0; i--) {
-        InteractiveRect r = interactive_rects[i];
-        if (x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height) {
-            return r.id;
-        }
-    }
-    return NULL;
+    return instance_hit_test(x, y);
 }
 
+// Check if instance still exists in tree
 static bool rect_id_exists(const char *id)
 {
-    if (!id || !interactive_rects) return false;
-    int count = arrlen(interactive_rects);
-    for (int i = 0; i < count; i++) {
-        if (strcmp(interactive_rects[i].id, id) == 0) return true;
-    }
-    return false;
+    return instance_exists(id);
 }
 
+// Push an input event to the queue (called from UI thread)
+static void push_input_event(const char *id, const char *event) {
+    InputEvent evt;
+    evt.type = EVT_INPUT;
+    strncpy(evt.id, id, sizeof(evt.id) - 1);
+    evt.id[sizeof(evt.id) - 1] = '\0';
+    strncpy(evt.event_name, event, sizeof(evt.event_name) - 1);
+    evt.event_name[sizeof(evt.event_name) - 1] = '\0';
+    event_queue_push(&evt);
+}
+
+// Called from JS thread to dispatch event to JS
 static void call_input_event_from_native(js_State *J, const char *id, const char *event) {
     js_getglobal(J, "vitadeck");
     js_getproperty(J, -1, "input");
@@ -103,7 +52,18 @@ static void call_input_event_from_native(js_State *J, const char *id, const char
     }
 }
 
-void process_mouse_input(js_State *J) {
+// Process events from queue (called from JS thread)
+void process_input_events(js_State *J) {
+    InputEvent evt;
+    while (event_queue_pop(&evt)) {
+        if (evt.type == EVT_INPUT) {
+            call_input_event_from_native(J, evt.id, evt.event_name);
+        }
+    }
+}
+
+// Poll mouse input and push events to queue (called from UI thread)
+void poll_mouse_input(void) {
     const int x = GetMouseX();
     const int y = GetMouseY();
 
@@ -124,14 +84,14 @@ void process_mouse_input(js_State *J) {
     if (hover_changed) {
         if (hovered_id) {
             TraceLog(LOG_DEBUG, "mouseleave: %s", hovered_id);
-            call_input_event_from_native(J, hovered_id, "mouseleave");
+            push_input_event(hovered_id, "mouseleave");
             free(hovered_id);
             hovered_id = NULL;
         }
         if (top_id) {
             hovered_id = strdup(top_id);
             TraceLog(LOG_DEBUG, "mouseenter: %s", hovered_id);
-            call_input_event_from_native(J, hovered_id, "mouseenter");
+            push_input_event(hovered_id, "mouseenter");
         }
     }
 
@@ -145,7 +105,7 @@ void process_mouse_input(js_State *J) {
             if (mouse_down_id) { free(mouse_down_id); mouse_down_id = NULL; }
             mouse_down_id = strdup(top_id);
             TraceLog(LOG_DEBUG, "mousedown: %s", mouse_down_id);
-            call_input_event_from_native(J, mouse_down_id, "mousedown");
+            push_input_event(mouse_down_id, "mousedown");
         }
     }
 
@@ -153,11 +113,11 @@ void process_mouse_input(js_State *J) {
     if (just_released) {
         if (mouse_down_id) {
             TraceLog(LOG_DEBUG, "mouseup: %s", mouse_down_id);
-            call_input_event_from_native(J, mouse_down_id, "mouseup");
+            push_input_event(mouse_down_id, "mouseup");
 
             if (hovered_id && strcmp(mouse_down_id, hovered_id) == 0) {
                 TraceLog(LOG_DEBUG, "click: %s", mouse_down_id);
-                call_input_event_from_native(J, mouse_down_id, "click");
+                push_input_event(mouse_down_id, "click");
             }
 
             free(mouse_down_id); 
@@ -168,7 +128,8 @@ void process_mouse_input(js_State *J) {
     prev_is_mouse_down = is_mouse_down;
 }
 
-void process_touch_input(js_State *J) {
+// Poll touch input and push events to queue (called from UI thread)
+void poll_touch_input(void) {
     const int count = GetTouchPointCount();
     const bool is_down = count > 0;
 
@@ -197,13 +158,13 @@ void process_touch_input(js_State *J) {
 
         if (hover_changed) {
             if (touch_hovered_id) {
-                call_input_event_from_native(J, touch_hovered_id, "mouseleave");
+                push_input_event(touch_hovered_id, "mouseleave");
                 free(touch_hovered_id);
                 touch_hovered_id = NULL;
             }
             if (top_id) {
                 touch_hovered_id = strdup(top_id);
-                call_input_event_from_native(J, touch_hovered_id, "mouseenter");
+                push_input_event(touch_hovered_id, "mouseenter");
             }
         }
     }
@@ -216,23 +177,23 @@ void process_touch_input(js_State *J) {
         if (top_id) {
             if (touch_down_id) { free(touch_down_id); touch_down_id = NULL; }
             touch_down_id = strdup(top_id);
-            call_input_event_from_native(J, touch_down_id, "mousedown");
+            push_input_event(touch_down_id, "mousedown");
         }
     }
 
     // Touch up -> mouseup (+ click if released over same target)
     if (just_released) {
         if (touch_down_id) {
-            call_input_event_from_native(J, touch_down_id, "mouseup");
+            push_input_event(touch_down_id, "mouseup");
 
             if (touch_hovered_id && strcmp(touch_down_id, touch_hovered_id) == 0) {
-                call_input_event_from_native(J, touch_down_id, "click");
+                push_input_event(touch_down_id, "click");
             }
 
         }
 
         if (touch_hovered_id) {
-            call_input_event_from_native(J, touch_hovered_id, "mouseleave");
+            push_input_event(touch_hovered_id, "mouseleave");
         }
 
         if (touch_down_id) { free(touch_down_id); touch_down_id = NULL; }
@@ -240,6 +201,17 @@ void process_touch_input(js_State *J) {
     }
 
     prev_touch_down = is_down;
+}
+
+// Legacy functions that call JS directly (kept for compatibility during transition)
+void process_mouse_input(js_State *J) {
+    (void)J;
+    poll_mouse_input();
+}
+
+void process_touch_input(js_State *J) {
+    (void)J;
+    poll_touch_input();
 }
 
 static void js_get_interactive_state(js_State *J)
@@ -263,8 +235,6 @@ static void js_get_interactive_state(js_State *J)
 }
 
 void register_js_input(js_State *J) {
-    js_newcfunction(J, sync_interactive_rects, "syncInteractiveRectsToNative", 0);
-    js_setglobal(J, "syncInteractiveRectsToNative");
     js_newcfunction(J, js_get_interactive_state, "getInteractiveState", 1);
     js_setglobal(J, "getInteractiveState");
 }

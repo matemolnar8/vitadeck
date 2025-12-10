@@ -1,60 +1,76 @@
 import React, { StrictMode } from "react";
 import { App } from "./app/App";
 import { ThemeProvider } from "./app/theme";
-import { commands } from "./drawlist";
-import { interactiveRects, onInputEventFromNative } from "./input";
-import { VitadeckReactReconciler } from "./vitadeck-react-reconciler";
-
-function toError(e: unknown): Error {
-  if (e instanceof Error) return e;
-  return new Error(typeof e === "string" ? e : String(e));
-}
-
-function logError(error: unknown) {
-  const err = toError(error);
-  console.error("Error:", err.message);
-  if (err.stack) {
-    console.error(err.stack);
-  }
-}
+import { onInputEventFromNative } from "./input";
+import type { MetricSummary } from "./reconciler-metrics";
+import { getMetrics, render, resetMetrics } from "./vitadeck-react-reconciler-mutation";
 
 export function updateContainer() {
-  try {
-    VitadeckReactReconciler.updateContainer(
-      <StrictMode>
-        <ThemeProvider>
-          <App />
-        </ThemeProvider>
-      </StrictMode>,
-      root,
-    );
-  } catch (error: unknown) {
-    logError(error);
-  }
+  render(
+    <StrictMode>
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
+    </StrictMode>,
+  );
 }
 
-// JS no longer renders; C side renders from synced flat draw list
-
 export const input = {
-  interactiveRects,
-  onInputEventFromNative: onInputEventFromNative,
+  onInputEventFromNative,
 };
 
-export const draw = {
-  commands,
-};
+const METRICS_REFRESH_MS = 1500;
+const METRICS_LOG_LIMIT = 10;
+let metricsLogSignature = "";
+let metricsIntervalId: number | null = null;
 
-const root = VitadeckReactReconciler.createContainer(
-  { children: [] },
-  0,
-  null,
-  true,
-  null,
-  "vitadeck_react_",
-  (error: unknown) => {
-    logError(error);
-  },
-  null,
-);
+function logMetrics() {
+  const summary = getMetrics().getSummary();
+  const pairs: Array<{ method: string; stats: MetricSummary }> = [];
+  for (const method in summary) {
+    const stats = summary[method];
+    if (stats) pairs.push({ method, stats });
+  }
+  if (pairs.length === 0) return;
+
+  pairs.sort((a, b) => b.stats.totalMs - a.stats.totalMs);
+  const trimmed = pairs.slice(0, METRICS_LOG_LIMIT);
+
+  let signature = "";
+  for (const entry of trimmed) {
+    signature += `${entry.method}:${entry.stats.totalMs.toFixed(3)}:${entry.stats.count}|`;
+  }
+  if (metricsLogSignature === signature) return;
+  metricsLogSignature = signature;
+
+  console.log("----------------------------------------");
+  console.log(`[ReconcilerMetrics] hotspots (top ${trimmed.length}, sorted by total time)`);
+  for (const entry of trimmed) {
+    console.log(
+      `  ${entry.method} :: count=${entry.stats.count} total=${entry.stats.totalMs.toFixed(3)}ms avg=${entry.stats.avgMs.toFixed(3)}ms min=${entry.stats.minMs.toFixed(3)}ms max=${entry.stats.maxMs.toFixed(3)}ms`,
+    );
+  }
+  console.log("----------------------------------------");
+}
+
+function startMetricsLogging() {
+  if (metricsIntervalId !== null) return;
+  metricsIntervalId = setInterval(logMetrics, METRICS_REFRESH_MS) as unknown as number;
+}
+
+function stopMetricsLogging() {
+  if (metricsIntervalId === null) return;
+  clearInterval(metricsIntervalId);
+  metricsIntervalId = null;
+  metricsLogSignature = "";
+}
+
+export const metrics = {
+  get: getMetrics,
+  reset: resetMetrics,
+  startLogging: startMetricsLogging,
+  stopLogging: stopMetricsLogging,
+  isLogging: () => metricsIntervalId !== null,
+};
 
 console.debug("main.tsx loaded");
