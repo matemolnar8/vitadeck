@@ -6,7 +6,6 @@ import replace from "@rollup/plugin-replace";
 import terser from "@rollup/plugin-terser";
 import typescript from "@rollup/plugin-typescript";
 import { defineConfig } from "rollup";
-import { corejsPlugin } from "rollup-plugin-corejs";
 
 export default defineConfig({
   input: {
@@ -16,10 +15,6 @@ export default defineConfig({
     dir: "dist",
     format: "iife",
     name: "vitadeck",
-    generatedCode: {
-      preset: "es5",
-      symbols: false,
-    },
   },
   plugins: [
     typescript(),
@@ -55,26 +50,14 @@ export default defineConfig({
           },
         ],
       ],
-      exclude: [/node_modules\/core-js/],
-      presets: [
-        [
-          "@babel/preset-env",
-          {
-            targets: { ie: "10" },
-            bugfixes: true,
-            modules: false,
-          },
-        ],
-      ],
     }),
     replace({
       "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || "development"),
       preventAssignment: true,
     }),
-    corejsPlugin(),
     process.env.NODE_ENV === "production"
       ? terser({
-          ecma: 5,
+          ecma: 2020,
         })
       : null,
   ],

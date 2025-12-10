@@ -66,20 +66,21 @@ static char *read_file(const char *filename, size_t *out_len) {
 static void* js_thread_func(void* arg) {
 	(void)arg;
 	void* result = NULL;
+	JSRuntime *rt = NULL;
+	JSContext *ctx = NULL;
 	
-	JSRuntime *rt = JS_NewRuntime();
+	rt = JS_NewRuntime();
 	if (!rt) {
 		TraceLog(LOG_ERROR, "Could not initialize QuickJS runtime.");
 		js_init_failed = true;
-		return NULL;
+		return_defer(NULL);
 	}
 
-	JSContext *ctx = JS_NewContext(rt);
+	ctx = JS_NewContext(rt);
 	if (!ctx) {
 		TraceLog(LOG_ERROR, "Could not initialize QuickJS context.");
-		JS_FreeRuntime(rt);
 		js_init_failed = true;
-		return NULL;
+		return_defer(NULL);
 	}
 	
 	register_js_lib(ctx);
@@ -94,6 +95,7 @@ static void* js_thread_func(void* arg) {
 
 	JSValue eval_result = JS_Eval(ctx, code, len, "main.js", JS_EVAL_TYPE_GLOBAL);
 	free(code);
+	code = NULL;
 
 	if (JS_IsException(eval_result)) {
 		JSValue exc = JS_GetException(ctx);
@@ -125,8 +127,8 @@ static void* js_thread_func(void* arg) {
 	}
 
 defer:
-	JS_FreeContext(ctx);
-	JS_FreeRuntime(rt);
+	if (ctx) JS_FreeContext(ctx);
+	if (rt) JS_FreeRuntime(rt);
 	return result;
 }
 
