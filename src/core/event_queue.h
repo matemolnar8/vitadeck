@@ -14,7 +14,7 @@ typedef struct {
     char event_name[32];
 } InputEvent;
 
-void event_queue_init(void);
+bool event_queue_init(void);
 void event_queue_destroy(void);
 void event_queue_push(const InputEvent* evt);
 bool event_queue_pop(InputEvent* evt);

@@ -16,12 +16,13 @@ typedef struct {
 
 static EventQueue queue;
 
-void event_queue_init(void) {
+bool event_queue_init(void) {
     queue.head = 0;
     queue.tail = 0;
     queue.count = 0;
     queue.shutdown = false;
     queue.mutex = vd_mutex_create();
+    return queue.mutex != NULL;
 }
 
 void event_queue_destroy(void) {

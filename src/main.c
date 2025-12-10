@@ -90,7 +90,10 @@ int main(int argc, char *argv[]) {
 	
 	// SetTraceLogLevel(LOG_DEBUG);
 
-	event_queue_init();
+	if (!event_queue_init()) {
+		TraceLog(LOG_ERROR, "Could not initialize event queue.");
+		return 1;
+	}
 	instance_tree_init();
 
 	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "VitaDeck");	
