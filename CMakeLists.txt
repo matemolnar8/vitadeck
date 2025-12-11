@@ -11,13 +11,13 @@ project(vitadeck)
 if(DEFINED ENV{VITASDK})
   message(STATUS "VITA is ON")
   include("${VITASDK}/share/vita.cmake" REQUIRED)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -flto")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
 else()
   message(STATUS "VITA is OFF")
-  if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -flto")
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Og -g")
   else()
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Og -g -flto")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -flto")
   endif()
 endif()
 
@@ -40,7 +40,7 @@ if(NOT DEFINED ENV{VITASDK})
 endif()
 
 # Set up include directories
-set(VITADECK_INCLUDE_DIRS src vendor vendor/mujs-1.3.7)
+set(VITADECK_INCLUDE_DIRS src vendor vendor/quickjs)
 
 if(DEFINED ENV{VITASDK})
   list(APPEND VITADECK_INCLUDE_DIRS
@@ -55,6 +55,23 @@ endif()
 include_directories(${VITADECK_INCLUDE_DIRS})
 link_directories(${VITADECK_LIBRARY_DIRS})
 
+# QuickJS
+set(QUICKJS_SOURCES
+    vendor/quickjs/quickjs.c
+    vendor/quickjs/libregexp.c
+    vendor/quickjs/libunicode.c
+    vendor/quickjs/cutils.c
+    vendor/quickjs/dtoa.c
+)
+add_library(quickjs STATIC ${QUICKJS_SOURCES})
+target_compile_definitions(quickjs PRIVATE
+    CONFIG_VERSION="2024-01-13"
+    $<$<NOT:$<BOOL:$ENV{VITASDK}>>:_GNU_SOURCE>
+)
+if(DEFINED ENV{VITASDK})
+    target_compile_definitions(quickjs PRIVATE __vita__)
+endif()
+
 set(PLATFORM_SOURCES)
 if(DEFINED ENV{VITASDK})
   list(APPEND PLATFORM_SOURCES src/platform/thread_vita.c)
@@ -62,18 +79,20 @@ else()
   list(APPEND PLATFORM_SOURCES src/platform/thread_posix.c)
 endif()
 
-add_executable(${PROJECT_NAME}
+set(VITADECK_SOURCES
     src/main.c
     src/jslib/jslib.c
+    src/ui/instance_tree.c
+    src/ui/render.c
+    src/ui/input.c
     src/core/event_queue.c
     ${PLATFORM_SOURCES}
-    vendor/mujs-1.3.7/one.c
 )
+add_executable(${PROJECT_NAME} ${VITADECK_SOURCES})
 
-set(VITADECK_LIBRARIES)
+set(VITADECK_LIBRARIES quickjs)
 
 if(DEFINED ENV{VITASDK})
-  # Set up link libraries (Correct Order)
   list(APPEND VITADECK_LIBRARIES
     raylib
     SDL2
@@ -118,7 +137,7 @@ endif()
 target_link_libraries(${PROJECT_NAME} ${VITADECK_LIBRARIES})
 
 add_custom_target(js_build
-  COMMAND pnpm build
+  COMMAND pnpm build:prod
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/js
   COMMENT "Building JavaScript with pnpm"
   VERBATIM

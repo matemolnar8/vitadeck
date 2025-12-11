@@ -1,28 +1,18 @@
-
-#include "core/event_queue.h"
+#include <stdlib.h>
 #include <string.h>
+#include <raylib.h>
+#include "instance_tree.h"
+#include "core/event_queue.h"
 
-// Mouse state (file-scope to share with JS getters)
+// Mouse state
 static bool prev_is_mouse_down = false;
 static char *hovered_id = NULL;
 static char *mouse_down_id = NULL;
 
-// Touch state (file-scope)
+// Touch state
 static bool prev_touch_down = false;
 static char *touch_hovered_id = NULL;
 static char *touch_down_id = NULL;
-
-// Use instance tree for hit testing
-static const char *top_rect_id_at(int x, int y)
-{
-    return instance_hit_test(x, y);
-}
-
-// Check if instance still exists in tree
-static bool rect_id_exists(const char *id)
-{
-    return instance_exists(id);
-}
 
 // Push an input event to the queue (called from UI thread)
 static void push_input_event(const char *id, const char *event) {
@@ -35,41 +25,13 @@ static void push_input_event(const char *id, const char *event) {
     event_queue_push(&evt);
 }
 
-// Called from JS thread to dispatch event to JS
-static void call_input_event_from_native(js_State *J, const char *id, const char *event) {
-    js_getglobal(J, "vitadeck");
-    js_getproperty(J, -1, "input");
-    js_getproperty(J, -1, "onInputEventFromNative");
-
-    js_pushnull(J);
-
-    js_pushstring(J, id);
-    js_pushstring(J, event);
-
-    if(js_pcall(J, 2)) {
-        TraceLog(LOG_ERROR, "Error calling input event from native: %s", js_tostring(J, -1));
-        js_pop(J, 1);
-    }
-}
-
-// Process events from queue (called from JS thread)
-void process_input_events(js_State *J) {
-    InputEvent evt;
-    while (event_queue_pop(&evt)) {
-        if (evt.type == EVT_INPUT) {
-            call_input_event_from_native(J, evt.id, evt.event_name);
-        }
-    }
-}
-
-// Poll mouse input and push events to queue (called from UI thread)
 void poll_mouse_input(void) {
     const int x = GetMouseX();
     const int y = GetMouseY();
 
-    const char *top_id = top_rect_id_at(x, y);
+    const char *top_id = instance_hit_test(x, y);
 
-    if (hovered_id && !rect_id_exists(hovered_id)) {
+    if (hovered_id && !instance_exists(hovered_id)) {
         free(hovered_id);
         hovered_id = NULL;
     }
@@ -128,7 +90,6 @@ void poll_mouse_input(void) {
     prev_is_mouse_down = is_mouse_down;
 }
 
-// Poll touch input and push events to queue (called from UI thread)
 void poll_touch_input(void) {
     const int count = GetTouchPointCount();
     const bool is_down = count > 0;
@@ -141,9 +102,9 @@ void poll_touch_input(void) {
         y = (int)pos.y;
     }
 
-    const char *top_id = is_down ? top_rect_id_at(x, y) : NULL;
+    const char *top_id = is_down ? instance_hit_test(x, y) : NULL;
 
-    if (touch_hovered_id && !rect_id_exists(touch_hovered_id)) {
+    if (touch_hovered_id && !instance_exists(touch_hovered_id)) {
         free(touch_hovered_id);
         touch_hovered_id = NULL;
     }
@@ -203,42 +164,6 @@ void poll_touch_input(void) {
     prev_touch_down = is_down;
 }
 
-// Legacy functions that call JS directly (kept for compatibility during transition)
-void process_mouse_input(js_State *J) {
-    (void)J;
-    poll_mouse_input();
-}
-
-void process_touch_input(js_State *J) {
-    (void)J;
-    poll_touch_input();
-}
-
-static void js_get_interactive_state(js_State *J)
-{
-    const char *id = js_tostring(J, 1);
-    js_newobject(J);
-    bool is_hovered = false;
-    if (id) {
-        if (hovered_id && strcmp(hovered_id, id) == 0) is_hovered = true;
-        if (touch_hovered_id && strcmp(touch_hovered_id, id) == 0) is_hovered = true;
-    }
-    js_pushboolean(J, is_hovered);
-    js_setproperty(J, -2, "hovered");
-    bool is_pressed = false;
-    if (id) {
-        if (mouse_down_id && strcmp(mouse_down_id, id) == 0) is_pressed = true;
-        if (touch_down_id && strcmp(touch_down_id, id) == 0) is_pressed = true;
-    }
-    js_pushboolean(J, is_pressed);
-    js_setproperty(J, -2, "pressed");
-}
-
-void register_js_input(js_State *J) {
-    js_newcfunction(J, js_get_interactive_state, "getInteractiveState", 1);
-    js_setglobal(J, "getInteractiveState");
-}
-
 bool input_is_hovered(const char *id)
 {
     if (!id) return false;
@@ -254,3 +179,4 @@ bool input_is_pressed(const char *id)
     if (touch_down_id && strcmp(touch_down_id, id) == 0) return true;
     return false;
 }
+
