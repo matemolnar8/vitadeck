@@ -242,6 +242,55 @@ const char *instance_hit_test(int x, int y)
     return result;
 }
 
+// Focusable element collection for gamepad navigation
+static void collect_focusable_recursive(ReactInstance **children, int offset_x, int offset_y, FocusableElement **out_elems)
+{
+    if (!children) return;
+    int count = arrlen(children);
+    
+    for (int i = 0; i < count; i++) {
+        ReactInstance *inst = children[i];
+        if (!inst) continue;
+        
+        if (inst->type == NT_BUTTON) {
+            ButtonProps *b = &inst->props.button;
+            FocusableElement elem = {
+                .id = strdup(inst->id),
+                .x = offset_x + b->x,
+                .y = offset_y + b->y,
+                .width = b->width,
+                .height = b->height
+            };
+            arrput(*out_elems, elem);
+        } else if (inst->type == NT_RECT) {
+            RectProps *r = &inst->props.rect;
+            collect_focusable_recursive(inst->children, offset_x + r->x, offset_y + r->y, out_elems);
+        }
+    }
+}
+
+FocusableElement *get_focusable_elements(int *count)
+{
+    FocusableElement *elems = NULL;
+    
+    vd_mutex_lock(snapshot_mutex);
+    if (front_snapshot) {
+        collect_focusable_recursive(front_snapshot->root_children, 0, 0, &elems);
+    }
+    vd_mutex_unlock(snapshot_mutex);
+    
+    *count = arrlen(elems);
+    return elems;
+}
+
+void free_focusable_elements(FocusableElement *elems, int count)
+{
+    for (int i = 0; i < count; i++) {
+        free(elems[i].id);
+    }
+    arrfree(elems);
+}
+
 // Back-buffer operations (JS thread only)
 ReactInstance *instance_back_find(const char *id)
 {

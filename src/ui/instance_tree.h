@@ -63,6 +63,15 @@ ReactInstance **instance_get_root_children(void);
 const char *instance_hit_test(int x, int y);
 bool instance_exists(const char *id);
 
+// Focusable elements for gamepad navigation
+typedef struct {
+    char *id;
+    int x, y, width, height;
+} FocusableElement;
+
+FocusableElement *get_focusable_elements(int *count);
+void free_focusable_elements(FocusableElement *elems, int count);
+
 // Back-buffer operations (called from JS thread only)
 ReactInstance *instance_back_find(const char *id);
 void instance_back_put(ReactInstance *inst);

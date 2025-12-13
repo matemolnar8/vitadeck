@@ -178,6 +178,7 @@ int main(int argc, char *argv[]) {
 	while (!WindowShouldClose()) {
 		poll_mouse_input();
 		poll_touch_input();
+		poll_gamepad_input();
 
 		BeginDrawing();
 			ClearBackground(BLACK);
