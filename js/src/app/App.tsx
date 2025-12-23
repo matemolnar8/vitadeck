@@ -20,18 +20,60 @@ export const App = () => {
     <vita-rect x={0} y={0} width={960} height={544} color={theme.background}>
       {/* Top navigation bar */}
       <vita-rect x={0} y={0} width={960} height={60} color={theme.navBackground}>
-        <vita-button x={20} y={10} width={200} height={40} label={"Hello"} onClick={showHello} />
-        <vita-button x={240} y={10} width={200} height={40} label={"Counters"} onClick={showCounters} />
-        <vita-button x={460} y={10} width={200} height={40} label={"Timers"} onClick={showTimers} />
-        <vita-button x={680} y={10} width={200} height={40} label={"Minesweeper"} onClick={showGame} />
+        <vita-button
+          x={20}
+          y={10}
+          width={200}
+          height={40}
+          label={"Hello"}
+          onClick={showHello}
+          color={theme.primary}
+          textColor={theme.navText}
+          borderRadius={0.25}
+        />
+        <vita-button
+          x={240}
+          y={10}
+          width={200}
+          height={40}
+          label={"Counters"}
+          onClick={showCounters}
+          color={theme.primary}
+          textColor={theme.navText}
+          borderRadius={0.25}
+        />
+        <vita-button
+          x={460}
+          y={10}
+          width={200}
+          height={40}
+          label={"Timers"}
+          onClick={showTimers}
+          color={theme.primary}
+          textColor={theme.navText}
+          borderRadius={0.25}
+        />
+        <vita-button
+          x={680}
+          y={10}
+          width={200}
+          height={40}
+          label={"Minesweeper"}
+          onClick={showGame}
+          color={theme.primary}
+          textColor={theme.navText}
+          borderRadius={0.25}
+        />
         <vita-button
           x={900}
           y={10}
           width={40}
           height={40}
-          color={theme.buttonBackground}
+          color={theme.accent}
+          textColor={theme.navText}
           label={"T"}
           onClick={cycleTheme}
+          borderRadius={0.4}
         />
       </vita-rect>
 

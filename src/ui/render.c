@@ -26,12 +26,22 @@ static void render_rect_instance(ReactInstance *inst, RenderContext ctx)
     RectProps *r = &inst->props.rect;
     int abs_x = ctx.x + r->x;
     int abs_y = ctx.y + r->y;
+    Rectangle rect = { abs_x, abs_y, r->width, r->height };
     
-    if (r->has_fill) {
-        DrawRectangle(abs_x, abs_y, r->width, r->height, r->fill_color);
-    }
-    if (r->has_outline) {
-        DrawRectangleLines(abs_x, abs_y, r->width, r->height, r->border_color);
+    if (r->border_radius > 0.0f) {
+        if (r->has_fill) {
+            DrawRectangleRounded(rect, r->border_radius, 8, r->fill_color);
+        }
+        if (r->has_outline) {
+            DrawRectangleRoundedLinesEx(rect, r->border_radius, 8, 2.0f, r->border_color);
+        }
+    } else {
+        if (r->has_fill) {
+            DrawRectangle(abs_x, abs_y, r->width, r->height, r->fill_color);
+        }
+        if (r->has_outline) {
+            DrawRectangleLines(abs_x, abs_y, r->width, r->height, r->border_color);
+        }
     }
     
     RenderContext child_ctx = { abs_x, abs_y, 0 };
@@ -89,11 +99,16 @@ static void render_button_instance(ReactInstance *inst, RenderContext ctx)
     if (pressed) visual = mix_color(visual, BLACK, 0.5f);
     else if (hovered) visual = mix_color(visual, WHITE, 0.4f);
     
-    DrawRectangle(abs_x, abs_y, b->width, b->height, visual);
+    if (b->border_radius > 0.0f) {
+        Rectangle rect = { abs_x, abs_y, b->width, b->height };
+        DrawRectangleRounded(rect, b->border_radius, 8, visual);
+    } else {
+        DrawRectangle(abs_x, abs_y, b->width, b->height, visual);
+    }
     
     const int padding = 8;
     int font_size = b->font_size > 0 ? b->font_size : 20;
-    DrawText(b->label, abs_x + padding, abs_y + padding, font_size, RAYWHITE);
+    DrawText(b->label, abs_x + padding, abs_y + padding, font_size, b->text_color);
 }
 
 static void render_instance(ReactInstance *inst, RenderContext ctx)

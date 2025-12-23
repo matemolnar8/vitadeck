@@ -259,10 +259,10 @@ export const GameMinesweeper = () => {
   return (
     <>
       {/* Board container */}
-      <vita-rect x={playfield.x} y={playfield.y} width={playfield.w} height={playfield.h} color={theme.surface}>
+      <vita-rect x={playfield.x} y={playfield.y} width={playfield.w} height={playfield.h} color={theme.surface} borderRadius={0.15}>
         {/* Header inside the board */}
         <vita-rect x={0} y={0} width={playfield.w} height={headerHeight} color={theme.navBackground}>
-          <vita-text fontSize={24} color={theme.text}>
+          <vita-text fontSize={24} color={theme.navText}>
             {headerText}
           </vita-text>
           {/* Reset button lives inside header; coordinates relative to header */}
@@ -273,6 +273,9 @@ export const GameMinesweeper = () => {
             height={resetButton.height}
             label={"Reset"}
             onClick={reset}
+            color={theme.accent}
+            textColor={theme.navText}
+            borderRadius={0.2}
           />
         </vita-rect>
         {/* Grid within padded content area */}
@@ -282,9 +285,10 @@ export const GameMinesweeper = () => {
             const y = headerHeight + boardPadding + r * cellSize.height;
             const isRevealed = cell.revealed || (gameOver === "lost" && cell.mine);
             const baseColor = isRevealed ? theme.surfaceAlt : theme.primary;
-            const mineColor = gameOver === "lost" && cell.mine ? Colors.RED : baseColor;
-            const fillColor = cell.flagged ? Colors.DARKPURPLE : mineColor;
+            const mineColor = gameOver === "lost" && cell.mine ? theme.danger : baseColor;
+            const fillColor = cell.flagged ? theme.warning : mineColor;
             const label = isRevealed && !cell.mine && cell.adjacent > 0 ? String(cell.adjacent) : "";
+            const textColor = isRevealed ? theme.text : theme.buttonText;
             return (
               <vita-button
                 key={cell.id}
@@ -293,9 +297,11 @@ export const GameMinesweeper = () => {
                 width={cellSize.width - 2}
                 height={cellSize.height - 2}
                 color={fillColor}
+                textColor={textColor}
                 label={label}
                 onMouseDown={() => onCellDown(r, c)}
                 onMouseUp={() => onCellUp(r, c)}
+                borderRadius={0.1}
               />
             );
           });

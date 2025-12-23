@@ -15,6 +15,7 @@ typedef struct {
     int x, y, width, height;
     bool has_fill, has_outline;
     Color fill_color, border_color;
+    float border_radius;
 } RectProps;
 
 typedef struct {
@@ -27,8 +28,10 @@ typedef struct {
 typedef struct {
     int x, y, width, height;
     Color color;
+    Color text_color;
     char *label;
     int font_size;
+    float border_radius;
 } ButtonProps;
 
 typedef struct ReactInstance ReactInstance;

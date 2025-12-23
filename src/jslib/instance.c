@@ -3,7 +3,7 @@
 static JSValue native_create_rect(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    if (argc < 15) return JS_UNDEFINED;
+    if (argc < 16) return JS_UNDEFINED;
     
     const char *id = JS_ToCString(ctx, argv[0]);
     if (!id) return JS_UNDEFINED;
@@ -35,6 +35,9 @@ static JSValue native_create_rect(JSContext *ctx, JSValueConst this_val, int arg
         JS_ToInt32(ctx, &a, argv[14]);
         inst->props.rect.border_color = (Color){r, g, b, a};
     }
+    double border_radius;
+    JS_ToFloat64(ctx, &border_radius, argv[15]);
+    inst->props.rect.border_radius = (float)border_radius;
     inst->children = NULL;
     inst->parent = NULL;
     
@@ -78,7 +81,7 @@ static JSValue native_create_text(JSContext *ctx, JSValueConst this_val, int arg
 static JSValue native_create_button(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    if (argc < 11) return JS_UNDEFINED;
+    if (argc < 16) return JS_UNDEFINED;
     
     const char *id = JS_ToCString(ctx, argv[0]);
     if (!id) return JS_UNDEFINED;
@@ -105,6 +108,17 @@ static JSValue native_create_button(JSContext *ctx, JSValueConst this_val, int a
     JS_FreeCString(ctx, label);
     
     JS_ToInt32(ctx, &tmp, argv[10]); inst->props.button.font_size = tmp;
+    
+    double border_radius;
+    JS_ToFloat64(ctx, &border_radius, argv[11]);
+    inst->props.button.border_radius = (float)border_radius;
+    
+    int32_t tr, tg, tb, ta;
+    JS_ToInt32(ctx, &tr, argv[12]);
+    JS_ToInt32(ctx, &tg, argv[13]);
+    JS_ToInt32(ctx, &tb, argv[14]);
+    JS_ToInt32(ctx, &ta, argv[15]);
+    inst->props.button.text_color = (Color){tr, tg, tb, ta};
     inst->children = NULL;
     inst->parent = NULL;
     
@@ -294,7 +308,7 @@ static JSValue native_destroy_instance(JSContext *ctx, JSValueConst this_val, in
 static JSValue native_update_rect(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    if (argc < 15) return JS_UNDEFINED;
+    if (argc < 16) return JS_UNDEFINED;
     
     const char *id = JS_ToCString(ctx, argv[0]);
     if (!id) return JS_UNDEFINED;
@@ -328,6 +342,9 @@ static JSValue native_update_rect(JSContext *ctx, JSValueConst this_val, int arg
         JS_ToInt32(ctx, &a, argv[14]);
         inst->props.rect.border_color = (Color){r, g, b, a};
     }
+    double border_radius;
+    JS_ToFloat64(ctx, &border_radius, argv[15]);
+    inst->props.rect.border_radius = (float)border_radius;
     
     JS_FreeCString(ctx, id);
     return JS_UNDEFINED;
@@ -367,7 +384,7 @@ static JSValue native_update_text(JSContext *ctx, JSValueConst this_val, int arg
 static JSValue native_update_button(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    if (argc < 11) return JS_UNDEFINED;
+    if (argc < 16) return JS_UNDEFINED;
     
     const char *id = JS_ToCString(ctx, argv[0]);
     if (!id) return JS_UNDEFINED;
@@ -397,6 +414,17 @@ static JSValue native_update_button(JSContext *ctx, JSValueConst this_val, int a
     JS_FreeCString(ctx, label);
     
     JS_ToInt32(ctx, &tmp, argv[10]); inst->props.button.font_size = tmp;
+    
+    double border_radius;
+    JS_ToFloat64(ctx, &border_radius, argv[11]);
+    inst->props.button.border_radius = (float)border_radius;
+    
+    int32_t tr, tg, tb, ta;
+    JS_ToInt32(ctx, &tr, argv[12]);
+    JS_ToInt32(ctx, &tg, argv[13]);
+    JS_ToInt32(ctx, &tb, argv[14]);
+    JS_ToInt32(ctx, &ta, argv[15]);
+    inst->props.button.text_color = (Color){tr, tg, tb, ta};
     
     JS_FreeCString(ctx, id);
     return JS_UNDEFINED;
@@ -434,17 +462,17 @@ static JSValue native_clear_container(JSContext *ctx, JSValueConst this_val, int
 
 void register_instance_tree(JSContext *ctx)
 {
-    js_set_global_function(ctx, "nativeCreateRect", native_create_rect, 15);
+    js_set_global_function(ctx, "nativeCreateRect", native_create_rect, 16);
     js_set_global_function(ctx, "nativeCreateText", native_create_text, 8);
-    js_set_global_function(ctx, "nativeCreateButton", native_create_button, 11);
+    js_set_global_function(ctx, "nativeCreateButton", native_create_button, 16);
     js_set_global_function(ctx, "nativeCreateRawText", native_create_raw_text, 2);
     js_set_global_function(ctx, "nativeAppendChild", native_append_child, 2);
     js_set_global_function(ctx, "nativeInsertBefore", native_insert_before, 3);
     js_set_global_function(ctx, "nativeRemoveChild", native_remove_child, 2);
     js_set_global_function(ctx, "nativeDestroyInstance", native_destroy_instance, 1);
-    js_set_global_function(ctx, "nativeUpdateRect", native_update_rect, 15);
+    js_set_global_function(ctx, "nativeUpdateRect", native_update_rect, 16);
     js_set_global_function(ctx, "nativeUpdateText", native_update_text, 8);
-    js_set_global_function(ctx, "nativeUpdateButton", native_update_button, 11);
+    js_set_global_function(ctx, "nativeUpdateButton", native_update_button, 16);
     js_set_global_function(ctx, "nativeUpdateRawText", native_update_raw_text, 2);
     js_set_global_function(ctx, "nativeClearContainer", native_clear_container, 0);
 }

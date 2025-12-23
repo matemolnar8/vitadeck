@@ -20,6 +20,7 @@ declare global {
         variant?: "fill" | "outline";
         color?: Color;
         borderColor?: Color;
+        borderRadius?: number;
         onClick?: (() => void) | undefined;
         onMouseDown?: () => void;
         onMouseUp?: () => void;
@@ -33,6 +34,8 @@ declare global {
         width: number;
         height: number;
         color?: Color;
+        textColor?: Color;
+        borderRadius?: number;
         label: string;
         onClick?: () => void;
         onMouseDown?: () => void;
@@ -92,6 +95,7 @@ declare global {
     outlineG: number,
     outlineB: number,
     outlineA: number,
+    borderRadius: number,
   ): void;
 
   function nativeCreateText(
@@ -117,6 +121,11 @@ declare global {
     colorA: number,
     label: string,
     fontSize: number,
+    borderRadius: number,
+    textColorR: number,
+    textColorG: number,
+    textColorB: number,
+    textColorA: number,
   ): void;
 
   function nativeCreateRawText(id: string, text: string): void;
@@ -142,6 +151,7 @@ declare global {
     outlineG: number,
     outlineB: number,
     outlineA: number,
+    borderRadius: number,
   ): void;
 
   function nativeUpdateText(
@@ -167,6 +177,11 @@ declare global {
     colorA: number,
     label: string,
     fontSize: number,
+    borderRadius: number,
+    textColorR: number,
+    textColorG: number,
+    textColorB: number,
+    textColorA: number,
   ): void;
 
   function nativeUpdateRawText(id: string, text: string): void;

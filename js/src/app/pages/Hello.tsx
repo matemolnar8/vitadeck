@@ -16,7 +16,7 @@ export const Hello = () => {
 
   return (
     <>
-      <vita-rect x={20} y={20} width={920} height={80} color={theme.surface}>
+      <vita-rect x={20} y={20} width={920} height={80} color={theme.surface} borderRadius={0.15}>
         <vita-text fontSize={28} color={theme.text}>
           Hello, world!
         </vita-text>
@@ -25,7 +25,7 @@ export const Hello = () => {
       <Counter x={30} y={130} />
 
       {/* Overlapping buttons test */}
-      <vita-rect x={20} y={240} width={920} height={200} color={theme.surface}>
+      <vita-rect x={20} y={240} width={920} height={200} color={theme.surface} borderRadius={0.15}>
         <vita-text fontSize={22} color={theme.text}>
           Overlapping Buttons Test
         </vita-text>
@@ -42,9 +42,11 @@ export const Hello = () => {
           y={100}
           width={300}
           height={60}
-          color={Colors.RED}
+          color={theme.danger}
+          textColor={theme.navText}
           label="Bottom Button"
           onClick={handleBottomClick}
+          borderRadius={0.2}
         />
 
         {/* Top button (smaller, rendered second, should be on top) */}
@@ -53,9 +55,11 @@ export const Hello = () => {
           y={120}
           width={300}
           height={60}
-          color={Colors.GREEN}
+          color={theme.success}
+          textColor={theme.navText}
           label="Top Button"
           onClick={handleTopClick}
+          borderRadius={0.2}
         />
       </vita-rect>
     </>

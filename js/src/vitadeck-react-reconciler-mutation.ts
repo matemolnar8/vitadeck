@@ -97,6 +97,7 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
       outlineColor.g,
       outlineColor.b,
       outlineColor.a,
+      p.borderRadius || 0,
     );
     registerHandlers(id, extractHandlers(props));
   } else if (type === "vita-text") {
@@ -106,7 +107,25 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
   } else if (type === "vita-button") {
     const p = props as PropsByType["vita-button"];
     const color = p.color || Colors.DARKBLUE;
-    nativeCreateButton(id, p.x, p.y, p.width, p.height, color.r, color.g, color.b, color.a, p.label, 20);
+    const textColor = p.textColor || Colors.RAYWHITE;
+    nativeCreateButton(
+      id,
+      p.x,
+      p.y,
+      p.width,
+      p.height,
+      color.r,
+      color.g,
+      color.b,
+      color.a,
+      p.label,
+      20,
+      p.borderRadius || 0,
+      textColor.r,
+      textColor.g,
+      textColor.b,
+      textColor.a,
+    );
     registerHandlers(id, extractHandlers(props));
   } else {
     exhaustiveGuard(type, `Unsupported element type: ${type}`);
@@ -138,6 +157,7 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
       outlineColor.g,
       outlineColor.b,
       outlineColor.a,
+      p.borderRadius || 0,
     );
     updateHandlers(id, extractHandlers(props));
   } else if (type === "vita-text") {
@@ -147,7 +167,25 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
   } else if (type === "vita-button") {
     const p = props as PropsByType["vita-button"];
     const color = p.color || Colors.DARKBLUE;
-    nativeUpdateButton(id, p.x, p.y, p.width, p.height, color.r, color.g, color.b, color.a, p.label, 20);
+    const textColor = p.textColor || Colors.RAYWHITE;
+    nativeUpdateButton(
+      id,
+      p.x,
+      p.y,
+      p.width,
+      p.height,
+      color.r,
+      color.g,
+      color.b,
+      color.a,
+      p.label,
+      20,
+      p.borderRadius || 0,
+      textColor.r,
+      textColor.g,
+      textColor.b,
+      textColor.a,
+    );
     updateHandlers(id, extractHandlers(props));
   } else {
     exhaustiveGuard(type, `Unsupported element type: ${type}`);
