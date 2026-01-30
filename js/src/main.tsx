@@ -1,8 +1,8 @@
 import React, { StrictMode } from "react";
-import { App } from "./app/App";
-import { ThemeProvider } from "./app/theme";
-import { onInputEventFromNative } from "./input";
 import type { MetricSummary } from "./reconciler-metrics";
+import { App } from "./app/App";
+import { onInputEventFromNative } from "./input";
+import { ThemeProvider } from "./app/theme";
 import { getMetrics, render, resetMetrics } from "./vitadeck-react-reconciler-mutation";
 
 export function updateContainer() {

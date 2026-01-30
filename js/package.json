@@ -5,33 +5,37 @@
   "type": "module",
   "main": "main.js",
   "scripts": {
-    "build": "tsgo && rollup --config rollup.config.js",
-    "build:prod": "tsgo && NODE_ENV=production rollup --config rollup.config.js",
-    "dev": "rollup --config rollup.config.js --watch",
+    "build": "rolldown -c",
+    "build:prod": "NODE_ENV=production rolldown -c",
+    "dev": "rolldown -c --watch",
     "tsc": "tsgo",
-    "biome": "biome check",
-    "biome:fix": "biome check --write"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "2.3.0",
-    "@rollup/plugin-babel": "^6.1.0",
-    "@rollup/plugin-commonjs": "^28.0.9",
-    "@rollup/plugin-node-resolve": "^16.0.3",
-    "@rollup/plugin-replace": "^6.0.3",
-    "@rollup/plugin-terser": "^0.4.4",
-    "@rollup/plugin-typescript": "^12.3.0",
-    "@types/node": "^22.19.2",
-    "@types/react": "^18.3.27",
-    "@types/react-reconciler": "^0.28.9",
-    "@typescript/native-preview": "7.0.0-dev.20251206.1",
-    "babel-plugin-react-compiler": "^1.0.0",
-    "rollup": "^4.53.3"
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check"
   },
   "dependencies": {
+    "oxlint-tsgolint": "^0.11.4",
     "react": "^18.3.1",
     "react-compiler-runtime": "^1.0.0",
     "react-reconciler": "^0.29.2",
     "tslib": "^2.8.1"
   },
-  "packageManager": "pnpm@10.24.0+sha512.01ff8ae71b4419903b65c60fb2dc9d34cf8bb6e06d03bde112ef38f7a34d6904c424ba66bea5cdcf12890230bf39f9580473140ed9c946fef328b6e5238a345a"
+  "devDependencies": {
+    "@babel/preset-react": "^7.28.5",
+    "@babel/preset-typescript": "^7.28.5",
+    "@rollup/plugin-babel": "^6.1.0",
+    "@types/node": "^22.19.7",
+    "@types/react": "^18.3.27",
+    "@types/react-reconciler": "^0.28.9",
+    "@typescript/native-preview": "7.0.0-dev.20251206.1",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "oxfmt": "latest",
+    "oxlint": "latest",
+    "rolldown": "1.0.0-rc.2"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.28.2+sha512.41872f037ad22f7348e3b1debbaf7e867cfd448f2726d9cf74c08f19507c31d2c8e7a11525b983febc2df640b5438dee6023ebb1f84ed43cc2d654d2bc326264"
 }

@@ -259,7 +259,14 @@ export const GameMinesweeper = () => {
   return (
     <>
       {/* Board container */}
-      <vita-rect x={playfield.x} y={playfield.y} width={playfield.w} height={playfield.h} color={theme.surface} borderRadius={0.15}>
+      <vita-rect
+        x={playfield.x}
+        y={playfield.y}
+        width={playfield.w}
+        height={playfield.h}
+        color={theme.surface}
+        borderRadius={0.15}
+      >
         {/* Header inside the board */}
         <vita-rect x={0} y={0} width={playfield.w} height={headerHeight} color={theme.navBackground}>
           <vita-text fontSize={24} color={theme.navText}>

@@ -81,16 +81,56 @@ export const Timers = () => {
         <vita-text fontSize={24} color={theme.text}>
           setTimeout demo: {timeoutMsg}
         </vita-text>
-        <vita-button x={20} y={50} width={180} height={40} label={"Start 2s"} onClick={startTimeout} color={theme.success} textColor={theme.navText} borderRadius={0.2} />
-        <vita-button x={210} y={50} width={180} height={40} label={"Cancel"} onClick={cancelTimeout} color={theme.danger} textColor={theme.navText} borderRadius={0.2} />
+        <vita-button
+          x={20}
+          y={50}
+          width={180}
+          height={40}
+          label={"Start 2s"}
+          onClick={startTimeout}
+          color={theme.success}
+          textColor={theme.navText}
+          borderRadius={0.2}
+        />
+        <vita-button
+          x={210}
+          y={50}
+          width={180}
+          height={40}
+          label={"Cancel"}
+          onClick={cancelTimeout}
+          color={theme.danger}
+          textColor={theme.navText}
+          borderRadius={0.2}
+        />
       </vita-rect>
 
       <vita-rect x={20} y={240} width={920} height={200} color={theme.surfaceAlt} borderRadius={0.15}>
         <vita-text fontSize={24} color={theme.text}>
           setInterval demo: ticks = {ticks}
         </vita-text>
-        <vita-button x={20} y={50} width={180} height={40} label={"Start"} onClick={startInterval} color={theme.success} textColor={theme.navText} borderRadius={0.2} />
-        <vita-button x={210} y={50} width={180} height={40} label={"Stop"} onClick={stopInterval} color={theme.danger} textColor={theme.navText} borderRadius={0.2} />
+        <vita-button
+          x={20}
+          y={50}
+          width={180}
+          height={40}
+          label={"Start"}
+          onClick={startInterval}
+          color={theme.success}
+          textColor={theme.navText}
+          borderRadius={0.2}
+        />
+        <vita-button
+          x={210}
+          y={50}
+          width={180}
+          height={40}
+          label={"Stop"}
+          onClick={stopInterval}
+          color={theme.danger}
+          textColor={theme.navText}
+          borderRadius={0.2}
+        />
       </vita-rect>
     </>
   );

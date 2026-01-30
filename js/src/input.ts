@@ -12,16 +12,26 @@ const handlersById = new Map<string, EventHandlers>();
 // Register event handlers for an instance
 export function registerHandlers(id: string, handlers: EventHandlers): void {
   // Only store if there are any handlers
-  if (handlers.onClick || handlers.onMouseDown || handlers.onMouseUp || 
-      handlers.onMouseEnter || handlers.onMouseLeave) {
+  if (
+    handlers.onClick ||
+    handlers.onMouseDown ||
+    handlers.onMouseUp ||
+    handlers.onMouseEnter ||
+    handlers.onMouseLeave
+  ) {
     handlersById.set(id, handlers);
   }
 }
 
 // Update event handlers for an instance
 export function updateHandlers(id: string, handlers: EventHandlers): void {
-  if (handlers.onClick || handlers.onMouseDown || handlers.onMouseUp || 
-      handlers.onMouseEnter || handlers.onMouseLeave) {
+  if (
+    handlers.onClick ||
+    handlers.onMouseDown ||
+    handlers.onMouseUp ||
+    handlers.onMouseEnter ||
+    handlers.onMouseLeave
+  ) {
     handlersById.set(id, handlers);
   } else {
     // No handlers, remove from map
@@ -41,7 +51,7 @@ export function onInputEventFromNative(
 ): void {
   const handlers = handlersById.get(id);
   if (!handlers) return;
-  
+
   switch (type) {
     case "mouseenter":
       handlers.onMouseEnter?.();

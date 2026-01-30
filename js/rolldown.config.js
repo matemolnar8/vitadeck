@@ -1,13 +1,8 @@
-import path from "node:path";
 import babel from "@rollup/plugin-babel";
-import commonjs from "@rollup/plugin-commonjs";
-import nodeResolve from "@rollup/plugin-node-resolve";
-import replace from "@rollup/plugin-replace";
-import terser from "@rollup/plugin-terser";
-import typescript from "@rollup/plugin-typescript";
-import { defineConfig } from "rollup";
+import path from "node:path";
+import { defineConfig } from "rolldown";
 
-console.log("NODE_ENV", process.env.NODE_ENV);
+const isProd = process.env.NODE_ENV === "production";
 
 export default defineConfig({
   input: {
@@ -17,14 +12,22 @@ export default defineConfig({
     dir: "dist",
     format: "iife",
     name: "vitadeck",
+    minify: isProd,
+  },
+  tsconfig: true,
+  transform: {
+    define: {
+      "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || "development"),
+    },
   },
   plugins: [
-    typescript(),
-    commonjs(),
-    nodeResolve(),
     babel({
       babelHelpers: "bundled",
       extensions: [".ts", ".tsx", ".js", ".jsx"],
+      presets: [
+        "@babel/preset-react",
+        ["@babel/preset-typescript", { isTSX: true, allExtensions: true }],
+      ],
       plugins: [
         [
           "babel-plugin-react-compiler",
@@ -44,7 +47,9 @@ export default defineConfig({
                   }
                   if (detail.options?.details?.[0]) {
                     const firstError = detail.options.details[0];
-                    console.error(`  🔍 ${relativePath}:${firstError.loc.start.line}: ${firstError.message}`);
+                    console.error(
+                      `  🔍 ${relativePath}:${firstError.loc.start.line}: ${firstError.message}`,
+                    );
                   }
                 }
               },
@@ -53,14 +58,5 @@ export default defineConfig({
         ],
       ],
     }),
-    replace({
-      "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || "development"),
-      preventAssignment: true,
-    }),
-    process.env.NODE_ENV === "production"
-      ? terser({
-          ecma: 2020,
-        })
-      : null,
   ],
 });

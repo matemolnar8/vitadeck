@@ -6,10 +6,12 @@ description: JavaScript runtime build and typecheck instructions
 
 Build and typecheck the JS runtime separately from the native app.
 
+- Requires Node.js 22+ (Rolldown CLI uses Node 22+ APIs).
 - Install dependencies once: `pnpm install` (run inside `js/`)
 - Build JS runtime: `pnpm --dir js build`
 - Typecheck only: `pnpm --dir js tsc`
 - Watch mode (dev): `pnpm --dir js dev`
+- Lint: `pnpm --dir js lint`; format: `pnpm --dir js format`
 
 Outputs:
 - Bundled files are written to `js/dist/`.
