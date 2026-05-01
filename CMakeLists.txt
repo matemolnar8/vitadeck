@@ -29,18 +29,20 @@ set(VITA_MKSFOEX_FLAGS "${VITA_MKSFOEX_FLAGS} -d PARENTAL_LEVEL=1")
 set(VITA_MKSFOEX_FLAGS "${VITA_MKSFOEX_FLAGS} -d ATTRIBUTE2=12")
 
 if(DEFINED ENV{VITASDK})
-  # Find SDL2 (Static)
   find_library(SDL2_LIB SDL2 HINTS $ENV{VITASDK}/arm-vita-eabi/lib REQUIRED)
 endif()
 
 if(NOT DEFINED ENV{VITASDK})
-  # Find raylib with pkg-config
   find_package(PkgConfig REQUIRED)
   pkg_check_modules(RAYLIB REQUIRED raylib)
 endif()
 
+find_package(CURL REQUIRED)
+find_package(OpenSSL REQUIRED)
+
 # Set up include directories
 set(VITADECK_INCLUDE_DIRS src vendor vendor/quickjs)
+list(APPEND VITADECK_INCLUDE_DIRS ${CURL_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
 
 if(DEFINED ENV{VITASDK})
   list(APPEND VITADECK_INCLUDE_DIRS
@@ -90,7 +92,7 @@ set(VITADECK_SOURCES
 )
 add_executable(${PROJECT_NAME} ${VITADECK_SOURCES})
 
-set(VITADECK_LIBRARIES quickjs)
+set(VITADECK_LIBRARIES m quickjs)
 
 if(DEFINED ENV{VITASDK})
   list(APPEND VITADECK_LIBRARIES
@@ -120,17 +122,20 @@ if(DEFINED ENV{VITASDK})
     SceIofilemgr_stub
     SceNetCtl_stub
     SceNet_stub
+    SceHttp_stub
+    SceSsl_stub
     SceDisplay_stub
     SceAppUtil_stub
     SceAudioIn_stub
-    SceIofilemgr_stub
     ScePower_stub
     SceProcessmgr_stub
     SceIme_stub
+    ${CURL_LIBRARIES}
+    ${OPENSSL_LIBRARIES}
+    z
   )
 else()
-  list(APPEND VITADECK_LIBRARIES ${RAYLIB_LIBRARIES})
-  list(APPEND VITADECK_LIBRARIES m)
+  list(APPEND VITADECK_LIBRARIES ${RAYLIB_LIBRARIES} ${CURL_LIBRARIES} ${OPENSSL_LIBRARIES})
   list(APPEND VITADECK_LIBRARIES pthread)
 endif()
 

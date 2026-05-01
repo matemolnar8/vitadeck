@@ -8,6 +8,7 @@
 #include "ui/input.h"
 #include "platform/thread.h"
 #include "core/event_queue.h"
+#include <curl/curl.h>
 
 #define SCREEN_WIDTH 960
 #define SCREEN_HEIGHT 544
@@ -139,7 +140,27 @@ int main(int argc, char *argv[]) {
 	(void)argv;
 	int result = 0;
 	vd_thread* js_thread = NULL;
-	
+
+	CURL *curl;
+
+	CURLcode curl_code = curl_global_init(CURL_GLOBAL_ALL);
+	if (curl_code) return_defer(1);
+
+	curl = curl_easy_init();
+	if (!curl) {
+		TraceLog(LOG_ERROR, "Could not initialize curl.");
+		return_defer(1);
+	}
+
+	curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
+	curl_easy_setopt(curl, CURLOPT_CA_CACHE_TIMEOUT, 604800L);
+
+	TraceLog(LOG_INFO, "Initializing curl...");
+    result = curl_easy_perform(curl);
+    if(result != CURLE_OK) {
+		TraceLog(LOG_ERROR, "curl_easy_perform() failed: %s", curl_easy_strerror(result));
+		return_defer(1);
+	}
 	// SetTraceLogLevel(LOG_DEBUG);
 
 	if (!event_queue_init()) {
@@ -193,6 +214,8 @@ int main(int argc, char *argv[]) {
 	}
 
 defer:
+	if (curl) curl_easy_cleanup(curl);
+	curl_global_cleanup();
 	event_queue_shutdown();
 	if (js_thread) {
 		vd_thread_join(js_thread);
