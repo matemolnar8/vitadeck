@@ -1,16 +1,15 @@
 import React, { createContext, useContext, useState } from "react";
 
 function hex(value: string): Color {
-  const hex = value.replace("#", "");
+  const normalized = value.replace("#", "");
   return {
-    r: parseInt(hex.slice(0, 2), 16),
-    g: parseInt(hex.slice(2, 4), 16),
-    b: parseInt(hex.slice(4, 6), 16),
+    r: parseInt(normalized.slice(0, 2), 16),
+    g: parseInt(normalized.slice(2, 4), 16),
+    b: parseInt(normalized.slice(4, 6), 16),
     a: 255,
   };
 }
 
-// Generated with HueForge https://talon-volt-07448726.figma.site/
 const palette = {
   brand10: hex("#f7fbfd"),
   brand20: hex("#ebf5f9"),
@@ -97,33 +96,20 @@ const THEMES: Record<ThemeName, Theme> = {
 
 export type ThemeContextValue = {
   theme: Theme;
-  setTheme: (name: ThemeName) => void;
   themeName: ThemeName;
-  cycleTheme: () => void;
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [themeName, setThemeName] = useState<ThemeName>("dark");
-
+  const [themeName] = useState<ThemeName>("dark");
   const theme = THEMES[themeName];
 
-  const setTheme = (name: ThemeName) => {
-    setThemeName(name);
-  };
-
-  const cycleTheme = () => {
-    setThemeName(themeName === "dark" ? "light" : "dark");
-  };
-
-  const value = { theme, setTheme, themeName, cycleTheme };
-
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return <ThemeContext.Provider value={{ theme, themeName }}>{children}</ThemeContext.Provider>;
 };
 
 export function useTheme(): ThemeContextValue {
   const ctx = useContext(ThemeContext);
-  if (!ctx) throw new Error("useTheme must be used within ThemeProvider");
+  if (!ctx) throw new Error("useTheme must be used within VitaDeck runtime bootstrap");
   return ctx;
 }

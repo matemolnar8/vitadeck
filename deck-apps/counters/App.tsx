@@ -1,18 +1,17 @@
 import React from "react";
-import { Counter } from "../components/Counter";
+import { Screen } from "@vitadeck/runtime";
+import { Counter } from "../shared/Counter";
 
-export const Counters = () => {
+export default function CountersDeckApp() {
   return (
-    <>
-      {/* First row of 3 counters */}
+    <Screen>
       <Counter x={30} y={30} />
       <Counter x={360} y={30} />
       <Counter x={690} y={30} />
 
-      {/* Second row of 3 counters */}
       <Counter x={30} y={270} />
       <Counter x={360} y={270} />
       <Counter x={690} y={270} />
-    </>
+    </Screen>
   );
-};
+}

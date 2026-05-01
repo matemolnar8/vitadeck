@@ -11,7 +11,15 @@
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
+    "moduleResolution": "bundler",
+    "paths": {
+      "@vitadeck/active-deck-app": ["./src/generated/active-deck-app.ts"],
+      "@vitadeck/runtime": ["./src/runtime/index.tsx"],
+      "react": ["./node_modules/@types/react/index.d.ts"],
+      "react/*": ["./node_modules/@types/react/*"]
+    },
     "skipLibCheck": true,
     "esModuleInterop": true
-  }
+  },
+  "include": ["src", "../deck-apps"]
 }

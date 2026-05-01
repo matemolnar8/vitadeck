@@ -1,15 +1,15 @@
 import React, { StrictMode } from "react";
+import DeckApp from "@vitadeck/active-deck-app";
 import type { MetricSummary } from "./reconciler-metrics";
-import { App } from "./app/App";
 import { onInputEventFromNative } from "./input";
-import { ThemeProvider } from "./app/theme";
+import { ThemeProvider } from "./runtime/theme";
 import { getMetrics, render, resetMetrics } from "./vitadeck-react-reconciler-mutation";
 
 export function updateContainer() {
   render(
     <StrictMode>
       <ThemeProvider>
-        <App />
+        <DeckApp />
       </ThemeProvider>
     </StrictMode>,
   );

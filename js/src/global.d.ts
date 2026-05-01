@@ -21,11 +21,6 @@ declare global {
         color?: Color;
         borderColor?: Color;
         borderRadius?: number;
-        onClick?: (() => void) | undefined;
-        onMouseDown?: () => void;
-        onMouseUp?: () => void;
-        onMouseEnter?: () => void;
-        onMouseLeave?: () => void;
         children?: React.ReactNode | React.ReactNode[];
       }>;
       "vita-button": JSXPropsWithKey<{
@@ -37,11 +32,9 @@ declare global {
         textColor?: Color;
         borderRadius?: number;
         label: string;
-        onClick?: () => void;
-        onMouseDown?: () => void;
-        onMouseUp?: () => void;
-        onMouseEnter?: () => void;
-        onMouseLeave?: () => void;
+        onPress?: () => void;
+        onPressStart?: () => void;
+        onPressEnd?: () => void;
       }>;
     }
   }

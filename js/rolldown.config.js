@@ -14,7 +14,15 @@ export default defineConfig({
     name: "vitadeck",
     minify: isProd,
   },
-  tsconfig: true,
+  resolve: {
+    alias: {
+      "@vitadeck/active-deck-app": path.resolve("src/generated/active-deck-app.ts"),
+      "@vitadeck/runtime": path.resolve("src/runtime/index.tsx"),
+      react: path.resolve("node_modules/react/index.js"),
+      "react-compiler-runtime": path.resolve("node_modules/react-compiler-runtime/dist/index.js"),
+    },
+  },
+  tsconfig: false,
   transform: {
     define: {
       "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || "development"),

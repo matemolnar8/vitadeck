@@ -1,0 +1,4 @@
+{
+  "name": "Minesweeper",
+  "entry": "./App.tsx"
+}

@@ -65,11 +65,9 @@ const colorToArgs = (color: Color | undefined, defaultColor: Color): [boolean, n
 
 // Extract event handlers from props
 const extractHandlers = (props: Props) => ({
-  onClick: (props as { onClick?: () => void }).onClick,
-  onMouseDown: (props as { onMouseDown?: () => void }).onMouseDown,
-  onMouseUp: (props as { onMouseUp?: () => void }).onMouseUp,
-  onMouseEnter: (props as { onMouseEnter?: () => void }).onMouseEnter,
-  onMouseLeave: (props as { onMouseLeave?: () => void }).onMouseLeave,
+  onPress: (props as { onPress?: () => void }).onPress,
+  onPressStart: (props as { onPressStart?: () => void }).onPressStart,
+  onPressEnd: (props as { onPressEnd?: () => void }).onPressEnd,
 });
 
 // Create native instance based on type

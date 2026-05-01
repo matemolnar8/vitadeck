@@ -5,17 +5,18 @@
   "type": "module",
   "main": "main.js",
   "scripts": {
-    "build": "rolldown -c",
-    "build:prod": "NODE_ENV=production rolldown -c",
+    "generate:active-deck-app": "tsx scripts/generate-active-deck-app.ts",
+    "build": "pnpm generate:active-deck-app && rolldown -c",
+    "build:prod": "pnpm generate:active-deck-app && NODE_ENV=production rolldown -c",
     "dev": "rolldown -c --watch",
-    "tsc": "tsgo",
+    "tsc": "pnpm generate:active-deck-app && tsgo && tsgo -p tsconfig.scripts.json",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "format": "oxfmt",
     "format:check": "oxfmt --check"
   },
   "dependencies": {
-    "oxlint-tsgolint": "^0.11.4",
+    "oxlint-tsgolint": "^0.22.1",
     "react": "^18.3.1",
     "react-compiler-runtime": "^1.0.0",
     "react-reconciler": "^0.29.2",
@@ -24,15 +25,16 @@
   "devDependencies": {
     "@babel/preset-react": "^7.28.5",
     "@babel/preset-typescript": "^7.28.5",
-    "@rollup/plugin-babel": "^6.1.0",
-    "@types/node": "^22.19.7",
-    "@types/react": "^18.3.27",
+    "@rollup/plugin-babel": "^7.0.0",
+    "@types/node": "^25.6.0",
+    "@types/react": "^18.3.28",
     "@types/react-reconciler": "^0.28.9",
-    "@typescript/native-preview": "7.0.0-dev.20251206.1",
+    "@typescript/native-preview": "7.0.0-dev.20260501.1",
     "babel-plugin-react-compiler": "^1.0.0",
     "oxfmt": "latest",
     "oxlint": "latest",
-    "rolldown": "1.0.0-rc.2"
+    "rolldown": "1.0.0-rc.18",
+    "tsx": "^4.21.0"
   },
   "engines": {
     "node": ">=22"
