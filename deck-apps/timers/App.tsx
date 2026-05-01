@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Button, Rect, Screen, Text, useTheme } from "@vitadeck/runtime";
+import { Button, Rect, Screen, Text, insetContent, useTheme } from "@vitadeck/runtime";
 
 export default function TimersDeckApp() {
   const { theme } = useTheme();
@@ -47,9 +47,13 @@ export default function TimersDeckApp() {
     };
   }, []);
 
+  const { x: insetX, y: insetY, width: cw, height: ch } = insetContent();
+  const stackGap = 16;
+  const rowH = (ch - stackGap) / 2;
+
   return (
     <Screen>
-      <Rect x={20} y={20} width={920} height={200} color={theme.surface} borderRadius={0.15}>
+      <Rect x={insetX} y={insetY} width={cw} height={rowH} color={theme.surface} borderRadius={0.08}>
         <Text fontSize={24} color={theme.text}>
           setTimeout demo: {timeoutMsg}
         </Text>
@@ -62,7 +66,7 @@ export default function TimersDeckApp() {
           onPress={() => setTimeoutActive(true)}
           color={theme.success}
           textColor={theme.navText}
-          borderRadius={0.2}
+          borderRadius={0.12}
         />
         <Button
           x={210}
@@ -73,11 +77,18 @@ export default function TimersDeckApp() {
           onPress={() => setTimeoutActive(false)}
           color={theme.danger}
           textColor={theme.navText}
-          borderRadius={0.2}
+          borderRadius={0.12}
         />
       </Rect>
 
-      <Rect x={20} y={240} width={920} height={200} color={theme.surfaceAlt} borderRadius={0.15}>
+      <Rect
+        x={insetX}
+        y={insetY + rowH + stackGap}
+        width={cw}
+        height={rowH}
+        color={theme.surfaceAlt}
+        borderRadius={0.08}
+      >
         <Text fontSize={24} color={theme.text}>
           setInterval demo: ticks = {ticks}
         </Text>
@@ -90,7 +101,7 @@ export default function TimersDeckApp() {
           onPress={() => setIntervalRunning(true)}
           color={theme.success}
           textColor={theme.navText}
-          borderRadius={0.2}
+          borderRadius={0.12}
         />
         <Button
           x={210}
@@ -101,7 +112,7 @@ export default function TimersDeckApp() {
           onPress={() => setIntervalRunning(false)}
           color={theme.danger}
           textColor={theme.navText}
-          borderRadius={0.2}
+          borderRadius={0.12}
         />
       </Rect>
     </Screen>

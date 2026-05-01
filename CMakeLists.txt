@@ -156,8 +156,11 @@ add_custom_target(js_copy
 )
 
 add_custom_target(js
-  DEPENDS js_build ${PROJECT_NAME}
-  COMMENT "Build JavaScript and everything"
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/js
+  COMMAND pnpm build:prod
+  COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${PROJECT_NAME}
+  COMMENT "Build JS bundle (pnpm build:prod) then native ${PROJECT_NAME}"
+  VERBATIM
 )
 
 add_custom_target(cloc

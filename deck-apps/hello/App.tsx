@@ -1,22 +1,29 @@
 import React, { useState } from "react";
-import { Button, Rect, Screen, Text, useTheme } from "@vitadeck/runtime";
+import { Button, Rect, Screen, Text, insetContent, useTheme } from "@vitadeck/runtime";
 import { Counter } from "../shared/Counter";
 
 export default function HelloDeckApp() {
   const { theme } = useTheme();
   const [pressedButton, setPressedButton] = useState<string | null>(null);
+  const { x: insetX, y: insetY, width: cw, height: ch } = insetContent();
+  const bannerH = 80;
+  const gap = 16;
+  const counterY = insetY + bannerH + gap;
+  const counterFootprintH = 90;
+  const panelY = counterY + counterFootprintH + gap;
+  const panelH = ch - (panelY - insetY);
 
   return (
     <Screen>
-      <Rect x={20} y={20} width={920} height={80} color={theme.surface} borderRadius={0.15}>
+      <Rect x={insetX} y={insetY} width={cw} height={bannerH} color={theme.surface} borderRadius={0.08}>
         <Text fontSize={28} color={theme.text}>
           Hello, world!
         </Text>
       </Rect>
 
-      <Counter x={30} y={130} />
+      <Counter x={insetX + 10} y={counterY} />
 
-      <Rect x={20} y={240} width={920} height={200} color={theme.surface} borderRadius={0.15}>
+      <Rect x={insetX} y={panelY} width={cw} height={panelH} color={theme.surface} borderRadius={0.08}>
         <Text fontSize={22} color={theme.text}>
           Overlapping Buttons Test
         </Text>
@@ -36,7 +43,7 @@ export default function HelloDeckApp() {
           textColor={theme.navText}
           label="Bottom Button"
           onPress={() => setPressedButton("bottom")}
-          borderRadius={0.2}
+          borderRadius={0.12}
         />
 
         <Button
@@ -48,7 +55,7 @@ export default function HelloDeckApp() {
           textColor={theme.navText}
           label="Top Button"
           onPress={() => setPressedButton("top")}
-          borderRadius={0.2}
+          borderRadius={0.12}
         />
       </Rect>
     </Screen>

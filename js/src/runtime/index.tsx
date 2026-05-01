@@ -3,6 +3,21 @@ import { useTheme, type Theme, type ThemeContextValue, type ThemeName } from "./
 
 type TextChild = string | number | boolean | null | undefined;
 
+/** PSVita panel resolution; JS layout matches native `SCREEN_WIDTH` / `SCREEN_HEIGHT`. */
+export const VITA_SCREEN = { width: 960, height: 544 } as const;
+
+/** Outer padding for deck apps (full canvas; no shell top bar). */
+export const VITA_INSET = 20;
+
+export function insetContent(): { x: number; y: number; width: number; height: number } {
+  return {
+    x: VITA_INSET,
+    y: VITA_INSET,
+    width: VITA_SCREEN.width - VITA_INSET * 2,
+    height: VITA_SCREEN.height - VITA_INSET * 2,
+  };
+}
+
 export type ScreenProps = {
   children?: ReactNode;
   color?: Color;
@@ -11,7 +26,7 @@ export type ScreenProps = {
 export function Screen({ children, color }: ScreenProps) {
   const { theme } = useTheme();
   return (
-    <vita-rect x={0} y={0} width={960} height={544} color={color ?? theme.background}>
+    <vita-rect x={0} y={0} width={VITA_SCREEN.width} height={VITA_SCREEN.height} color={color ?? theme.background}>
       {children}
     </vita-rect>
   );

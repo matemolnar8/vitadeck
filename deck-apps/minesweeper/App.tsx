@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Button, Rect, Screen, Text, useTheme } from "@vitadeck/runtime";
+import { Button, Rect, Screen, Text, insetContent, useTheme } from "@vitadeck/runtime";
 
 type Cell = {
   id: string;
@@ -11,7 +11,8 @@ type Cell = {
 
 type Grid = Cell[][];
 
-const playfield = { x: 20, y: 20, w: 920, h: 444 };
+const playfieldInset = insetContent();
+const playfield = { x: playfieldInset.x, y: playfieldInset.y, w: playfieldInset.width, h: playfieldInset.height };
 const gridSize = { rows: 9, cols: 16 };
 const headerHeight = 40;
 const boardPadding = 10;
@@ -245,7 +246,7 @@ export default function MinesweeperDeckApp() {
         width={playfield.w}
         height={playfield.h}
         color={theme.surface}
-        borderRadius={0.15}
+        borderRadius={0}
       >
         <Rect x={0} y={0} width={playfield.w} height={headerHeight} color={theme.navBackground}>
           <Text fontSize={24} color={theme.navText}>
@@ -260,7 +261,7 @@ export default function MinesweeperDeckApp() {
             onPress={reset}
             color={theme.accent}
             textColor={theme.navText}
-            borderRadius={0.2}
+            borderRadius={0.12}
           />
         </Rect>
         {grid.map((row, r) => {
@@ -285,7 +286,7 @@ export default function MinesweeperDeckApp() {
                 label={label}
                 onPressStart={() => onCellPressStart(r, c)}
                 onPressEnd={() => onCellPressEnd(r, c)}
-                borderRadius={0.1}
+                borderRadius={0.08}
               />
             );
           });

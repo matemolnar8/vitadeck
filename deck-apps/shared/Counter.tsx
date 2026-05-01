@@ -21,9 +21,9 @@ export const Counter = ({ x, y }: Props) => {
         onPress={() => setCount((count) => count + 1)}
         color={theme.primary}
         textColor={theme.navText}
-        borderRadius={0.2}
+        borderRadius={0.12}
       />
-      <Rect x={x} y={y + 50} width={180} height={40} color={theme.surface} borderRadius={0.15}>
+      <Rect x={x} y={y + 50} width={180} height={40} color={theme.surface} borderRadius={0.08}>
         <Text fontSize={24} color={theme.text}>
           Count: {count}
         </Text>
