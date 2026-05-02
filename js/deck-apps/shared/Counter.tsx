@@ -18,7 +18,7 @@ export const Counter = ({ x, y }: Props) => {
         width={180}
         height={40}
         label="Increment"
-        onPress={() => setCount((count) => count + 1)}
+        onPress={() => setCount((prev) => prev + 1)}
         color={theme.primary}
         textColor={theme.navText}
         borderRadius={0.12}

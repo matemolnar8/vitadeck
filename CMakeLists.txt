@@ -17,7 +17,7 @@ else()
   if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Og -g")
   else()
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -flto")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
   endif()
 endif()
 

@@ -21,5 +21,5 @@
     "skipLibCheck": true,
     "esModuleInterop": true
   },
-  "include": ["src", "../deck-apps"]
+  "include": ["src", "deck-apps"]
 }

@@ -31,7 +31,7 @@ export default function TimersDeckApp() {
     if (intervalRunning) {
       if (!intervalIdRef.current) {
         intervalIdRef.current = setInterval(() => {
-          setTicks((ticks) => ticks + 1);
+          setTicks((prev) => prev + 1);
         }, 1000);
       }
     } else if (intervalIdRef.current) {

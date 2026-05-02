@@ -66,7 +66,7 @@ _Avoid_: Click, mouse down, mouse up, hover
 - A **Deck App Manifest** contains `name` and `entry` for the MVP.
 - A **Deck App Manifest** selects which **Deck App Source Entry** is bundled.
 - The project configuration selects the **Active Deck App** by pointing at a **Deck App Manifest**.
-- The **Deck App Workspace** contains MVP Deck Apps under `deck-apps/`.
+- The **Deck App Workspace** contains MVP Deck Apps under `js/deck-apps/`.
 - VitaDeck owns bootstrapping and renders the **Deck App Component**.
 - The **VitaDeck Runtime API** may be implemented as a thin local TypeScript module for the MVP.
 - The **VitaDeck Runtime API** provides the **Runtime Theme**.

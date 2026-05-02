@@ -19,22 +19,22 @@ Enable VitaDeck to bundle one selected Deck App at build time and render it as t
 - Theme is provided by VitaDeck runtime bootstrap; Deck Apps only consume it.
 - A Deck App source entry default-exports a React component; VitaDeck owns bootstrapping and rendering.
 - Each Deck App has a tiny `vitadeck.json` manifest with `name` and `entry`.
-- `vitadeck.config.json` selects the active Deck App manifest for normal builds.
+- `js/vitadeck.config.json` selects the active Deck App manifest for normal builds.
 - Runtime upload over an HTTP server on the Vita is a future goal, not an MVP requirement.
-- Iteration 1 Deck Apps live in-repo under `deck-apps/`.
+- Iteration 1 Deck Apps live in-repo under `js/deck-apps/`.
 - The existing demo pages become four separate sample Deck Apps instead of one built-in navigation app.
 
 ## Proposed Skeleton
 
-- `vitadeck.config.json`
-- `deck-apps/hello/vitadeck.json`
-- `deck-apps/hello/App.tsx`
-- `deck-apps/counters/vitadeck.json`
-- `deck-apps/counters/App.tsx`
-- `deck-apps/timers/vitadeck.json`
-- `deck-apps/timers/App.tsx`
-- `deck-apps/minesweeper/vitadeck.json`
-- `deck-apps/minesweeper/App.tsx`
+- `js/vitadeck.config.json`
+- `js/deck-apps/hello/vitadeck.json`
+- `js/deck-apps/hello/App.tsx`
+- `js/deck-apps/counters/vitadeck.json`
+- `js/deck-apps/counters/App.tsx`
+- `js/deck-apps/timers/vitadeck.json`
+- `js/deck-apps/timers/App.tsx`
+- `js/deck-apps/minesweeper/vitadeck.json`
+- `js/deck-apps/minesweeper/App.tsx`
 - `js/src/runtime/index.tsx`
 - `js/src/runtime/theme.tsx`
 - `js/src/main.tsx` imports `@vitadeck/active-deck-app`
@@ -58,4 +58,4 @@ Enable VitaDeck to bundle one selected Deck App at build time and render it as t
 - The active Deck App is typechecked by `pnpm --dir js tsc`.
 - The active Deck App is bundled by `pnpm --dir js build`.
 - The native build packages the bundled active Deck App without changing the existing C runtime loading path.
-- Each sample Deck App can be selected through `vitadeck.config.json` and built independently.
+- Each sample Deck App can be selected through `js/vitadeck.config.json` and built independently.

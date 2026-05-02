@@ -165,8 +165,8 @@ export default function MinesweeperDeckApp() {
       }
       let allSafeRevealed = true;
       outer: for (const row of current) {
-        for (const cell of row) {
-          if (!cell.mine && !cell.revealed) {
+        for (const gridCell of row) {
+          if (!gridCell.mine && !gridCell.revealed) {
             allSafeRevealed = false;
             break outer;
           }

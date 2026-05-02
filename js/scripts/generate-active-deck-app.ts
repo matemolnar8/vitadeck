@@ -15,7 +15,7 @@ type DeckAppManifest = {
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const jsRoot = path.resolve(scriptDir, "..");
 const repoRoot = path.resolve(jsRoot, "..");
-const configPath = path.join(repoRoot, "vitadeck.config.json");
+const configPath = path.join(jsRoot, "vitadeck.config.json");
 const generatedDir = path.join(jsRoot, "src", "generated");
 const generatedPath = path.join(generatedDir, "active-deck-app.ts");
 
@@ -72,7 +72,7 @@ function toImportPath(fromFile: string, toFile: string): string {
 
 async function regenerate(): Promise<void> {
   const config = await readProjectConfig();
-  const manifestPath = path.resolve(repoRoot, config.deckAppManifest);
+  const manifestPath = path.resolve(jsRoot, config.deckAppManifest);
   assertInsideRepo(manifestPath, "deckAppManifest must point inside the VitaDeck repository.");
 
   const manifest = await readDeckAppManifest(manifestPath);
@@ -123,7 +123,7 @@ if (!watchMode) {
     manifestWatcher?.close();
     manifestWatcher = undefined;
     const cfg = await readProjectConfig();
-    const manifestPath = path.resolve(repoRoot, cfg.deckAppManifest);
+    const manifestPath = path.resolve(jsRoot, cfg.deckAppManifest);
     manifestWatcher = watch(manifestPath, runDebounced);
   }
 
