@@ -1,0 +1,6 @@
+{
+  "extends": "@vitadeck/sdk/tsconfig",
+  "include": [
+    "src"
+  ]
+}

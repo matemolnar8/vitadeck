@@ -136,12 +136,13 @@ globalThis.vitadeckPackage.register(DeckApp);
 
 async function create(projectName: string): Promise<void> {
   const targetDir = path.resolve(process.cwd(), projectName);
+  const slug = packageNameFor(projectName).replace(/\.vdapp$/, "");
   await mkdir(path.join(targetDir, "src"), { recursive: true });
   await writeFile(
     path.join(targetDir, "package.json"),
     JSON.stringify(
       {
-        name: packageNameFor(projectName).replace(/\.vdapp$/, ""),
+        name: slug,
         version: "0.1.0",
         private: true,
         type: "module",
@@ -150,7 +151,7 @@ async function create(projectName: string): Promise<void> {
           tsc: "tsgo",
         },
         dependencies: {
-          "@vitadeck/sdk": "latest",
+          "@vitadeck/sdk": "workspace:*",
           react: "^18.3.1",
         },
         devDependencies: {
@@ -164,30 +165,36 @@ async function create(projectName: string): Promise<void> {
   );
   await writeFile(
     path.join(targetDir, "vitadeck.config.json"),
-    JSON.stringify({ name: projectName, entry: "./src/App.tsx", outDir: "./dist" }, null, 2) + "\n",
+    JSON.stringify({ name: slug, entry: "./src/App.tsx", outDir: "./dist" }, null, 2) + "\n",
   );
   await writeFile(
     path.join(targetDir, "tsconfig.json"),
-    JSON.stringify({ extends: "@vitadeck/sdk/tsconfig", include: ["src"] }, null, 2) + "\n",
+    `${JSON.stringify(
+      {
+        extends: "@vitadeck/sdk/tsconfig",
+        include: ["src"],
+      },
+      null,
+      2,
+    )}\n`,
   );
-  await writeFile(
-    path.join(targetDir, "src", "vitadeck-env.d.ts"),
-    '/// <reference types="@vitadeck/sdk/deck-app-env" />\n',
-  );
+  await writeFile(path.join(targetDir, "src", "vitadeck-env.d.ts"), '/// <reference types="@vitadeck/sdk/deck-app-env" />\n');
   await writeFile(
     path.join(targetDir, "src", "App.tsx"),
-    `import React from "react";
-import { Screen, Text, insetContent, useTheme } from "@vitadeck/sdk";
+    `import { Rect, Screen, Text, insetContent, useTheme } from "@vitadeck/sdk";
+import React from "react";
 
 export default function App() {
   const { theme } = useTheme();
-  const { x, y } = insetContent();
+  const { x, y, width, height } = insetContent();
 
   return (
     <Screen>
-      <Text fontSize={28} color={theme.text}>
-        Hello from ${projectName}
-      </Text>
+      <Rect x={x} y={y} width={width} height={height} color={theme.surface}>
+        <Text fontSize={28} color={theme.text}>
+          Hello from ${slug}
+        </Text>
+      </Rect>
     </Screen>
   );
 }
