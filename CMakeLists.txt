@@ -8,6 +8,8 @@ endif()
 
 project(vitadeck)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 if(DEFINED ENV{VITASDK})
   message(STATUS "VITA is ON")
   include("${VITASDK}/share/vita.cmake" REQUIRED)
