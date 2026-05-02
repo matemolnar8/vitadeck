@@ -1,0 +1,37 @@
+{
+  "name": "@vitadeck/sdk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.tsx",
+    "./internal": "./src/internal.tsx",
+    "./tsconfig": "./tsconfig.deck-app.json",
+    "./types": "./src/types.ts",
+    "./vitadeck-host-types": "./src/vitadeck-host-types.ts",
+    "./deck-app-env": "./src/deck-app-globals.d.ts"
+  },
+  "bin": {
+    "vitadeck": "./bin/vitadeck.js"
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.json",
+    "tsc": "tsgo -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1"
+  },
+  "dependencies": {
+    "@babel/preset-react": "^7.28.5",
+    "@babel/preset-typescript": "^7.28.5",
+    "@rollup/plugin-babel": "^7.0.0",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "rolldown": "1.0.0-rc.18",
+    "tsx": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@types/react": "^18.3.28",
+    "react": "^18.3.1"
+  }
+}

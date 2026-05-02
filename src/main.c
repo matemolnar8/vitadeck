@@ -89,21 +89,21 @@ static void* js_thread_func(void* arg) {
 	register_js_lib(ctx);
 
 	size_t len;
-	char *code = read_file("js/main.js", &len);
+	char *code = read_file("js/runtime.js", &len);
 	if (!code) {
-		TraceLog(LOG_ERROR, "Could not load main.js.");
+		TraceLog(LOG_ERROR, "Could not load runtime.js.");
 		js_init_failed = true;
 		return_defer(NULL);
 	}
 
-	JSValue eval_result = JS_Eval(ctx, code, len, "main.js", JS_EVAL_TYPE_GLOBAL);
+	JSValue eval_result = JS_Eval(ctx, code, len, "runtime.js", JS_EVAL_TYPE_GLOBAL);
 	free(code);
 	code = NULL;
 
 	if (JS_IsException(eval_result)) {
 		JSValue exc = JS_GetException(ctx);
 		const char *str = JS_ToCString(ctx, exc);
-		TraceLog(LOG_ERROR, "Error evaluating main.js: %s", str ? str : "unknown error");
+		TraceLog(LOG_ERROR, "Error evaluating runtime.js: %s", str ? str : "unknown error");
 		JS_FreeCString(ctx, str);
 		JS_FreeValue(ctx, exc);
 		JS_FreeValue(ctx, eval_result);

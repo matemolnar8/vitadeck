@@ -6,4 +6,7 @@ out-vita
 module/*.suprx
 
 js/dist
-js/node_modules
+js/examples/*/dist
+js/examples/*/.vitadeck
+node_modules/
+**/node_modules/

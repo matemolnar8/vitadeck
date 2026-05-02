@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react",
+    "types": ["node"],
+    "lib": ["es2022"]
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}

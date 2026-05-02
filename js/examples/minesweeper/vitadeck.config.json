@@ -1,0 +1,5 @@
+{
+  "name": "Minesweeper",
+  "entry": "./src/App.tsx",
+  "outDir": "./dist"
+}

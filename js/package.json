@@ -1,28 +1,17 @@
 {
-  "name": "vitadeck-js",
+  "name": "vitadeck-workspace",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "main.js",
   "scripts": {
-    "generate:active-deck-app": "tsx scripts/generate-active-deck-app.ts",
-    "build": "pnpm generate:active-deck-app && rolldown -c",
-    "build:prod": "pnpm generate:active-deck-app && NODE_ENV=production rolldown -c",
-    "dev:generate": "tsx scripts/generate-active-deck-app.ts --watch",
-    "dev:bundle": "rolldown -c --watch",
-    "dev": "pnpm run \"/^dev:(generate|bundle)$/\"",
-    "tsc": "pnpm generate:active-deck-app && tsgo && tsgo -p tsconfig.scripts.json",
+    "build": "pnpm --filter @vitadeck/sdk build && pnpm --filter \"./examples/*\" build && pnpm --filter @vitadeck/runtime build && pnpm copy:active-deck-app",
+    "build:prod": "NODE_ENV=production pnpm build",
+    "copy:active-deck-app": "tsx scripts/copy-active-deck-app.ts",
+    "tsc": "pnpm --filter @vitadeck/sdk tsc && pnpm --filter @vitadeck/runtime tsc && pnpm --filter \"./examples/*\" tsc && tsgo -p tsconfig.scripts.json",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "format": "oxfmt",
     "format:check": "oxfmt --check"
-  },
-  "dependencies": {
-    "oxlint-tsgolint": "^0.22.1",
-    "react": "^18.3.1",
-    "react-compiler-runtime": "^1.0.0",
-    "react-reconciler": "^0.29.2",
-    "tslib": "^2.8.1"
   },
   "devDependencies": {
     "@babel/preset-react": "^7.28.5",
@@ -35,7 +24,12 @@
     "babel-plugin-react-compiler": "^1.0.0",
     "oxfmt": "latest",
     "oxlint": "latest",
+    "oxlint-tsgolint": "^0.22.1",
+    "react": "^18.3.1",
+    "react-compiler-runtime": "^1.0.0",
+    "react-reconciler": "^0.29.2",
     "rolldown": "1.0.0-rc.18",
+    "tslib": "^2.8.1",
     "tsx": "^4.21.0"
   },
   "engines": {

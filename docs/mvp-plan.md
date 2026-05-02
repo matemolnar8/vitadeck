@@ -1,5 +1,7 @@
 # VitaDeck Deck App Iteration 1 Plan
 
+> Superseded for current implementation by [VitaDeck Deck App Packages Plan](./deck-app-packages-plan.md). This document records the completed source-selected iteration.
+
 ## Goal
 
 Enable VitaDeck to bundle one selected Deck App at build time and render it as the full VitaDeck experience. This is the first iteration toward runtime-uploaded Deck Apps, not the final package model.
