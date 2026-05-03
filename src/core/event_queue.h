@@ -20,5 +20,6 @@ void event_queue_push(const InputEvent* evt);
 bool event_queue_pop(InputEvent* evt);
 void event_queue_shutdown(void);
 bool event_queue_is_shutdown(void);
+void event_queue_clear(void);
 
 #endif /* EVENT_QUEUE_H */

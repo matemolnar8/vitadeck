@@ -21,8 +21,16 @@ The metadata file that identifies a **Deck App** and its **Deck App Source Entry
 _Avoid_: Package file, plugin config
 
 **Deck App Package Manifest**:
-The versioned metadata file inside a **Deck App Package Directory** that VitaDeck reads before loading the package.
+The metadata file inside a **Deck App Package Directory** that VitaDeck reads before loading the package, including a **Deck App Package Schema Version**.
 _Avoid_: Source manifest, npm package metadata, config file
+
+**Deck App Package Schema Version**:
+The manifest field that versions the **Deck App Package Manifest** shape read by VitaDeck.
+_Avoid_: App release version, package version, semver
+
+**Deck App Package Version**:
+The user-visible semver of a **Deck App Package**, stored in `manifest.json` as `version` for display and updates.
+_Avoid_: Schema version, SDK version, VitaDeck version
 
 **Deck App Package**:
 The built portable unit produced from a **Deck App** project and consumed by VitaDeck.
@@ -45,15 +53,115 @@ The internal global convention used by generated **Deck App Package Entries** to
 _Avoid_: Public SDK API, security boundary, author API
 
 **Active Deck App**:
-The **Deck App Package** currently selected to be copied into VitaDeck.
+The **Deck App Package** currently selected to run in VitaDeck.
 _Avoid_: Current plugin, selected component
+
+**Installed Deck App Library**:
+The on-device collection of **Deck App Packages** available for activation, persisted across VitaDeck restarts until **Installed Deck App Removal**. Packages installed via **Runtime Upload** live here after a successful publish, not only in transient **Runtime Upload Staging**.
+_Avoid_: Upload cache, package folder, app store
+
+**VitaDeck Shell**:
+The VitaDeck-owned management UI for choosing and managing installed **Deck App Packages**.
+_Avoid_: Deck App menu, overlay app, launcher screen
+
+**Shell Face Input**:
+VitaDeck **System Input** face-button conventions for the **VitaDeck Shell**: Cross confirms the focused control; Circle backs out or activates **Shell Upload Cancel** when focused.
+_Avoid_: Deck App **Press**, mouse click, tap
+
+**Shell Home Screen**:
+The default **VitaDeck Shell** view for browsing the **Installed Deck App Library**, performing **Installed Deck App Removal**, and opening **Runtime Upload** through the primary **Shell Upload Entry** action. Library entries are ordered alphabetically by the **`name`** field in each **Deck App Package Manifest** (case-insensitive), with **Deck App Package Name** as the tie-breaker when **`name`** values collide.
+_Avoid_: Live Area, system settings, account screen
+
+**Shell Upload Entry**:
+The primary **Shell Home Screen** control that opens the **Shell Upload Screen**, using the same **Shell Face Input** focus-and-confirm pattern as other top-level Shell actions; not relegated to a submenu, long-press, or **Deck App** UI.
+_Avoid_: Hidden gesture, Deck App **Press**, browser bookmark
+
+**Shell Upload Screen**:
+The **VitaDeck Shell** **Runtime Upload** mode that attempts to start the **Runtime Upload Listener**, shows the **Runtime Upload URL** on-device when binding succeeds, shows an on-device bind-failure state with no URL when every port in the fallback range is in use, and keeps the session until **Shell Upload Cancel** or a successful publish completes. **Shell Upload Cancel** is sufficient to leave upload mode after bind failure; no in-screen retry is required.
+_Avoid_: Deck App screen, FTP client, OS browser chrome
+
+**Shell Upload Cancel**:
+The explicit **Shell Upload Screen** control that stops the **Runtime Upload Listener** and returns to the **Shell Home Screen** without closing the **VitaDeck Shell** (on-screen only on macOS at first).
+_Avoid_: Browser back, global back gesture, undo upload
+
+**Installed Deck App Removal**:
+Deleting a **Deck App Package** from the **Installed Deck App Library** using the **VitaDeck Shell**.
+_Avoid_: Uninstalling VitaDeck, clearing cache, revoking permissions
+
+**System Input**:
+A VitaDeck-reserved input that controls VitaDeck itself instead of the running **Deck App**.
+_Avoid_: App shortcut, global hotkey, hidden button
+
+**Start Input**:
+The Vita `Start` **System Input** that toggles between the **Deck App** and **VitaDeck Shell** when not on the **Shell Upload Screen**; **Shell Upload Screen** exits use explicit controls like **Shell Upload Cancel**.
+_Avoid_: Game menu, global pause, app back button
+
+**Host Start Mapping**:
+The macOS keyboard key that maps to the Vita `Start` **System Input** (F1).
+_Avoid_: Escape, window manager shortcuts, in-app hotkeys
+
+**Host Shell Confirm Mapping**:
+The macOS keyboard key that maps to Cross confirm in **Shell Face Input** while the **VitaDeck Shell** has focus (Enter).
+_Avoid_: Mouse click, Deck App **Press**, text field submission in **Deck Apps**
+
+**Host Shell Back Mapping**:
+The macOS keyboard key that maps to Circle back in **Shell Face Input** while the **VitaDeck Shell** has focus (Backspace).
+_Avoid_: Browser back, undo typing in **Deck Apps**, delete file shortcuts
+
+**Runtime Upload Listener**:
+The VitaDeck-owned HTTP server that serves the **Runtime Upload Web UI** and receives **Runtime Upload Archive** uploads while the **Shell Upload Screen** is open and binding succeeded. It binds on all network interfaces so LAN clients can reach it, uses a default TCP listen port with consecutive port fallback when that port is already in use (initially default **8787**, trying up to **10** ports), and the **Shell Upload Screen** shows the **Runtime Upload URL** for the address and port actually bound. If no port in that range can be bound, the listener does not run and the **Shell Upload Screen** shows bind failure instead.
+_Avoid_: Public API, always-on server, background service
+
+**Runtime Upload Web UI**:
+The LAN web page served by the **Runtime Upload Listener** for choosing, dragging/dropping, and uploading a **Runtime Upload Archive**, showing success and failure results in the browser.
+_Avoid_: Deck App UI, store frontend, CDN-hosted site
+
+**Runtime Upload HTTP Contract**:
+The **Runtime Upload Listener** author-facing HTTP surface is **`GET /`** for the **Runtime Upload Web UI** plus whatever same-origin static assets that page requires, and **`POST /upload`** for **Runtime Upload POST**. Undocumented paths respond **404**; non-**POST** requests to **`/upload`** respond **405**. There is no separate health, readiness, or version HTTP endpoint in the initial **Runtime Upload** iteration.
+_Avoid_: Public REST catalog, mandatory OpenAPI, extension plugin routes
+
+**Runtime Upload URL**:
+The `http://IP:PORT/` address of the **Runtime Upload Web UI** shown on the **Shell Upload Screen** when the **Runtime Upload Listener** has successfully bound, using a LAN-reachable **IP** for the device and the **PORT** actually bound.
+_Avoid_: FTP URL, deep link, marketplace URL
+
+**Runtime Upload POST**:
+The HTTP `POST /upload` endpoint on the **Runtime Upload Listener** that ingests a **Runtime Upload Archive** as either `multipart/form-data` (browser-primary) or `application/zip` (automation-friendly). For `multipart/form-data`, the file part field name is **`archive`** (single file part per request). Responses are always JSON (`Content-Type: application/json`): on success, `ok: true` plus **`packageName`** (**Deck App Package Name**) and **`version`** (**Deck App Package Version**); on failure, `ok: false` plus a short machine **`code`** and human **`message`**. Typical HTTP statuses include **200** success, **413** over **Runtime Upload Limits**, **400** malformed request body, **415** unsupported `Content-Type`, **422** archive layout or manifest validation failure, and **409** when **Runtime Upload Single-Flight** rejects a concurrent ingest.
+_Avoid_: GraphQL mutation, WebSocket upload, chunked multi-file APIs
+
+**Runtime Upload Single-Flight**:
+At most one **Runtime Upload** ingest pipeline (from accepting **Runtime Upload POST** through **Runtime Upload Staging** validation to publish or failure) runs at a time; another **Runtime Upload POST** while one is in progress receives **HTTP 409** and JSON failure, with no upload queue.
+_Avoid_: Parallel unpack, pipelined installs, last-wins overwrite
+
+**Upload Pairing**:
+A future optional ephemeral credential that authorizes clients to use a **Runtime Upload Listener**.
+_Avoid_: Login, account, DRM
+
+**Runtime Upload Limits**:
+VitaDeck-enforced caps on **Runtime Upload Archive** size, unpacked size, and entry count to prevent zip-style abuse (initially 16MB uploaded, 64MB unpacked, 256 entries).
+_Avoid_: User quota, app permissions, download budget
+
+**Runtime Upload Staging**:
+A temporary on-disk location where **Runtime Upload** unpacks and validates a **Runtime Upload Archive** before it becomes visible in the **Installed Deck App Library**.
+_Avoid_: Cache, download folder, build output
+
+**Runtime Upload Replacement**:
+A **Runtime Upload** that overwrites an existing **Installed Deck App** because the uploaded `.vdapp` **Deck App Package Name** matches.
+_Avoid_: Uninstall, rollback, package rename
+
+**Deck App Runtime Restart**:
+Restarting the Deck App JavaScript runtime with a fresh context after **Runtime Upload Replacement** of the **Active Deck App** or after changing the **Active Deck App**.
+_Avoid_: Hot reload, refresh, soft reload
+
+**Runtime Upload Archive**:
+A zip file that unpacks to exactly one top-level **Deck App Package Directory** whose name ends in `.vdapp`.
+_Avoid_: Source zip, VPK, npm tarball
 
 **Deck App Workspace**:
 The in-repository JavaScript workspace containing the **VitaDeck SDK**, VitaDeck runtime project, and example Deck App projects.
 _Avoid_: Plugin folder, examples folder
 
 **Runtime Upload**:
-A future installation flow where a **Deck App** is sent to a running VitaDeck instance over the network.
+A future installation flow where a **Runtime Upload Archive** is uploaded through the **Runtime Upload Web UI** (or compatible HTTP clients) while the **Shell Upload Screen** is open. Successful publishes add or replace entries in the persistent **Installed Deck App Library** like other installed packages.
 _Avoid_: Hot reload, live edit
 
 **Render Surface**:
@@ -105,7 +213,7 @@ _Avoid_: Click, mouse down, mouse up, hover
 - A **Deck App Source Entry** default-exports one **Deck App Component**.
 - A **Deck App Manifest** contains `name` and `entry` for the MVP.
 - A **Deck App Manifest** selects which **Deck App Source Entry** is bundled.
-- A **Deck App Package Manifest** includes a schema version, package display name, and package entry path.
+- A **Deck App Package Manifest** includes `schemaVersion` (**Deck App Package Schema Version**), `version` (**Deck App Package Version**), package display name, and package entry path.
 - A **Deck App Package** contains compiled **Deck App** code and metadata, but not the VitaDeck runtime.
 - A **Deck App Package Directory** is the initial on-disk artifact format for a **Deck App Package**.
 - A **Deck App Package Directory** always uses a `.vdapp` suffix.
@@ -115,7 +223,8 @@ _Avoid_: Click, mouse down, mouse up, hover
 - The **Package Registration Hook** is an internal compatibility convention, not a security boundary.
 - Deck App authors export a **Deck App Component**; they do not call VitaDeck registration APIs directly.
 - A **Deck App Source Entry** may use normal TypeScript and ES module syntax; the **VitaDeck SDK** compiles it into the **Deck App Package Entry**.
-- A future **Runtime Upload** may zip a **Deck App Package Directory** for transport without changing the package contents.
+- **Runtime Upload** transports a **Deck App Package Directory** as a **Runtime Upload Archive** without changing the package contents.
+- A **Runtime Upload Archive** contains exactly one top-level `.vdapp` directory and no other top-level entries.
 - The project configuration selects the **Active Deck App** by pointing at a built **Deck App Package Directory**.
 - The **Deck App Workspace** is a pnpm workspace rooted at `js/`.
 - The **Deck App Workspace** contains package-shaped example Deck App projects under `js/examples/`.
@@ -132,6 +241,8 @@ _Avoid_: Click, mouse down, mouse up, hover
 - The **VitaDeck Runtime API** may be implemented as a thin local TypeScript module for the MVP.
 - The **VitaDeck SDK** is imported by Deck App projects as `@vitadeck/sdk`.
 - The **VitaDeck SDK** exposes the **VitaDeck Runtime API** and produces **Deck App Package Directories**.
+- The **VitaDeck SDK** writes **`Deck App Package Version`** into the **Deck App Package Manifest** using the Deck App project's `package.json` `version` by default.
+- An optional `version` in `vitadeck.config.json` overrides `package.json` for **`Deck App Package Version`**.
 - The **VitaDeck Runtime Bundle** is preferably named `runtime.js` to distinguish it from **Deck App Package Entries**.
 - The **VitaDeck Runtime API** provides the **Runtime Theme**.
 - **Deck Apps** consume the **Runtime Theme**; VitaDeck owns the theme provider.
@@ -140,7 +251,38 @@ _Avoid_: Click, mouse down, mouse up, hover
 - A **Deck App Component** explicitly renders **Screen**.
 - **Button** is the only public interactable UI component in the MVP.
 - **Button** exposes press-oriented callbacks: `onPress`, `onPressStart`, and `onPressEnd`.
-- **Runtime Upload** should eventually use an HTTP server running on the Vita.
+- **Runtime Upload** should eventually use a **Runtime Upload Listener** on the Vita.
+- The **Runtime Upload Listener** runs only while the **Shell Upload Screen** is open.
+- The **Runtime Upload Listener** listens on all interfaces with default port **8787** and falls forward to following ports until one binds or **10** attempts fail; the **Runtime Upload URL** reflects the bound port when binding succeeds.
+- If all **10** listen attempts fail, the **Shell Upload Screen** shows a bind-failure state (no **Runtime Upload URL**, no **Runtime Upload Web UI**); **Shell Upload Cancel** returns to **Shell Home Screen** without an in-screen retry control.
+- **Runtime Upload** primary author interaction is the **Runtime Upload Web UI** served locally by the **Runtime Upload Listener**.
+- The **Runtime Upload HTTP Contract** limits documented listener behavior to **`GET /`** (and required same-origin Web UI assets) and **`POST /upload`**; other paths **404**, wrong method on **`/upload`** **405**; no **GET /health**-style probe in the initial **Runtime Upload** iteration.
+- Initial **Runtime Upload** trusts the local network; **Upload Pairing** is optional future hardening.
+- **Runtime Upload** accepts exactly one **Runtime Upload Archive** per request via **Runtime Upload POST**, using `multipart/form-data` for browsers (file field **`archive`**) and `application/zip` for simple HTTP clients.
+- **Runtime Upload POST** returns JSON only: success includes **`packageName`** and **`version`**; failures include **`code`** and **`message`**, with HTTP status reflecting the error class.
+- **Runtime Upload Single-Flight** applies to **Runtime Upload POST**: concurrent ingests get **409** and no queue.
+- **Runtime Upload** enforces **Runtime Upload Limits** and rejects over-limit archives without installing anything.
+- **Runtime Upload** validates packages in **Runtime Upload Staging** and only publishes successful installs into the **Installed Deck App Library**.
+- When a simple atomic rename/swap is practical, **Runtime Upload** publishes by swapping staged content into place; otherwise it keeps staging isolated until a single publish step completes.
+- **Runtime Upload** replaces an existing **Installed Deck App** when the **Deck App Package Name** matches the uploaded `.vdapp` directory name.
+- **Runtime Upload Replacement** is not **Installed Deck App Removal**; it overwrites package contents in place.
+- When **Runtime Upload Replacement** targets the **Active Deck App**, VitaDeck performs a **Deck App Runtime Restart** immediately after a successful publish so the running session loads the new package bits.
+- Changing the **Active Deck App** at runtime triggers a **Deck App Runtime Restart**.
+- After a successful **Runtime Upload** publish, VitaDeck closes the **Shell Upload Screen**, stops the **Runtime Upload Listener**, and returns the **Render Surface** to the **Deck App**.
+- After a failed **Runtime Upload**, VitaDeck keeps the **Shell Upload Screen** open so uploads can be retried without reopening it.
+- Runtime Upload installs into the **Installed Deck App Library**; activation is a separate choice.
+- **Runtime Upload** successful publishes are **durable**: they survive VitaDeck restarts until **Installed Deck App Removal**; only **Runtime Upload Staging** is temporary.
+- The **VitaDeck Shell** is opened through **System Input** rather than by a **Deck App**.
+- The **VitaDeck Shell** uses **Shell Face Input** conventions separate from **Deck App** **Press** semantics.
+- On macOS, **Host Shell Confirm Mapping** and **Host Shell Back Mapping** apply only while the **VitaDeck Shell** has focus.
+- When a gamepad is available on macOS, **Shell Face Input** uses the gamepad face buttons as the primary mapping.
+- **Start Input** toggles between the **Deck App** and **VitaDeck Shell** when not on the **Shell Upload Screen**.
+- On the **Shell Upload Screen**, **Start Input** does not dismiss the screen; **Shell Upload Cancel** returns to the **Shell Home Screen** and stops the **Runtime Upload Listener**.
+- **Shell Upload Cancel** is on-screen only on macOS at first; optional host keyboard shortcuts are future work.
+- The Vita `Start` button is a **System Input** reserved for VitaDeck; on macOS it uses the **Host Start Mapping** (F1).
+- The **Shell Home Screen** lists **Deck App Package Version** from each installed **Deck App Package Manifest**, sorted by manifest **`name`** (case-insensitive), then **Deck App Package Name** when **`name`** ties.
+- **Runtime Upload** is offered from the **Shell Home Screen** as a primary action via **Shell Upload Entry**, not as a secondary or **Deck App**-hosted flow.
+- **Installed Deck App Removal** cannot target the **Active Deck App**.
 
 ## Example dialogue
 
@@ -217,7 +359,7 @@ _Avoid_: Click, mouse down, mouse up, hover
 > **Domain expert:** "No — call the artifact a **Deck App Package**; it contains the Deck App's compiled code and metadata, while VitaDeck keeps owning runtime bootstrap."
 >
 > **Dev:** "Should the first package format be a zip file?"
-> **Domain expert:** "No — start with a **Deck App Package Directory** so VitaDeck reads plain files; future **Runtime Upload** can zip that directory for transport."
+> **Domain expert:** "No — start with a **Deck App Package Directory** so VitaDeck reads plain files; **Runtime Upload** later uses a **Runtime Upload Archive** zip for transport."
 >
 > **Dev:** "Should `outDir` include the `.vdapp` folder name?"
 > **Domain expert:** "No — `outDir` names the parent output location; the **VitaDeck SDK** generates the **Deck App Package Name** with a `.vdapp` suffix."
@@ -227,25 +369,151 @@ _Avoid_: Click, mouse down, mouse up, hover
 >
 > **Dev:** "Should example Deck Apps stay under `js/deck-apps/`?"
 > **Domain expert:** "No — make `js/` a pnpm **Deck App Workspace** with standalone examples under `js/examples/` and the local **VitaDeck SDK** under `js/packages/sdk/`."
+>
+> **Dev:** "When a user makes another Deck App active at runtime, should VitaDeck hot-swap it inside the existing JavaScript context?"
+> **Domain expert:** "No — changing the **Active Deck App** restarts the Deck App runtime with a fresh JavaScript context."
+>
+> **Dev:** "Should uploading a Deck App automatically make it active?"
+> **Domain expert:** "No — Runtime Upload installs into the **Installed Deck App Library**; activation is a separate choice."
+>
+> **Dev:** "Should the management UI be rendered inside every Deck App?"
+> **Domain expert:** "No — use a separate **VitaDeck Shell** opened by **System Input**, with the Vita `Start` button reserved for VitaDeck."
+>
+> **Dev:** "Should the upload HTTP listener run the whole time VitaDeck is open?"
+> **Domain expert:** "No — only while the **Shell Upload Screen** is open, using a **Runtime Upload Listener**."
+>
+> **Dev:** "Should Runtime Upload stream individual package files, or one archive?"
+> **Domain expert:** "One **Runtime Upload Archive** zip so installs are atomic and easy to validate."
+>
+> **Dev:** "Should the zip place `manifest.json` at the archive root, or inside a `.vdapp` folder?"
+> **Domain expert:** "Inside exactly one top-level `.vdapp` directory, matching the built **Deck App Package Directory** layout."
+>
+> **Dev:** "If Runtime Upload targets an existing **Deck App Package Name**, should VitaDeck keep both copies?"
+> **Domain expert:** "No — replace the installed package, and show **Deck App Package Version** from the **Deck App Package Manifest** in the **VitaDeck Shell**."
+>
+> **Dev:** "What field name should carry **Deck App Package Version**, and should it be semver?"
+> **Domain expert:** "Use `version` in `manifest.json` as a semver string, distinct from `schemaVersion`."
+>
+> **Dev:** "Where do authors set **Deck App Package Version** during development?"
+> **Domain expert:** "Default to `package.json` `version`, with an optional override in `vitadeck.config.json` when present."
+>
+> **Dev:** "Should **Runtime Upload** require an ephemeral upload token?"
+> **Domain expert:** "Not initially — trust the LAN while the **Shell Upload Screen** is open; add optional **Upload Pairing** later if needed."
+>
+> **Dev:** "Should **Runtime Upload** allow huge zips?"
+> **Domain expert:** "No — enforce **Runtime Upload Limits** on uploaded size, unpacked size, and entry count, and reject failures without partial installs."
+>
+> **Dev:** "Should installs be atomic even if it complicates the implementation?"
+> **Domain expert:** "Prefer atomic swap when it stays a small filesystem operation; otherwise still stage and validate, but avoid showing broken half-installed packages in the library."
+>
+> **Dev:** "Can users delete the **Active Deck App** from the library?"
+> **Domain expert:** "No — **Installed Deck App Removal** must not target the **Active Deck App**."
+>
+> **Dev:** "Can **Runtime Upload** replace the **Active Deck App** anyway?"
+> **Domain expert:** "Yes — **Runtime Upload Replacement** overwrites in place, then restarts the Deck App runtime so the active session matches the new bits."
+>
+> **Dev:** "Should that restart wait for an extra confirmation step?"
+> **Domain expert:** "No — do a **Deck App Runtime Restart** immediately after a successful publish to avoid mismatched on-disk bits versus loaded code."
+>
+> **Dev:** "After a successful upload, should the **Shell Upload Screen** stay open?"
+> **Domain expert:** "No — close it and stop the **Runtime Upload Listener** so the **Deck App** regains the full **Render Surface**."
+>
+> **Dev:** "If an upload fails validation, should the Upload screen close?"
+> **Domain expert:** "No — keep the **Shell Upload Screen** open so the **Runtime Upload Listener** stays available for a quick retry."
+>
+> **Dev:** "What macOS key should represent Vita `Start`?"
+> **Domain expert:** "Use **Host Start Mapping** on F1."
+>
+> **Dev:** "Should `Start` dismiss the **Shell Upload Screen** instantly?"
+> **Domain expert:** "No — keep **Start Input** from closing uploads; use explicit **Shell Upload** controls so uploads are not ended accidentally."
+>
+> **Dev:** "What should **Shell Upload Cancel** do?"
+> **Domain expert:** "Stop the **Runtime Upload Listener**, return to the **Shell Home Screen**, and keep the **VitaDeck Shell** open."
+>
+> **Dev:** "Should **Shell Upload Cancel** have a macOS keyboard shortcut immediately?"
+> **Domain expert:** "No — keep it on-screen only at first to avoid accidental listener shutdown."
+>
+> **Dev:** "Should **VitaDeck Shell** controls use the same input words as **Deck App** buttons?"
+> **Domain expert:** "No — **Shell Face Input** uses Cross/Circle confirm/back conventions; **Deck Apps** keep **Press** language."
+>
+> **Dev:** "How should **Shell Face Input** work on macOS with only a keyboard?"
+> **Domain expert:** "Prefer a gamepad when present; otherwise use **Host Shell Confirm Mapping** on Enter and **Host Shell Back Mapping** on Backspace while the Shell is focused."
+>
+> **Dev:** "Should **Runtime Upload** be a raw HTTP upload only?"
+> **Domain expert:** "No — serve a **Runtime Upload Web UI** at the **Runtime Upload URL** for drag/drop uploads and clear browser-side success/failure, backed by the same **Runtime Upload Listener**."
+>
+> **Dev:** "Should browser uploads use multipart zip posts?"
+> **Domain expert:** "Yes — use `multipart/form-data` as the primary **Runtime Upload POST** shape with a single file part named **`archive`**, and keep raw `application/zip` as a compatible option for scripts."
+>
+> **Dev:** "Should **Runtime Upload POST** return HTML for browsers and plain text for scripts?"
+> **Domain expert:** "No — JSON only for every client: **`ok`**, **`packageName`** and **`version`** on success, **`code`** and **`message`** on failure, with HTTP status for the error class."
+>
+> **Dev:** "How should the **Runtime Upload Listener** choose host and port?"
+> **Domain expert:** "Bind on all interfaces for LAN access, start at a default port (**8787**) and try the next ports if busy (up to **10** tries), and show the real **Runtime Upload URL** on the **Shell Upload Screen**."
+>
+> **Dev:** "What if two **Runtime Upload POST** requests overlap?"
+> **Domain expert:** "Use **Runtime Upload Single-Flight**: reject the second with **409** and JSON failure; no queue, so VitaDeck stays simple."
+>
+> **Dev:** "If every port in the fallback range is busy, what should the **Shell Upload Screen** offer?"
+> **Domain expert:** "Show that the upload server could not start, omit the **Runtime Upload URL**, and rely on **Shell Upload Cancel** to go home — no mandatory retry button."
+>
+> **Dev:** "Should the **Runtime Upload Listener** expose extra HTTP APIs for scripts?"
+> **Domain expert:** "No — stick to the **Runtime Upload HTTP Contract**: **`GET /`** plus assets for the **Runtime Upload Web UI** and **`POST /upload`**; **404** elsewhere, **405** on **`/upload`** if not **POST**; skip a separate health endpoint for now."
+>
+> **Dev:** "Should **Runtime Upload** be a buried Shell action?"
+> **Domain expert:** "No — **Shell Upload Entry** on the **Shell Home Screen** is a primary control using normal **Shell Face Input**, same family as picking a library item."
+>
+> **Dev:** "Are **Runtime Upload** installs session-only?"
+> **Domain expert:** "No — after publish they are normal **Installed Deck App Library** entries on disk until removed, same durability expectation as build-time shipped packages."
+>
+> **Dev:** "How should the **Shell Home Screen** order installed apps?"
+> **Domain expert:** "Alphabetical by **`name`** in **Deck App Package Manifest**, case-insensitive, with **Deck App Package Name** as a stable tie-break."
 
 ## Flagged ambiguities
 
 - "React component" can mean either a source-level entry component or the whole runnable **Deck App**; resolved: **Deck App** is the runnable unit.
 - "upload" can mean build-time packaging or **Runtime Upload**; resolved: MVP uses build-time bundling, while **Runtime Upload** is a future HTTP-based flow.
+- "HTTP upload" could mean browser multipart or raw zip bytes; resolved: **Runtime Upload POST** supports `multipart/form-data` for browsers (field **`archive`**) and `application/zip` for automation.
+- "upload response" could mean HTML, plain text, or structured data; resolved: **Runtime Upload POST** always responds with JSON and uses HTTP status for error class.
+- "concurrent uploads" could mean parallel ingests or queued retries; resolved: **Runtime Upload Single-Flight** — one ingest at a time, **409** for overlap, no queue.
 - "UI elements" can mean public author-facing components or internal host elements; resolved: **Deck Apps** use the **VitaDeck Runtime API**, while host elements remain internal.
 - "`runtime` package" is too narrow for the package that also builds artifacts; resolved: use **VitaDeck SDK** for `@vitadeck/sdk`.
 - "React dependency" could mean bundled app code or a VitaDeck-provided runtime dependency; resolved: React is a **Runtime Dependency** and Deck App projects develop against the SDK-compatible version.
 - "theme" can mean sample app styling or runtime styling; resolved: the shared theme is a **Runtime Theme** owned by VitaDeck.
 - "clickable rect" suggests visual primitives are interactive; resolved: public interaction goes through **Button**.
 - "click" and "mouse" terms are implementation leakage; resolved: public input language is **Press**.
+- "confirm" could mean **Deck App** **Press** or **VitaDeck Shell** confirmation; resolved: **Shell Face Input** uses Cross/Circle conventions in the Shell, while **Deck Apps** use **Press**.
+- "Enter" could mean **Deck App** activation or **Shell Face Input** confirm; resolved: **Host Shell Confirm Mapping** applies only while the **VitaDeck Shell** has focus.
 - "Surface" and "viewport" were considered for the root display component; resolved: the public component is **Screen**.
 - "render function" suggests author-controlled bootstrapping; resolved: authors export a **Deck App Component** and VitaDeck bootstraps it.
 - "entry" can mean author source or generated package code; resolved: **Deck App Source Entry** is authored, **Deck App Package Entry** is generated.
 - "generated registration" could imply restricted author syntax; resolved: author code supports TypeScript and ES modules before SDK compilation.
 - "manifest" could mean runtime configuration or build metadata; resolved: **Deck App Manifest** is build-time metadata in the MVP.
 - "artifact" could mean either a complete VitaDeck runtime bundle or a portable **Deck App Package**; resolved: the package excludes the VitaDeck runtime.
-- "package" could mean an archive or a directory; resolved: the initial artifact is a **Deck App Package Directory**, with zipped transport reserved for future **Runtime Upload**.
+- "package" could mean an archive or a directory; resolved: the on-disk artifact is a **Deck App Package Directory**, while **Runtime Upload** uses a **Runtime Upload Archive** for transport.
+- "zip layout" could mean flat files at the archive root or a nested `.vdapp` folder; resolved: **Runtime Upload Archive** requires exactly one top-level `.vdapp` directory.
+- "`schemaVersion`" can be mistaken for the app release version; resolved: use **Deck App Package Schema Version** vs **Deck App Package Version**.
+- "`version`" could mean npm package versioning or **Deck App Package Version**; resolved: **Deck App Package Version** is the `version` field in `manifest.json`, semver-shaped for VitaDeck UI, sourced from `package.json` by default and overridden by optional `vitadeck.config.json` `version`.
 - "`outDir` could mean the final package directory or its parent; resolved: `outDir` is the parent and the **VitaDeck SDK** generates the `.vdapp` directory name.
 - "**Deck App Workspace** no longer means only in-repository app source; resolved: it is the JavaScript pnpm workspace for SDK, runtime, and examples.
-- "selected app" is the **Active Deck App**; resolved: the project configuration points to its built **Deck App Package Directory**.
+- "selected app" is the **Active Deck App**; resolved: project configuration can select it for build-time packaging, and Runtime Upload can select it on-device.
+- "upload" does not imply activation; resolved: Runtime Upload installs into the **Installed Deck App Library**, and activation is explicit.
+- "upload install" could mean RAM-only or until reboot; resolved: published **Runtime Upload** packages persist like other **Installed Deck App Library** entries; staging alone is ephemeral.
+- "Vita UI" could mean a Deck App screen or VitaDeck management UI; resolved: management belongs to the **VitaDeck Shell**.
+- "`Start` input" is not Deck App input; resolved: it is **Start Input** (**System Input**) reserved for VitaDeck, mapped on macOS via **Host Start Mapping** (F1), toggling between the **Deck App** and **VitaDeck Shell** except on the **Shell Upload Screen**.
+- "cancel upload" could mean leaving the Shell entirely; resolved: **Shell Upload Cancel** returns to **Shell Home Screen** while keeping the Shell open.
+- "cancel control" could imply a host keyboard binding; resolved: **Shell Upload Cancel** is on-screen only on macOS at first.
+- "HTTP server on Vita" could imply an always-on network service; resolved: use a **Runtime Upload Listener** only on the **Shell Upload Screen**.
+- "upload server API" could sprawl into many routes; resolved: **Runtime Upload HTTP Contract** — **`GET /`** + Web UI assets and **`POST /upload`** only as the documented surface; **404**/**405** as above; no health endpoint initially.
+- "upload URL" could hide port collisions or loopback-only binds; resolved: **Runtime Upload URL** uses LAN IP and the port actually bound; default **8787** with consecutive fallback up to **10** attempts; all interfaces.
+- "ports exhausted" could leave the user stuck or imply auto-retry; resolved: **Shell Upload Screen** bind-failure state, no URL, **Shell Upload Cancel** only (no required in-screen retry).
+- "Upload UI" could mean a **Deck App** flow, a **VitaDeck Shell** flow, or a browser page; resolved: **Runtime Upload** reaches the **Shell Upload Screen** from the **Shell Home Screen** via primary **Shell Upload Entry**, then uses the browser **Runtime Upload Web UI** at the **Runtime Upload URL**.
+- "upload finished" could mean success or failure; resolved: success closes the **Shell Upload Screen**, failure keeps it open for retry.
+- "secure upload" could imply authenticated clients; resolved: initial **Runtime Upload** is LAN-trusted, with optional future **Upload Pairing**.
+- "trusted LAN" could imply unlimited resource use; resolved: still enforce **Runtime Upload Limits** and fail closed without partial installs.
+- "atomic install" could imply heavy transactional machinery; resolved: use **Runtime Upload Staging** plus a swap/publish step only when it stays simple; never surface invalid packages as installed.
+- "delete app" could include deleting the running **Deck App**; resolved: disallow **Installed Deck App Removal** for the **Active Deck App**.
+- "replace" could sound like **Installed Deck App Removal**; resolved: **Runtime Upload Replacement** overwrites package contents and may restart the active session, but does not remove the active selection.
+- "restart" could mean hot reload versus a full context reset; resolved: use **Deck App Runtime Restart** for a fresh JavaScript context.
 - "globals available in Deck App code" can mean ordinary JS host conveniences or VitaDeck native bridge entry points; resolved: the author-facing surface is the **VitaDeck Runtime API** plus a small typed host subset for normal patterns, not native bridge calls.
+- "app list order" could mean install order, recent use, or arbitrary; resolved: **Shell Home Screen** sorts by manifest **`name`** (case-insensitive), tie-break **Deck App Package Name**.

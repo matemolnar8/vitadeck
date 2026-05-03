@@ -1,4 +1,4 @@
-import { cp, mkdir, readFile, rm } from "node:fs/promises";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -51,5 +51,9 @@ if (!packagePath.endsWith(".vdapp")) {
 await rm(outputDir, { recursive: true, force: true });
 await mkdir(path.dirname(outputDir), { recursive: true });
 await cp(packagePath, outputDir, { recursive: true });
+await writeFile(
+  path.join(outputDir, "vitadeck-package.json"),
+  JSON.stringify({ packageName: path.basename(packagePath) }, null, 2) + "\n",
+);
 
 console.log(`Copied ${path.relative(repoRoot, packagePath)} to ${path.relative(repoRoot, outputDir)}`);

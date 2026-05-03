@@ -9,6 +9,7 @@ type DeckAppConfig = {
   name: string;
   entry: string;
   outDir: string;
+  version?: string;
 };
 
 const PACKAGE_SCHEMA_VERSION = 1;
@@ -41,11 +42,15 @@ function requireString(value: unknown, field: string, sourcePath: string): strin
 async function readConfig(projectRoot: string): Promise<DeckAppConfig> {
   const configPath = path.join(projectRoot, "vitadeck.config.json");
   const raw = requireObject(await readJson(configPath), configPath);
-  return {
+  const config: DeckAppConfig = {
     name: requireString(raw.name, "name", configPath),
     entry: requireString(raw.entry, "entry", configPath),
     outDir: requireString(raw.outDir, "outDir", configPath),
   };
+  if (raw.version !== undefined) {
+    config.version = requireString(raw.version, "version", configPath);
+  }
+  return config;
 }
 
 function packageNameFor(displayName: string): string {
@@ -72,9 +77,29 @@ async function validateReact(projectRoot: string): Promise<void> {
   }
 }
 
+function validatePackageVersion(version: string, sourcePath: string): void {
+  if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)) {
+    throw new Error(`${sourcePath} must define "version" as a semver string.`);
+  }
+}
+
+async function readPackageVersion(projectRoot: string, config: DeckAppConfig): Promise<string> {
+  if (config.version) {
+    validatePackageVersion(config.version, "vitadeck.config.json");
+    return config.version;
+  }
+
+  const packagePath = path.join(projectRoot, "package.json");
+  const raw = requireObject(await readJson(packagePath), packagePath);
+  const version = requireString(raw.version, "version", packagePath);
+  validatePackageVersion(version, packagePath);
+  return version;
+}
+
 async function build(projectRoot = process.cwd()): Promise<void> {
   const config = await readConfig(projectRoot);
   await validateReact(projectRoot);
+  const version = await readPackageVersion(projectRoot, config);
 
   const entryPath = path.resolve(projectRoot, config.entry);
   const outDir = path.resolve(projectRoot, config.outDir);
@@ -127,7 +152,7 @@ globalThis.vitadeckPackage.register(DeckApp);
 
   await writeFile(
     path.join(packageDir, "manifest.json"),
-    JSON.stringify({ schemaVersion: PACKAGE_SCHEMA_VERSION, name: config.name, entry: "app.js" }, null, 2) + "\n",
+    JSON.stringify({ schemaVersion: PACKAGE_SCHEMA_VERSION, name: config.name, version, entry: "app.js" }, null, 2) + "\n",
   );
   await rm(generatedDir, { recursive: true, force: true });
 

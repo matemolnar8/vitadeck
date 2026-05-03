@@ -4,7 +4,7 @@
 
 Decouple Deck App authoring and packaging from the VitaDeck runtime build. A Deck App author should be able to use a local npm package, build a portable Deck App Package Directory, and have VitaDeck consume that package as its active Deck App.
 
-This is the next iteration after source-selected in-repo Deck Apps. Runtime upload is still future work, but the artifact shape should be suitable for later upload.
+This is the next iteration after source-selected in-repo Deck Apps. The artifact shape supports **Runtime Upload** in iteration 3; see [Shell and Runtime Upload Plan](./shell-runtime-upload-plan.md).
 
 ## Iteration 2 Choices
 

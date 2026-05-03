@@ -13,6 +13,7 @@
 #include "jslib.h"
 #include "ui/instance_tree.h"
 #include "core/event_queue.h"
+#include "core/package_library.h"
 
 static void js_set_global_function(JSContext *ctx, const char *name, JSCFunction *func, int length) {
 	JSValue global = JS_GetGlobalObject(ctx);
@@ -85,6 +86,11 @@ static JSValue js_native_eval_file(JSContext *ctx, JSValueConst this_val, int ar
 	return result;
 }
 
+static JSValue js_native_get_active_deck_app_path(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+	(void)this_val; (void)argc; (void)argv;
+	return JS_NewString(ctx, package_library_active_package_path());
+}
+
 // Called from JS thread to dispatch event to JS
 static void call_input_event_from_native(JSContext *ctx, const char *id, const char *event) {
     JSValue global = JS_GetGlobalObject(ctx);
@@ -135,4 +141,5 @@ void register_js_lib(JSContext *ctx) {
 	js_set_global_function(ctx, "getTime", js_get_time, 0);
 	js_set_global_function(ctx, "nativeReadTextFile", js_native_read_text_file, 1);
 	js_set_global_function(ctx, "nativeEvalFile", js_native_eval_file, 1);
+	js_set_global_function(ctx, "nativeGetActiveDeckAppPath", js_native_get_active_deck_app_path, 0);
 }

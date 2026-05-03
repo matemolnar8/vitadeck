@@ -157,6 +157,24 @@ void instance_tree_swap(void) {
     free_snapshot(old_snap);
 }
 
+void instance_tree_clear(void) {
+    int back_count = arrlen(back_root_children);
+    for (int i = 0; i < back_count; i++) {
+        free_instance_tree(back_root_children[i]);
+    }
+    arrfree(back_root_children);
+    back_root_children = NULL;
+    shfree(back_registry);
+    back_registry = NULL;
+
+    InstanceSnapshot* old_snap = NULL;
+    vd_mutex_lock(snapshot_mutex);
+    old_snap = front_snapshot;
+    front_snapshot = NULL;
+    vd_mutex_unlock(snapshot_mutex);
+    free_snapshot(old_snap);
+}
+
 void instance_tree_render_lock(void) {
     vd_mutex_lock(snapshot_mutex);
 }

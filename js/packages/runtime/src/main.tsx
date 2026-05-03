@@ -9,6 +9,7 @@ import { getMetrics, render, resetMetrics } from "./vitadeck-react-reconciler-mu
 type DeckAppPackageManifest = {
   schemaVersion: number;
   name: string;
+  version: string;
   entry: string;
 };
 
@@ -25,13 +26,17 @@ globalThis.vitadeckPackage = {
 };
 
 function readManifest(): DeckAppPackageManifest {
-  const raw = nativeReadTextFile("deck-app/manifest.json");
+  const packagePath = nativeGetActiveDeckAppPath();
+  const raw = nativeReadTextFile(`${packagePath}/manifest.json`);
   const manifest = JSON.parse(raw) as Partial<DeckAppPackageManifest>;
   if (manifest.schemaVersion !== 1) {
     throw new Error(`Unsupported Deck App package schema: ${String(manifest.schemaVersion)}`);
   }
   if (typeof manifest.name !== "string" || manifest.name.length === 0) {
     throw new Error("Deck App package manifest must define a name.");
+  }
+  if (typeof manifest.version !== "string" || manifest.version.length === 0) {
+    throw new Error("Deck App package manifest must define a version.");
   }
   if (manifest.entry !== "app.js") {
     throw new Error("Deck App package manifest entry must be app.js.");
@@ -45,7 +50,7 @@ function loadDeckApp(): ComponentType {
 
   const manifest = readManifest();
   packageLoaded = true;
-  nativeEvalFile(`deck-app/${manifest.entry}`);
+  nativeEvalFile(`${nativeGetActiveDeckAppPath()}/${manifest.entry}`);
   if (!deckAppComponent) {
     throw new Error(`Deck App package "${manifest.name}" did not register a component.`);
   }

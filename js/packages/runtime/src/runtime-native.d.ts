@@ -126,6 +126,7 @@ declare global {
 
   function nativeReadTextFile(path: string): string;
   function nativeEvalFile(path: string): void;
+  function nativeGetActiveDeckAppPath(): string;
 
   var React: typeof React;
   var reactCompilerRuntime: typeof ReactCompilerRuntime;

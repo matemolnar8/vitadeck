@@ -41,6 +41,9 @@ endif()
 
 find_package(CURL REQUIRED)
 find_package(OpenSSL REQUIRED)
+if(NOT DEFINED ENV{VITASDK})
+  find_package(ZLIB REQUIRED)
+endif()
 
 # Set up include directories
 set(VITADECK_INCLUDE_DIRS src vendor vendor/quickjs)
@@ -85,11 +88,16 @@ endif()
 
 set(VITADECK_SOURCES
     src/main.c
+    src/core/js_runtime.c
+    src/core/package_library.c
     src/jslib/jslib.c
     src/ui/instance_tree.c
     src/ui/render.c
     src/ui/input.c
     src/core/event_queue.c
+    src/shell/shell.c
+    src/upload/archive.c
+    src/upload/http_server.c
     ${PLATFORM_SOURCES}
 )
 add_executable(${PROJECT_NAME} ${VITADECK_SOURCES})
@@ -138,6 +146,7 @@ if(DEFINED ENV{VITASDK})
   )
 else()
   list(APPEND VITADECK_LIBRARIES ${RAYLIB_LIBRARIES} ${CURL_LIBRARIES} ${OPENSSL_LIBRARIES})
+  list(APPEND VITADECK_LIBRARIES ZLIB::ZLIB)
   list(APPEND VITADECK_LIBRARIES pthread)
 endif()
 
@@ -183,6 +192,7 @@ if(DEFINED ENV{VITASDK})
       FILE module module
       FILE js/dist/js/runtime.js js/runtime.js
       FILE js/dist/deck-app/manifest.json deck-app/manifest.json
+      FILE js/dist/deck-app/vitadeck-package.json deck-app/vitadeck-package.json
       FILE js/dist/deck-app/app.js deck-app/app.js
   )
 
@@ -210,6 +220,8 @@ if(DEFINED ENV{VITASDK})
     COMMAND curl -T ${CMAKE_SOURCE_DIR}/js/dist/js/runtime.js ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/js/runtime.js
     COMMAND echo "Sending ${VITA_TITLEID}/deck-app/manifest.json to vita"
     COMMAND curl -T ${CMAKE_SOURCE_DIR}/js/dist/deck-app/manifest.json ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/deck-app/manifest.json
+    COMMAND echo "Sending ${VITA_TITLEID}/deck-app/vitadeck-package.json to vita"
+    COMMAND curl -T ${CMAKE_SOURCE_DIR}/js/dist/deck-app/vitadeck-package.json ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/deck-app/vitadeck-package.json
     COMMAND echo "Sending ${VITA_TITLEID}/deck-app/app.js to vita"
     COMMAND curl -T ${CMAKE_SOURCE_DIR}/js/dist/deck-app/app.js ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/deck-app/app.js
     # Launch the app
