@@ -2,7 +2,10 @@
 #define VD_SHELL_H
 
 #include <stdbool.h>
+#include "core/package_library.h"
 #include "upload/http_server.h"
+
+#define VD_SHELL_REMOVE_LABEL_MAX 192
 
 typedef enum {
     VD_SHELL_HIDDEN,
@@ -12,7 +15,11 @@ typedef enum {
 
 typedef struct {
     VdShellState state;
-    int focus_index;
+    int focus_row;
+    int focus_col;
+    int remove_confirm_row;
+    char remove_confirm_package[VD_PACKAGE_NAME_MAX];
+    char remove_confirm_label[VD_SHELL_REMOVE_LABEL_MAX];
     char message[256];
     char bind_error[256];
     VdUploadServer upload_server;

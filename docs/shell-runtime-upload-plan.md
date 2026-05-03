@@ -30,7 +30,7 @@ Authoritative vocabulary and edge-case decisions live in [CONTEXT.md](../CONTEXT
 
 ### Runtime Upload listener
 
-- **Runtime Upload Listener** runs only while **Shell Upload Screen** is open and binding succeeded; otherwise no HTTP server for upload.
+- **Runtime Upload Listener** starts when **Runtime Upload** opens and binding succeeds. After a successful publish it may keep running on **Shell Home Screen** until the user hides the shell to the **Deck App**, **Shell Upload Cancel** from **Shell Upload Screen**, or activation hides the shell; otherwise no upload HTTP server.
 - Bind **all interfaces**; default TCP port **8787**, try up to **10** consecutive ports. **Runtime Upload URL** on the device reflects the bound **IP:PORT**.
 - If no port binds: **Shell Upload Screen** shows bind failure, no URL, **Shell Upload Cancel** returns to **Shell Home** (no mandatory in-screen retry).
 
@@ -46,7 +46,7 @@ Authoritative vocabulary and edge-case decisions live in [CONTEXT.md](../CONTEXT
 
 - **Runtime Upload Archive**: zip with exactly one top-level `.vdapp` directory; layout and limits per **CONTEXT.md** (**Runtime Upload Limits**: 16MB uploaded, 64MB unpacked, 256 entries initially).
 - **Runtime Upload Staging** for unpack/validate; publish into library when validation succeeds; **Runtime Upload Replacement** when **Deck App Package Name** matches an existing install.
-- Successful publish closes **Shell Upload Screen**, stops listener, returns **Render Surface** to **Deck App**. Failed validation keeps upload screen open for retry. **Shell Upload Cancel** stops listener and returns to **Shell Home** without closing Shell.
+- Successful publish returns to **Shell Home** with Shell still visible, refreshes the library list, and keeps the listener running for further uploads. Failed validation keeps **Shell Upload Screen** open for retry. **Shell Upload Cancel** stops the listener and returns to **Shell Home** without closing Shell. **Start** from **Shell Home** or back to hide the shell stops a listener still running after success.
 - Initial trust model: LAN only; **Upload Pairing** is future optional hardening.
 
 ## Runtime Upload Archive
@@ -80,10 +80,10 @@ Exactly one top-level `*.vdapp` directory; no other top-level entries.
 ## Acceptance Criteria
 
 - From **Shell Home**, user can open **Runtime Upload** (**Shell Upload Entry**) and see **Runtime Upload URL** when bind succeeds, or a clear error when all ports fail.
-- Browser can open **Runtime Upload Web UI**, upload a valid **Runtime Upload Archive**, and receive JSON success; device shows install outcome consistent with **CONTEXT.md** (success closes upload screen and stops listener; failure keeps screen open).
+- Browser can open **Runtime Upload Web UI**, upload a valid **Runtime Upload Archive**, and receive JSON success; device shows install outcome consistent with **CONTEXT.md** (success returns to **Shell Home** with updated list and listener still running; failure keeps **Shell Upload Screen** open).
 - `curl` (or equivalent) can **POST** `application/zip` or `multipart/form-data` with field **`archive`** and parse JSON responses.
 - Second overlapping **POST /upload** during ingest receives **409** and JSON failure.
-- New install appears in **Installed Deck App Library** after restart; **Runtime Upload Replacement** updates existing package by **Deck App Package Name**; replacing **Active Deck App** triggers **Deck App Runtime Restart**.
+- New install appears in **Installed Deck App Library** on **Shell Home** as soon as publish succeeds; **Runtime Upload Replacement** updates existing package by **Deck App Package Name**; replacing **Active Deck App** triggers **Deck App Runtime Restart** (shell may stay on **Shell Home**).
 - **Installed Deck App Removal** works for non-active entries and is refused for **Active Deck App**.
 - **Start Input** toggles Deck App / Shell as specified; **Shell Upload Screen** does not close on **Start** alone.
 - **Shell Home** list order matches manifest **`name`** rules in **CONTEXT.md**.
