@@ -388,7 +388,7 @@ static void *handler_thread(void *raw)
         const char *html =
             "<!doctype html><html><head><meta charset=\"utf-8\"><title>VitaDeck Upload</title>"
             "<style>body{font-family:system-ui;margin:2rem;max-width:42rem}button{font-size:1rem;padding:.6rem 1rem}</style></head>"
-            "<body><h1>VitaDeck Runtime Upload</h1><p>Select a zip containing exactly one .vdapp directory.</p>"
+            "<body><h1>VitaDeck</h1><p>Select a zip containing exactly one .vdapp directory.</p>"
             "<form id=\"form\"><input id=\"archive\" name=\"archive\" type=\"file\" accept=\".zip\" required><button>Upload</button></form>"
             "<pre id=\"result\"></pre><script>form.onsubmit=async e=>{e.preventDefault();const fd=new FormData();fd.append('archive',archive.files[0]);"
             "const r=await fetch('/upload',{method:'POST',body:fd});result.textContent=JSON.stringify(await r.json(),null,2)}</script></body></html>";

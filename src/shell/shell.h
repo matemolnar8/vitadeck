@@ -9,8 +9,7 @@
 
 typedef enum {
     VD_SHELL_HIDDEN,
-    VD_SHELL_HOME,
-    VD_SHELL_UPLOAD
+    VD_SHELL_HOME
 } VdShellState;
 
 typedef struct {
