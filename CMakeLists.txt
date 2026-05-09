@@ -47,7 +47,7 @@ endif()
 
 # Set up include directories
 set(VITADECK_INCLUDE_DIRS src vendor vendor/quickjs)
-list(APPEND VITADECK_INCLUDE_DIRS ${CURL_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
+list(APPEND VITADECK_INCLUDE_DIRS ${OPENSSL_INCLUDE_DIR})
 
 if(DEFINED ENV{VITASDK})
   list(APPEND VITADECK_INCLUDE_DIRS
@@ -60,6 +60,9 @@ else()
 endif()
 
 include_directories(${VITADECK_INCLUDE_DIRS})
+# System libcurl (e.g. macOS SDK) lives under usr/include; -I there makes Clang
+# diagnose SDK headers. SYSTEM uses -isystem so libc headers stay quiet.
+include_directories(SYSTEM ${CURL_INCLUDE_DIRS})
 link_directories(${VITADECK_LIBRARY_DIRS})
 
 # QuickJS
