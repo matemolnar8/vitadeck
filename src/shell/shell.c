@@ -24,6 +24,7 @@
 #define SHELL_TITLE_Y SHELL_PADDING
 #define SHELL_SECTION_Y (SHELL_TITLE_Y + SHELL_FONT_TITLE + SHELL_SPACE_SM)
 #define SHELL_LIST_Y (SHELL_SECTION_Y + SHELL_FONT_BODY + SHELL_SPACE_MD)
+#define SHELL_LIST_BOTTOM (SHELL_FOOTER_Y - SHELL_SPACE_MD - SHELL_FONT_BODY - SHELL_SPACE_MD)
 
 #define SHELL_ROW_H 50
 #define SHELL_ROW_STEP (SHELL_ROW_H + SHELL_SPACE_SM)
@@ -96,6 +97,52 @@ static int shell_row_count(void)
 static bool row_is_upload(int row, int package_count)
 {
     return row == package_count;
+}
+
+static int row_band_height(int row, int package_count)
+{
+    return row_is_upload(row, package_count) ? SHELL_UPLOAD_ROW_H : SHELL_ROW_H;
+}
+
+static int shell_visible_rows_from(int start_row, int package_count, int row_count)
+{
+    if (row_count <= 0) return 0;
+    if (start_row < 0) start_row = 0;
+    if (start_row >= row_count) start_row = row_count - 1;
+
+    int available = SHELL_LIST_BOTTOM - SHELL_LIST_Y;
+    if (available <= 0) return 1;
+
+    int used = 0;
+    int visible = 0;
+    for (int row = start_row; row < row_count; row++) {
+        int band_h = row_band_height(row, package_count);
+        int cost = band_h + (visible > 0 ? SHELL_SPACE_SM : 0);
+        if (used + cost > available) break;
+        used += cost;
+        visible++;
+    }
+    return visible > 0 ? visible : 1;
+}
+
+static int clamp_scroll_row(int scroll_row, int row_count)
+{
+    if (row_count <= 0) return 0;
+    if (scroll_row < 0) return 0;
+    if (scroll_row >= row_count) return row_count - 1;
+    return scroll_row;
+}
+
+static void ensure_focus_row_visible(VdShell *shell, int package_count, int row_count)
+{
+    shell->scroll_row = clamp_scroll_row(shell->scroll_row, row_count);
+    int visible_rows = shell_visible_rows_from(shell->scroll_row, package_count, row_count);
+    if (shell->focus_row < shell->scroll_row) {
+        shell->scroll_row = shell->focus_row;
+    } else if (shell->focus_row >= shell->scroll_row + visible_rows) {
+        shell->scroll_row = shell->focus_row - visible_rows + 1;
+    }
+    shell->scroll_row = clamp_scroll_row(shell->scroll_row, row_count);
 }
 
 static void clear_remove_confirm(VdShell *shell)
@@ -201,6 +248,7 @@ void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart)
         if (shell->state == VD_SHELL_HIDDEN) {
             shell->state = VD_SHELL_HOME;
             shell->focus_row = 0;
+            shell->scroll_row = 0;
             shell->focus_col = 0;
         } else {
             hide_shell_to_deck(shell);
@@ -243,6 +291,8 @@ void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart)
         if (left_pressed() && shell->focus_col > 0) shell->focus_col--;
         if (right_pressed() && shell->focus_col < 1) shell->focus_col++;
     }
+
+    ensure_focus_row_visible(shell, package_count, row_count);
 
     if (back_pressed()) {
         hide_shell_to_deck(shell);
@@ -322,14 +372,18 @@ void shell_render(VdShell *shell)
     int package_count = package_library_list(packages, VD_PACKAGE_LIST_MAX);
     int row_count = package_count + 1;
 
+    shell->scroll_row = clamp_scroll_row(shell->scroll_row, row_count);
+
     int row_top = SHELL_LIST_Y;
-    for (int row = 0; row < row_count; row++) {
+    int end_row = shell->scroll_row;
+    for (int row = shell->scroll_row; row < row_count; row++) {
         bool row_focus = row == shell->focus_row && shell->remove_confirm_package[0] == '\0';
         bool upload_row = row_is_upload(row, package_count);
         bool upload_running = upload_row && upload_server_is_running(&shell->upload_server);
 
         int row_w = SCREEN_WIDTH - SHELL_PADDING - SHELL_PADDING;
-        int band_h = upload_row ? SHELL_UPLOAD_ROW_H : SHELL_ROW_H;
+        int band_h = row_band_height(row, package_count);
+        if (row_top + band_h > SHELL_LIST_BOTTOM) break;
         Color band_color = row_focus ? (Color){ 42, 52, 72, 255 } : (Color){ 28, 34, 44, 255 };
         if (upload_running) band_color = row_focus ? (Color){ 34, 64, 58, 255 } : (Color){ 24, 48, 44, 255 };
         DrawRectangle(SHELL_PADDING, row_top, row_w, band_h,
@@ -357,6 +411,18 @@ void shell_render(VdShell *shell)
             draw_x_cell(SHELL_X_CX, row_top, row_focus, shell->focus_col == 1);
         }
         row_top += band_h + SHELL_SPACE_SM;
+        end_row = row + 1;
+    }
+
+    if (row_count > 0) {
+        bool more_above = shell->scroll_row > 0;
+        bool more_below = end_row < row_count;
+        if (more_above || more_below) {
+            const char *hint = more_above && more_below ? "More above/below" :
+                               (more_above ? "More above" : "More below");
+            int hint_x = SCREEN_WIDTH - SHELL_PADDING - MeasureText(hint, SHELL_FONT_CAPTION);
+            DrawText(hint, hint_x, SHELL_SECTION_Y + 2, SHELL_FONT_CAPTION, (Color){ 130, 140, 160, 255 });
+        }
     }
 
     if (shell->remove_confirm_package[0] != '\0') {

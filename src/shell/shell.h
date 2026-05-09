@@ -15,6 +15,7 @@ typedef enum {
 typedef struct {
     VdShellState state;
     int focus_row;
+    int scroll_row;
     int focus_col;
     int remove_confirm_row;
     char remove_confirm_package[VD_PACKAGE_NAME_MAX];
