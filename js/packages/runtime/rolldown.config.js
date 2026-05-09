@@ -7,7 +7,7 @@ const isProd = process.env.NODE_ENV === "production";
 export default defineConfig({
   input: "./src/main.tsx",
   output: {
-    file: "../../dist/js/runtime.js",
+    file: "../../dist/runtime/runtime.js",
     format: "iife",
     name: "vitadeck",
     minify: isProd,

@@ -7,11 +7,11 @@ description: Builds the JS runtime (pnpm in js/), then vitadeck for the host (CM
 
 ## Prerequisites
 
-**JavaScript workspace** (run before native builds; CMake copies `js/dist/` into the build output root):
+**JavaScript workspace** (run before native builds; CMake copies `js/dist/runtime` into `<build>/js/`):
 
 - Node.js 22+ (Rolldown uses Node 22+ APIs)
 - Dependencies once: `pnpm --dir js install`
-- Produce bundles and selected Deck App package: `pnpm --dir js build` → writes `js/dist/js/runtime.js` and `js/dist/deck-app/`
+- Produce bundles and selected Deck App package: `pnpm --dir js build` → writes `js/dist/runtime/runtime.js` and `js/dist/deck-app/`
 - Typecheck: `pnpm --dir js tsc`; watch dev: `pnpm --dir js dev`; lint/format: `pnpm --dir js lint` / `pnpm --dir js format`
 
 **Host (current machine)** — e.g. macOS:

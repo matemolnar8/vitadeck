@@ -14,9 +14,9 @@ Build and typecheck the JS workspace separately from the native app.
 
 Outputs:
 - Bundled files are written to `js/dist/`.
-- `js/dist/js/runtime.js` is the VitaDeck runtime bundle.
+- `js/dist/runtime/runtime.js` is the VitaDeck runtime bundle.
 - `js/dist/deck-app/` contains the selected Deck App Package files.
-- During native builds, CMake copies `js/dist/` to the build output root.
+- During native builds, CMake copies `js/dist/runtime` to `<build>/js/`.
 
 Notes:
 - The CMake target `js_build` calls `pnpm build:prod` in `js/`.

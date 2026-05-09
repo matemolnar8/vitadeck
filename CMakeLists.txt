@@ -163,9 +163,10 @@ add_custom_target(js_build
 )
 
 add_custom_target(js_copy
-  COMMENT "Copying js/dist to ${CMAKE_BINARY_DIR}"
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/js/dist ${CMAKE_BINARY_DIR}
-  BYPRODUCTS ${CMAKE_BINARY_DIR}/js ${CMAKE_BINARY_DIR}/deck-app
+  COMMENT "Copying js/dist/runtime to ${CMAKE_BINARY_DIR}/js"
+  COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/deck-app
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/js/dist/runtime ${CMAKE_BINARY_DIR}/js
+  BYPRODUCTS ${CMAKE_BINARY_DIR}/js
 )
 
 add_custom_target(js
@@ -193,10 +194,7 @@ if(DEFINED ENV{VITASDK})
       VERSION ${VITA_VERSION}
       NAME ${VITA_APP_NAME}
       FILE module module
-      FILE js/dist/js/runtime.js js/runtime.js
-      FILE js/dist/deck-app/manifest.json deck-app/manifest.json
-      FILE js/dist/deck-app/vitadeck-package.json deck-app/vitadeck-package.json
-      FILE js/dist/deck-app/app.js deck-app/app.js
+      FILE js/dist/runtime/runtime.js js/runtime.js
   )
 
   # Create an explicit `upload_vpk` target to upload the VPK file to Vita's download folder
@@ -220,13 +218,7 @@ if(DEFINED ENV{VITASDK})
     COMMAND curl -T eboot.bin ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/
     # Upload runtime and active Deck App package
     COMMAND echo "Sending ${VITA_TITLEID}/js/runtime.js to vita"
-    COMMAND curl -T ${CMAKE_SOURCE_DIR}/js/dist/js/runtime.js ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/js/runtime.js
-    COMMAND echo "Sending ${VITA_TITLEID}/deck-app/manifest.json to vita"
-    COMMAND curl -T ${CMAKE_SOURCE_DIR}/js/dist/deck-app/manifest.json ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/deck-app/manifest.json
-    COMMAND echo "Sending ${VITA_TITLEID}/deck-app/vitadeck-package.json to vita"
-    COMMAND curl -T ${CMAKE_SOURCE_DIR}/js/dist/deck-app/vitadeck-package.json ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/deck-app/vitadeck-package.json
-    COMMAND echo "Sending ${VITA_TITLEID}/deck-app/app.js to vita"
-    COMMAND curl -T ${CMAKE_SOURCE_DIR}/js/dist/deck-app/app.js ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/deck-app/app.js
+    COMMAND curl -T ${CMAKE_SOURCE_DIR}/js/dist/runtime/runtime.js ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/js/runtime.js
     # Launch the app
     COMMAND echo "Launching ${VITA_TITLEID}"
     COMMAND echo launch ${VITA_TITLEID} | nc ${PSVITAIP} 1338
