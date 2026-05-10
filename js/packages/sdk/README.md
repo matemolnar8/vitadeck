@@ -10,30 +10,29 @@ Build tooling and the VitaDeck Runtime API for Deck Apps.
 ## Install
 
 ```bash
-npm install @vitadeck/sdk react
+npm install @vitadeck/sdk
 ```
 
-pnpm and Yarn work the same (`pnpm add`, `yarn add`).
+pnpm and Bun work the same (`pnpm add`, `bun add`).
 
 ## Scaffold a project
 
 ```bash
-npx vitadeck create <project-name>
+npx @vitadeck/sdk create <project-name>
 ```
-
-Or, with a local install: `vitadeck create <project-name>`.
 
 ## Build
 
 From the root of a Deck App (with `vitadeck.config.json`):
 
 ```bash
-npx vitadeck build
+npx @vitadeck/sdk build
 ```
 
-`vitadeck` with no subcommand runs **build**. Use `vitadeck build --no-zip` to skip the `.zip` archive.
+`npx @vitadeck/sdk` with no subcommand runs **build**. Use `npx @vitadeck/sdk build --no-zip` to skip the `.zip` archive.
 
 ## Links
 
-- **Repository:** https://github.com/matemolnar8/vitadeck (monorepo; this package is under `js/packages/sdk`.)
-- **Issues:** https://github.com/matemolnar8/vitadeck/issues
+- **Repository:** [https://github.com/matemolnar8/vitadeck](https://github.com/matemolnar8/vitadeck) (monorepo; this package is under `js/packages/sdk`.)
+- **Issues:** [https://github.com/matemolnar8/vitadeck/issues](https://github.com/matemolnar8/vitadeck/issues)
+
