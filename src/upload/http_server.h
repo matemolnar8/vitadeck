@@ -6,10 +6,14 @@
 #include "core/package_library.h"
 #include "platform/thread.h"
 
+#define VD_UPLOAD_MAX_OPEN_CLIENTS 16
+
 typedef struct {
     vd_thread *thread;
     vd_thread *handlers[16];
     int handler_count;
+    int open_client_fds[VD_UPLOAD_MAX_OPEN_CLIENTS];
+    int open_client_count;
     vd_mutex *mutex;
     volatile bool running;
     bool ingesting;
