@@ -15,17 +15,19 @@ jobs:
   vpk:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
+          package_json_file: js/package.json
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "22"
+          package-manager-cache: false
           cache: pnpm
           cache-dependency-path: js/pnpm-lock.yaml
 
@@ -39,7 +41,7 @@ jobs:
         run: docker compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"
 
       - name: Upload VPK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: vitadeck-vpk-${{ github.sha }}
           path: out-vita/vitadeck.vpk
