@@ -69,59 +69,6 @@ static bool mkdir_p(const char *path)
     return mkdir(tmp, 0777) == 0 || errno == EEXIST;
 }
 
-static bool copy_file(const char *src, const char *dst)
-{
-    FILE *in = fopen(src, "rb");
-    if (!in) return false;
-    FILE *out = fopen(dst, "wb");
-    if (!out) {
-        fclose(in);
-        return false;
-    }
-
-    char buffer[8192];
-    size_t n;
-    bool ok = true;
-    while ((n = fread(buffer, 1, sizeof(buffer), in)) > 0) {
-        if (fwrite(buffer, 1, n, out) != n) {
-            ok = false;
-            break;
-        }
-    }
-    if (ferror(in)) ok = false;
-    fclose(out);
-    fclose(in);
-    return ok;
-}
-
-static bool copy_dir(const char *src, const char *dst)
-{
-    if (!mkdir_p(dst)) return false;
-    DIR *dir = opendir(src);
-    if (!dir) return false;
-
-    struct dirent *entry;
-    bool ok = true;
-    while ((entry = readdir(dir))) {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
-
-        char src_path[VD_PATH_MAX];
-        char dst_path[VD_PATH_MAX];
-        join_path(src_path, sizeof(src_path), src, entry->d_name);
-        join_path(dst_path, sizeof(dst_path), dst, entry->d_name);
-
-        if (is_dir(src_path)) {
-            ok = copy_dir(src_path, dst_path);
-        } else {
-            ok = copy_file(src_path, dst_path);
-        }
-        if (!ok) break;
-    }
-
-    closedir(dir);
-    return ok;
-}
-
 static bool remove_tree(const char *path)
 {
     DIR *dir = opendir(path);
@@ -293,15 +240,6 @@ bool package_library_validate_package(const char *package_path, const char *pack
     return true;
 }
 
-static bool read_bundled_package_name(char *out, size_t out_size)
-{
-    char *metadata = read_text_file("deck-app/vitadeck-package.json");
-    if (!metadata) return false;
-    bool ok = json_string_value(metadata, "packageName", out, out_size);
-    free(metadata);
-    return ok;
-}
-
 static bool read_active_state(void)
 {
     char state_path[VD_PATH_MAX];
@@ -329,6 +267,18 @@ static void refresh_active_path(void)
         return;
     }
     join_path(g_active_path, sizeof(g_active_path), g_installed_root, g_active_name);
+}
+
+static void clear_active_state_file(void)
+{
+    char state_path[VD_PATH_MAX];
+    join_path(state_path, sizeof(state_path), g_root, "active-package.txt");
+    (void)remove(state_path);
+}
+
+bool package_library_has_active_deck_app(void)
+{
+    return g_active_name[0] != '\0' && is_dir(g_active_path);
 }
 
 static int package_compare(const void *a, const void *b)
@@ -359,36 +309,6 @@ int package_library_list(VdPackageInfo *items, int max_items)
     return count;
 }
 
-static bool seed_from_bundle(char *error, size_t error_size)
-{
-    if (!is_dir("deck-app")) return true;
-
-    char package_name[VD_PACKAGE_NAME_MAX] = "bundled.vdapp";
-    read_bundled_package_name(package_name, sizeof(package_name));
-    if (!safe_package_name(package_name)) {
-        set_error(error, error_size, "Bundled Deck App package name is invalid.");
-        return false;
-    }
-
-    char destination[VD_PATH_MAX];
-    join_path(destination, sizeof(destination), g_installed_root, package_name);
-    if (!is_dir(destination)) {
-        if (!copy_dir("deck-app", destination)) {
-            set_error(error, error_size, "Could not seed bundled Deck App Package.");
-            return false;
-        }
-    }
-
-    if (g_active_name[0] == '\0') {
-        snprintf(g_active_name, sizeof(g_active_name), "%s", package_name);
-        if (!write_active_state(package_name)) {
-            set_error(error, error_size, "Could not persist Active Deck App.");
-            return false;
-        }
-    }
-    return true;
-}
-
 bool package_library_init(char *error, size_t error_size)
 {
     join_path(g_installed_root, sizeof(g_installed_root), g_root, "installed-deck-apps");
@@ -399,8 +319,15 @@ bool package_library_init(char *error, size_t error_size)
         return false;
     }
 
+    g_active_name[0] = '\0';
+    g_active_path[0] = '\0';
     read_active_state();
-    if (!seed_from_bundle(error, error_size)) return false;
+    refresh_active_path();
+    if (g_active_name[0] != '\0' && !is_dir(g_active_path)) {
+        clear_active_state_file();
+        g_active_name[0] = '\0';
+        g_active_path[0] = '\0';
+    }
 
     if (g_active_name[0] == '\0') {
         VdPackageInfo items[VD_PACKAGE_LIST_MAX];
@@ -409,10 +336,6 @@ bool package_library_init(char *error, size_t error_size)
     }
 
     refresh_active_path();
-    if (g_active_name[0] == '\0' || !is_dir(g_active_path)) {
-        set_error(error, error_size, "No Active Deck App is installed.");
-        return false;
-    }
     return true;
 }
 
@@ -460,6 +383,7 @@ bool package_library_remove(const char *package_name, char *error, size_t error_
 
 bool package_library_publish_package(const char *source_path, const char *package_name, bool *replaced_active, VdPackageInfo *out_info, char *error, size_t error_size)
 {
+    bool had_no_active = (g_active_name[0] == '\0');
     VdPackageInfo info;
     if (!package_library_validate_package(source_path, package_name, &info, error, error_size)) return false;
 
@@ -481,7 +405,12 @@ bool package_library_publish_package(const char *source_path, const char *packag
     }
 
     remove_tree(backup);
-    if (replaced_active) *replaced_active = strcmp(package_name, g_active_name) == 0;
+    if (had_no_active) {
+        if (!package_library_set_active(package_name, error, error_size)) return false;
+        if (replaced_active) *replaced_active = true;
+    } else if (replaced_active) {
+        *replaced_active = strcmp(package_name, g_active_name) == 0;
+    }
     if (out_info) package_library_validate_package(destination, package_name, out_info, NULL, 0);
     refresh_active_path();
     return true;

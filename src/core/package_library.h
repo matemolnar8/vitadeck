@@ -19,6 +19,7 @@ typedef struct {
 } VdPackageInfo;
 
 bool package_library_init(char *error, size_t error_size);
+bool package_library_has_active_deck_app(void);
 const char *package_library_root(void);
 const char *package_library_staging_root(void);
 const char *package_library_active_package_name(void);

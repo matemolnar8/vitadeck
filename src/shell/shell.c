@@ -29,6 +29,8 @@
 #define SHELL_ROW_H 50
 #define SHELL_ROW_STEP (SHELL_ROW_H + SHELL_SPACE_SM)
 #define SHELL_UPLOAD_ROW_H (SHELL_SPACE_MD + SHELL_FONT_BODY + SHELL_SPACE_XS + SHELL_FONT_CAPTION + SHELL_SPACE_MD)
+#define SHELL_OVERFLOW_ROW_H 18
+#define SHELL_OVERFLOW_ROW_STEP (SHELL_OVERFLOW_ROW_H + SHELL_SPACE_SM)
 #define SHELL_NAME_X SHELL_PADDING
 #define SHELL_X_CX (SCREEN_WIDTH - SHELL_PADDING - 28)
 #define SHELL_TICK_CX (SHELL_X_CX - 80)
@@ -40,7 +42,7 @@ static int shell_text_baseline_y(int row_top, int font_h)
 
 static void shell_draw_footer_hint(void)
 {
-    DrawText("F1 · Enter · Back", SHELL_PADDING, SHELL_FOOTER_Y, SHELL_FONT_CAPTION, GRAY);
+    DrawText("Start / F1 · Confirm · Back", SHELL_PADDING, SHELL_FOOTER_Y, SHELL_FONT_CAPTION, GRAY);
 }
 
 static bool start_pressed(void)
@@ -111,6 +113,7 @@ static int shell_visible_rows_from(int start_row, int package_count, int row_cou
     if (start_row >= row_count) start_row = row_count - 1;
 
     int available = SHELL_LIST_BOTTOM - SHELL_LIST_Y;
+    if (start_row > 0) available -= SHELL_OVERFLOW_ROW_STEP;
     if (available <= 0) return 1;
 
     int used = 0;
@@ -118,7 +121,8 @@ static int shell_visible_rows_from(int start_row, int package_count, int row_cou
     for (int row = start_row; row < row_count; row++) {
         int band_h = row_band_height(row, package_count);
         int cost = band_h + (visible > 0 ? SHELL_SPACE_SM : 0);
-        if (used + cost > available) break;
+        int bottom_reserve = row + 1 < row_count ? SHELL_OVERFLOW_ROW_STEP : 0;
+        if (used + cost + bottom_reserve > available) break;
         used += cost;
         visible++;
     }
@@ -250,7 +254,7 @@ void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart)
             shell->focus_row = 0;
             shell->scroll_row = 0;
             shell->focus_col = 0;
-        } else {
+        } else if (package_library_has_active_deck_app()) {
             hide_shell_to_deck(shell);
         }
     }
@@ -295,7 +299,7 @@ void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart)
     ensure_focus_row_visible(shell, package_count, row_count);
 
     if (back_pressed()) {
-        hide_shell_to_deck(shell);
+        if (package_library_has_active_deck_app()) hide_shell_to_deck(shell);
         return;
     }
 
@@ -319,8 +323,8 @@ void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart)
 
 static void draw_panel(void)
 {
-    DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, (Color){ 18, 22, 30, 255 });
-    DrawRectangleLines(24, 24, SCREEN_WIDTH - 48, SCREEN_HEIGHT - 48, (Color){ 120, 150, 190, 255 });
+    DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, (Color){ 18, 22, 30, 200 });
+    DrawRectangleLines(24, 24, SCREEN_WIDTH - 48, SCREEN_HEIGHT - 48, (Color){ 120, 150, 190, 200 });
 }
 
 static void draw_tick_cell(int cx, int row_top, bool is_active, bool row_focused, bool col_focused)
@@ -360,6 +364,37 @@ static void draw_x_cell(int cx, int row_top, bool row_focused, bool col_focused)
     DrawText(label, cx - MeasureText(label, SHELL_FONT_BODY) / 2, ty, SHELL_FONT_BODY, t);
 }
 
+static void draw_overflow_row(int row_top, bool points_up)
+{
+    int row_w = SCREEN_WIDTH - SHELL_PADDING - SHELL_PADDING;
+    DrawRectangle(SHELL_PADDING, row_top, row_w, SHELL_OVERFLOW_ROW_H, (Color){ 24, 30, 40, 255 });
+
+    Color chevron = (Color){ 120, 140, 170, 255 };
+    int cy = row_top + SHELL_OVERFLOW_ROW_H / 2;
+    for (int i = -1; i <= 1; i++) {
+        int cx = SCREEN_WIDTH / 2 + i * 20;
+        if (points_up) {
+            DrawLineEx((Vector2){ (float)(cx - 6), (float)(cy + 3) },
+                (Vector2){ (float)cx, (float)(cy - 4) },
+                2.0f,
+                chevron);
+            DrawLineEx((Vector2){ (float)cx, (float)(cy - 4) },
+                (Vector2){ (float)(cx + 6), (float)(cy + 3) },
+                2.0f,
+                chevron);
+        } else {
+            DrawLineEx((Vector2){ (float)(cx - 6), (float)(cy - 3) },
+                (Vector2){ (float)cx, (float)(cy + 4) },
+                2.0f,
+                chevron);
+            DrawLineEx((Vector2){ (float)cx, (float)(cy + 4) },
+                (Vector2){ (float)(cx + 6), (float)(cy - 3) },
+                2.0f,
+                chevron);
+        }
+    }
+}
+
 void shell_render(VdShell *shell)
 {
     if (shell->state == VD_SHELL_HIDDEN) return;
@@ -372,9 +407,25 @@ void shell_render(VdShell *shell)
     int package_count = package_library_list(packages, VD_PACKAGE_LIST_MAX);
     int row_count = package_count + 1;
 
+    int list_top = SHELL_LIST_Y;
+    if (package_count == 0) {
+        int hint_y = SHELL_SECTION_Y + SHELL_FONT_BODY + SHELL_SPACE_XS;
+        DrawText("No Deck Apps installed yet.", SHELL_PADDING, hint_y, SHELL_FONT_CAPTION, (Color){ 150, 160, 180, 255 });
+        hint_y += SHELL_FONT_CAPTION + SHELL_SPACE_XS;
+        DrawText("Select Upload, confirm to start the server, then open the URL shown below on", SHELL_PADDING, hint_y, SHELL_FONT_CAPTION, (Color){ 130, 140, 160, 255 });
+        hint_y += SHELL_FONT_CAPTION + SHELL_SPACE_XS;
+        DrawText("another device on this network and upload a zip containing one .vdapp folder.", SHELL_PADDING, hint_y, SHELL_FONT_CAPTION, (Color){ 130, 140, 160, 255 });
+        list_top = hint_y + SHELL_FONT_CAPTION + SHELL_SPACE_MD;
+    }
+
     shell->scroll_row = clamp_scroll_row(shell->scroll_row, row_count);
 
-    int row_top = SHELL_LIST_Y;
+    int row_top = list_top;
+    if (shell->scroll_row > 0) {
+        draw_overflow_row(row_top, true);
+        row_top += SHELL_OVERFLOW_ROW_STEP;
+    }
+
     int end_row = shell->scroll_row;
     for (int row = shell->scroll_row; row < row_count; row++) {
         bool row_focus = row == shell->focus_row && shell->remove_confirm_package[0] == '\0';
@@ -383,7 +434,8 @@ void shell_render(VdShell *shell)
 
         int row_w = SCREEN_WIDTH - SHELL_PADDING - SHELL_PADDING;
         int band_h = row_band_height(row, package_count);
-        if (row_top + band_h > SHELL_LIST_BOTTOM) break;
+        int bottom_reserve = row + 1 < row_count ? SHELL_OVERFLOW_ROW_STEP : 0;
+        if (row_top + band_h + bottom_reserve > SHELL_LIST_BOTTOM) break;
         Color band_color = row_focus ? (Color){ 42, 52, 72, 255 } : (Color){ 28, 34, 44, 255 };
         if (upload_running) band_color = row_focus ? (Color){ 34, 64, 58, 255 } : (Color){ 24, 48, 44, 255 };
         DrawRectangle(SHELL_PADDING, row_top, row_w, band_h,
@@ -399,7 +451,7 @@ void shell_render(VdShell *shell)
             if (upload_running) {
                 DrawText(upload_server_url(&shell->upload_server), SHELL_NAME_X + pad, sub_y, SHELL_FONT_CAPTION, GREEN);
             } else {
-                DrawText("Enter to start server", SHELL_NAME_X + pad, sub_y, SHELL_FONT_CAPTION, (Color){ 130, 140, 160, 255 });
+                DrawText("Confirm to start server", SHELL_NAME_X + pad, sub_y, SHELL_FONT_CAPTION, (Color){ 130, 140, 160, 255 });
             }
         } else {
             const VdPackageInfo *pkg = &packages[row];
@@ -414,23 +466,14 @@ void shell_render(VdShell *shell)
         end_row = row + 1;
     }
 
-    if (row_count > 0) {
-        bool more_above = shell->scroll_row > 0;
-        bool more_below = end_row < row_count;
-        if (more_above || more_below) {
-            const char *hint = more_above && more_below ? "More above/below" :
-                               (more_above ? "More above" : "More below");
-            int hint_x = SCREEN_WIDTH - SHELL_PADDING - MeasureText(hint, SHELL_FONT_CAPTION);
-            DrawText(hint, hint_x, SHELL_SECTION_Y + 2, SHELL_FONT_CAPTION, (Color){ 130, 140, 160, 255 });
-        }
-    }
+    if (end_row < row_count) draw_overflow_row(row_top, false);
 
     if (shell->remove_confirm_package[0] != '\0') {
         int box_y = (int)(SCREEN_HEIGHT * 0.40f);
         DrawRectangle(0, box_y, SCREEN_WIDTH, 112, (Color){ 10, 12, 18, 255 });
         int ly = box_y + SHELL_SPACE_MD;
         DrawText(shell->remove_confirm_label, SHELL_PADDING, ly, SHELL_FONT_BODY, RAYWHITE);
-        DrawText("Enter: remove · Back: cancel", SHELL_PADDING, ly + SHELL_FONT_BODY + SHELL_SPACE_SM, SHELL_FONT_CAPTION, GRAY);
+        DrawText("Confirm: remove · Back: cancel", SHELL_PADDING, ly + SHELL_FONT_BODY + SHELL_SPACE_SM, SHELL_FONT_CAPTION, GRAY);
     }
 
     if (shell->message[0] != '\0') {

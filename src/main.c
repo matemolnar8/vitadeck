@@ -42,10 +42,10 @@ int main(int argc, char *argv[]) {
 
 	BeginDrawing();
 		ClearBackground(BLACK);
-		DrawText("Loading...", 10, 10, 20, WHITE);
+		if (package_library_has_active_deck_app()) DrawText("Loading...", 10, 10, 20, WHITE);
 	EndDrawing();
 
-	if (!js_runtime_start(&js_runtime)) {
+	if (package_library_has_active_deck_app() && !js_runtime_start(&js_runtime)) {
 		TraceLog(LOG_ERROR, "Could not create JS thread.");
 		return_defer(1);
 	}
@@ -55,10 +55,14 @@ int main(int argc, char *argv[]) {
 		shell_update(&shell, &request_runtime_restart);
 		shell_poll_system_input(&shell, &request_runtime_restart);
 		if (request_runtime_restart) {
-			js_runtime_restart(&js_runtime);
+			if (package_library_has_active_deck_app()) {
+				js_runtime_restart(&js_runtime);
+			} else {
+				js_runtime_stop(&js_runtime);
+			}
 		}
 
-		if (!shell_is_visible(&shell) && js_runtime_is_ready(&js_runtime)) {
+		if (!shell_is_visible(&shell) && package_library_has_active_deck_app() && js_runtime_is_ready(&js_runtime)) {
 			poll_mouse_input();
 			poll_touch_input();
 			poll_gamepad_input();
@@ -66,7 +70,9 @@ int main(int argc, char *argv[]) {
 
 		BeginDrawing();
 			ClearBackground(BLACK);
-			if (js_runtime_failed(&js_runtime)) {
+			if (!package_library_has_active_deck_app()) {
+				/* Shell shows setup instructions; keep canvas black underneath. */
+			} else if (js_runtime_failed(&js_runtime)) {
 				DrawText("Deck App Runtime failed to start.", 10, 10, 24, RED);
 				DrawText("Open the Shell with F1/Start to choose another Deck App.", 10, 44, 20, RAYWHITE);
 			} else if (!js_runtime_is_ready(&js_runtime)) {
