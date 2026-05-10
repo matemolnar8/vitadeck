@@ -1,8 +1,8 @@
-#!/usr/bin/env node
 import babel from "@rollup/plugin-babel";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 import { rolldown } from "rolldown";
 
 type DeckAppConfig = {
@@ -14,6 +14,8 @@ type DeckAppConfig = {
 
 const PACKAGE_SCHEMA_VERSION = 1;
 const SUPPORTED_REACT_PREFIX = "18.3.";
+/** Must match `name` / copy in `cli/templates/scaffold` so the template is a valid workspace package and typechecks; replaced with the author's slug on `create`. */
+const SCAFFOLD_TEMPLATE_LABEL = "vitadeck-scaffold-template";
 const requireFromHere = createRequire(import.meta.url);
 
 async function readJson(filePath: string): Promise<unknown> {
@@ -96,6 +98,35 @@ async function readPackageVersion(projectRoot: string, config: DeckAppConfig): P
   return version;
 }
 
+function isScaffoldCopySkippedDir(name: string): boolean {
+  return name === "node_modules" || name === "dist";
+}
+
+async function copyScaffold(templateRoot: string, targetRoot: string, slug: string): Promise<void> {
+  const stack: string[] = [""];
+  while (stack.length > 0) {
+    const rel = stack.pop()!;
+    const absDir = path.join(templateRoot, rel);
+    const entries = await readdir(absDir, { withFileTypes: true });
+    for (const ent of entries) {
+      if (ent.isDirectory() && isScaffoldCopySkippedDir(ent.name)) continue;
+      const childRel = rel ? path.join(rel, ent.name) : ent.name;
+      const src = path.join(templateRoot, childRel);
+      const dest = path.join(targetRoot, childRel);
+      if (ent.isDirectory()) {
+        await mkdir(dest, { recursive: true });
+        stack.push(childRel);
+      } else if (ent.isFile()) {
+        await mkdir(path.dirname(dest), { recursive: true });
+        const body = (await readFile(src, "utf8"))
+          .replaceAll("{{slug}}", slug)
+          .replaceAll(SCAFFOLD_TEMPLATE_LABEL, slug);
+        await writeFile(dest, body);
+      }
+    }
+  }
+}
+
 async function build(projectRoot = process.cwd()): Promise<void> {
   const config = await readConfig(projectRoot);
   await validateReact(projectRoot);
@@ -162,69 +193,9 @@ globalThis.vitadeckPackage.register(DeckApp);
 async function create(projectName: string): Promise<void> {
   const targetDir = path.resolve(process.cwd(), projectName);
   const slug = packageNameFor(projectName).replace(/\.vdapp$/, "");
-  await mkdir(path.join(targetDir, "src"), { recursive: true });
-  await writeFile(
-    path.join(targetDir, "package.json"),
-    JSON.stringify(
-      {
-        name: slug,
-        version: "0.1.0",
-        private: true,
-        type: "module",
-        scripts: {
-          build: "vitadeck build",
-          tsc: "tsgo",
-        },
-        dependencies: {
-          "@vitadeck/sdk": "workspace:*",
-          react: "^18.3.1",
-        },
-        devDependencies: {
-          "@types/react": "^18.3.28",
-          "@typescript/native-preview": "7.0.0-dev.20260501.1",
-        },
-      },
-      null,
-      2,
-    ) + "\n",
-  );
-  await writeFile(
-    path.join(targetDir, "vitadeck.config.json"),
-    JSON.stringify({ name: slug, entry: "./src/App.tsx", outDir: "./dist" }, null, 2) + "\n",
-  );
-  await writeFile(
-    path.join(targetDir, "tsconfig.json"),
-    `${JSON.stringify(
-      {
-        extends: "@vitadeck/sdk/tsconfig",
-        include: ["src"],
-      },
-      null,
-      2,
-    )}\n`,
-  );
-  await writeFile(path.join(targetDir, "src", "vitadeck-env.d.ts"), '/// <reference types="@vitadeck/sdk/deck-app-env" />\n');
-  await writeFile(
-    path.join(targetDir, "src", "App.tsx"),
-    `import { Rect, Screen, Text, insetContent, useTheme } from "@vitadeck/sdk";
-import React from "react";
-
-export default function App() {
-  const { theme } = useTheme();
-  const { x, y, width, height } = insetContent();
-
-  return (
-    <Screen>
-      <Rect x={x} y={y} width={width} height={height} color={theme.surface}>
-        <Text fontSize={28} color={theme.text}>
-          Hello from ${slug}
-        </Text>
-      </Rect>
-    </Screen>
-  );
-}
-`,
-  );
+  const templateRoot = fileURLToPath(new URL("./templates/scaffold", import.meta.url));
+  await mkdir(targetDir, { recursive: true });
+  await copyScaffold(templateRoot, targetDir, slug);
   console.log(`Created ${targetDir}`);
 }
 

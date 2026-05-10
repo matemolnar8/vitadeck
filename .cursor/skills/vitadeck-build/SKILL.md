@@ -76,4 +76,4 @@ Run **JS build**, then the host quick start, then the Vita quick start. Fix comp
 - In the container, `VITASDK` is set by the image; the project picks the Vita toolchain when that env var is present.
 - Host builds use `out/`; Vita builds use `out-vita/` on the **host** filesystem (bind-mounted from the container).
 - CMake can invoke JS via the `js_build` target; for agent workflows, treat **`pnpm --dir js build` before native builds** as the normal prerequisite so `js/dist/` is explicit and up to date.
-- Extra JS-only detail: `.cursor/rules/js-runtime-build.mdc`.
+- The **`vitadeck`** CLI is a compiled **`js/packages/sdk/dist/cli.mjs`** (plus **`dist/templates/`**); **`pnpm --dir js install`** runs **`@vitadeck/sdk` `prepare`** to build it. See `.cursor/rules/js-runtime-build.mdc`.

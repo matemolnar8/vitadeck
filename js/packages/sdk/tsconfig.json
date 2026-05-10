@@ -5,5 +5,5 @@
     "types": ["node"],
     "lib": ["es2022"]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "cli/**/*.ts", "cli/templates/**/*.tsx", "cli/templates/**/*.ts"]
 }

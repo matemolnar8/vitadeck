@@ -12,10 +12,12 @@
     "./deck-app-env": "./src/deck-app-globals.d.ts"
   },
   "bin": {
-    "vitadeck": "./bin/vitadeck.js"
+    "vitadeck": "./dist/cli.mjs"
   },
   "scripts": {
-    "build": "tsgo -p tsconfig.json",
+    "build:cli": "rolldown -c rolldown.cli.config.mjs && tsx cli/copy-templates.ts",
+    "build": "tsgo -p tsconfig.json && pnpm run build:cli",
+    "prepare": "pnpm run build:cli",
     "tsc": "tsgo -p tsconfig.json"
   },
   "peerDependencies": {
@@ -26,12 +28,12 @@
     "@babel/preset-typescript": "^7.28.5",
     "@rollup/plugin-babel": "^7.0.0",
     "babel-plugin-react-compiler": "^1.0.0",
-    "rolldown": "1.0.0-rc.18",
-    "tsx": "^4.21.0"
+    "rolldown": "1.0.0-rc.18"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
     "@types/react": "^18.3.28",
-    "react": "^18.3.1"
+    "react": "^18.3.1",
+    "tsx": "^4.21.0"
   }
 }

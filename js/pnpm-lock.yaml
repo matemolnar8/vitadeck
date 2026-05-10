@@ -203,9 +203,6 @@ importers:
       rolldown:
         specifier: 1.0.0-rc.18
         version: 1.0.0-rc.18
-      tsx:
-        specifier: ^4.21.0
-        version: 4.21.0
     devDependencies:
       '@types/node':
         specifier: ^25.6.0
@@ -216,6 +213,25 @@ importers:
       react:
         specifier: ^18.3.1
         version: 18.3.1
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
+
+  packages/sdk/cli/templates/scaffold:
+    dependencies:
+      '@vitadeck/sdk':
+        specifier: workspace:*
+        version: link:../../..
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.28
+        version: 18.3.28
+      '@typescript/native-preview':
+        specifier: 7.0.0-dev.20260501.1
+        version: 7.0.0-dev.20260501.1
 
 packages:
 
