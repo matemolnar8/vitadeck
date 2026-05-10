@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: js/pnpm-lock.yaml
+
+      - name: Install JS dependencies
+        run: pnpm --dir js install --frozen-lockfile
+
+      - name: Build JS (runtime + deck app)
+        run: pnpm --dir js build
+
+      - name: Typecheck JS
+        run: pnpm --dir js tsc
+
+      - name: Install host native dependencies
+        run: brew install raylib pkg-config cmake
+
+      - name: Configure and build host target
+        run: cmake -S . -B out && cmake --build out
+
+      # Placeholder: replace with test runner (e.g. ctest, pnpm test) when tests exist.
+      - name: Tests
+        run: echo "No tests configured yet."
