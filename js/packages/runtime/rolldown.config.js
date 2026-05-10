@@ -14,8 +14,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@vitadeck/sdk": path.resolve("../sdk/src/index.tsx"),
-      "@vitadeck/sdk/internal": path.resolve("../sdk/src/internal.tsx"),
+      "@vitadeck/sdk": path.resolve("../sdk/dist/index.js"),
+      "@vitadeck/sdk/internal": path.resolve("../sdk/dist/internal.js"),
       react: path.resolve("../../node_modules/react/index.js"),
       "react-compiler-runtime": path.resolve("../../node_modules/react-compiler-runtime/dist/index.js"),
     },

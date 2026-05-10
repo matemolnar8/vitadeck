@@ -181,11 +181,11 @@ A JavaScript dependency provided by the **VitaDeck Runtime Bundle** rather than 
 _Avoid_: App dependency, bundled dependency, peer package
 
 **VitaDeck SDK**:
-The npm package that provides the **VitaDeck Runtime API** and Deck App build tooling.
+The npm package that provides the **VitaDeck Runtime API** and Deck App build tooling, distributed on the public npm registry as `@vitadeck/sdk` so **Deck App** projects can live outside the **Deck App Workspace**.
 _Avoid_: Runtime package, CLI package, app framework
 
 **Deck App Project Scaffold**:
-The SDK-generated starting project layout for authoring one standalone **Deck App**.
+The SDK-generated starting project layout for authoring one standalone **Deck App**. Outside the **Deck App Workspace**, the scaffold pins `@vitadeck/sdk` with a **caret range** anchored to the **VitaDeck SDK** version that produced the scaffold.
 _Avoid_: Example copy, starter blob, template folder
 
 **Runtime Theme**:
@@ -237,9 +237,11 @@ _Avoid_: Click, mouse down, mouse up, hover
 - The **VitaDeck SDK** build validates that a Deck App project resolves a compatible React version.
 - The **VitaDeck SDK** provides a TypeScript config preset for Deck App projects.
 - The **VitaDeck SDK** provides a **Deck App Project Scaffold** for creating package-shaped Deck App projects.
+- A **Deck App Project Scaffold** created outside the **Deck App Workspace** declares `@vitadeck/sdk` as `^version` matching the scaffolding **VitaDeck SDK** release.
 - A **Deck App Project Scaffold** is author-facing and is not a repo migration tool.
 - The **VitaDeck Runtime API** may be implemented as a thin local TypeScript module for the MVP.
-- The **VitaDeck SDK** is imported by Deck App projects as `@vitadeck/sdk`.
+- The **VitaDeck SDK** is imported by Deck App projects as `@vitadeck/sdk`, resolved from the npm registry in standalone projects and via the **Deck App Workspace** during VitaDeck development.
+- The published **VitaDeck SDK** is consumed like a typical npm library: compiled JavaScript for runtime imports and declaration files for TypeScript.
 - The **VitaDeck SDK** exposes the **VitaDeck Runtime API** and produces **Deck App Package Directories**.
 - The **VitaDeck SDK** emits a **Runtime Upload Archive** alongside each built **Deck App Package Directory** by default; a build may omit the archive when the author only needs the directory.
 - The **VitaDeck SDK** writes **`Deck App Package Version`** into the **Deck App Package Manifest** using the Deck App project's `package.json` `version` by default.

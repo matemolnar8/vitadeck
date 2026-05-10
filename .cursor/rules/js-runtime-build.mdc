@@ -20,7 +20,7 @@ Outputs:
 
 `vitadeck` CLI (`@vitadeck/sdk`):
 - The **`vitadeck`** binary points at **`js/packages/sdk/dist/cli.mjs`** (Rolldown-built ESM). Source lives under **`js/packages/sdk/cli/`** (`cli.ts`, `copy-templates.ts`, run via **`tsx`** during **`build:cli`**); config at **`js/packages/sdk/rolldown.cli.config.mjs`**; **`js/packages/sdk/dist/`** is gitignored like `js/dist/`.
-- **`pnpm --dir js install`** runs **`prepare`** on `@vitadeck/sdk`, which runs **`build:cli`** (bundle + copy **`cli/templates`** → **`dist/templates`**, skipping **`node_modules`** / **`dist`** under the scaffold template).
+- **`pnpm --dir js install`** runs the workspace **`prepare`** script, which runs **`pnpm --filter @vitadeck/sdk run build`** (clean **`dist/`**, **`tsgo`** library emit, then **`build:cli`**: Rolldown bundle + copy **`cli/templates`** → **`dist/templates`**, skipping **`node_modules`** / **`dist`** under the scaffold template).
 - **`pnpm --dir js build`** runs **`pnpm --filter @vitadeck/sdk build`**, which typechecks with **`tsgo`** then **`build:cli`**, so examples can run **`vitadeck build`** afterward.
 - After changing **`cli/cli.ts`**, **`cli/templates/`**, or **`rolldown.cli.config.mjs`**, rebuild the CLI with **`pnpm --filter @vitadeck/sdk build:cli`** (or full **`pnpm --filter @vitadeck/sdk build`**).
 
