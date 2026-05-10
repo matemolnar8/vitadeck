@@ -18,7 +18,6 @@ jobs:
 
       - uses: pnpm/action-setup@v6
         with:
-          version: 10
           package_json_file: js/package.json
 
       - uses: actions/setup-node@v5
