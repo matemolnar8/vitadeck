@@ -28,6 +28,7 @@
     "@babel/preset-typescript": "^7.28.5",
     "@rollup/plugin-babel": "^7.0.0",
     "babel-plugin-react-compiler": "^1.0.0",
+    "fflate": "^0.8.2",
     "rolldown": "1.0.0-rc.18"
   },
   "devDependencies": {

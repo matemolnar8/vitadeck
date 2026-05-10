@@ -241,6 +241,7 @@ _Avoid_: Click, mouse down, mouse up, hover
 - The **VitaDeck Runtime API** may be implemented as a thin local TypeScript module for the MVP.
 - The **VitaDeck SDK** is imported by Deck App projects as `@vitadeck/sdk`.
 - The **VitaDeck SDK** exposes the **VitaDeck Runtime API** and produces **Deck App Package Directories**.
+- The **VitaDeck SDK** emits a **Runtime Upload Archive** alongside each built **Deck App Package Directory** by default; a build may omit the archive when the author only needs the directory.
 - The **VitaDeck SDK** writes **`Deck App Package Version`** into the **Deck App Package Manifest** using the Deck App project's `package.json` `version` by default.
 - An optional `version` in `vitadeck.config.json` overrides `package.json` for **`Deck App Package Version`**.
 - The **VitaDeck Runtime Bundle** is preferably named `runtime.js` to distinguish it from **Deck App Package Entries**.
