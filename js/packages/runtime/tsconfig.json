@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react",
+    "types": [],
+    "lib": ["es2020"]
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/runtime-native.d.ts"]
+}

@@ -1,0 +1,46 @@
+name: Vita (VPK)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: vita-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  vpk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: js/package.json
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          package-manager-cache: false
+          cache: pnpm
+          cache-dependency-path: js/pnpm-lock.yaml
+
+      - name: Install JS dependencies
+        run: pnpm --dir js install --frozen-lockfile
+
+      - name: Build JS (required before Vita CMake; stages js/dist)
+        run: pnpm --dir js build
+
+      - name: Build Vita target in Vitasdk container
+        run: docker compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"
+
+      - name: Upload VPK
+        uses: actions/upload-artifact@v6
+        with:
+          name: vitadeck-vpk-${{ github.sha }}
+          path: out-vita/vitadeck.vpk

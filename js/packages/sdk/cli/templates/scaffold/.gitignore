@@ -1,0 +1,4 @@
+node_modules/
+dist/
+.vitadeck/
+.DS_Store

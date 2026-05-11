@@ -8,6 +8,8 @@ endif()
 
 project(vitadeck)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 if(DEFINED ENV{VITASDK})
   message(STATUS "VITA is ON")
   include("${VITASDK}/share/vita.cmake" REQUIRED)
@@ -17,7 +19,7 @@ else()
   if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Og -g")
   else()
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -flto")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
   endif()
 endif()
 
@@ -29,18 +31,23 @@ set(VITA_MKSFOEX_FLAGS "${VITA_MKSFOEX_FLAGS} -d PARENTAL_LEVEL=1")
 set(VITA_MKSFOEX_FLAGS "${VITA_MKSFOEX_FLAGS} -d ATTRIBUTE2=12")
 
 if(DEFINED ENV{VITASDK})
-  # Find SDL2 (Static)
   find_library(SDL2_LIB SDL2 HINTS $ENV{VITASDK}/arm-vita-eabi/lib REQUIRED)
 endif()
 
 if(NOT DEFINED ENV{VITASDK})
-  # Find raylib with pkg-config
   find_package(PkgConfig REQUIRED)
   pkg_check_modules(RAYLIB REQUIRED raylib)
 endif()
 
+find_package(CURL REQUIRED)
+find_package(OpenSSL REQUIRED)
+if(NOT DEFINED ENV{VITASDK})
+  find_package(ZLIB REQUIRED)
+endif()
+
 # Set up include directories
 set(VITADECK_INCLUDE_DIRS src vendor vendor/quickjs)
+list(APPEND VITADECK_INCLUDE_DIRS ${OPENSSL_INCLUDE_DIR})
 
 if(DEFINED ENV{VITASDK})
   list(APPEND VITADECK_INCLUDE_DIRS
@@ -53,6 +60,9 @@ else()
 endif()
 
 include_directories(${VITADECK_INCLUDE_DIRS})
+# System libcurl (e.g. macOS SDK) lives under usr/include; -I there makes Clang
+# diagnose SDK headers. SYSTEM uses -isystem so libc headers stay quiet.
+include_directories(SYSTEM ${CURL_INCLUDE_DIRS})
 link_directories(${VITADECK_LIBRARY_DIRS})
 
 # QuickJS
@@ -81,16 +91,21 @@ endif()
 
 set(VITADECK_SOURCES
     src/main.c
+    src/core/js_runtime.c
+    src/core/package_library.c
     src/jslib/jslib.c
     src/ui/instance_tree.c
     src/ui/render.c
     src/ui/input.c
     src/core/event_queue.c
+    src/shell/shell.c
+    src/upload/archive.c
+    src/upload/http_server.c
     ${PLATFORM_SOURCES}
 )
 add_executable(${PROJECT_NAME} ${VITADECK_SOURCES})
 
-set(VITADECK_LIBRARIES quickjs)
+set(VITADECK_LIBRARIES m quickjs)
 
 if(DEFINED ENV{VITASDK})
   list(APPEND VITADECK_LIBRARIES
@@ -120,17 +135,21 @@ if(DEFINED ENV{VITASDK})
     SceIofilemgr_stub
     SceNetCtl_stub
     SceNet_stub
+    SceHttp_stub
+    SceSsl_stub
     SceDisplay_stub
     SceAppUtil_stub
     SceAudioIn_stub
-    SceIofilemgr_stub
     ScePower_stub
     SceProcessmgr_stub
     SceIme_stub
+    ${CURL_LIBRARIES}
+    ${OPENSSL_LIBRARIES}
+    z
   )
 else()
-  list(APPEND VITADECK_LIBRARIES ${RAYLIB_LIBRARIES})
-  list(APPEND VITADECK_LIBRARIES m)
+  list(APPEND VITADECK_LIBRARIES ${RAYLIB_LIBRARIES} ${CURL_LIBRARIES} ${OPENSSL_LIBRARIES})
+  list(APPEND VITADECK_LIBRARIES ZLIB::ZLIB)
   list(APPEND VITADECK_LIBRARIES pthread)
 endif()
 
@@ -144,15 +163,18 @@ add_custom_target(js_build
 )
 
 add_custom_target(js_copy
-  COMMENT "Copying js/dist to ${CMAKE_BINARY_DIR}/js"
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/js
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/js/dist ${CMAKE_BINARY_DIR}/js
+  COMMENT "Copying js/dist/runtime to ${CMAKE_BINARY_DIR}/js"
+  COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/deck-app
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/js/dist/runtime ${CMAKE_BINARY_DIR}/js
   BYPRODUCTS ${CMAKE_BINARY_DIR}/js
 )
 
 add_custom_target(js
-  DEPENDS js_build ${PROJECT_NAME}
-  COMMENT "Build JavaScript and everything"
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/js
+  COMMAND pnpm build:prod
+  COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${PROJECT_NAME}
+  COMMENT "Build JS bundle (pnpm build:prod) then native ${PROJECT_NAME}"
+  VERBATIM
 )
 
 add_custom_target(cloc
@@ -172,7 +194,7 @@ if(DEFINED ENV{VITASDK})
       VERSION ${VITA_VERSION}
       NAME ${VITA_APP_NAME}
       FILE module module
-      FILE js/dist/main.js js/main.js
+      FILE js/dist/runtime/runtime.js js/runtime.js
   )
 
   # Create an explicit `upload_vpk` target to upload the VPK file to Vita's download folder
@@ -194,9 +216,9 @@ if(DEFINED ENV{VITASDK})
     # Upload eboot.bin
     COMMAND echo "Sending ${VITA_TITLEID}/eboot.bin to vita"
     COMMAND curl -T eboot.bin ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/
-    # Upload js/main.js
-    COMMAND echo "Sending ${VITA_TITLEID}/js/main.js to vita"
-    COMMAND curl -T ${CMAKE_SOURCE_DIR}/js/dist/main.js ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/js/main.js
+    # Upload runtime and active Deck App package
+    COMMAND echo "Sending ${VITA_TITLEID}/js/runtime.js to vita"
+    COMMAND curl -T ${CMAKE_SOURCE_DIR}/js/dist/runtime/runtime.js ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/js/runtime.js
     # Launch the app
     COMMAND echo "Launching ${VITA_TITLEID}"
     COMMAND echo launch ${VITA_TITLEID} | nc ${PSVITAIP} 1338

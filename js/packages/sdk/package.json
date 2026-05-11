@@ -1,0 +1,81 @@
+{
+  "name": "@vitadeck/sdk",
+  "version": "0.1.0",
+  "license": "MIT",
+  "keywords": [
+    "vitadeck",
+    "deck-app",
+    "playstation-vita",
+    "ps-vita",
+    "vita",
+    "react",
+    "cli"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./internal": {
+      "types": "./dist/internal.d.ts",
+      "import": "./dist/internal.js",
+      "default": "./dist/internal.js"
+    },
+    "./tsconfig": "./dist/tsconfig.deck-app.json",
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js",
+      "default": "./dist/types.js"
+    },
+    "./vitadeck-host-types": {
+      "types": "./dist/vitadeck-host-types.d.ts",
+      "import": "./dist/vitadeck-host-types.js",
+      "default": "./dist/vitadeck-host-types.js"
+    },
+    "./deck-app-env": "./dist/deck-app-globals.d.ts"
+  },
+  "files": ["dist"],
+  "bin": {
+    "vitadeck": "./dist/cli.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matemolnar8/vitadeck.git",
+    "directory": "js/packages/sdk"
+  },
+  "homepage": "https://github.com/matemolnar8/vitadeck/tree/main/js/packages/sdk",
+  "bugs": {
+    "url": "https://github.com/matemolnar8/vitadeck/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build:lib": "tsgo -p tsconfig.build.json",
+    "build:cli": "rolldown -c rolldown.cli.config.mjs && tsx cli/copy-templates.ts",
+    "build": "tsx cli/clean-dist.ts && pnpm run build:lib && pnpm run build:cli",
+    "prepublishOnly": "pnpm run build",
+    "tsc": "tsgo -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1"
+  },
+  "dependencies": {
+    "@babel/preset-react": "^7.28.5",
+    "@babel/preset-typescript": "^7.28.5",
+    "@rollup/plugin-babel": "^7.0.0",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "fflate": "^0.8.2",
+    "rolldown": "1.0.0-rc.18"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@types/react": "^18.3.28",
+    "react": "^18.3.1",
+    "tsx": "^4.21.0"
+  }
+}

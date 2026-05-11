@@ -54,6 +54,7 @@ void instance_tree_init(void);
 
 // Swap back buffer to front buffer (call from JS thread after mutations)
 void instance_tree_swap(void);
+void instance_tree_clear(void);
 
 // Render lock/unlock - UI thread must hold lock during entire render
 void instance_tree_render_lock(void);

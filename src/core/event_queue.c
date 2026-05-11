@@ -74,3 +74,11 @@ bool event_queue_is_shutdown(void) {
     vd_mutex_unlock(queue.mutex);
     return shutdown;
 }
+
+void event_queue_clear(void) {
+    vd_mutex_lock(queue.mutex);
+    queue.head = 0;
+    queue.tail = 0;
+    queue.count = 0;
+    vd_mutex_unlock(queue.mutex);
+}

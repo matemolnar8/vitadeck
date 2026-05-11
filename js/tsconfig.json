@@ -1,17 +1,17 @@
 {
   "compilerOptions": {
     "module": "esnext",
-    "target": "es2015",
-    "types": [],
-    "lib": ["es5", "es2015"],
+    "target": "es2020",
+    "lib": ["es2020"],
     "noEmit": true,
     "noUncheckedIndexedAccess": true,
     "strict": true,
-    "jsx": "react",
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
+    "moduleResolution": "bundler",
     "skipLibCheck": true,
     "esModuleInterop": true
-  }
+  },
+  "include": []
 }

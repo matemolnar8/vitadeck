@@ -13,6 +13,7 @@
 #include "jslib.h"
 #include "ui/instance_tree.h"
 #include "core/event_queue.h"
+#include "core/package_library.h"
 
 static void js_set_global_function(JSContext *ctx, const char *name, JSCFunction *func, int length) {
 	JSValue global = JS_GetGlobalObject(ctx);
@@ -28,6 +29,66 @@ static void js_set_global_function(JSContext *ctx, const char *name, JSCFunction
 static JSValue js_get_time(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
 	(void)this_val; (void)argc; (void)argv;
 	return JS_NewFloat64(ctx, GetTime());
+}
+
+static char *jslib_read_file(const char *filename, size_t *out_len) {
+	FILE *f = fopen(filename, "rb");
+	if (!f) return NULL;
+	fseek(f, 0, SEEK_END);
+	long len = ftell(f);
+	fseek(f, 0, SEEK_SET);
+	char *buf = malloc(len + 1);
+	if (!buf) { fclose(f); return NULL; }
+	fread(buf, 1, len, f);
+	buf[len] = '\0';
+	fclose(f);
+	if (out_len) *out_len = len;
+	return buf;
+}
+
+static JSValue js_native_read_text_file(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+	(void)this_val;
+	if (argc < 1) return JS_ThrowTypeError(ctx, "nativeReadTextFile requires a path");
+
+	const char *filename = JS_ToCString(ctx, argv[0]);
+	if (!filename) return JS_EXCEPTION;
+
+	size_t len = 0;
+	char *contents = jslib_read_file(filename, &len);
+	if (!contents) {
+		JS_FreeCString(ctx, filename);
+		return JS_ThrowReferenceError(ctx, "Could not read file");
+	}
+
+	JSValue result = JS_NewStringLen(ctx, contents, len);
+	free(contents);
+	JS_FreeCString(ctx, filename);
+	return result;
+}
+
+static JSValue js_native_eval_file(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+	(void)this_val;
+	if (argc < 1) return JS_ThrowTypeError(ctx, "nativeEvalFile requires a path");
+
+	const char *filename = JS_ToCString(ctx, argv[0]);
+	if (!filename) return JS_EXCEPTION;
+
+	size_t len = 0;
+	char *code = jslib_read_file(filename, &len);
+	if (!code) {
+		JS_FreeCString(ctx, filename);
+		return JS_ThrowReferenceError(ctx, "Could not read file");
+	}
+
+	JSValue result = JS_Eval(ctx, code, len, filename, JS_EVAL_TYPE_GLOBAL);
+	free(code);
+	JS_FreeCString(ctx, filename);
+	return result;
+}
+
+static JSValue js_native_get_active_deck_app_path(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+	(void)this_val; (void)argc; (void)argv;
+	return JS_NewString(ctx, package_library_active_package_path());
 }
 
 // Called from JS thread to dispatch event to JS
@@ -78,4 +139,7 @@ void register_js_lib(JSContext *ctx) {
 	register_instance_tree(ctx);
 
 	js_set_global_function(ctx, "getTime", js_get_time, 0);
+	js_set_global_function(ctx, "nativeReadTextFile", js_native_read_text_file, 1);
+	js_set_global_function(ctx, "nativeEvalFile", js_native_eval_file, 1);
+	js_set_global_function(ctx, "nativeGetActiveDeckAppPath", js_native_get_active_deck_app_path, 0);
 }
