@@ -1,15 +1,30 @@
 {
   "name": "@vitadeck/sdk",
-  "version": "0.1.0",
-  "license": "MIT",
+  "version": "0.1.1",
   "keywords": [
-    "vitadeck",
+    "cli",
     "deck-app",
     "playstation-vita",
     "ps-vita",
-    "vita",
     "react",
-    "cli"
+    "vita",
+    "vitadeck"
+  ],
+  "homepage": "https://github.com/matemolnar8/vitadeck/tree/main/js/packages/sdk",
+  "bugs": {
+    "url": "https://github.com/matemolnar8/vitadeck/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matemolnar8/vitadeck.git",
+    "directory": "js/packages/sdk"
+  },
+  "bin": {
+    "vitadeck": "./dist/cli.mjs"
+  },
+  "files": [
+    "dist"
   ],
   "type": "module",
   "main": "./dist/index.js",
@@ -38,19 +53,6 @@
     },
     "./deck-app-env": "./dist/deck-app-globals.d.ts"
   },
-  "files": ["dist"],
-  "bin": {
-    "vitadeck": "./dist/cli.mjs"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/matemolnar8/vitadeck.git",
-    "directory": "js/packages/sdk"
-  },
-  "homepage": "https://github.com/matemolnar8/vitadeck/tree/main/js/packages/sdk",
-  "bugs": {
-    "url": "https://github.com/matemolnar8/vitadeck/issues"
-  },
   "publishConfig": {
     "access": "public"
   },
@@ -60,9 +62,6 @@
     "build": "tsx cli/clean-dist.ts && pnpm run build:lib && pnpm run build:cli",
     "prepublishOnly": "pnpm run build",
     "tsc": "tsgo -p tsconfig.json"
-  },
-  "peerDependencies": {
-    "react": "^18.3.1"
   },
   "dependencies": {
     "@babel/preset-react": "^7.28.5",
@@ -77,5 +76,8 @@
     "@types/react": "^18.3.28",
     "react": "^18.3.1",
     "tsx": "^4.21.0"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1"
   }
 }
