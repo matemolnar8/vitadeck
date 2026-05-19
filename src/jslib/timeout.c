@@ -1,3 +1,8 @@
+#include <stdbool.h>
+#include <raylib.h>
+#include "quickjs.h"
+#include "stb_ds.h"
+#include "jslib_internal.h"
 
 typedef struct {
     JSValue func;
@@ -66,7 +71,8 @@ static JSValue js_clear_timeout(JSContext *ctx, JSValueConst this_val, int argc,
     int32_t id;
     JS_ToInt32(ctx, &id, argv[0]);
 
-    if (hmgeti(timeout_hm, id) < 0) {
+    int idx = hmgeti(timeout_hm, id);
+    if (idx < 0) {
         TraceLog(LOG_DEBUG, "[clearTimeout/clearInterval] Timeout with ID: %d not found, ignoring", id);
         return JS_UNDEFINED;
     }
@@ -104,6 +110,8 @@ void run_timeouts(JSContext *ctx) {
         JSValue result = JS_Call(ctx, item.func, global, 0, NULL);
         JS_FreeValue(ctx, global);
 
+        int idx_after = hmgeti(timeout_hm, id);
+
         if (JS_IsException(result)) {
             JSValue exc = JS_GetException(ctx);
             const char *str = JS_ToCString(ctx, exc);
@@ -115,12 +123,14 @@ void run_timeouts(JSContext *ctx) {
         }
         JS_FreeValue(ctx, result);
 
-        if (item.interval_ms >= 0) {
-            item.next_scheduled_at = GetTime() + item.interval_ms / 1000.0;
-            hmput(timeout_hm, item.id, item);
+        if (idx_after < 0) continue;
+
+        TimeoutItem *live = &timeout_hm[idx_after].value;
+        if (live->interval_ms >= 0) {
+            live->next_scheduled_at = GetTime() + live->interval_ms / 1000.0;
         } else {
-            hmdel(timeout_hm, item.id);
-            JS_FreeValue(ctx, item.func);
+            hmdel(timeout_hm, id);
+            JS_FreeValue(ctx, live->func);
         }
     }
 

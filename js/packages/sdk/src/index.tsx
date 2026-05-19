@@ -1,5 +1,6 @@
 import React, { type ReactNode } from "react";
 import { vitaHost } from "./host-elements";
+export * from "./host-control";
 import { useTheme, type Theme, type ThemeContextValue, type ThemeName } from "./theme";
 import type { Color, ColorsMap } from "./types";
 import type { VitaRectProps, VitaTextProps } from "./vitadeck-host-types";

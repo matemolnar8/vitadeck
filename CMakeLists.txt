@@ -93,7 +93,14 @@ set(VITADECK_SOURCES
     src/main.c
     src/core/js_runtime.c
     src/core/package_library.c
+    src/core/settings.c
     src/jslib/jslib.c
+    src/jslib/jslib_internal.c
+    src/jslib/instance.c
+    src/jslib/colors.c
+    src/jslib/timeout.c
+    src/jslib/log.c
+    src/jslib/host_control.c
     src/ui/instance_tree.c
     src/ui/render.c
     src/ui/input.c

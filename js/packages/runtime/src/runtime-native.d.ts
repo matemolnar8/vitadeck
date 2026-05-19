@@ -5,6 +5,9 @@ import type * as VitaDeckSdk from "@vitadeck/sdk";
 
 declare global {
   function getTime(): number;
+  function nativeGetHostControlBaseUrl(): string;
+  function nativeHostControlHttpPostJson(requestId: number, url: string, body: string, timeoutMs: number): void;
+  function nativeTakeHostControlHttpResponse(requestId: number): string | null;
 
   var Colors: ColorsMap;
 

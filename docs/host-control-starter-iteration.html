@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VitaDeck — Host control starter iteration</title>
+  <style>
+    :root {
+      color-scheme: dark light;
+      --bg: #0f1218;
+      --fg: #e8eaef;
+      --muted: #9aa3b2;
+      --accent: #6ea8fe;
+      --border: #2a3140;
+      --warn: #f0c674;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f6f7f9;
+        --fg: #12151c;
+        --muted: #5c6575;
+        --accent: #2156c9;
+        --border: #d6dae3;
+        --warn: #8a6d00;
+      }
+    }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.55;
+      max-width: 52rem;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      background: var(--bg);
+      color: var(--fg);
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+    h2 { font-size: 1.1rem; margin-top: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 0.35rem; }
+    .muted { color: var(--muted); font-size: 0.95rem; }
+    .note { border-left: 3px solid var(--accent); padding-left: 1rem; margin: 1rem 0; }
+    .warn { border-left-color: var(--warn); }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.92rem; }
+    th, td { border: 1px solid var(--border); padding: 0.55rem 0.65rem; text-align: left; vertical-align: top; }
+    th { background: color-mix(in srgb, var(--border) 35%, transparent); }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88em; }
+    ul.compact { margin: 0.5rem 0; padding-left: 1.25rem; }
+    ul.compact li { margin: 0.35rem 0; }
+  </style>
+</head>
+<body>
+  <h1>Host control companion — starter commands (iteration 0)</h1>
+  <p class="muted">
+    Working doc for a <strong>Host Control Companion</strong>: a program on the desktop that accepts structured requests from Vita <strong>Deck Apps</strong> (via VitaDeck) to control the machine.
+    VitaDeck’s glossary uses <strong>host</strong> elsewhere (macOS dev target, React host elements); this doc uses <strong>Host Control Companion</strong> for this app to avoid collisions.
+  </p>
+
+  <h2>Goal for the first slice</h2>
+  <p>
+    Prove end-to-end delivery of a small, typed command set from a Deck App to the desktop: connect, verify, then perform <em>low-risk</em> OS actions that do not require typing arbitrary text or driving the cursor (defer those until the threat model tightens).
+  </p>
+
+  <h2>Initial commands</h2>
+  <p class="muted">Use each row’s <code>command</code> string as the JSON <code>command</code> field in <code>POST /v1/command</code>; omit or empty <code>payload</code> unless noted.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Command</th>
+        <th>Purpose</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>host.capabilities</code></td>
+        <td>Handshake: protocol version, supported commands, optional host display name.</td>
+        <td>Deck App can adapt UI (grey out unsupported actions). Pair with a Deck-side <code>deck.ready</code> if you want symmetry.</td>
+      </tr>
+      <tr>
+        <td><code>host.echo</code></td>
+        <td>Round-trip test with opaque payload + server timestamp.</td>
+        <td>Validates wiring before anything touches the OS; keep payloads size-capped.</td>
+      </tr>
+      <tr>
+        <td><code>host.power.sleep_displays</code></td>
+        <td>Turn displays off / sleep displays only (not full suspend if avoidable).</td>
+        <td>Useful “remote control” moment; scope tightly so it is not mistaken for shutdown. macOS: <code>pmset displaysleepnow</code>.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note warn">
+    <strong>Deferred (good second iteration):</strong>
+    <ul class="compact">
+      <li>Mouse/keyboard injection, clipboard read/write, arbitrary shell — high abuse surface.</li>
+      <li>Launching apps or URLs unless paired with an explicit allowlist model.</li>
+    </ul>
+  </div>
+
+  <h2>Transport (decided)</h2>
+  <ul class="compact">
+    <li><strong>Network:</strong> Same Wi‑Fi LAN as the Vita.</li>
+    <li><strong>Discovery / addressing:</strong> Operator-entered IPs only — on the Vita, configure the PC’s <strong>Host Control Console Address</strong> in VitaDeck Shell; on the companion, optionally configure the Vita’s LAN IP when an implementation needs it (callbacks, allowlists, or logging). No mDNS, tokens, or pairing ceremony in this iteration (<strong>Host Control Trusted LAN</strong>).</li>
+    <li><strong>Wire format:</strong> HTTP request/response — JSON (<code>Content-Type: application/json</code>), no WebSocket.</li>
+    <li><strong>Routing:</strong> Single dispatch endpoint — <code>POST /v1/command</code> with body <code>{ "command": string, "payload"?: object }</code>; responses JSON only.</li>
+  </ul>
+
+  <h2>Response envelope (decided)</h2>
+  <p>
+    All <code>POST /v1/command</code> responses use <strong>VitaDeck LAN JSON Result</strong> (same family as <strong>Runtime Upload POST</strong>): <code>Content-Type: application/json</code>.
+  </p>
+  <ul class="compact">
+    <li><strong>Success:</strong> <code>{ "ok": true, … }</code> — extra keys depend on <code>command</code> (e.g. capabilities echo metadata).</li>
+    <li><strong>Failure:</strong> <code>{ "ok": false, "code": string, "message": string }</code> — HTTP status carries error class (malformed body, unknown command, unsupported OS action, etc.).</li>
+  </ul>
+  <p class="muted">When you implement: mirror this envelope in shared TypeScript types for Deck Apps and the companion (not part of this planning-only iteration).</p>
+
+  <h2>Cross-cutting requirements (still open)</h2>
+  <ul class="compact">
+    <li><strong>Errors:</strong> failures always use <strong>VitaDeck LAN JSON Result</strong> (<code>ok: false</code>, <code>code</code>, <code>message</code>).</li>
+    <li><strong>Idempotency:</strong> repeated <code>host.power.sleep_displays</code> is safe (displays already off).</li>
+  </ul>
+
+  <h2>Locked API appendix</h2>
+  <p>
+    The companion listens on all interfaces, starting at TCP port <code>8797</code> and falling forward through <code>8806</code> if ports are busy.
+    Deck Apps send JSON to <code>POST /v1/command</code>:
+  </p>
+  <pre><code>{ "command": "host.echo", "payload": { "value": "hello" } }</code></pre>
+  <p>Failures use the same JSON envelope. Transport, routing, and command-dispatch codes:</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>Code</th>
+        <th>Meaning</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><code>400</code></td><td><code>malformed_request</code></td><td>Body is not valid JSON or does not contain a string <code>command</code>.</td></tr>
+      <tr><td><code>400</code></td><td><code>unknown_command</code></td><td>The <code>command</code> string is not a registered Host Control command (not in the protocol command set).</td></tr>
+      <tr><td><code>404</code></td><td><code>not_found</code></td><td>Path is not part of the Host Control Companion HTTP Contract.</td></tr>
+      <tr><td><code>405</code></td><td><code>method_not_allowed</code></td><td>The endpoint exists but does not accept this method.</td></tr>
+      <tr><td><code>413</code></td><td><code>payload_too_large</code></td><td>Request body exceeds the companion's JSON request cap.</td></tr>
+      <tr><td><code>415</code></td><td><code>unsupported_content_type</code></td><td>Request is not <code>application/json</code>.</td></tr>
+      <tr><td><code>422</code></td><td><code>invalid_payload</code></td><td>The command is known, but its payload is invalid.</td></tr>
+      <tr><td><code>501</code></td><td><code>unsupported_platform</code></td><td>The command is not implemented on the current desktop OS.</td></tr>
+      <tr><td><code>501</code></td><td><code>command_failed</code></td><td>A command supported on this platform failed while executing (e.g. the OS tool returned an error).</td></tr>
+    </tbody>
+  </table>
+  <p class="muted"><code>command_failed</code> <code>message</code> carries the runtime error detail when available.</p>
+  <p>Command successes:</p>
+  <ul class="compact">
+    <li><code>host.capabilities</code>: <code>{ "ok": true, "protocolVersion": 1, "hostName": string, "platform": string, "commands": string[] }</code></li>
+    <li><code>host.echo</code>: <code>{ "ok": true, "payload": object, "receivedAt": string }</code>; echo payloads are capped by the request limit.</li>
+    <li><code>host.power.sleep_displays</code>: <code>{ "ok": true }</code> when the companion successfully asks the OS to sleep displays.</li>
+  </ul>
+
+  <h2>Open alignment with VitaDeck</h2>
+  <p>
+    <strong>Runtime Upload</strong> is desktop → Vita over HTTP at <strong>Runtime Upload URL</strong>.
+    <strong>Host Control Companion</strong> is Vita → desktop over LAN using <strong>Host Control Console Address</strong> — inverse direction, separate surface (both documented in <code>CONTEXT.md</code>).
+  </p>
+
+  <p class="muted" style="margin-top:2rem;">
+    Last updated: <strong>VitaDeck LAN JSON Result</strong> responses; trusted LAN; single <code>POST /v1/command</code>; HTTP JSON.
+  </p>
+</body>
+</html>

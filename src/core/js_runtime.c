@@ -73,6 +73,12 @@ static void *js_thread_func(void *arg)
 		goto defer;
 	}
 
+	if (JS_AddIntrinsicPromise(ctx) < 0) {
+		TraceLog(LOG_ERROR, "Could not initialize QuickJS Promise intrinsics.");
+		runtime->failed = true;
+		goto defer;
+	}
+
 	register_js_lib(ctx);
 
 	size_t len = 0;
@@ -109,6 +115,7 @@ static void *js_thread_func(void *arg)
 	while (!runtime->stop_requested && !event_queue_is_shutdown()) {
 		process_input_events(ctx);
 		run_timeouts(ctx);
+		while (JS_ExecutePendingJob(rt, NULL) > 0) {}
 		instance_tree_swap();
 		vd_thread_yield();
 	}

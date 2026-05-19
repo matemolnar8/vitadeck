@@ -1,6 +1,7 @@
 #include "shell/shell.h"
 
 #include <raylib.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include "core/package_library.h"
@@ -93,7 +94,7 @@ static int shell_row_count(void)
 {
     VdPackageInfo packages[VD_PACKAGE_LIST_MAX];
     int n = package_library_list(packages, VD_PACKAGE_LIST_MAX);
-    return n + 1;
+    return n + 2;
 }
 
 static bool row_is_upload(int row, int package_count)
@@ -101,9 +102,14 @@ static bool row_is_upload(int row, int package_count)
     return row == package_count;
 }
 
+static bool row_is_host_control(int row, int package_count)
+{
+    return row == package_count + 1;
+}
+
 static int row_band_height(int row, int package_count)
 {
-    return row_is_upload(row, package_count) ? SHELL_UPLOAD_ROW_H : SHELL_ROW_H;
+    return (row_is_upload(row, package_count) || row_is_host_control(row, package_count)) ? SHELL_UPLOAD_ROW_H : SHELL_ROW_H;
 }
 
 static int shell_visible_rows_from(int start_row, int package_count, int row_count)
@@ -180,6 +186,71 @@ static void toggle_upload_server(VdShell *shell)
     start_upload_server(shell);
 }
 
+static void enter_host_control_settings(VdShell *shell)
+{
+    if (!settings_get_host_control_url(shell->host_control_url, sizeof(shell->host_control_url))) {
+        snprintf(shell->host_control_url, sizeof(shell->host_control_url), "http://192.168.1.100:8797");
+    }
+    shell->host_control_cursor = (int)strlen(shell->host_control_url);
+    shell->state = VD_SHELL_HOST_CONTROL;
+    snprintf(shell->message, sizeof(shell->message), "Edit Host Control address.");
+}
+
+static bool host_control_cancel_pressed(void)
+{
+    return IsKeyPressed(KEY_ESCAPE) || (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT));
+}
+
+static int host_control_char_index(char c)
+{
+    const char *chars = "0123456789.:/abcdefghijklmnopqrstuvwxyz-";
+    const char *p = strchr(chars, (int)c);
+    return p ? (int)(p - chars) : 0;
+}
+
+static char host_control_cycle_char(char current, int delta)
+{
+    const char *chars = "0123456789.:/abcdefghijklmnopqrstuvwxyz-";
+    int count = (int)strlen(chars);
+    int index = host_control_char_index(current);
+    index = (index + delta + count) % count;
+    return chars[index];
+}
+
+static void host_control_insert_char(VdShell *shell, char c)
+{
+    size_t len = strlen(shell->host_control_url);
+    if (len + 1 >= sizeof(shell->host_control_url)) return;
+    if (shell->host_control_cursor < 0) shell->host_control_cursor = 0;
+    if (shell->host_control_cursor > (int)len) shell->host_control_cursor = (int)len;
+    memmove(shell->host_control_url + shell->host_control_cursor + 1,
+        shell->host_control_url + shell->host_control_cursor,
+        len - (size_t)shell->host_control_cursor + 1);
+    shell->host_control_url[shell->host_control_cursor++] = c;
+}
+
+static void host_control_delete_char(VdShell *shell)
+{
+    size_t len = strlen(shell->host_control_url);
+    if (len == 0 || shell->host_control_cursor <= 0) return;
+    if (shell->host_control_cursor > (int)len) shell->host_control_cursor = (int)len;
+    memmove(shell->host_control_url + shell->host_control_cursor - 1,
+        shell->host_control_url + shell->host_control_cursor,
+        len - (size_t)shell->host_control_cursor + 1);
+    shell->host_control_cursor--;
+}
+
+static void save_host_control_settings(VdShell *shell)
+{
+    char error[256];
+    if (!settings_set_host_control_url(shell->host_control_url, error, sizeof(error))) {
+        snprintf(shell->message, sizeof(shell->message), "%s", error);
+        return;
+    }
+    shell->state = VD_SHELL_HOME;
+    snprintf(shell->message, sizeof(shell->message), "Saved Host Control address.");
+}
+
 static void hide_shell_to_deck(VdShell *shell)
 {
     shell->state = VD_SHELL_HIDDEN;
@@ -246,6 +317,43 @@ void shell_update(VdShell *shell, bool *request_runtime_restart)
     }
 }
 
+static void poll_host_control_settings(VdShell *shell)
+{
+    size_t len = strlen(shell->host_control_url);
+    if (shell->host_control_cursor < 0) shell->host_control_cursor = 0;
+    if (shell->host_control_cursor > (int)len) shell->host_control_cursor = (int)len;
+
+    int ch = GetCharPressed();
+    while (ch > 0) {
+        if (ch >= 32 && ch <= 126 && !isspace(ch)) host_control_insert_char(shell, (char)ch);
+        ch = GetCharPressed();
+    }
+
+    if (IsKeyPressed(KEY_BACKSPACE)) host_control_delete_char(shell);
+    if (left_pressed() && shell->host_control_cursor > 0) shell->host_control_cursor--;
+    if (right_pressed() && shell->host_control_cursor < (int)strlen(shell->host_control_url)) shell->host_control_cursor++;
+
+    bool cycle_up = up_pressed();
+    bool cycle_down = down_pressed();
+    if (cycle_up || cycle_down) {
+        len = strlen(shell->host_control_url);
+        if (len == 0) host_control_insert_char(shell, '0');
+        int index = shell->host_control_cursor;
+        if (index >= (int)len) index = (int)len - 1;
+        if (index >= 0) {
+            shell->host_control_url[index] = host_control_cycle_char(shell->host_control_url[index], cycle_up ? 1 : -1);
+        }
+    }
+
+    if (host_control_cancel_pressed()) {
+        shell->state = VD_SHELL_HOME;
+        snprintf(shell->message, sizeof(shell->message), "Host Control address unchanged.");
+        return;
+    }
+
+    if (confirm_pressed()) save_host_control_settings(shell);
+}
+
 void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart)
 {
     if (start_pressed()) {
@@ -260,10 +368,14 @@ void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart)
     }
 
     if (shell->state == VD_SHELL_HIDDEN) return;
+    if (shell->state == VD_SHELL_HOST_CONTROL) {
+        poll_host_control_settings(shell);
+        return;
+    }
 
     VdPackageInfo packages[VD_PACKAGE_LIST_MAX];
     int package_count = package_library_list(packages, VD_PACKAGE_LIST_MAX);
-    int row_count = package_count + 1;
+    int row_count = package_count + 2;
     if (row_count <= 0) return;
 
     if (shell->remove_confirm_package[0] != '\0') {
@@ -289,7 +401,7 @@ void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart)
         shell->focus_col = 0;
     }
 
-    if (row_is_upload(shell->focus_row, package_count)) {
+    if (row_is_upload(shell->focus_row, package_count) || row_is_host_control(shell->focus_row, package_count)) {
         shell->focus_col = 0;
     } else {
         if (left_pressed() && shell->focus_col > 0) shell->focus_col--;
@@ -307,6 +419,10 @@ void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart)
 
     if (row_is_upload(shell->focus_row, package_count)) {
         toggle_upload_server(shell);
+        return;
+    }
+    if (row_is_host_control(shell->focus_row, package_count)) {
+        enter_host_control_settings(shell);
         return;
     }
 
@@ -395,9 +511,40 @@ static void draw_overflow_row(int row_top, bool points_up)
     }
 }
 
+static void draw_host_control_settings(VdShell *shell)
+{
+    draw_panel();
+    DrawText("Host Control", SHELL_PADDING, SHELL_TITLE_Y, SHELL_FONT_TITLE, RAYWHITE);
+    DrawText("Console Address", SHELL_PADDING, SHELL_SECTION_Y, SHELL_FONT_BODY, GRAY);
+
+    int box_y = SHELL_LIST_Y;
+    int box_w = SCREEN_WIDTH - SHELL_PADDING - SHELL_PADDING;
+    DrawRectangle(SHELL_PADDING, box_y, box_w, 60, (Color){ 28, 34, 44, 255 });
+    DrawRectangleLines(SHELL_PADDING, box_y, box_w, 60, (Color){ 100, 120, 150, 255 });
+
+    int text_y = box_y + 18;
+    DrawText(shell->host_control_url, SHELL_PADDING + SHELL_SPACE_MD, text_y, SHELL_FONT_BODY, RAYWHITE);
+    int cursor_x = SHELL_PADDING + SHELL_SPACE_MD + MeasureText(TextSubtext(shell->host_control_url, 0, shell->host_control_cursor), SHELL_FONT_BODY);
+    DrawLine(cursor_x, text_y - 2, cursor_x, text_y + SHELL_FONT_BODY + 2, YELLOW);
+
+    int hint_y = box_y + 80;
+    DrawText("Keyboard: type address, Backspace delete, Enter save, Esc cancel.", SHELL_PADDING, hint_y, SHELL_FONT_CAPTION, (Color){ 150, 160, 180, 255 });
+    hint_y += SHELL_FONT_CAPTION + SHELL_SPACE_XS;
+    DrawText("Gamepad/Vita: Left/Right cursor, Up/Down cycle character, Cross save, Circle cancel.", SHELL_PADDING, hint_y, SHELL_FONT_CAPTION, (Color){ 150, 160, 180, 255 });
+
+    if (shell->message[0] != '\0') {
+        int msg_y = SHELL_FOOTER_Y - SHELL_SPACE_MD - SHELL_FONT_BODY;
+        DrawText(shell->message, SHELL_PADDING, msg_y, SHELL_FONT_BODY, YELLOW);
+    }
+}
+
 void shell_render(VdShell *shell)
 {
     if (shell->state == VD_SHELL_HIDDEN) return;
+    if (shell->state == VD_SHELL_HOST_CONTROL) {
+        draw_host_control_settings(shell);
+        return;
+    }
     draw_panel();
 
     DrawText("VitaDeck", SHELL_PADDING, SHELL_TITLE_Y, SHELL_FONT_TITLE, RAYWHITE);
@@ -405,7 +552,7 @@ void shell_render(VdShell *shell)
 
     VdPackageInfo packages[VD_PACKAGE_LIST_MAX];
     int package_count = package_library_list(packages, VD_PACKAGE_LIST_MAX);
-    int row_count = package_count + 1;
+    int row_count = package_count + 2;
 
     int list_top = SHELL_LIST_Y;
     if (package_count == 0) {
@@ -430,6 +577,7 @@ void shell_render(VdShell *shell)
     for (int row = shell->scroll_row; row < row_count; row++) {
         bool row_focus = row == shell->focus_row && shell->remove_confirm_package[0] == '\0';
         bool upload_row = row_is_upload(row, package_count);
+        bool host_control_row = row_is_host_control(row, package_count);
         bool upload_running = upload_row && upload_server_is_running(&shell->upload_server);
 
         int row_w = SCREEN_WIDTH - SHELL_PADDING - SHELL_PADDING;
@@ -453,6 +601,13 @@ void shell_render(VdShell *shell)
             } else {
                 DrawText("Confirm to start server", SHELL_NAME_X + pad, sub_y, SHELL_FONT_CAPTION, (Color){ 130, 140, 160, 255 });
             }
+        } else if (host_control_row) {
+            int pad = SHELL_SPACE_MD;
+            char url[VD_HOST_CONTROL_URL_MAX];
+            if (!settings_get_host_control_url(url, sizeof(url))) snprintf(url, sizeof(url), "Not configured");
+            DrawText("Host Control", SHELL_NAME_X + pad, text_y, SHELL_FONT_BODY, RAYWHITE);
+            int sub_y = text_y + SHELL_FONT_BODY + SHELL_SPACE_XS;
+            DrawText(url, SHELL_NAME_X + pad, sub_y, SHELL_FONT_CAPTION, (Color){ 130, 140, 160, 255 });
         } else {
             const VdPackageInfo *pkg = &packages[row];
             char name_line[VD_DISPLAY_NAME_MAX + VD_VERSION_MAX + 12];

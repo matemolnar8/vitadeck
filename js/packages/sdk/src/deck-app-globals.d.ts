@@ -7,6 +7,9 @@ declare global {
   function clearInterval(id: number): void;
 
   function getTime(): number;
+  function nativeGetHostControlBaseUrl(): string;
+  function nativeHostControlHttpPostJson(requestId: number, url: string, body: string, timeoutMs: number): void;
+  function nativeTakeHostControlHttpResponse(requestId: number): string | null;
 
   var console: {
     log: (...args: unknown[]) => void;

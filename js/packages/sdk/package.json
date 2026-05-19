@@ -35,6 +35,11 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./host-control": {
+      "types": "./dist/host-control.d.ts",
+      "import": "./dist/host-control.js",
+      "default": "./dist/host-control.js"
+    },
     "./internal": {
       "types": "./dist/internal.d.ts",
       "import": "./dist/internal.js",

@@ -1,0 +1,5 @@
+{
+  "name": "Host Control",
+  "entry": "src/App.tsx",
+  "outDir": "dist"
+}

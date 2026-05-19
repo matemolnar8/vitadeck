@@ -5,6 +5,7 @@ out-vita
 
 module/*.suprx
 
+js/**/*/dist
 js/dist
 js/packages/sdk/dist
 js/examples/*/dist

@@ -117,15 +117,43 @@ The LAN web page served by the **Runtime Upload Listener** for choosing, draggin
 _Avoid_: Deck App UI, store frontend, CDN-hosted site
 
 **Runtime Upload HTTP Contract**:
-The **Runtime Upload Listener** author-facing HTTP surface is **`GET /`** for the **Runtime Upload Web UI** plus whatever same-origin static assets that page requires, and **`POST /upload`** for **Runtime Upload POST**. Undocumented paths respond **404**; non-**POST** requests to **`/upload`** respond **405**. There is no separate health, readiness, or version HTTP endpoint in the initial **Runtime Upload** iteration.
+The **Runtime Upload Listener** author-facing HTTP surface is **`GET /`** for the **Runtime Upload Web UI** plus whatever same-origin static assets that page requires, and **`POST /upload`** for **Runtime Upload POST**. Documented JSON responses follow **VitaDeck LAN JSON Result**. Undocumented paths respond **404**; non-**POST** requests to **`/upload`** respond **405**. There is no separate health, readiness, or version HTTP endpoint in the initial **Runtime Upload** iteration.
 _Avoid_: Public REST catalog, mandatory OpenAPI, extension plugin routes
 
 **Runtime Upload URL**:
 The `http://IP:PORT/` address of the **Runtime Upload Web UI** shown on the **Shell Upload Screen** when the **Runtime Upload Listener** has successfully bound, using a LAN-reachable **IP** for the device and the **PORT** actually bound.
 _Avoid_: FTP URL, deep link, marketplace URL
 
+**Host Control Companion**:
+A desktop program that listens on the LAN for a constrained set of control commands initiated from **Deck Apps** on VitaDeck over the same Wi‑Fi network under **Host Control Trusted LAN**. Not the VitaDeck macOS development executable (“host build”), nor React internal host elements.
+_Avoid_: **Runtime Upload Listener**, Vita-hosted FTP, OS SSH daemon
+
+**Host Control Trusted LAN**:
+The initial **Host Control Companion** trust model: same-network use with operator-entered LAN IPs (**Host Control Console Address** on the Vita toward the PC, **Host Control Vita LAN Address** on the companion when an implementation needs the Vita’s IP); no bearer tokens, shared secrets, or mandatory credentials (**Upload Pairing** remains unrelated unless deliberately extended later).
+_Avoid_: Mandatory OAuth, certificate pinning requirements for v1
+
+**Host Control Console Address**:
+The LAN-reachable **IP** and TCP **PORT** for the **Host Control Companion** — printed or surfaced on the companion console so the operator can configure the **Deck App** on Vita to send **`POST /v1/command`** — analogous intent to showing **Runtime Upload URL** on-device for uploads to Vita, but for Vita-initiated desktop control.
+_Avoid_: **Runtime Upload URL**, cloud relay hostname, Bluetooth pairing PIN
+
+**Host Control Address Setting**:
+The VitaDeck Shell-managed value for the **Host Control Console Address** used by **Deck Apps** that choose the default **Host Control Companion** target.
+_Avoid_: Deck App hard-coded companion address, discovery beacon, pairing credential
+
+**Host Control Vita LAN Address**:
+The Vita’s LAN **IP** the operator configures on the **Host Control Companion** when a feature needs the desktop side to know or reach the handheld (optional depending on implementation).
+_Avoid_: IMEI, PSN account identifiers
+
+**VitaDeck LAN JSON Result**:
+The shared JSON response shape for VitaDeck LAN HTTP surfaces that return structured outcomes: always `Content-Type: application/json`; success objects include **`ok: true`** plus endpoint-specific fields; failure objects include **`ok: false`**, a short machine-readable **`code`**, and a human-readable **`message`**. **Runtime Upload POST** and **Host Control Companion** **`POST /v1/command`** both use this envelope; implementations should JSON-escape string fields.
+_Avoid_: Ad-hoc per-endpoint success shapes without **`ok`**, HTML error bodies for API responses
+
+**Host Control Companion HTTP Contract**:
+Deck-initiated control uses HTTP with JSON request bodies (`Content-Type: application/json`) and JSON responses (`Content-Type: application/json`); the initial iteration does not use WebSockets. Under **Host Control Trusted LAN**, requests do not require authentication headers or signed payloads. Responses use **VitaDeck LAN JSON Result**: success `{ "ok": true, … }` with command-specific fields; failure `{ "ok": false, "code", "message" }` with HTTP status indicating error class. Besides transport-level failures, command dispatch may use additional **`code`** values (e.g. **`unknown_command`** on **400**, **`command_failed`** on **501** when a supported OS action fails at runtime). Commands dispatch through a single documented **`POST`** path on **Host Control Console Address** (initial convention **`/v1/command`**) with a JSON **`command`** discriminant and optional **`payload`** object; per-command URL proliferation is out of scope. Undocumented paths respond **404**; unsupported methods follow normal HTTP semantics (**405** where applicable).
+_Avoid_: WebSocket control plane, GraphQL, multipart command envelopes, REST resource per command
+
 **Runtime Upload POST**:
-The HTTP `POST /upload` endpoint on the **Runtime Upload Listener** that ingests a **Runtime Upload Archive** as either `multipart/form-data` (browser-primary) or `application/zip` (automation-friendly). For `multipart/form-data`, the file part field name is **`archive`** (single file part per request). Responses are always JSON (`Content-Type: application/json`): on success, `ok: true` plus **`packageName`** (**Deck App Package Name**) and **`version`** (**Deck App Package Version**); on failure, `ok: false` plus a short machine **`code`** and human **`message`**. Typical HTTP statuses include **200** success, **413** over **Runtime Upload Limits**, **400** malformed request body, **415** unsupported `Content-Type`, **422** archive layout or manifest validation failure, and **409** when **Runtime Upload Single-Flight** rejects a concurrent ingest.
+The HTTP `POST /upload` endpoint on the **Runtime Upload Listener** that ingests a **Runtime Upload Archive** as either `multipart/form-data` (browser-primary) or `application/zip` (automation-friendly). For `multipart/form-data`, the file part field name is **`archive`** (single file part per request). Responses use **VitaDeck LAN JSON Result**: on success **`ok: true`** plus **`packageName`** (**Deck App Package Name**) and **`version`** (**Deck App Package Version**); on failure **`ok: false`** plus **`code`** and **`message`**. Typical HTTP statuses include **200** success, **413** over **Runtime Upload Limits**, **400** malformed request body, **415** unsupported `Content-Type`, **422** archive layout or manifest validation failure, and **409** when **Runtime Upload Single-Flight** rejects a concurrent ingest.
 _Avoid_: GraphQL mutation, WebSocket upload, chunked multi-file APIs
 
 **Runtime Upload Single-Flight**:
@@ -224,6 +252,8 @@ _Avoid_: Click, mouse down, mouse up, hover
 - Deck App authors export a **Deck App Component**; they do not call VitaDeck registration APIs directly.
 - A **Deck App Source Entry** may use normal TypeScript and ES module syntax; the **VitaDeck SDK** compiles it into the **Deck App Package Entry**.
 - **Runtime Upload** transports a **Deck App Package Directory** as a **Runtime Upload Archive** without changing the package contents.
+- A **Deck App** configured with **Host Control Console Address** may send commands to a **Host Control Companion** on the LAN under **Host Control Trusted LAN** (manual IPs; optional **Host Control Vita LAN Address** on the companion when needed); **`POST /v1/command`** responses use **VitaDeck LAN JSON Result**.
+- The **Host Control Address Setting** is managed through the **VitaDeck Shell** and supplies the default **Host Control Console Address** for **Deck Apps** that use the default **Host Control Companion** target.
 - A **Runtime Upload Archive** contains exactly one top-level `.vdapp` directory and no other top-level entries.
 - The project configuration selects the **Active Deck App** by pointing at a built **Deck App Package Directory**.
 - The **Deck App Workspace** is a pnpm workspace rooted at `js/`.
@@ -262,7 +292,7 @@ _Avoid_: Click, mouse down, mouse up, hover
 - The **Runtime Upload HTTP Contract** limits documented listener behavior to **`GET /`** (and required same-origin Web UI assets) and **`POST /upload`**; other paths **404**, wrong method on **`/upload`** **405**; no **GET /health**-style probe in the initial **Runtime Upload** iteration.
 - Initial **Runtime Upload** trusts the local network; **Upload Pairing** is optional future hardening.
 - **Runtime Upload** accepts exactly one **Runtime Upload Archive** per request via **Runtime Upload POST**, using `multipart/form-data` for browsers (file field **`archive`**) and `application/zip` for simple HTTP clients.
-- **Runtime Upload POST** returns JSON only: success includes **`packageName`** and **`version`**; failures include **`code`** and **`message`**, with HTTP status reflecting the error class.
+- **Runtime Upload POST** returns JSON only using **VitaDeck LAN JSON Result**: success adds **`packageName`** and **`version`**; failures include **`code`** and **`message`**, with HTTP status reflecting the error class.
 - **Runtime Upload Single-Flight** applies to **Runtime Upload POST**: concurrent ingests get **409** and no queue.
 - **Runtime Upload** enforces **Runtime Upload Limits** and rejects over-limit archives without installing anything.
 - **Runtime Upload** validates packages in **Runtime Upload Staging** and only publishes successful installs into the **Installed Deck App Library**.
@@ -477,7 +507,7 @@ _Avoid_: Click, mouse down, mouse up, hover
 - "React component" can mean either a source-level entry component or the whole runnable **Deck App**; resolved: **Deck App** is the runnable unit.
 - "upload" can mean build-time packaging or **Runtime Upload**; resolved: MVP uses build-time bundling, while **Runtime Upload** is a future HTTP-based flow.
 - "HTTP upload" could mean browser multipart or raw zip bytes; resolved: **Runtime Upload POST** supports `multipart/form-data` for browsers (field **`archive`**) and `application/zip` for automation.
-- "upload response" could mean HTML, plain text, or structured data; resolved: **Runtime Upload POST** always responds with JSON and uses HTTP status for error class.
+- "upload response" could mean HTML, plain text, or structured data; resolved: **Runtime Upload POST** always responds with JSON using **VitaDeck LAN JSON Result**.
 - "concurrent uploads" could mean parallel ingests or queued retries; resolved: **Runtime Upload Single-Flight** — one ingest at a time, **409** for overlap, no queue.
 - "UI elements" can mean public author-facing components or internal host elements; resolved: **Deck Apps** use the **VitaDeck Runtime API**, while host elements remain internal.
 - "`runtime` package" is too narrow for the package that also builds artifacts; resolved: use **VitaDeck SDK** for `@vitadeck/sdk`.
@@ -519,4 +549,10 @@ _Avoid_: Click, mouse down, mouse up, hover
 - "replace" could sound like **Installed Deck App Removal**; resolved: **Runtime Upload Replacement** overwrites package contents and may restart the active session, but does not remove the active selection.
 - "restart" could mean hot reload versus a full context reset; resolved: use **Deck App Runtime Restart** for a fresh JavaScript context.
 - "globals available in Deck App code" can mean ordinary JS host conveniences or VitaDeck native bridge entry points; resolved: the author-facing surface is the **VitaDeck Runtime API** plus a small typed host subset for normal patterns, not native bridge calls.
+- "host application" could mean the VitaDeck macOS executable or a desktop LAN companion for Deck Apps; resolved: use **Host Control Companion** for LAN desktop control; reserve informal **host** for dev-target wording where already established.
+- "Deck App → PC transport" could mean HTTP or WebSocket; resolved: **Host Control Companion HTTP Contract** uses HTTP JSON only initially.
+- "HTTP command routing" could mean one URL per command or one dispatcher; resolved: single **`POST`** path with **`command`** JSON discriminant (**Host Control Companion HTTP Contract**).
+- "LAN JSON response shape" could differ per endpoint; resolved: **VitaDeck LAN JSON Result** generalizes **`ok`** plus success fields vs **`code`**/**`message`** failures across **Runtime Upload POST** and **Host Control Companion** **`POST /v1/command`**.
+- "Host control authentication" could imply tokens or pairing secrets; resolved: **Host Control Trusted LAN** — operator-entered LAN IPs only for iteration zero, no mandatory credentials on **`POST /v1/command`**.
+- "Where the desktop control address lives" could mean each **Deck App** owns its own hard-coded address; resolved: the **Host Control Address Setting** is managed by the **VitaDeck Shell** and can provide the default **Host Control Console Address**.
 - "app list order" could mean install order, recent use, or arbitrary; resolved: **Shell Home Screen** sorts by manifest **`name`** (case-insensitive), tie-break **Deck App Package Name**.

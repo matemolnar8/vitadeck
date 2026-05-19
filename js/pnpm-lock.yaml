@@ -114,6 +114,22 @@ importers:
         specifier: 7.0.0-dev.20260501.1
         version: 7.0.0-dev.20260501.1
 
+  examples/host-control:
+    dependencies:
+      '@vitadeck/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.28
+        version: 18.3.28
+      '@typescript/native-preview':
+        specifier: 7.0.0-dev.20260501.1
+        version: 7.0.0-dev.20260501.1
+
   examples/minesweeper:
     dependencies:
       '@vitadeck/sdk':
@@ -145,6 +161,19 @@ importers:
       '@typescript/native-preview':
         specifier: 7.0.0-dev.20260501.1
         version: 7.0.0-dev.20260501.1
+
+  packages/host-control-companion:
+    dependencies:
+      '@vitadeck/sdk':
+        specifier: workspace:*
+        version: link:../sdk
+    devDependencies:
+      '@types/node':
+        specifier: ^25.6.0
+        version: 25.6.0
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
 
   packages/runtime:
     dependencies:

@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "prepare": "pnpm --filter @vitadeck/sdk run build",
-    "build": "pnpm --filter @vitadeck/sdk build && pnpm --filter \"./examples/*\" build && pnpm --filter @vitadeck/runtime build && pnpm copy:active-deck-app",
+    "build": "pnpm --filter @vitadeck/sdk build && pnpm --filter @vitadeck/host-control-companion build && pnpm --filter \"./examples/*\" build && pnpm --filter @vitadeck/runtime build && pnpm copy:active-deck-app",
     "build:prod": "NODE_ENV=production pnpm build",
     "copy:active-deck-app": "tsx scripts/copy-active-deck-app.ts",
-    "tsc": "pnpm --filter @vitadeck/sdk tsc && pnpm --filter @vitadeck/runtime tsc && pnpm --filter \"./examples/*\" tsc && tsgo -p tsconfig.scripts.json",
+    "tsc": "pnpm --filter @vitadeck/sdk tsc && pnpm --filter @vitadeck/host-control-companion tsc && pnpm --filter @vitadeck/runtime tsc && pnpm --filter \"./examples/*\" tsc && tsgo -p tsconfig.scripts.json",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "format": "oxfmt",

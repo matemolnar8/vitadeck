@@ -1,4 +1,9 @@
-// JS bindings for instance tree operations
+#include <stdlib.h>
+#include <string.h>
+#include "quickjs.h"
+#include "stb_ds.h"
+#include "ui/instance_tree.h"
+#include "jslib_internal.h"
 
 static JSValue native_create_rect(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
@@ -460,7 +465,7 @@ static JSValue native_clear_container(JSContext *ctx, JSValueConst this_val, int
     return JS_UNDEFINED;
 }
 
-void register_instance_tree(JSContext *ctx)
+void register_js_instance_tree(JSContext *ctx)
 {
     js_set_global_function(ctx, "nativeCreateRect", native_create_rect, 16);
     js_set_global_function(ctx, "nativeCreateText", native_create_text, 8);
