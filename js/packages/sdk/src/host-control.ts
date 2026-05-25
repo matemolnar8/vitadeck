@@ -82,12 +82,9 @@ export type HostControlClient = {
   sleepDisplays(): Promise<VitaDeckLanJsonResult>;
 };
 
-let nextNativeRequestId = 1;
-
 type HostControlNativeGlobals = {
   nativeGetHostControlBaseUrl?: () => string;
-  nativeHostControlHttpPostJson?: (requestId: number, url: string, body: string, timeoutMs: number) => void;
-  nativeTakeHostControlHttpResponse?: (requestId: number) => string | null;
+  nativeHostControlFetch?: (url: string, body: string, timeoutMs: number) => Promise<string>;
 };
 
 function nativeGlobals(): HostControlNativeGlobals {
@@ -103,37 +100,27 @@ function getDefaultBaseUrl(): string {
   return native.nativeGetHostControlBaseUrl?.() ?? "";
 }
 
-function nativeTransport({ url, body, timeoutMs }: Parameters<HostControlTransport>[0]) {
-  return new Promise<HostControlTransportResponse>((resolve, reject) => {
-    const native = nativeGlobals();
-    if (!native.nativeHostControlHttpPostJson || !native.nativeTakeHostControlHttpResponse) {
-      reject(new Error("Host Control native HTTP transport is unavailable."));
-      return;
-    }
+type NativeTransportEnvelope = HostControlTransportResponse & { error?: string };
 
-    const requestId = nextNativeRequestId++;
-    native.nativeHostControlHttpPostJson(requestId, url, body, timeoutMs);
+async function nativeTransport({ url, body, timeoutMs }: Parameters<HostControlTransport>[0]) {
+  const native = nativeGlobals();
+  if (!native.nativeHostControlFetch) {
+    throw new Error("Host Control native HTTP transport is unavailable.");
+  }
 
-    const poll = () => {
-      const raw = native.nativeTakeHostControlHttpResponse?.(requestId) ?? null;
-      if (raw === null) {
-        setTimeout(poll, 16);
-        return;
-      }
+  const raw = await native.nativeHostControlFetch(url, body, timeoutMs);
+  let envelope: NativeTransportEnvelope;
+  try {
+    envelope = JSON.parse(raw) as NativeTransportEnvelope;
+  } catch {
+    throw new Error("Host Control native HTTP transport returned malformed JSON.");
+  }
 
-      try {
-        const response = JSON.parse(raw) as HostControlTransportResponse & { error?: string };
-        if (response.error) {
-          reject(new Error(response.error));
-          return;
-        }
-        resolve({ status: response.status, body: response.body });
-      } catch {
-        reject(new Error("Host Control native HTTP transport returned malformed JSON."));
-      }
-    };
-    setTimeout(poll, 16);
-  });
+  if (envelope.error) {
+    throw new Error(envelope.error);
+  }
+
+  return { status: envelope.status, body: envelope.body };
 }
 
 function parseResult<T extends object>(response: HostControlTransportResponse): VitaDeckLanJsonResult<T> {
