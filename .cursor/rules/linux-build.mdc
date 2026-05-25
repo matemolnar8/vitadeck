@@ -1,0 +1,23 @@
+---
+alwaysApply: true
+description: Linux / Cursor Cloud build instructions for native development
+---
+# Linux Build Steps
+
+Build the project natively on Linux (including Cursor Cloud VMs).
+
+- Configure: `CC=gcc CXX=g++ cmake -S . -B out -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group"`
+- Build: `cmake --build out`
+- Run: `cd out && ./vitadeck` (must run from `out/` so the binary finds `js/runtime.js` copied there by CMake)
+- The `--start-group` linker flag is required on Linux/GCC because the default library ordering causes unresolved `libm` symbols from QuickJS. Not needed on macOS.
+- Upload Deck Apps while the Upload screen is active: `curl -X POST http://localhost:8787/upload -F archive=@path/to/app.vdapp.zip`
+
+System dependencies (pre-installed on Cloud VMs, not in the update script):
+- raylib 5.5 (built from source)
+- `libcurl4-openssl-dev`, `libssl-dev`, `zlib1g-dev`
+- `libgl-dev`, `libegl-dev`, `libx11-dev` and related X11/Wayland dev packages
+- `gcc`, `g++`
+
+Git submodules: QuickJS lives at `vendor/quickjs`. Run `git submodule update --init --recursive` if the directory is empty.
+
+For JavaScript runtime build instructions, see [js-runtime-build.mdc](mdc:.cursor/rules/js-runtime-build.mdc).
