@@ -109,16 +109,20 @@ The macOS keyboard key that maps to Circle back in **Shell Face Input** while th
 _Avoid_: Browser back, undo typing in **Deck Apps**, delete file shortcuts
 
 **LAN HTTP Listener**:
-The VitaDeck-owned HTTP server on the LAN that multiplexes **Runtime Upload** and **Host Control** routes on one bound port for the lifetime of a Vitadeck session. The user does not turn it on or off from the **VitaDeck Shell**; Vitadeck starts it when the session begins and keeps it running until exit, except when **LAN HTTP Listener Recovery** stops and restarts it because the network is unavailable or binding failed.
-_Avoid_: Shell upload toggle, per-feature enable switches, separate upload and host ports by default
+The VitaDeck-owned HTTP server on the LAN that multiplexes **Runtime Upload** and **Host Control** routes on one bound port for the lifetime of a Vitadeck process—from launch until the user quits Vitadeck. The user does not turn it on or off from the **VitaDeck Shell**; it keeps running while a **Deck App** owns the **Render Surface** (Shell hidden) as well as while the **VitaDeck Shell** is visible.
+_Avoid_: Shell upload toggle, per-feature enable switches, listener scoped only to Shell visibility
 
 **LAN HTTP URL**:
-The `http://IP:PORT/` address of the bound **LAN HTTP Listener**, shown in the **VitaDeck Shell** when the listener is listening, using a LAN-reachable **IP** and the **PORT** actually bound.
+The `http://IP:PORT/` address of the bound **LAN HTTP Listener**, using a LAN-reachable **IP** and the **PORT** actually bound.
 _Avoid_: Host computer URL, FTP URL, deep link
 
+**Shell LAN Strip**:
+The permanent **VitaDeck Shell** area on the **Shell Home Screen** that always shows the **LAN HTTP URL** and listener status (listening or bind failure), for browser **Runtime Upload** and **Host Control Companion** pairing without a start/stop control.
+_Avoid_: Upload server toggle, hidden network submenu, URL only on a separate screen
+
 **LAN HTTP Listener Recovery**:
-When the **LAN HTTP Listener** cannot stay bound or reachable on the LAN (no network, interface down, or port bind failure), Vitadeck stops or avoids the listener and retries until the network is usable again. This is the only intended stop/start cycle—not a user-facing off switch.
-_Avoid_: Manual server toggle, Shell Upload Cancel stopping the listener, disabling Host Control from Shell
+Automatic stop and restart of the **LAN HTTP Listener** when the network is unavailable or binding fails, with retry until service is restored. Optional future hardening; initial implementation may only surface bind failure without retry.
+_Avoid_: Manual server toggle, treating recovery as required for the first ship
 
 **Host Control**:
 The Vitadeck capability for **Deck Apps** to ask a nearby computer on the LAN to run actions through a **Host Control Companion**, using **Host Control** routes on the **LAN HTTP Listener**.
@@ -498,10 +502,10 @@ _Avoid_: Click, mouse down, mouse up, hover
 > **Domain expert:** "Alphabetical by **`name`** in **Deck App Package Manifest**, case-insensitive, with **Deck App Package Name** as a stable tie-break."
 >
 > **Dev:** "If Host Control shares the upload HTTP port, does the server run all the time?"
-> **Domain expert:** "Yes for a Vitadeck session — one **LAN HTTP Listener** stays up while the network works. The user doesn't flip it off in Shell; only **LAN HTTP Listener Recovery** stops and restarts it when the network fails."
+> **Domain expert:** "Yes — one **LAN HTTP Listener** from Vitadeck launch until quit, including while a **Deck App** is fullscreen. No Shell toggle. **LAN HTTP Listener Recovery** can come later."
 >
-> **Dev:** "Should Upload on Shell Home still say 'Confirm to start server'?"
-> **Domain expert:** "No — Shell shows the **LAN HTTP URL** and status (listening vs recovering), not an on/off toggle."
+> **Dev:** "Where does the user read the Vita IP for the host companion?"
+> **Domain expert:** "The **Shell LAN Strip** on **Shell Home Screen** — always visible: **LAN HTTP URL** and status, no start/stop toggle."
 
 ## Flagged ambiguities
 
