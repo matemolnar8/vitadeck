@@ -76,7 +76,7 @@ Three families of designs:
 - **Pros:** Flexible latency (persistent channel).
 - **Cons:** More state on both sides; harder to explain in CONTEXT.md.
 
-**Lifecycle (resolved):** One **LAN HTTP Listener** (shared port, path routing). Runs **continuously** for a Vitadeck session while the network allows. No Shell on/off toggle; **LAN HTTP Listener Recovery** only when network or bind fails. Shell shows **LAN HTTP URL** and status, not "start server."
+**Lifecycle (resolved):** One **LAN HTTP Listener** (shared port, path routing). Starts at Vitadeck launch, stops at quit—including while a **Deck App** is active and Shell is hidden. No Shell on/off toggle. **LAN HTTP Listener Recovery** (retry on network failure) is **deferred**; first ship may only show bind failure. Shell shows **LAN HTTP URL** when bound, not "start server."
 
 **Transport (resolved):** **B-HTTP** long-poll first on the shared listener; optional **B-WS** later. Parse layer: **picohttpparser** (Vita cross-compile confirmed).
 

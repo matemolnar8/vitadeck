@@ -141,8 +141,8 @@ The **Runtime Upload Listener** author-facing HTTP surface is **`GET /`** for th
 _Avoid_: Public REST catalog, mandatory OpenAPI, extension plugin routes
 
 **Runtime Upload URL**:
-The **LAN HTTP URL** while **Runtime Upload Enablement** is on, used to reach the **Runtime Upload Web UI** in a browser.
-_Avoid_: FTP URL, deep link, marketplace URL, host companion address
+The **LAN HTTP URL** used to reach the **Runtime Upload Web UI** in a browser while the **LAN HTTP Listener** is listening.
+_Avoid_: FTP URL, deep link, marketplace URL, host-only address
 
 **Runtime Upload POST**:
 The HTTP `POST /upload` endpoint on the **Runtime Upload Listener** that ingests a **Runtime Upload Archive** as either `multipart/form-data` (browser-primary) or `application/zip` (automation-friendly). For `multipart/form-data`, the file part field name is **`archive`** (single file part per request). Responses are always JSON (`Content-Type: application/json`): on success, `ok: true` plus **`packageName`** (**Deck App Package Name**) and **`version`** (**Deck App Package Version**); on failure, `ok: false` plus a short machine **`code`** and human **`message`**. Typical HTTP statuses include **200** success, **413** over **Runtime Upload Limits**, **400** malformed request body, **415** unsupported `Content-Type`, **422** archive layout or manifest validation failure, and **409** when **Runtime Upload Single-Flight** rejects a concurrent ingest.
@@ -274,12 +274,13 @@ _Avoid_: Click, mouse down, mouse up, hover
 - A **Deck App Component** explicitly renders **Screen**.
 - **Button** is the only public interactable UI component in the MVP.
 - **Button** exposes press-oriented callbacks: `onPress`, `onPressStart`, and `onPressEnd`.
-- **Runtime Upload** and **Host Control** share one **LAN HTTP Listener** on one port; route families differ, not separate always-on servers.
-- The **LAN HTTP Listener** binds only when **Runtime Upload Enablement** and/or **Host Control Enablement** is on in the **VitaDeck Shell**; turning off the last enabled feature stops the listener.
-- The **LAN HTTP Listener** is not a background daemon while the user only plays a **Deck App** with neither feature enabled.
-- **Runtime Upload Enablement** and **Host Control Enablement** are independent shell toggles; either can be on without the other.
-- The **LAN HTTP URL** is the single address shown for pairing and upload while the listener runs.
-- **Runtime Upload** uses **Runtime Upload Listener** routes on the **LAN HTTP Listener** when **Runtime Upload Enablement** is on.
+- **Runtime Upload** and **Host Control** share one **LAN HTTP Listener** on one port; route families differ, not separate servers.
+- The **LAN HTTP Listener** starts when Vitadeck launches and stops when Vitadeck exits; the user does not start or stop it from Shell.
+- The **LAN HTTP Listener** remains up while the **VitaDeck Shell** is hidden and a **Deck App** is active.
+- **LAN HTTP Listener Recovery** is optional later work; first ship may only report bind failure without automatic retry.
+- The **LAN HTTP URL** is the single address for browser upload and **Host Control Companion** pairing while listening.
+- **Runtime Upload** uses **Runtime Upload Listener** routes on the always-shared **LAN HTTP Listener**.
+- **Host Control** uses its route family on the same **LAN HTTP Listener** whenever it is listening.
 - The **LAN HTTP Listener** listens on all interfaces with default port **8787** and falls forward to following ports until one binds or **10** attempts fail; the **LAN HTTP URL** reflects the bound port when binding succeeds.
 - If all **10** listen attempts fail, the **Shell Upload Screen** shows a bind-failure state (no **Runtime Upload URL**, no **Runtime Upload Web UI**); **Shell Upload Cancel** returns to **Shell Home Screen** without an in-screen retry control.
 - **Runtime Upload** primary author interaction is the **Runtime Upload Web UI** served locally by the **Runtime Upload Listener**.
@@ -497,10 +498,10 @@ _Avoid_: Click, mouse down, mouse up, hover
 > **Domain expert:** "Alphabetical by **`name`** in **Deck App Package Manifest**, case-insensitive, with **Deck App Package Name** as a stable tie-break."
 >
 > **Dev:** "If Host Control shares the upload HTTP port, does the server run all the time?"
-> **Domain expert:** "No — one **LAN HTTP Listener**, but it only binds when the user turns on **Runtime Upload Enablement** and/or **Host Control Enablement** in the Shell. Playing a **Deck App** with both off means no LAN server."
+> **Domain expert:** "Yes for a Vitadeck session — one **LAN HTTP Listener** stays up while the network works. The user doesn't flip it off in Shell; only **LAN HTTP Listener Recovery** stops and restarts it when the network fails."
 >
-> **Dev:** "Can I upload a Deck App without enabling Host Control?"
-> **Domain expert:** "Yes — enablements are independent; only the enabled route families are meaningful while the listener is up."
+> **Dev:** "Should Upload on Shell Home still say 'Confirm to start server'?"
+> **Domain expert:** "No — Shell shows the **LAN HTTP URL** and status (listening vs recovering), not an on/off toggle."
 
 ## Flagged ambiguities
 
@@ -536,9 +537,10 @@ _Avoid_: Click, mouse down, mouse up, hover
 - "`Start` input" is not Deck App input; resolved: it is **Start Input** (**System Input**) reserved for VitaDeck, mapped on macOS via **Host Start Mapping** (F1), toggling between the **Deck App** and **VitaDeck Shell** except on the **Shell Upload Screen**.
 - "cancel upload" could mean leaving the Shell entirely; resolved: **Shell Upload Cancel** returns to **Shell Home Screen** while keeping the Shell open.
 - "cancel control" could imply a host keyboard binding; resolved: **Shell Upload Cancel** is on-screen only on macOS at first.
-- "HTTP server on Vita" could imply an always-on network service; resolved: use a **LAN HTTP Listener** started only when **Runtime Upload Enablement** and/or **Host Control Enablement** is on in the **VitaDeck Shell**, stopped when all are off (not a background daemon during normal **Deck App** play).
-- "shared listener" could imply always-on; resolved: one **LAN HTTP Listener** multiplexes routes, but enablement stays explicit like today's upload toggle.
+- "HTTP server on Vita" could imply a user toggle or a global OS daemon; resolved: **LAN HTTP Listener** runs for the Vitadeck process lifetime (launch to quit), including hidden Shell; **LAN HTTP Listener Recovery** deferred.
+- "shared listener" could imply optional features; resolved: one listener, always multiplexing **Runtime Upload** and **Host Control** routes when listening—not per-feature enable switches.
 - "Runtime Upload Listener" vs **LAN HTTP Listener** could imply two servers; resolved: **Runtime Upload Listener** is the upload route family on the shared **LAN HTTP Listener**.
+- "Shell upload toggle" vs continuous listener; resolved: superseded—upload row shows **LAN HTTP URL** / status, not start/stop (see implementation migration from current toggle build).
 - "upload server API" could sprawl into many routes; resolved: **Runtime Upload HTTP Contract** — **`GET /`** + Web UI assets and **`POST /upload`** only as the documented surface; **404**/**405** as above; no health endpoint initially.
 - "upload URL" could hide port collisions or loopback-only binds; resolved: **Runtime Upload URL** uses LAN IP and the port actually bound; default **8787** with consecutive fallback up to **10** attempts; all interfaces.
 - "ports exhausted" could leave the user stuck or imply auto-retry; resolved: **Shell Upload Screen** bind-failure state, no URL, **Shell Upload Cancel** only (no required in-screen retry).
