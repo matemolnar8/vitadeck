@@ -128,9 +128,17 @@ _Avoid_: Manual server toggle, treating recovery as required for the first ship
 The Vitadeck capability for **Deck Apps** to ask a nearby computer on the LAN to run actions through a **Host Control Companion**, using **Host Control** routes on the **LAN HTTP Listener**.
 _Avoid_: Runtime Upload, USB control, cloud remote desktop
 
+**Host Control Unavailable**:
+The state where a **Deck App** invokes **Host Control** through the **VitaDeck Runtime API** but no **Host Control Companion** session is connected to accept work. Vitadeck fails the call immediately with a typed error; the **Deck App** decides how to present that to the user.
+_Avoid_: Vita-side request queue, silent no-ops, automatic retries inside Vitadeck for Deck App calls
+
 **Host Control Companion**:
-The program on the user’s computer that connects to the **LAN HTTP URL** and executes **Host Control** commands on that machine.
-_Avoid_: VitaDeck runtime, Deck App Package, browser upload client
+The program on the user’s computer that connects to the **LAN HTTP URL** and executes **Host Control** commands on that machine. It **automatically reconnects** to the Vita when the session drops while Vitadeck is running and the **LAN HTTP Listener** is listening.
+_Avoid_: VitaDeck runtime, Deck App Package, browser upload client, manual reconnect-only tooling
+
+**Host Control LAN Trust**:
+The initial **Host Control** security model: any peer on the local network may use **Host Control** routes while the **LAN HTTP Listener** is up, with no pairing token—same trust class as initial **Runtime Upload**. Optional future hardening may mirror **Upload Pairing**.
+_Avoid_: Account login, internet-wide access, per-command user approval on the Vita
 
 **Runtime Upload Listener**:
 The **Runtime Upload** routes on the **LAN HTTP Listener** (including the **Runtime Upload Web UI** and **Runtime Upload POST**). Not a separate server process from **Host Control** routes.
@@ -286,11 +294,14 @@ _Avoid_: Click, mouse down, mouse up, hover
 - The **Shell LAN Strip** permanently displays the **LAN HTTP URL** and status on the **Shell Home Screen**.
 - **Runtime Upload** uses **Runtime Upload Listener** routes on the always-shared **LAN HTTP Listener**.
 - **Host Control** uses its route family on the same **LAN HTTP Listener** whenever it is listening.
+- **Host Control** initially uses **Host Control LAN Trust** (open LAN, no pairing token).
+- The **Host Control Companion** maintains an automatic session to the **LAN HTTP URL** and reconnects after drops without requiring the user to re-enter the Vita address each time.
 - The **LAN HTTP Listener** listens on all interfaces with default port **8787** and falls forward to following ports until one binds or **10** attempts fail; the **LAN HTTP URL** reflects the bound port when binding succeeds.
 - If all **10** listen attempts fail, the **Shell Upload Screen** shows a bind-failure state (no **Runtime Upload URL**, no **Runtime Upload Web UI**); **Shell Upload Cancel** returns to **Shell Home Screen** without an in-screen retry control.
 - **Runtime Upload** primary author interaction is the **Runtime Upload Web UI** served locally by the **Runtime Upload Listener**.
 - The **Runtime Upload HTTP Contract** limits documented listener behavior to **`GET /`** (and required same-origin Web UI assets) and **`POST /upload`**; other paths **404**, wrong method on **`/upload`** **405**; no **GET /health**-style probe in the initial **Runtime Upload** iteration.
 - Initial **Runtime Upload** trusts the local network; **Upload Pairing** is optional future hardening.
+- Initial **Host Control** uses **Host Control LAN Trust**; optional future pairing may mirror **Upload Pairing**.
 - **Runtime Upload** accepts exactly one **Runtime Upload Archive** per request via **Runtime Upload POST**, using `multipart/form-data` for browsers (file field **`archive`**) and `application/zip` for simple HTTP clients.
 - **Runtime Upload POST** returns JSON only: success includes **`packageName`** and **`version`**; failures include **`code`** and **`message`**, with HTTP status reflecting the error class.
 - **Runtime Upload Single-Flight** applies to **Runtime Upload POST**: concurrent ingests get **409** and no queue.
