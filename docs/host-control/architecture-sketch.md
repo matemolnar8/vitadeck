@@ -105,10 +105,16 @@ Additional fields likely needed for async/persistent transports: `requestId`, `p
 - Companion imports the same definitions + platform implementations.
 - Deck Apps call typed helpers, e.g. `hostControl.launchApp({ path })` generated from registry — exact export path TBD.
 
-## Security posture (initial)
+## Security posture (resolved)
 
-- Same trust class as **Runtime Upload**: LAN-only, no crypto in v1; optional future **pairing token** (analogous to **Upload Pairing**).
+- **Host Control LAN Trust** for v1: open LAN, no pairing token (same class as initial **Runtime Upload**). Optional **Upload Pairing**-style hardening later.
 - Fail closed on malformed input; size limits on bodies.
+
+## Host companion session (resolved)
+
+- **Host Control Companion** connects to **LAN HTTP URL** at startup (user-configured Vita address).
+- **Automatic reconnection** when the session drops while Vitadeck and the listener remain up; user does not re-pair on every disconnect.
+- **LAN HTTP Listener Recovery** on the Vita remains deferred; reconnect is companion-driven first.
 
 ## Background host app
 
