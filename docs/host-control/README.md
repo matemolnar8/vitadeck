@@ -11,6 +11,8 @@ This folder holds planning material for a **fresh** implementation. Prior work o
 | [overview.md](./overview.md) | Goals, non-goals, glossary hooks, success criteria |
 | [architecture-sketch.md](./architecture-sketch.md) | Layering, open decisions, options vs `host-control-companion` |
 | [implementation-phases.md](./implementation-phases.md) | Suggested delivery order (contract → companion → Vita → SDK) |
+| [topology-comparison.md](./topology-comparison.md) | A / B / C comparison (topology **B** chosen) |
+| [vita-http-server-libraries.md](./vita-http-server-libraries.md) | HTTP server library research for Vita listener |
 
 ## Related domain language
 
