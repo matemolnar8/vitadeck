@@ -116,6 +116,11 @@ Additional fields likely needed for async/persistent transports: `requestId`, `p
 - **Automatic reconnection** when the session drops while Vitadeck and the listener remain up; user does not re-pair on every disconnect.
 - **LAN HTTP Listener Recovery** on the Vita remains deferred; reconnect is companion-driven first.
 
+## Deck App errors (resolved)
+
+- No Vita-side command queue for **Host Control** in v1.
+- **Host Control Unavailable** → SDK fails fast with typed error; **Deck App** handles UI.
+
 ## Background host app
 
 - Node.js CLI with `start` / `stop` or single long-running process.
