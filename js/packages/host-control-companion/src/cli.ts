@@ -1,15 +1,17 @@
 #!/usr/bin/env node
-import { createHostActionProvider } from "./actions.js";
-import { startHostControlServer } from "./server.js";
+import { createDefaultGateway, startHostControlServer } from "./server.js";
 
-const actions = createHostActionProvider();
+const gateway = createDefaultGateway();
 
 try {
-  const { url } = await startHostControlServer(actions);
+  const { url } = await startHostControlServer(gateway);
   console.log("VitaDeck Host Control Companion");
   console.log(`Host Control Console Address: ${url}`);
   console.log("Endpoint: POST /v1/command");
-  console.log(`Supported OS commands: ${actions.supportedCommands().join(", ") || "none"}`);
+  const osCommands = gateway
+    .availableCommands()
+    .filter((command) => command !== "host.capabilities" && command !== "host.echo");
+  console.log(`Supported OS commands: ${osCommands.join(", ") || "none"}`);
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;

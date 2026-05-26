@@ -9,6 +9,7 @@
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",
     "tsc": "tsgo -p tsconfig.json",
+    "test": "node --import tsx --test src/**/*.test.ts",
     "start": "tsx src/cli.ts"
   },
   "dependencies": {
