@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",
     "tsc": "tsgo -p tsconfig.json",
-    "test": "node --import tsx --test src/**/*.test.ts",
+    "test": "pnpm --filter @vitadeck/sdk test",
     "start": "tsx src/cli.ts"
   },
   "dependencies": {

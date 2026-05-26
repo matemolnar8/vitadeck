@@ -5,17 +5,18 @@ import {
   HOST_CONTROL_DEFAULT_PORT,
   HOST_CONTROL_PORT_TRIES,
   HOST_CONTROL_REQUEST_MAX_BYTES,
+  hostControlFailure,
   type HostControlRequest,
+  type createHostControlGateway,
 } from "@vitadeck/sdk/host-control";
-
-import { hostControlFailure } from "../lan-json.js";
-import type { HostControlGateway } from "./types.js";
 
 export type HostControlServer = {
   server: http.Server;
   port: number;
   url: string;
 };
+
+type HostControlGateway = ReturnType<typeof createHostControlGateway>;
 
 function statusText(status: number): string {
   return (

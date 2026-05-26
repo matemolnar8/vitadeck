@@ -1,20 +1,12 @@
 import os from "node:os";
 
-import { createHostControlGateway } from "../gateway/registry.js";
-import type { HostControlGateway } from "../gateway/types.js";
-import { createBuiltinHandlers, withHostIdentity } from "./builtin.js";
-import { createPlatformHandlers } from "./platform.js";
+import { createHostControlGateway, hostControlCommands } from "@vitadeck/sdk/host-control";
 
-export function createDefaultGateway(): HostControlGateway {
-  const context = { platform: process.platform, hostName: os.hostname() };
-  const platformHandlers = createPlatformHandlers();
-  let gateway: HostControlGateway;
+import { hostControlImplementations } from "../implementations.js";
 
-  const builtin = withHostIdentity(
-    createBuiltinHandlers(() => gateway.availableCommands()),
-    context,
-  );
-
-  gateway = createHostControlGateway([...builtin, ...platformHandlers], context);
-  return gateway;
+export function createDefaultGateway() {
+  return createHostControlGateway(hostControlCommands, hostControlImplementations, {
+    platform: process.platform,
+    hostName: os.hostname(),
+  });
 }
