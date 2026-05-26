@@ -283,6 +283,7 @@ _Avoid_: Click, mouse down, mouse up, hover
 - The **LAN HTTP Listener** remains up while the **VitaDeck Shell** is hidden and a **Deck App** is active.
 - **LAN HTTP Listener Recovery** is optional later work; first ship may only report bind failure without automatic retry.
 - The **LAN HTTP URL** is the single address for browser upload and **Host Control Companion** pairing while listening.
+- The **Shell LAN Strip** permanently displays the **LAN HTTP URL** and status on the **Shell Home Screen**.
 - **Runtime Upload** uses **Runtime Upload Listener** routes on the always-shared **LAN HTTP Listener**.
 - **Host Control** uses its route family on the same **LAN HTTP Listener** whenever it is listening.
 - The **LAN HTTP Listener** listens on all interfaces with default port **8787** and falls forward to following ports until one binds or **10** attempts fail; the **LAN HTTP URL** reflects the bound port when binding succeeds.
