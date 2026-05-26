@@ -101,6 +101,7 @@ set(VITADECK_SOURCES
     src/shell/shell.c
     src/upload/archive.c
     src/upload/http_server.c
+    src/net/http_parse.c
     vendor/picohttpparser/picohttpparser.c
     ${PLATFORM_SOURCES}
 )

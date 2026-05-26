@@ -1,9 +1,24 @@
-import { Rect, Screen, Text, insetContent, useTheme } from "@vitadeck/sdk";
-import React from "react";
+import { Button, Rect, Screen, Text, hostControl, insetContent, useTheme } from "@vitadeck/sdk";
+import React, { useState } from "react";
 
 export default function App() {
   const { theme } = useTheme();
   const { x, y, width, height } = insetContent();
+  const [hostStatus, setHostStatus] = useState("Host: not tested");
+
+  async function testHostEcho() {
+    setHostStatus("Host: calling echo...");
+    try {
+      const result = await hostControl.command("host.echo", { from: "default-deck-app" });
+      if (result.ok) {
+        setHostStatus(`Host: echo ok @ ${result.receivedAt}`);
+      } else {
+        setHostStatus(`Host: ${result.code}`);
+      }
+    } catch (error) {
+      setHostStatus(`Host: ${error instanceof Error ? error.message : "error"}`);
+    }
+  }
 
   return (
     <Screen>
@@ -11,6 +26,22 @@ export default function App() {
         <Text fontSize={28} color={theme.text}>
           Hello from default
         </Text>
+        <Text fontSize={18} color={theme.text}>
+          {hostStatus}
+        </Text>
+        <Button
+          x={x + 20}
+          y={y + 120}
+          width={320}
+          height={56}
+          color={theme.primary}
+          textColor={theme.navText}
+          label="Host echo"
+          onPress={() => {
+            void testHostEcho();
+          }}
+          borderRadius={0.1}
+        />
       </Rect>
     </Screen>
   );
