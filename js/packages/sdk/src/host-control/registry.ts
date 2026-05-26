@@ -36,6 +36,24 @@ export const hostControlCommands = defineHostControlCommands({
   "host.power.sleep_displays": cmd<undefined, Record<string, never>>({
     validatePayload: noPayloadOrEmptyObject,
   }),
+  "host.media.play_pause": cmd<undefined, Record<string, never>>({
+    validatePayload: noPayloadOrEmptyObject,
+  }),
+  "host.media.next": cmd<undefined, Record<string, never>>({
+    validatePayload: noPayloadOrEmptyObject,
+  }),
+  "host.media.previous": cmd<undefined, Record<string, never>>({
+    validatePayload: noPayloadOrEmptyObject,
+  }),
+  "host.media.volume_up": cmd<undefined, Record<string, never>>({
+    validatePayload: noPayloadOrEmptyObject,
+  }),
+  "host.media.volume_down": cmd<undefined, Record<string, never>>({
+    validatePayload: noPayloadOrEmptyObject,
+  }),
+  "host.media.mute": cmd<undefined, Record<string, never>>({
+    validatePayload: noPayloadOrEmptyObject,
+  }),
 });
 
 export type HostControlCommand = (typeof hostControlCommands.commandNames)[number];

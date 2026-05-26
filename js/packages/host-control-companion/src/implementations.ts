@@ -8,7 +8,22 @@ import {
   type HostControlImplementationsFor,
 } from "@vitadeck/sdk/host-control";
 
+import { pressMediaKey, type MediaKeyAction } from "./media-keys.js";
+
 const execFileAsync = promisify(execFile);
+
+function mediaCommand(action: MediaKeyAction) {
+  return {
+    linux: async () => {
+      await pressMediaKey("linux", action);
+      return {};
+    },
+    darwin: async () => {
+      await pressMediaKey("darwin", action);
+      return {};
+    },
+  };
+}
 
 /**
  * Per-command platform implementations. Add OS keys on the same command — not grouped by OS file.
@@ -34,7 +49,11 @@ export const hostControlImplementations = defineHostControlImplementations(hostC
       await execFileAsync("pmset", ["displaysleepnow"]);
       return {};
     },
-    // Example: add linux when a safe impl exists
-    // linux: async () => { ... return {}; },
   },
+  "host.media.play_pause": mediaCommand("play_pause"),
+  "host.media.next": mediaCommand("next"),
+  "host.media.previous": mediaCommand("previous"),
+  "host.media.volume_up": mediaCommand("volume_up"),
+  "host.media.volume_down": mediaCommand("volume_down"),
+  "host.media.mute": mediaCommand("mute"),
 } satisfies HostControlImplementationsFor<typeof hostControlCommands.definitions>);
