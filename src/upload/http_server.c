@@ -69,33 +69,6 @@ static void send_response(int fd, int status, const char *status_text, const cha
     send(fd, body, (size_t)body_len, 0);
 }
 
-static void drain_request_headers(int fd)
-{
-    char buffer[1024];
-    char window[4] = {0};
-    int window_len = 0;
-
-    while (true) {
-        ssize_t n = recv(fd, buffer, sizeof(buffer), 0);
-        if (n <= 0) return;
-        for (ssize_t i = 0; i < n; i++) {
-            if (window_len < 4) {
-                window[window_len++] = buffer[i];
-            } else {
-                memmove(window, window + 1, 3);
-                window[3] = buffer[i];
-            }
-            if (window_len == 4 && memcmp(window, "\r\n\r\n", 4) == 0) return;
-        }
-    }
-}
-
-static void send_simple_response(int fd, int status, const char *status_text, const char *content_type, const char *body)
-{
-    drain_request_headers(fd);
-    send_response(fd, status, status_text, content_type, body);
-}
-
 static void send_json_error(int fd, int status, const char *code, const char *message)
 {
     char body[512];
