@@ -25,6 +25,7 @@ static void js_set_global_function(JSContext *ctx, const char *name, JSCFunction
 #include "colors.c"
 #include "timeout.c"
 #include "log.c"
+#include "../net/host_control.c"
 
 static JSValue js_get_time(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
 	(void)this_val; (void)argc; (void)argv;
@@ -142,4 +143,6 @@ void register_js_lib(JSContext *ctx) {
 	js_set_global_function(ctx, "nativeReadTextFile", js_native_read_text_file, 1);
 	js_set_global_function(ctx, "nativeEvalFile", js_native_eval_file, 1);
 	js_set_global_function(ctx, "nativeGetActiveDeckAppPath", js_native_get_active_deck_app_path, 0);
+	js_set_global_function(ctx, "nativeHostControlCommand", native_host_control_command, 3);
+	host_control_init();
 }

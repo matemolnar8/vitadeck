@@ -64,3 +64,6 @@ const runtimeColors = (globalThis as unknown as { Colors: ColorsMap }).Colors;
 export { runtimeColors as Colors, useTheme };
 export type { Theme, ThemeContextValue, ThemeName };
 export type { Color, ColorName, ColorsMap } from "./types";
+export { hostControl, createHostControlClient } from "./host-control/client.js";
+export type { HostControlClient } from "./host-control/client.js";
+export type { HostControlCommand, HostCapabilitiesResult, HostEchoResult } from "./host-control/registry.js";

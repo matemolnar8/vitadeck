@@ -4,13 +4,13 @@ Order assumes connection topology is chosen in phase 0. Adjust if grill resolves
 
 ## Phase 0 — Design lock (documents + CONTEXT)
 
-- [ ] Resolve connection topology (see [architecture-sketch.md](./architecture-sketch.md))
-- [ ] Add glossary terms to [CONTEXT.md](../../CONTEXT.md) (no implementation detail in glossary)
+- [x] Resolve connection topology (see [architecture-sketch.md](./architecture-sketch.md))
+- [x] Add glossary terms to [CONTEXT.md](../../CONTEXT.md)
 - [ ] ADR only if a decision is hard to reverse (e.g. WebSocket vs HTTP-only)
 
 ## Phase 1 — Contract in SDK
 
-- **`@vitadeck/sdk/host-control`** subpath exporting:
+- [x] **`@vitadeck/sdk/host-control`** subpath exporting:
   - `protocolVersion`, error codes, request/response types
   - `defineHostControlCommands` + `host.capabilities` + `host.echo`
 - Contract tests (parse/validate golden JSON fixtures)
@@ -18,7 +18,7 @@ Order assumes connection topology is chosen in phase 0. Adjust if grill resolves
 
 ## Phase 2 — Host companion (TS)
 
-- In-repo package `js/packages/host-control-companion` (workspace only, not npm publish v1)
+- [x] In-repo package `js/packages/host-control-companion` (workspace only, not npm publish v1)
 - Depends on `@vitadeck/sdk/host-control` subpath
 - CLI: `start` with **Host Control Companion Configuration** + `--vita` override
 - Implements gateway + command dispatch + auto-reconnect
@@ -26,14 +26,18 @@ Order assumes connection topology is chosen in phase 0. Adjust if grill resolves
 
 ## Phase 3 — Vitadeck native + shell
 
-- Listener or client per topology
+- [x] Shared listener routes `/v1/host/poll` and `/v1/host/result`
+- [x] Always-on listener from `shell_init`
+- [x] **Shell LAN Strip**
+- [x] Native `nativeHostControlCommand` bridge
+- [ ] picohttpparser integrated into request parsing (vendored; wire-up optional follow-up)
 - Shell surface: show Vita **Host Control** address when listener active (lifecycle TBD — may mirror **Runtime Upload Listener** or always-on when enabled)
 - Bridge: async host calls from Deck App JS without blocking render thread
 - Settings persistence only if topology requires Vita-side state
 
 ## Phase 4 — SDK + author API
 
-- Export typed `hostControl` (name TBD) from `@vitadeck/sdk`
+- [x] Export typed `hostControl` from `@vitadeck/sdk`
 - Example Deck App button that calls `host.echo` / reads capabilities
 - Documentation in SDK README
 

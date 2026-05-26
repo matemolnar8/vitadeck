@@ -6,6 +6,7 @@
 #include "quickjs.h"
 #include "core/event_queue.h"
 #include "jslib/jslib.h"
+#include "net/host_control.h"
 #include "platform/thread.h"
 #include "ui/input.h"
 #include "ui/instance_tree.h"
@@ -124,6 +125,7 @@ static void *js_thread_func(void *arg)
 
 	while (!runtime->stop_requested && !event_queue_is_shutdown()) {
 		process_input_events(ctx);
+		host_control_drain_completions(ctx, rt);
 		run_timeouts(ctx);
 		drain_microtasks(rt);
 		instance_tree_swap();
@@ -131,7 +133,10 @@ static void *js_thread_func(void *arg)
 	}
 
 defer:
-	if (ctx) JS_FreeContext(ctx);
+	if (ctx) {
+		host_control_shutdown(ctx);
+		JS_FreeContext(ctx);
+	}
 	if (rt) JS_FreeRuntime(rt);
 	return result;
 }

@@ -15,4 +15,10 @@ declare global {
     warn: (...args: unknown[]) => void;
     error: (...args: unknown[]) => void;
   };
+
+  function nativeHostControlCommand(
+    command: string,
+    payloadJson: string,
+    timeoutMs: number,
+  ): Promise<string>;
 }
