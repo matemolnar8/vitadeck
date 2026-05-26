@@ -132,6 +132,10 @@ _Avoid_: Runtime Upload, USB control, cloud remote desktop
 The state where a **Deck App** invokes **Host Control** through the **VitaDeck Runtime API** but no **Host Control Companion** session is connected to accept work. Vitadeck fails the call immediately with a typed error; the **Deck App** decides how to present that to the user.
 _Avoid_: Vita-side request queue, silent no-ops, automatic retries inside Vitadeck for Deck App calls
 
+**Host Control Long-Poll**:
+The initial **Host Control** transport on the **LAN HTTP Listener**: the **Host Control Companion** opens a blocking HTTP request that waits for work, then posts results, then polls again. Blocking I/O runs only on Vitadeck network threads and the companion process—not on the Vita render loop or the Deck App JavaScript thread.
+_Avoid_: Synchronous host calls from UI callbacks, WebSocket-only v1, polling the host from the main thread every frame
+
 **Host Control Companion**:
 The host-side program in the **Deck App Workspace** that connects to the **LAN HTTP URL** and executes **Host Control** commands on that computer. It is not published to npm in the initial iteration; it **automatically reconnects** when the session drops while Vitadeck is running and the **LAN HTTP Listener** is listening.
 _Avoid_: VitaDeck runtime, Deck App Package, npm package Deck App authors install, browser upload client
@@ -305,6 +309,7 @@ _Avoid_: Click, mouse down, mouse up, hover
 - **Host Control** initially uses **Host Control LAN Trust** (open LAN, no pairing token).
 - The **Host Control Companion** maintains an automatic session to the **LAN HTTP URL** and reconnects after drops without requiring the user to re-enter the Vita address each time.
 - When **Host Control Unavailable**, **Deck App** calls fail fast; UI handling is the **Deck App** author’s responsibility, not VitaDeck’s.
+- **Host Control Long-Poll** must not block VitaDeck rendering or Deck App JavaScript; host calls from **Deck Apps** are asynchronous through the native bridge.
 - The **Host Control Companion** reads **Host Control Companion Configuration** on start; a one-run URL override does not require editing the saved configuration.
 - **Deck App** authors use only the **VitaDeck SDK** for **Host Control Contract** types and client APIs—not a second npm package.
 - The **Host Control Companion** imports the same **Host Control Contract** from the **VitaDeck SDK** (subpath export), keeping one registry source of truth.
