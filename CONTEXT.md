@@ -133,8 +133,8 @@ The state where a **Deck App** invokes **Host Control** through the **VitaDeck R
 _Avoid_: Vita-side request queue, silent no-ops, automatic retries inside Vitadeck for Deck App calls
 
 **Host Control Companion**:
-The program on the user’s computer that connects to the **LAN HTTP URL** and executes **Host Control** commands on that machine. It **automatically reconnects** to the Vita when the session drops while Vitadeck is running and the **LAN HTTP Listener** is listening.
-_Avoid_: VitaDeck runtime, Deck App Package, browser upload client, manual reconnect-only tooling
+The host-side program in the **Deck App Workspace** that connects to the **LAN HTTP URL** and executes **Host Control** commands on that computer. It is not published to npm in the initial iteration; it **automatically reconnects** when the session drops while Vitadeck is running and the **LAN HTTP Listener** is listening.
+_Avoid_: VitaDeck runtime, Deck App Package, npm package Deck App authors install, browser upload client
 
 **Host Control Companion Configuration**:
 Persistent settings on the host for the **Host Control Companion**, including the Vitadeck **LAN HTTP URL** to connect to. A command-line override may replace the stored URL for a single run without changing persistence.
@@ -308,6 +308,7 @@ _Avoid_: Click, mouse down, mouse up, hover
 - The **Host Control Companion** reads **Host Control Companion Configuration** on start; a one-run URL override does not require editing the saved configuration.
 - **Deck App** authors use only the **VitaDeck SDK** for **Host Control Contract** types and client APIs—not a second npm package.
 - The **Host Control Companion** imports the same **Host Control Contract** from the **VitaDeck SDK** (subpath export), keeping one registry source of truth.
+- The **Host Control Companion** ships as an in-repo workspace package first, not as a separate public npm package for **Deck App** authors.
 - The **LAN HTTP Listener** listens on all interfaces with default port **8787** and falls forward to following ports until one binds or **10** attempts fail; the **LAN HTTP URL** reflects the bound port when binding succeeds.
 - If all **10** listen attempts fail, the **Shell Upload Screen** shows a bind-failure state (no **Runtime Upload URL**, no **Runtime Upload Web UI**); **Shell Upload Cancel** returns to **Shell Home Screen** without an in-screen retry control.
 - **Runtime Upload** primary author interaction is the **Runtime Upload Web UI** served locally by the **Runtime Upload Listener**.
