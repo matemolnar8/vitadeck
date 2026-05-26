@@ -18,9 +18,10 @@ Order assumes connection topology is chosen in phase 0. Adjust if grill resolves
 
 ## Phase 2 — Host companion (TS)
 
-- CLI entry: `vitadeck-host-control start --vita 192.168.x.x:PORT` (flags TBD)
-- Implements gateway + command dispatch
-- Manual test: curl or small script against companion OR vita listener per topology
+- In-repo package `js/packages/host-control-companion` (workspace only, not npm publish v1)
+- Depends on `@vitadeck/sdk/host-control` subpath
+- CLI: `start` with **Host Control Companion Configuration** + `--vita` override
+- Implements gateway + command dispatch + auto-reconnect
 - Windows + macOS smoke instructions in package README
 
 ## Phase 3 — Vitadeck native + shell
