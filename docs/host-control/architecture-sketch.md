@@ -76,7 +76,7 @@ Three families of designs:
 - **Pros:** Flexible latency (persistent channel).
 - **Cons:** More state on both sides; harder to explain in CONTEXT.md.
 
-**Lifecycle (resolved):** One **LAN HTTP Listener** (shared port, path routing). **Not** always-on — same explicit **VitaDeck Shell** enablement model as today's upload toggle. **Runtime Upload Enablement** and **Host Control Enablement** are independent; the listener binds when at least one is on and stops when all are off.
+**Lifecycle (resolved):** One **LAN HTTP Listener** (shared port, path routing). Runs **continuously** for a Vitadeck session while the network allows. No Shell on/off toggle; **LAN HTTP Listener Recovery** only when network or bind fails. Shell shows **LAN HTTP URL** and status, not "start server."
 
 **Transport (resolved):** **B-HTTP** long-poll first on the shared listener; optional **B-WS** later. Parse layer: **picohttpparser** (Vita cross-compile confirmed).
 
