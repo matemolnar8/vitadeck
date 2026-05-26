@@ -46,6 +46,10 @@ Exact JSON envelopes reuse **Host Control Contract** types from `@vitadeck/sdk/h
 - `GET /v1/host/poll` may return immediately with **204** or empty “no session” response, or timeout with no command—implementation detail.
 - Deck App enqueue with no active poll → **Host Control Unavailable** fail-fast (no Vita-side queue in v1).
 
+## Listener port (resolved)
+
+- Default **8787**, consecutive fallback up to **10** attempts (8787–8796) — unchanged from **Runtime Upload**; one **LAN HTTP URL** in the **Shell LAN Strip**.
+
 ## Later
 
 - **B-WS** may replace long-poll for latency; threading rules unchanged.
