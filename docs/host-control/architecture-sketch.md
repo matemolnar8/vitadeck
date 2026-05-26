@@ -121,6 +121,11 @@ Additional fields likely needed for async/persistent transports: `requestId`, `p
 - No Vita-side command queue for **Host Control** in v1.
 - **Host Control Unavailable** → SDK fails fast with typed error; **Deck App** handles UI.
 
+## Host companion configuration (resolved)
+
+- **Host Control Companion Configuration** persists the Vitadeck **LAN HTTP URL** on the host (e.g. for login-item / background start).
+- CLI `--vita` (or equivalent) overrides for one run without changing saved config.
+
 ## Background host app
 
 - Node.js CLI with `start` / `stop` or single long-running process.

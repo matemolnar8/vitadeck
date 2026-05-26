@@ -296,6 +296,8 @@ _Avoid_: Click, mouse down, mouse up, hover
 - **Host Control** uses its route family on the same **LAN HTTP Listener** whenever it is listening.
 - **Host Control** initially uses **Host Control LAN Trust** (open LAN, no pairing token).
 - The **Host Control Companion** maintains an automatic session to the **LAN HTTP URL** and reconnects after drops without requiring the user to re-enter the Vita address each time.
+- When **Host Control Unavailable**, **Deck App** calls fail fast; UI handling is the **Deck App** author’s responsibility, not VitaDeck’s.
+- The **Host Control Companion** reads **Host Control Companion Configuration** on start; a one-run URL override does not require editing the saved configuration.
 - The **LAN HTTP Listener** listens on all interfaces with default port **8787** and falls forward to following ports until one binds or **10** attempts fail; the **LAN HTTP URL** reflects the bound port when binding succeeds.
 - If all **10** listen attempts fail, the **Shell Upload Screen** shows a bind-failure state (no **Runtime Upload URL**, no **Runtime Upload Web UI**); **Shell Upload Cancel** returns to **Shell Home Screen** without an in-screen retry control.
 - **Runtime Upload** primary author interaction is the **Runtime Upload Web UI** served locally by the **Runtime Upload Listener**.
