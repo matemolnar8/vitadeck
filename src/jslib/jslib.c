@@ -145,4 +145,11 @@ void register_js_lib(JSContext *ctx) {
 	js_set_global_function(ctx, "nativeGetActiveDeckAppPath", js_native_get_active_deck_app_path, 0);
 	js_set_global_function(ctx, "nativeHostControlCommand", native_host_control_command, 3);
 	host_control_init();
+
+	const char *e2e_host_echo = getenv("VITADECK_E2E_HOST_ECHO");
+	if (e2e_host_echo && strcmp(e2e_host_echo, "1") == 0) {
+		JSValue global = JS_GetGlobalObject(ctx);
+		JS_SetPropertyStr(ctx, global, "__vitadeckE2eHostEcho", JS_TRUE);
+		JS_FreeValue(ctx, global);
+	}
 }

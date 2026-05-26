@@ -1,5 +1,10 @@
 import { Button, Rect, Screen, Text, hostControl, insetContent, useTheme } from "@vitadeck/sdk";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+
+declare global {
+  // Set by native when VITADECK_E2E_HOST_ECHO=1 (headless integration tests only).
+  var __vitadeckE2eHostEcho: boolean | undefined;
+}
 
 export default function App() {
   const { theme } = useTheme();
@@ -19,6 +24,14 @@ export default function App() {
       setHostStatus(`Host: ${error instanceof Error ? error.message : "error"}`);
     }
   }
+
+  useEffect(() => {
+    if (!globalThis.__vitadeckE2eHostEcho) return;
+    const timer = setTimeout(() => {
+      void testHostEcho();
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <Screen>

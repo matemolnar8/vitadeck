@@ -36,6 +36,9 @@ int main(int argc, char *argv[]) {
 		return_defer(1);
 	}
 
+	bool request_runtime_restart = false;
+	shell_try_auto_activate(&shell, &request_runtime_restart);
+
 	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "VitaDeck");	
 	window_ready = true;
 	SetTargetFPS(60);

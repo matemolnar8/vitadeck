@@ -30,7 +30,7 @@ Order assumes connection topology is chosen in phase 0. Adjust if grill resolves
 - [x] Always-on listener from `shell_init`
 - [x] **Shell LAN Strip**
 - [x] Native `nativeHostControlCommand` bridge
-- [ ] picohttpparser integrated into request parsing (vendored; wire-up optional follow-up)
+- [x] picohttpparser integrated into request parsing (`src/net/http_parse.c`)
 - Shell surface: show Vita **Host Control** address when listener active (lifecycle TBD — may mirror **Runtime Upload Listener** or always-on when enabled)
 - Bridge: async host calls from Deck App JS without blocking render thread
 - Settings persistence only if topology requires Vita-side state
@@ -38,7 +38,7 @@ Order assumes connection topology is chosen in phase 0. Adjust if grill resolves
 ## Phase 4 — SDK + author API
 
 - [x] Export typed `hostControl` from `@vitadeck/sdk`
-- Example Deck App button that calls `host.echo` / reads capabilities
+- [x] Example Deck App button that calls `host.echo` (`js/examples/default`)
 - Documentation in SDK README
 
 ## Phase 5 — Real commands (later)
