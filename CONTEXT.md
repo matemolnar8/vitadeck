@@ -136,6 +136,10 @@ _Avoid_: Vita-side request queue, silent no-ops, automatic retries inside Vitade
 The program on the user’s computer that connects to the **LAN HTTP URL** and executes **Host Control** commands on that machine. It **automatically reconnects** to the Vita when the session drops while Vitadeck is running and the **LAN HTTP Listener** is listening.
 _Avoid_: VitaDeck runtime, Deck App Package, browser upload client, manual reconnect-only tooling
 
+**Host Control Companion Configuration**:
+Persistent settings on the host for the **Host Control Companion**, including the Vitadeck **LAN HTTP URL** to connect to. A command-line override may replace the stored URL for a single run without changing persistence.
+_Avoid_: Vita-side settings file, typing the host PC address into the Vita
+
 **Host Control LAN Trust**:
 The initial **Host Control** security model: any peer on the local network may use **Host Control** routes while the **LAN HTTP Listener** is up, with no pairing token—same trust class as initial **Runtime Upload**. Optional future hardening may mirror **Upload Pairing**.
 _Avoid_: Account login, internet-wide access, per-command user approval on the Vita
@@ -213,8 +217,12 @@ A JavaScript dependency provided by the **VitaDeck Runtime Bundle** rather than 
 _Avoid_: App dependency, bundled dependency, peer package
 
 **VitaDeck SDK**:
-The npm package that provides the **VitaDeck Runtime API** and Deck App build tooling, distributed on the public npm registry as `@vitadeck/sdk` so **Deck App** projects can live outside the **Deck App Workspace**.
-_Avoid_: Runtime package, CLI package, app framework
+The npm package that provides the **VitaDeck Runtime API** and Deck App build tooling, distributed on the public npm registry as `@vitadeck/sdk` so **Deck App** projects can live outside the **Deck App Workspace**. It is the single published package **Deck App** authors use for **Host Control** types and calls (e.g. via a dedicated subpath export).
+_Avoid_: Runtime package, CLI package, app framework, separate npm package authors must install for Host Control
+
+**Host Control Contract**:
+The versioned set of **Host Control** command names, payloads, and results defined in the **VitaDeck SDK** and shared by **Deck Apps**, the **Host Control Companion**, and Vitadeck’s **LAN HTTP Listener** routes.
+_Avoid_: Ad hoc JSON strings, per-Deck-App command tables, duplicate registries on host and Vita
 
 **Deck App Project Scaffold**:
 The SDK-generated starting project layout for authoring one standalone **Deck App**. Outside the **Deck App Workspace**, the scaffold pins `@vitadeck/sdk` with a **caret range** anchored to the **VitaDeck SDK** version that produced the scaffold.
@@ -298,6 +306,8 @@ _Avoid_: Click, mouse down, mouse up, hover
 - The **Host Control Companion** maintains an automatic session to the **LAN HTTP URL** and reconnects after drops without requiring the user to re-enter the Vita address each time.
 - When **Host Control Unavailable**, **Deck App** calls fail fast; UI handling is the **Deck App** author’s responsibility, not VitaDeck’s.
 - The **Host Control Companion** reads **Host Control Companion Configuration** on start; a one-run URL override does not require editing the saved configuration.
+- **Deck App** authors use only the **VitaDeck SDK** for **Host Control Contract** types and client APIs—not a second npm package.
+- The **Host Control Companion** imports the same **Host Control Contract** from the **VitaDeck SDK** (subpath export), keeping one registry source of truth.
 - The **LAN HTTP Listener** listens on all interfaces with default port **8787** and falls forward to following ports until one binds or **10** attempts fail; the **LAN HTTP URL** reflects the bound port when binding succeeds.
 - If all **10** listen attempts fail, the **Shell Upload Screen** shows a bind-failure state (no **Runtime Upload URL**, no **Runtime Upload Web UI**); **Shell Upload Cancel** returns to **Shell Home Screen** without an in-screen retry control.
 - **Runtime Upload** primary author interaction is the **Runtime Upload Web UI** served locally by the **Runtime Upload Listener**.

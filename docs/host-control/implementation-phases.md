@@ -8,9 +8,9 @@ Order assumes connection topology is chosen in phase 0. Adjust if grill resolves
 - [ ] Add glossary terms to [CONTEXT.md](../../CONTEXT.md) (no implementation detail in glossary)
 - [ ] ADR only if a decision is hard to reverse (e.g. WebSocket vs HTTP-only)
 
-## Phase 1 — Contract package
+## Phase 1 — Contract in SDK
 
-- Shared TypeScript module (likely under `js/packages/`) exporting:
+- **`@vitadeck/sdk/host-control`** subpath exporting:
   - `protocolVersion`, error codes, request/response types
   - `defineHostControlCommands` + `host.capabilities` + `host.echo`
 - Contract tests (parse/validate golden JSON fixtures)
