@@ -49,7 +49,11 @@ flowchart TB
 | Commands | `host.capabilities`, `host.echo`, stubs | Keep registry pattern; defer implementations |
 | Shell | Host URL editor on Vita | Show Vita IP/URL for host; **OPEN** screen design |
 
-## Connection topology — **OPEN** (blocking)
+## Connection topology — **resolved: Option B**
+
+**Decision:** Vita-as-server; host companion connects using Vita IP shown in Shell. Phase 1: **B-HTTP** (long-poll on shared LAN listener). Phase 2: optional **B-WS** after hardware spike ([vita-http-server-libraries.md](./vita-http-server-libraries.md)).
+
+## Connection topology — options (reference)
 
 Three families of designs:
 
