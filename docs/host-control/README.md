@@ -13,6 +13,8 @@ This folder holds planning material for a **fresh** implementation. Prior work o
 | [implementation-phases.md](./implementation-phases.md) | Suggested delivery order (contract → companion → Vita → SDK) |
 | [topology-comparison.md](./topology-comparison.md) | A / B / C comparison (topology **B** chosen) |
 | [vita-http-server-libraries.md](./vita-http-server-libraries.md) | HTTP server library research for Vita listener |
+| [b-http-session.md](./b-http-session.md) | Phase 1 long-poll routes and threading rules |
+| [picohttpparser-vita-spike.md](./picohttpparser-vita-spike.md) | picohttpparser Vita cross-compile spike |
 
 ## Related domain language
 

@@ -80,7 +80,18 @@ Three families of designs:
 
 **Shell UX (resolved):** **Shell LAN Strip** on **Shell Home Screen** permanently shows **LAN HTTP URL** + status (listening / bind failure).
 
-**Transport (resolved):** **B-HTTP** long-poll first on the shared listener; optional **B-WS** later. Parse layer: **picohttpparser** (Vita cross-compile confirmed).
+**Transport (resolved):** **Host Control Long-Poll** on the shared listener (blocking `GET` wait-for-work + `POST` result); optional **B-WS** later. Parse layer: **picohttpparser** (Vita cross-compile confirmed).
+
+### Threading (resolved — no UI lockup)
+
+| Layer | Rule |
+|-------|------|
+| **Vita render / input** | Never waits on host I/O or long-poll |
+| **Deck App JavaScript** | Async host APIs only (promise/callback); native bridge queues work |
+| **LAN HTTP Listener** | Long-poll blocks in per-connection **handler threads** (same family as Runtime Upload), not on the JS runtime thread |
+| **Host Control Companion** | Long-poll loop on Node’s async I/O; no GUI in v1; reconnect in background |
+
+Companion blocking `GET` only blocks that HTTP handler thread on the Vita until a command exists or timeout—then the companion immediately opens the next poll.
 
 ## Protocol sketch (command-agnostic)
 
