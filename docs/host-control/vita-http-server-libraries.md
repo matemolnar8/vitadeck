@@ -330,7 +330,7 @@ Public Vita homebrew **does not** demonstrate CivetWeb, MHD, Mongoose, or LWS as
 
 - Aligns with [topology-comparison.md](./topology-comparison.md): clone upload patterns, add host long-poll routes, **no WebSocket yet**.
 - **Lowest risk** on real hardware; same threading discipline; desktop loopback testing unchanged.
-- Optional: embed **picohttpparser** to replace hand-rolled parse logic without adopting a full server library.
+- Embed **picohttpparser** for request parsing — **Vita cross-compile confirmed** ([picohttpparser-vita-spike.md](./picohttpparser-vita-spike.md)).
 
 #### **Pick 2 (Phase 2 — B-WS spike): CivetWeb (minimal MIT build) *or* libwebsockets (WS-first)**
 

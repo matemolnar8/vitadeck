@@ -99,11 +99,12 @@ Aligned with existing **Runtime Upload POST** JSON style:
 
 Additional fields likely needed for async/persistent transports: `requestId`, `protocolVersion` on envelope.
 
-## Type-safe SDK shape (intent)
+## Type-safe SDK shape (resolved)
 
-- `defineHostControlCommands({ … })` in SDK (or shared package) defines the contract.
-- Companion imports the same definitions + platform implementations.
-- Deck Apps call typed helpers, e.g. `hostControl.launchApp({ path })` generated from registry — exact export path TBD.
+- **Host Control Contract** lives in **`@vitadeck/sdk`** (dedicated subpath export, e.g. `@vitadeck/sdk/host-control`).
+- **Deck Apps** depend only on **`@vitadeck/sdk`** for types and client calls.
+- **Host Control Companion** imports the same subpath for registry + gateway types; command OS implementations stay in the companion package.
+- Registry pattern: `defineHostControlCommands({ … })`; Deck Apps call typed `hostControl` helpers derived from the registry.
 
 ## Security posture (resolved)
 

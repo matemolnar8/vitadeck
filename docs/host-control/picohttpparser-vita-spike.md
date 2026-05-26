@@ -157,7 +157,6 @@ No extra link libraries. Object size is small (~few KB `.o`); negligible vs Quic
 
 - No Vita-specific patches required.
 - MIT license compatible with Vitadeck.
-- Confirmed desktop compile + run; Vita hardware compile deferred to CI or dev machine with Vitasdk/Docker.
-- Next step: wire `phr_parse_request` into `http_server.c` behind a small adapter (method/path as `char*` views, header lookup helper), then run full `out/` and `out-vita/` builds.
-
-**Not blocked.** Optional follow-up: run the Docker cross-compile command above on a machine with Compose to close the SKIP with a logged PASS.
+- Confirmed desktop compile + run and **Vita cross-compile via Docker**.
+- **Adopted** for shared LAN HTTP refactor: vendored under `vendor/picohttpparser/`.
+- Next step: wire `phr_parse_request` into the shared listener refactor, then run full `out/` and `out-vita/` builds.
