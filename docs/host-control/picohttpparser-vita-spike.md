@@ -11,7 +11,7 @@ Upstream: [h2o/picohttpparser](https://github.com/h2o/picohttpparser) (MIT, two 
 | Target | Result | Notes |
 |--------|--------|-------|
 | Desktop Linux (gcc) | **PASS** | Compiles, links, runs; `phr_parse_request` returns expected method/path |
-| Vita cross-compile (`arm-vita-eabi-gcc`) | **SKIP** | No `VITASDK`, no Docker in this environment; static review + scalar-path desktop test |
+| Vita cross-compile (`arm-vita-eabi-gcc`) | **PASS** | Docker `vitasdk` image; see §3 |
 | Source review (Vita safety) | **PASS** | No sockets/threads/files; SSE is optional; ARM uses portable scalar path |
 | **Recommendation** | **Safe to adopt** | Drop-in parse layer; no patches required for Vita |
 
@@ -59,32 +59,9 @@ Same output as above.
 
 ---
 
-## 3. Vita cross-compile — SKIP (environment)
+## 3. Vita cross-compile — PASS
 
-### Environment check
-
-```sh
-echo "VITASDK=$VITASDK"          # empty
-which arm-vita-eabi-gcc           # not found
-which docker / docker-compose     # not found
-```
-
-Neither a local Vitasdk install nor Docker Compose is available on the Cursor Cloud VM used for this spike.
-
-### Commands to run when VITASDK or Docker is available
-
-**Local Vitasdk:**
-
-```sh
-cd vendor/picohttpparser
-arm-vita-eabi-gcc -Wall -Wextra -O3 -D__vita__ \
-  -o test_picohttp_vita test_picohttp.c picohttpparser.c
-arm-vita-eabi-size test_picohttp_vita
-```
-
-Note: the resulting ELF is ARM and cannot be executed on the build host; success is compile + link with no errors.
-
-**Docker (project standard):**
+### Docker (project standard)
 
 ```sh
 docker compose run --rm vitasdk bash -lc \
@@ -92,13 +69,20 @@ docker compose run --rm vitasdk bash -lc \
    -o test_picohttp_vita test_picohttp.c picohttpparser.c && arm-vita-eabi-size test_picohttp_vita'
 ```
 
+**Result (May 2026):** compile and link succeeded.
+
+```
+   text    data     bss     dec     hex filename
+  45720    2488  284932  333140   51554 test_picohttp_vita
+```
+
+The spike binary includes `test_picohttp` and newlib startup; linked parser-only `.o` in Vitadeck will be much smaller.
+
 **Full Vitadeck Vita target** (after CMake integration):
 
 ```sh
 docker compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"
 ```
-
-Expected outcome based on static review: **PASS** with no source changes.
 
 ---
 
