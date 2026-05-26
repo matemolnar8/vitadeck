@@ -76,7 +76,9 @@ Three families of designs:
 - **Pros:** Flexible latency (persistent channel).
 - **Cons:** More state on both sides; harder to explain in CONTEXT.md.
 
-**Recommendation (for discussion):** Prefer **B** with a single persistent **WebSocket** (or HTTP/1.1 upgrade) from host → Vita after user enters Vita IP, Vita queues **Host Control Requests** from Deck Apps, host receives and executes, results correlated by `requestId`. Re-evaluate if WebSocket cost on Vita is too high — fallback to Vita POST to host after one-time host→Vita registration that returns `hostBaseUrl`.
+**Lifecycle (resolved):** One **LAN HTTP Listener** (shared port, path routing). **Not** always-on — same explicit **VitaDeck Shell** enablement model as today's upload toggle. **Runtime Upload Enablement** and **Host Control Enablement** are independent; the listener binds when at least one is on and stops when all are off.
+
+**Transport (resolved):** **B-HTTP** long-poll first on the shared listener; optional **B-WS** later. Parse layer: **picohttpparser** (Vita cross-compile confirmed).
 
 ## Protocol sketch (command-agnostic)
 
