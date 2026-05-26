@@ -1,5 +1,7 @@
 #include "upload/http_server.h"
 
+#include "net/host_control.h"
+
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdbool.h>
@@ -392,7 +394,22 @@ static void *handler_thread(void *raw)
     char path[128] = {0};
     sscanf(first, "%15s %127s", method, path);
 
-    if (strcmp(path, "/upload") == 0 && strcmp(method, "POST") != 0) {
+    if (strcmp(path, "/v1/host/poll") == 0 && strcmp(method, "GET") == 0) {
+        host_control_handle_poll(arg->fd);
+    } else if (strcmp(path, "/v1/host/result") == 0 && strcmp(method, "POST") == 0) {
+        char headers[4096];
+        snprintf(headers, sizeof(headers), "%s", first);
+        ssize_t extra = recv(arg->fd, headers + strlen(headers), sizeof(headers) - strlen(headers) - 1, 0);
+        if (extra > 0) headers[strlen(headers) + (size_t)extra] = '\0';
+        const char *body = strstr(headers, "\r\n\r\n");
+        if (body) body += 4;
+        else body = "";
+        host_control_handle_result(arg->fd, body, strlen(body));
+    } else if (strcmp(path, "/v1/host/result") == 0) {
+        send_simple_response(arg->fd, 405, "Method Not Allowed", "text/plain", "Method Not Allowed");
+    } else if (strcmp(path, "/v1/host/poll") == 0) {
+        send_simple_response(arg->fd, 405, "Method Not Allowed", "text/plain", "Method Not Allowed");
+    } else if (strcmp(path, "/upload") == 0 && strcmp(method, "POST") != 0) {
         send_simple_response(arg->fd, 405, "Method Not Allowed", "text/plain", "Method Not Allowed");
     } else if (strcmp(path, "/upload") == 0) {
         handle_upload(arg, first);
