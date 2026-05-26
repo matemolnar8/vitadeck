@@ -109,24 +109,28 @@ The macOS keyboard key that maps to Circle back in **Shell Face Input** while th
 _Avoid_: Browser back, undo typing in **Deck Apps**, delete file shortcuts
 
 **LAN HTTP Listener**:
-The VitaDeck-owned HTTP server on the LAN that multiplexes **Runtime Upload** and **Host Control** routes on one bound port when the user has enabled at least one of them in the **VitaDeck Shell**. It is not an always-on background service; it starts only after explicit shell enablement and stops when every enabled LAN feature is turned off (and when shell rules stop network services).
-_Avoid_: Always-on daemon, separate upload and host ports by default, public internet API
+The VitaDeck-owned HTTP server on the LAN that multiplexes **Runtime Upload** and **Host Control** routes on one bound port for the lifetime of a Vitadeck session. The user does not turn it on or off from the **VitaDeck Shell**; Vitadeck starts it when the session begins and keeps it running until exit, except when **LAN HTTP Listener Recovery** stops and restarts it because the network is unavailable or binding failed.
+_Avoid_: Shell upload toggle, per-feature enable switches, separate upload and host ports by default
 
 **LAN HTTP URL**:
-The `http://IP:PORT/` address of the bound **LAN HTTP Listener**, shown in the **VitaDeck Shell** when the listener is running, using a LAN-reachable **IP** and the **PORT** actually bound.
+The `http://IP:PORT/` address of the bound **LAN HTTP Listener**, shown in the **VitaDeck Shell** when the listener is listening, using a LAN-reachable **IP** and the **PORT** actually bound.
 _Avoid_: Host computer URL, FTP URL, deep link
 
-**Runtime Upload Enablement**:
-Explicit **VitaDeck Shell** control that turns **Runtime Upload** on or off on the **LAN HTTP Listener** without requiring Host Control to be on.
-_Avoid_: Automatic start at boot, implicit enable when a Deck App runs
+**LAN HTTP Listener Recovery**:
+When the **LAN HTTP Listener** cannot stay bound or reachable on the LAN (no network, interface down, or port bind failure), Vitadeck stops or avoids the listener and retries until the network is usable again. This is the only intended stop/start cycle—not a user-facing off switch.
+_Avoid_: Manual server toggle, Shell Upload Cancel stopping the listener, disabling Host Control from Shell
 
-**Host Control Enablement**:
-Explicit **VitaDeck Shell** control that turns **Host Control** on or off on the **LAN HTTP Listener** and makes the **LAN HTTP URL** available for pairing the **Host Control Companion**.
-_Avoid_: Always-on host bridge, pairing stored only on the host
+**Host Control**:
+The Vitadeck capability for **Deck Apps** to ask a nearby computer on the LAN to run actions through a **Host Control Companion**, using **Host Control** routes on the **LAN HTTP Listener**.
+_Avoid_: Runtime Upload, USB control, cloud remote desktop
+
+**Host Control Companion**:
+The program on the user’s computer that connects to the **LAN HTTP URL** and executes **Host Control** commands on that machine.
+_Avoid_: VitaDeck runtime, Deck App Package, browser upload client
 
 **Runtime Upload Listener**:
-The **Runtime Upload** routes and behavior served by the **LAN HTTP Listener** when **Runtime Upload Enablement** is on (including the **Runtime Upload Web UI** and **Runtime Upload POST**). Historically a standalone server; now one route family on the shared listener.
-_Avoid_: Public API, always-on LAN service independent of the shell, background upload daemon
+The **Runtime Upload** routes on the **LAN HTTP Listener** (including the **Runtime Upload Web UI** and **Runtime Upload POST**). Not a separate server process from **Host Control** routes.
+_Avoid_: Standalone upload-only daemon, public REST catalog
 
 **Runtime Upload Web UI**:
 The LAN web page served by the **Runtime Upload Listener** for choosing, dragging/dropping, and uploading a **Runtime Upload Archive**, showing success and failure results in the browser.
