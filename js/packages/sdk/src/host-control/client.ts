@@ -64,9 +64,6 @@ export type HostControlClient = {
     command: C,
     ...args: HostControlPayloads[C] extends undefined ? [] : [payload: HostControlPayloads[C]]
   ): Promise<VitaDeckLanJsonResult<HostControlResults[C]>>;
-  capabilities(): Promise<VitaDeckLanJsonResult<HostControlResults["host.capabilities"]>>;
-  echo(payload?: HostControlPayloads["host.echo"]): Promise<VitaDeckLanJsonResult<HostControlResults["host.echo"]>>;
-  sleepDisplays(): Promise<VitaDeckLanJsonResult<HostControlResults["host.power.sleep_displays"]>>;
 };
 
 export function createHostControlClient(options: HostControlClientOptions = {}): HostControlClient {
@@ -92,12 +89,7 @@ export function createHostControlClient(options: HostControlClientOptions = {}):
     return parseResult<HostControlResults[C]>(response);
   }
 
-  return {
-    command,
-    capabilities: () => command("host.capabilities"),
-    echo: (payload) => command("host.echo", payload),
-    sleepDisplays: () => command("host.power.sleep_displays"),
-  };
+  return { command };
 }
 
 void hostControlCommands;

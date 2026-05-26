@@ -10,9 +10,12 @@ export default function App() {
 
   const actions = useMemo(
     () => [
-      { label: "Capabilities", run: () => client.capabilities() },
-      { label: "Echo", run: () => client.echo({ source: "host-control-example", time: getTime() }) },
-      { label: "Sleep Displays", run: () => client.sleepDisplays() },
+      { label: "Capabilities", run: () => client.command("host.capabilities") },
+      {
+        label: "Echo",
+        run: () => client.command("host.echo", { source: "host-control-example", time: getTime() }),
+      },
+      { label: "Sleep Displays", run: () => client.command("host.power.sleep_displays") },
     ],
     [],
   );
