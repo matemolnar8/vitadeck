@@ -33,9 +33,7 @@ Order assumes connection topology is chosen in phase 0. Adjust if grill resolves
 - [x] **Shell LAN Strip**
 - [x] Native `nativeHostControlFetch` + `nativeGetHostControlBaseUrl` bridge
 - [x] picohttpparser integrated into request parsing (`src/net/http_parse.c`)
-- Shell surface: show Vita **Host Control** address when listener active (lifecycle TBD — may mirror **Runtime Upload Listener** or always-on when enabled)
-- Bridge: async host calls from Deck App JS without blocking render thread
-- Settings persistence only if topology requires Vita-side state
+- [x] **Shell LAN Strip** shows link status via **Host Control Status**
 
 ## Phase 4 — SDK + author API
 

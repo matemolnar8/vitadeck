@@ -1,6 +1,6 @@
 # Host Control — Connection topology comparison
 
-Status: **analysis** (phase 0 design input). Resolves the blocking decision in [architecture-sketch.md](./architecture-sketch.md).
+Status: **historical analysis** (phase 0). **Shipped:** [Hybrid C](./architecture-sketch.md) — link on Vita, per-command HTTP to host. Option B (long-poll) and the B-HTTP recommendation below were not implemented.
 
 ## Product constraints (fixed)
 
@@ -419,7 +419,9 @@ sequenceDiagram
 
 ## Recommendation
 
-### Primary recommendation: **Option B** with a staged transport
+### Primary recommendation (historical): **Option B** with a staged transport
+
+Superseded by **Hybrid C** after implementation experience. Kept for rationale and trade-off reference.
 
 1. **Phase 0 lock:** Pairing = Vita displays **Host Control URL**; companion `start --vita HOST:PORT` initiates session.
 2. **Phase 1 transport:** Implement **B-HTTP** first (listener derived from `upload/http_server.c`, host long-poll or blocking GET for requests) to validate queue + `requestId` + gateway without WebSocket.

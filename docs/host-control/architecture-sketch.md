@@ -86,12 +86,11 @@ Three families of designs:
 
 | Layer | Rule |
 |-------|------|
-| **Vita render / input** | Never waits on host I/O or long-poll |
+| **Vita render / input** | Never waits on host command HTTP |
 | **Deck App JavaScript** | Async host APIs only (promise/callback); native bridge queues work |
-| **LAN HTTP Listener** | Long-poll blocks in per-connection **handler threads** (same family as Runtime Upload), not on the JS runtime thread |
-| **Host Control Companion** | Long-poll loop on Node’s async I/O; no GUI in v1; reconnect in background |
-
-Companion blocking `GET` only blocks that HTTP handler thread on the Vita until a command exists or timeout—then the companion immediately opens the next poll.
+| **LAN HTTP Listener** | Link/status handlers run in per-connection **handler threads** (same family as Runtime Upload), not on the JS runtime thread |
+| **Vita HTTP client** | `nativeHostControlFetch` runs on a dedicated worker thread; completions drain on the JS thread |
+| **Host Control Companion** | Node `http.Server` for commands; link retries on startup only in v1 |
 
 ## Protocol sketch (command-agnostic)
 
@@ -124,9 +123,9 @@ Additional fields likely needed for async/persistent transports: `requestId`, `p
 
 ## Host companion session (resolved)
 
-- **Host Control Companion** connects to **LAN HTTP URL** at startup (user-configured Vita address).
-- **Automatic reconnection** when the session drops while Vitadeck and the listener remain up; user does not re-pair on every disconnect.
-- **LAN HTTP Listener Recovery** on the Vita remains deferred; reconnect is companion-driven first.
+- **`start`** binds the **Host Control Command Listener**, then **Host Control Link** to the configured **LAN HTTP URL** (retry until Vita is up).
+- After the first successful link in a process, no automatic re-link until restart (manual reconnect deferred).
+- **LAN HTTP Listener Recovery** on the Vita remains deferred.
 
 ## Deck App errors (resolved)
 

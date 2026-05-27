@@ -23,6 +23,25 @@ typedef struct {
 
 static HostControlLinkState g_link;
 
+static void hc_json_escape_string(const char *value, char *out, size_t out_size)
+{
+    if (!out || out_size == 0) return;
+    if (!value) {
+        out[0] = '\0';
+        return;
+    }
+    char *p = out;
+    const char *end = out + out_size - 1;
+    for (const unsigned char *s = (const unsigned char *)value; *s && p < end; s++) {
+        if (*s == '\\' || *s == '"') {
+            if (p + 2 > end) break;
+            *p++ = '\\';
+        }
+        *p++ = (char)*s;
+    }
+    *p = '\0';
+}
+
 static void hc_send_simple(int fd, int status, const char *status_text, const char *body)
 {
     int body_len = body ? (int)strlen(body) : 0;
@@ -85,13 +104,18 @@ static void hc_link_path(char *out, size_t out_size)
 static bool hc_save_link_file(void)
 {
     char path[VD_PATH_MAX];
+    char escaped_host[HC_HOST_NAME_MAX * 2];
+    char escaped_url[HC_CALLBACK_URL_MAX * 2];
+    hc_json_escape_string(g_link.host_name, escaped_host, sizeof(escaped_host));
+    hc_json_escape_string(g_link.callback_url, escaped_url, sizeof(escaped_url));
+
     hc_link_path(path, sizeof(path));
     FILE *f = fopen(path, "wb");
     if (!f) return false;
     int n = fprintf(f,
         "{\"hostName\":\"%s\",\"callbackUrl\":\"%s\"}",
-        g_link.host_name,
-        g_link.callback_url);
+        escaped_host,
+        escaped_url);
     fclose(f);
     return n > 0;
 }
@@ -169,10 +193,14 @@ static bool hc_apply_link(const char *host_name, const char *callback_url)
 
 void host_control_link_handle_post(int client_fd, const char *body, size_t body_len)
 {
-    (void)body_len;
-    if (!body) {
+    if (!body || body_len == 0) {
         hc_send_simple(client_fd, 400, "Bad Request",
             "{\"ok\":false,\"code\":\"malformed_request\",\"message\":\"Missing body.\"}");
+        return;
+    }
+    if (body_len >= HC_JSON_MAX) {
+        hc_send_simple(client_fd, 413, "Payload Too Large",
+            "{\"ok\":false,\"code\":\"malformed_request\",\"message\":\"Body too large.\"}");
         return;
     }
 
@@ -203,20 +231,8 @@ void host_control_link_handle_status_get(int client_fd)
     } else {
         char escaped_host[HC_HOST_NAME_MAX * 2];
         char escaped_url[HC_CALLBACK_URL_MAX * 2];
-        const char *h = g_link.host_name;
-        char *p = escaped_host;
-        for (; *h && (size_t)(p - escaped_host) < sizeof(escaped_host) - 2; h++) {
-            if (*h == '\\' || *h == '"') *p++ = '\\';
-            *p++ = *h;
-        }
-        *p = '\0';
-        h = g_link.callback_url;
-        p = escaped_url;
-        for (; *h && (size_t)(p - escaped_url) < sizeof(escaped_url) - 2; h++) {
-            if (*h == '\\' || *h == '"') *p++ = '\\';
-            *p++ = *h;
-        }
-        *p = '\0';
+        hc_json_escape_string(g_link.host_name, escaped_host, sizeof(escaped_host));
+        hc_json_escape_string(g_link.callback_url, escaped_url, sizeof(escaped_url));
         snprintf(body, sizeof(body),
             "{\"ok\":true,\"linked\":true,\"hostName\":\"%s\",\"callbackUrl\":\"%s\"}",
             escaped_host,
