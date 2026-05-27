@@ -67,3 +67,13 @@ export type { Color, ColorName, ColorsMap } from "./types";
 export { hostControl, createHostControlClient } from "./host-control/client.js";
 export type { HostControlClient } from "./host-control/client.js";
 export type { HostControlCommand, HostCapabilitiesResult, HostEchoResult } from "./host-control/registry.js";
+export { isHostCommandAvailable, availableHostCommands } from "./host-control/capabilities.js";
+
+/** Raylib clock seconds from the native `getTime` global. */
+export function vitadeckTime(): number {
+  const getTime = (globalThis as { getTime?: () => number }).getTime;
+  if (typeof getTime !== "function") {
+    throw new Error("vitadeckTime: getTime is not available in this runtime.");
+  }
+  return getTime();
+}

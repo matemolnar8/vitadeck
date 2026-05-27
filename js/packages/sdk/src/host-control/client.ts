@@ -18,6 +18,18 @@ function nativeGlobals(): HostControlNativeGlobals {
   return globalThis as unknown as HostControlNativeGlobals;
 }
 
+function callNativeHostControl(
+  command: string,
+  payloadJson: string,
+  timeoutMs: number,
+): Promise<string> {
+  const native = nativeGlobals().nativeHostControlCommand;
+  if (typeof native !== "function") {
+    throw new Error("Host Control native bridge is unavailable.");
+  }
+  return Promise.resolve(native(command, payloadJson, timeoutMs));
+}
+
 function parseResult<T extends object>(raw: string): VitaDeckLanJsonResult<T> {
   const parsed = JSON.parse(raw) as unknown;
   if (!parsed || typeof parsed !== "object" || typeof (parsed as { ok?: unknown }).ok !== "boolean") {
@@ -40,15 +52,10 @@ export function createHostControlClient(options: HostControlClientOptions = {}):
     commandName: C,
     payload?: HostControlPayloads[C],
   ): Promise<VitaDeckLanJsonResult<HostControlResults[C]>> {
-    const native = nativeGlobals();
-    if (!native.nativeHostControlCommand) {
-      throw new Error("Host Control native bridge is unavailable.");
-    }
-
     const payloadJson =
       payload === undefined ? "null" : JSON.stringify(payload);
 
-    const raw = await native.nativeHostControlCommand(commandName, payloadJson, timeoutMs);
+    const raw = await callNativeHostControl(commandName, payloadJson, timeoutMs);
     return parseResult<HostControlResults[C]>(raw);
   }
 
