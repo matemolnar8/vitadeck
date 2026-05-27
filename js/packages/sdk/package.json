@@ -66,6 +66,7 @@
     "build:cli": "rolldown -c rolldown.cli.config.mjs && tsx cli/copy-templates.ts",
     "build": "tsx cli/clean-dist.ts && pnpm run build:lib && pnpm run build:cli",
     "prepublishOnly": "pnpm run build",
+    "test": "node --import tsx --test src/host-control/*.test.ts",
     "tsc": "tsgo -p tsconfig.json"
   },
   "dependencies": {
