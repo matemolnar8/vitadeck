@@ -49,9 +49,9 @@ flowchart TB
 | Commands | `host.capabilities`, `host.echo`, stubs | Keep registry pattern; defer implementations |
 | Shell | Host URL editor on Vita | Show Vita IP/URL for host; **OPEN** screen design |
 
-## Connection topology — **resolved: Option B**
+## Connection topology — **resolved: Option C (Hybrid)**
 
-**Decision:** Vita-as-server; host companion connects using Vita IP shown in Shell. Phase 1: **B-HTTP** (long-poll on shared LAN listener). Phase 2: optional **B-WS** after hardware spike ([vita-http-server-libraries.md](./vita-http-server-libraries.md)).
+**Decision:** **Host Control Link** on the always-on **LAN HTTP Listener** (`POST /v1/host/link`, `GET /v1/host/status`); steady-state **Vita → host** `POST /v1/command` on the persisted **Host Callback URL**. Host companion **`start`** binds the **Host Control Command Listener**, links with retry, then runs until stopped.
 
 ## Connection topology — options (reference)
 
@@ -80,7 +80,7 @@ Three families of designs:
 
 **Shell UX (resolved):** **Shell LAN Strip** on **Shell Home Screen** permanently shows **LAN HTTP URL** + status (listening / bind failure).
 
-**Transport (resolved):** **Host Control Long-Poll** on the shared listener (blocking `GET` wait-for-work + `POST` result); optional **B-WS** later. Parse layer: **picohttpparser** (Vita cross-compile confirmed).
+**Transport (resolved):** **Hybrid C** — link on Vita listener; per-command HTTP to host. Parse layer: **picohttpparser** on Vita listener routes.
 
 ### Threading (resolved — no UI lockup)
 

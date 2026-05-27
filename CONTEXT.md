@@ -117,32 +117,52 @@ The `http://IP:PORT/` address of the bound **LAN HTTP Listener**, using a LAN-re
 _Avoid_: Host computer URL, FTP URL, deep link
 
 **Shell LAN Strip**:
-The permanent **VitaDeck Shell** area on the **Shell Home Screen** that always shows the **LAN HTTP URL** and listener status (listening or bind failure), for browser **Runtime Upload** and **Host Control Companion** pairing without a start/stop control.
-_Avoid_: Upload server toggle, hidden network submenu, URL only on a separate screen
+The permanent **VitaDeck Shell** area on the **Shell Home Screen** that always shows the **LAN HTTP URL** and listener status (listening or bind failure), plus **Host Control** link state from **Host Control Status** (e.g. linked **Host Name** and **Host Callback URL**, or not linked). Used for **Runtime Upload** and **Host Control Link** without a start/stop control.
+_Avoid_: Upload server toggle, hidden network submenu, URL only on a separate screen, dedicated Host Control settings screen in v1
 
 **LAN HTTP Listener Recovery**:
 Automatic stop and restart of the **LAN HTTP Listener** when the network is unavailable or binding fails, with retry until service is restored. Optional future hardening; initial implementation may only surface bind failure without retry.
 _Avoid_: Manual server toggle, treating recovery as required for the first ship
 
 **Host Control**:
-The Vitadeck capability for **Deck Apps** to ask a nearby computer on the LAN to run actions through a **Host Control Companion**, using **Host Control** routes on the **LAN HTTP Listener**.
+The Vitadeck capability for **Deck Apps** to ask a nearby computer on the LAN to run actions through a **Host Control Companion**. Pairing uses **Host Control Link** on the **LAN HTTP Listener**; steady-state commands are HTTP requests from Vitadeck to the persisted **Host Callback URL**.
 _Avoid_: Runtime Upload, USB control, cloud remote desktop
 
-**Host Control Unavailable**:
-The state where a **Deck App** invokes **Host Control** through the **VitaDeck Runtime API** but no **Host Control Companion** session is connected to accept work. Vitadeck fails the call immediately with a typed error; the **Deck App** decides how to present that to the user.
-_Avoid_: Vita-side request queue, silent no-ops, automatic retries inside Vitadeck for Deck App calls
+**Host Control Link**:
+The registration step where the **Host Control Companion** calls **`POST /v1/host/link`** on the **LAN HTTP URL** with its **Host Callback URL**. Vitadeck persists that URL for subsequent commands; a later successful link **replaces** the previous **Host Callback URL** (latest link wins). Served on the always-on **LAN HTTP Listener** alongside **Runtime Upload**.
+_Avoid_: Long-poll session, typing the host address on the Vita, permanent Vita-side command queue, requiring explicit unlink before every re-link in v1
 
-**Host Control Long-Poll**:
-The initial **Host Control** transport on the **LAN HTTP Listener**: the **Host Control Companion** opens a blocking HTTP request that waits for work, then posts results, then polls again. Blocking I/O runs only on Vitadeck network threads and the companion process—not on the Vita render loop or the Deck App JavaScript thread.
-_Avoid_: Synchronous host calls from UI callbacks, WebSocket-only v1, polling the host from the main thread every frame
+**Host Control Status**:
+Read-only **Host Control** state on the **LAN HTTP Listener** via **`GET /v1/host/status`** (linked or not, **Host Name**, **Host Callback URL** when linked). Used by the **Shell LAN Strip** and diagnostics—not for executing commands.
+_Avoid_: Health probe for **Runtime Upload**, command polling endpoint
+
+**Host Callback URL**:
+The LAN-reachable base URL (`http://HOST:PORT`) where the **Host Control Companion** accepts steady-state **`POST /v1/command`** requests. Vitadeck **persists** it on the device after a successful **Host Control Link** (survives Vitadeck restarts) and uses it for every **Deck App** host action until replaced by a new link.
+_Avoid_: **LAN HTTP URL**, host-only loopback address when the Vita is separate hardware, Vita-side upload address, session-only link state cleared on quit
+
+**Host Control Command Listener**:
+The HTTP server on the host computer (inside the **Host Control Companion**) that handles **`POST /v1/command`** for the **Host Control Contract**. Distinct port range from the Vita **LAN HTTP Listener** (default host base port **8797**, up to **10** consecutive tries).
+_Avoid_: **LAN HTTP Listener**, **Runtime Upload Listener**, WebSocket control plane
+
+**Host Control Unavailable**:
+The state where a **Deck App** invokes **Host Control** but Vitadeck has no persisted **Host Callback URL**, or a command HTTP request to that URL fails before a result is returned. Vitadeck fails the call immediately with a typed error; the **Deck App** decides how to present that to the user.
+_Avoid_: Vita-side command queue, silent no-ops, automatic retries inside Vitadeck for Deck App calls
 
 **Host Control Companion**:
-The host-side program in the **Deck App Workspace** that connects to the **LAN HTTP URL** and executes **Host Control** commands on that computer. It is not published to npm in the initial iteration; it **automatically reconnects** when the session drops while Vitadeck is running and the **LAN HTTP Listener** is listening.
-_Avoid_: VitaDeck runtime, Deck App Package, npm package Deck App authors install, browser upload client
+The host-side program in the **Deck App Workspace** that performs **Host Control Link** against the user-configured **LAN HTTP URL**, runs the **Host Control Command Listener**, and executes **Host Control Contract** commands on that computer. A single **`start`** run binds the command listener, then links to the Vita (retrying **Host Control Link** with backoff if the **LAN HTTP Listener** is not up yet), and stays running until stopped. It is not published to npm in the initial iteration.
+_Avoid_: VitaDeck runtime, Deck App Package, npm package Deck App authors install, browser upload client, separate link-then-exit as the primary v1 flow
+
+**Host Control Companion Reconnect**:
+Automatic **Host Control Link** retries while the companion is running when the Vita was unreachable at startup. After the first successful link in a run, the companion does not re-link again until the process is restarted (or a future manual reconnect). A manual reconnect trigger may be added later; not required in v1.
+_Avoid_: Long-poll session, Vita-side command queue, periodic re-link every N minutes in v1
 
 **Host Control Companion Configuration**:
-Persistent settings on the host for the **Host Control Companion**, including the Vitadeck **LAN HTTP URL** to connect to. A command-line override may replace the stored URL for a single run without changing persistence.
+Persistent settings on the host for the **Host Control Companion**, including the Vitadeck **LAN HTTP URL** used for **Host Control Link**. A command-line override may replace the stored URL for a single run without changing persistence.
 _Avoid_: Vita-side settings file, typing the host PC address into the Vita
+
+**Host Control Callback Override**:
+An optional **Host Control Companion** CLI flag (e.g. `--callback-host`) that sets the host part of the **Host Callback URL** for one run. Default registration uses a LAN-reachable host address, not loopback, so hardware Vitae can reach the **Host Control Command Listener**; loopback is for same-machine desktop development only.
+_Avoid_: Persisting loopback as the default callback, Vita-side host URL entry
 
 **Host Control LAN Trust**:
 The initial **Host Control** security model: any peer on the local network may use **Host Control** routes while the **LAN HTTP Listener** is up, with no pairing token—same trust class as initial **Runtime Upload**. Optional future hardening may mirror **Upload Pairing**.
@@ -225,7 +245,7 @@ The npm package that provides the **VitaDeck Runtime API** and Deck App build to
 _Avoid_: Runtime package, CLI package, app framework, separate npm package authors must install for Host Control
 
 **Host Control Contract**:
-The versioned set of **Host Control** command names, payloads, and results defined in the **VitaDeck SDK** and shared by **Deck Apps**, the **Host Control Companion**, and Vitadeck’s **LAN HTTP Listener** routes.
+The versioned set of **Host Control** command names, payloads, and results defined in the **VitaDeck SDK** and shared by **Deck Apps**, the **Host Control Companion**, and the **Host Control Link** / **`POST /v1/command`** wire format.
 _Avoid_: Ad hoc JSON strings, per-Deck-App command tables, duplicate registries on host and Vita
 
 **Deck App Project Scaffold**:
@@ -303,14 +323,20 @@ _Avoid_: Click, mouse down, mouse up, hover
 - The **LAN HTTP Listener** remains up while the **VitaDeck Shell** is hidden and a **Deck App** is active.
 - **LAN HTTP Listener Recovery** is optional later work; first ship may only report bind failure without automatic retry.
 - The **LAN HTTP URL** is the single address for browser upload and **Host Control Companion** pairing while listening.
-- The **Shell LAN Strip** permanently displays the **LAN HTTP URL** and status on the **Shell Home Screen**.
+- The **Shell LAN Strip** permanently displays the **LAN HTTP URL**, listener status, and **Host Control** link state (**Host Name** / **Host Callback URL** when linked, or not linked) on the **Shell Home Screen**.
 - **Runtime Upload** uses **Runtime Upload Listener** routes on the always-shared **LAN HTTP Listener**.
-- **Host Control** uses its route family on the same **LAN HTTP Listener** whenever it is listening.
+- **Host Control Link** and **Host Control Status** are the only **Host Control** routes on the always-on **LAN HTTP Listener**; steady-state commands use the persisted **Host Callback URL** on the **Host Control Command Listener**.
 - **Host Control** initially uses **Host Control LAN Trust** (open LAN, no pairing token).
-- The **Host Control Companion** maintains an automatic session to the **LAN HTTP URL** and reconnects after drops without requiring the user to re-enter the Vita address each time.
+- The **Host Control Companion** **`start`** command binds the **Host Control Command Listener**, performs **Host Control Link**, then runs until stopped.
+- The **Host Control Companion** retries **Host Control Link** with backoff when the **LAN HTTP Listener** is not yet available at startup (**Host Control Companion Reconnect**).
+- After a successful link in a run, the companion does not **Host Control Link** again until restart (or a future manual reconnect).
+- Optional later: manual reconnect trigger; periodic re-link; explicit unlink-before-relink (**Host Control LAN Trust** hardening).
 - When **Host Control Unavailable**, **Deck App** calls fail fast; UI handling is the **Deck App** author’s responsibility, not VitaDeck’s.
-- **Host Control Long-Poll** must not block VitaDeck rendering or Deck App JavaScript; host calls from **Deck Apps** are asynchronous through the native bridge.
-- The **Host Control Companion** reads **Host Control Companion Configuration** on start; a one-run URL override does not require editing the saved configuration.
+- **Host Control** steady-state HTTP from Vitadeck to the host must not block VitaDeck rendering or Deck App JavaScript; calls are asynchronous through the native bridge.
+- The **Host Control Companion** reads **Host Control Companion Configuration** on start; a one-run **LAN HTTP URL** override does not require editing the saved configuration.
+- **Host Control Link** registers a **Host Callback URL** using a LAN-reachable host address by default; **Host Control Callback Override** allows loopback for same-machine desktop development only.
+- A successful **Host Control Link** overwrites any previously stored **Host Callback URL**; optional future hardening may require explicit unlink before accepting a new host (same class as **Upload Pairing**).
+- The **Host Callback URL** persists across Vitadeck launches until replaced by a new **Host Control Link**.
 - **Deck App** authors use only the **VitaDeck SDK** for **Host Control Contract** types and client APIs—not a second npm package.
 - The **Host Control Companion** imports the same **Host Control Contract** from the **VitaDeck SDK** (subpath export), keeping one registry source of truth.
 - The **Host Control Companion** ships as an in-repo workspace package first, not as a separate public npm package for **Deck App** authors.

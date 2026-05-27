@@ -93,6 +93,7 @@ set(VITADECK_SOURCES
     src/main.c
     src/core/js_runtime.c
     src/core/package_library.c
+    src/core/host_control_link.c
     src/jslib/jslib.c
     src/ui/instance_tree.c
     src/ui/render.c

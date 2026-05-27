@@ -1,6 +1,6 @@
 #include "upload/http_server.h"
 
-#include "net/host_control.h"
+#include "core/host_control_link.h"
 #include "net/http_parse.h"
 
 #include <arpa/inet.h>
@@ -269,13 +269,13 @@ static void *handler_thread(void *raw)
         goto done;
     }
 
-    if (strcmp(req.path, "/v1/host/poll") == 0 && strcmp(req.method, "GET") == 0) {
-        host_control_handle_poll(arg->fd);
-    } else if (strcmp(req.path, "/v1/host/result") == 0 && strcmp(req.method, "POST") == 0) {
-        host_control_handle_result(arg->fd, (const char *)req.body, req.body_len);
-    } else if (strcmp(req.path, "/v1/host/result") == 0) {
+    if (strcmp(req.path, "/v1/host/link") == 0 && strcmp(req.method, "POST") == 0) {
+        host_control_link_handle_post(arg->fd, (const char *)req.body, req.body_len);
+    } else if (strcmp(req.path, "/v1/host/link") == 0) {
         send_response(arg->fd, 405, "Method Not Allowed", "text/plain", "Method Not Allowed");
-    } else if (strcmp(req.path, "/v1/host/poll") == 0) {
+    } else if (strcmp(req.path, "/v1/host/status") == 0 && strcmp(req.method, "GET") == 0) {
+        host_control_link_handle_status_get(arg->fd);
+    } else if (strcmp(req.path, "/v1/host/status") == 0) {
         send_response(arg->fd, 405, "Method Not Allowed", "text/plain", "Method Not Allowed");
     } else if (strcmp(req.path, "/upload") == 0 && strcmp(req.method, "POST") != 0) {
         send_response(arg->fd, 405, "Method Not Allowed", "text/plain", "Method Not Allowed");

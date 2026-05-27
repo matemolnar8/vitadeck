@@ -16,9 +16,10 @@ declare global {
     error: (...args: unknown[]) => void;
   };
 
-  function nativeHostControlCommand(
-    command: string,
-    payloadJson: string,
+  function nativeGetHostControlBaseUrl(): string;
+  function nativeHostControlFetch(
+    url: string,
+    body: string,
     timeoutMs: number,
   ): Promise<string>;
 }

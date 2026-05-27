@@ -1,5 +1,6 @@
 #include <raylib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
 #include "ui/instance_tree.h"
@@ -34,6 +35,10 @@ int main(int argc, char *argv[]) {
 	if (!package_library_init(init_error, sizeof(init_error))) {
 		TraceLog(LOG_ERROR, "%s", init_error);
 		return_defer(1);
+	}
+
+	if (getenv("VITADECK_E2E_HOST_ECHO") && package_library_has_active_deck_app()) {
+		shell.state = VD_SHELL_HIDDEN;
 	}
 
 	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "VitaDeck");	

@@ -14,7 +14,7 @@ export default function App() {
     if (!globalThis.__vitadeckE2eHostEcho) return;
     const timer = setTimeout(() => {
       void testHostEcho();
-    }, 4000);
+    }, 6000);
     return () => clearTimeout(timer);
   }, []);
 

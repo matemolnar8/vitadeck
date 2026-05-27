@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "core/package_library.h"
+#include "core/host_control_link.h"
 
 #define SCREEN_WIDTH 960
 #define SCREEN_HEIGHT 544
@@ -20,7 +21,7 @@
 #define SHELL_SPACE_MD 16
 
 #define SHELL_FOOTER_HINT_Y (SCREEN_HEIGHT - SHELL_PADDING - SHELL_FONT_CAPTION)
-#define SHELL_LAN_STRIP_Y (SHELL_FOOTER_HINT_Y - SHELL_SPACE_MD - SHELL_FONT_CAPTION - SHELL_SPACE_XS - SHELL_FONT_CAPTION)
+#define SHELL_LAN_STRIP_Y (SHELL_FOOTER_HINT_Y - SHELL_SPACE_MD - (SHELL_FONT_CAPTION * 3) - (SHELL_SPACE_XS * 2))
 
 #define SHELL_TITLE_Y SHELL_PADDING
 #define SHELL_SECTION_Y (SHELL_TITLE_Y + SHELL_FONT_TITLE + SHELL_SPACE_SM)
@@ -44,6 +45,7 @@ static int shell_text_baseline_y(int row_top, int font_h)
 static void shell_draw_lan_strip(const VdShell *shell)
 {
     int y = SHELL_LAN_STRIP_Y;
+    char host_line[640];
     DrawText("LAN", SHELL_PADDING, y, SHELL_FONT_CAPTION, (Color){ 140, 160, 190, 255 });
     y += SHELL_FONT_CAPTION + SHELL_SPACE_XS;
     if (upload_server_is_running(&shell->upload_server)) {
@@ -53,6 +55,9 @@ static void shell_draw_lan_strip(const VdShell *shell)
     } else {
         DrawText("Starting network listener...", SHELL_PADDING, y, SHELL_FONT_CAPTION, (Color){ 130, 140, 160, 255 });
     }
+    y += SHELL_FONT_CAPTION + SHELL_SPACE_XS;
+    host_control_link_format_status_line(host_line, sizeof(host_line));
+    DrawText(host_line, SHELL_PADDING, y, SHELL_FONT_CAPTION, (Color){ 160, 200, 160, 255 });
 }
 
 static void shell_draw_footer_hint(void)

@@ -20,16 +20,18 @@ Order assumes connection topology is chosen in phase 0. Adjust if grill resolves
 
 - [x] In-repo package `js/packages/host-control-companion` (workspace only, not npm publish v1)
 - Depends on `@vitadeck/sdk/host-control` subpath
-- CLI: `start` with **Host Control Companion Configuration** + `--vita` override
-- Implements gateway + command dispatch + auto-reconnect
+- CLI: `start` binds command listener, **Host Control Link** with retry, `--vita` + `--callback-host`
+- Implements gateway + `POST /v1/command` server
 - Windows + macOS smoke instructions in package README
 
 ## Phase 3 — Vitadeck native + shell
 
-- [x] Shared listener routes `/v1/host/poll` and `/v1/host/result`
+- [x] Shared listener routes `/v1/host/link` and `/v1/host/status` (Hybrid C)
+- [x] Vita HTTP client (`nativeHostControlFetch`) for `POST /v1/command` on **Host Callback URL**
+- [x] Persist **Host Callback URL** (`host-control-link.json` under package library root)
 - [x] Always-on listener from `shell_init`
 - [x] **Shell LAN Strip**
-- [x] Native `nativeHostControlCommand` bridge
+- [x] Native `nativeHostControlFetch` + `nativeGetHostControlBaseUrl` bridge
 - [x] picohttpparser integrated into request parsing (`src/net/http_parse.c`)
 - Shell surface: show Vita **Host Control** address when listener active (lifecycle TBD — may mirror **Runtime Upload Listener** or always-on when enabled)
 - Bridge: async host calls from Deck App JS without blocking render thread
