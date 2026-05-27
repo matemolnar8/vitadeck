@@ -84,13 +84,17 @@ export type HostControlClient = {
 export function createHostControlClient(options: HostControlClientOptions = {}): HostControlClient {
   const timeoutMs = options.timeoutMs ?? HOST_CONTROL_DECK_TIMEOUT_MS;
   const transport = options.transport ?? nativeTransport;
-  const configuredBaseUrl = options.baseUrl ?? getDefaultBaseUrl();
-  const baseUrl = trimTrailingSlash(configuredBaseUrl);
+
+  function resolveBaseUrl(): string {
+    const configured = options.baseUrl ?? getDefaultBaseUrl();
+    return trimTrailingSlash(configured);
+  }
 
   async function command<C extends HostControlCommand>(
     commandName: C,
     payload?: HostControlPayloads[C],
   ): Promise<VitaDeckLanJsonResult<HostControlResults[C]>> {
+    const baseUrl = resolveBaseUrl();
     if (!baseUrl) {
       throw new Error("Host Control Unavailable");
     }

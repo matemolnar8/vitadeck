@@ -13,6 +13,10 @@
 #include <psp2/net/net.h>
 #include <psp2/net/netctl.h>
 #include <psp2/net/http.h>
+
+#ifndef SCE_HTTP_ERROR_ALREADY_INITED
+#define SCE_HTTP_ERROR_ALREADY_INITED 0x80431020
+#endif
 #else
 #include <curl/curl.h>
 #endif
@@ -280,9 +284,14 @@ static int host_http_sce_init(void)
     if (!g_net_mem) return -1;
 
     SceNetInitParam param = { .memory = g_net_mem, .size = 256 * 1024, .flags = 0 };
-    if (sceNetInit(&param) < 0) return -1;
-    if (sceNetCtlInit() < 0) return -1;
-    if (sceHttpInit(256 * 1024) < 0) return -1;
+    if (sceNetInit(&param) < 0) {
+        /* Net may already be initialized (e.g. system Wi-Fi stack). */
+    }
+    if (sceNetCtlInit() < 0) {
+        /* NetCtl may already be initialized. */
+    }
+    int http_init = sceHttpInit(256 * 1024);
+    if (http_init < 0 && http_init != SCE_HTTP_ERROR_ALREADY_INITED) return -1;
 
     g_sce_http_ready = true;
     return 0;
@@ -297,6 +306,12 @@ static void host_http_perform_sce(const HostHttpJob *job, HostHttpDone *done)
 
     if (host_http_sce_init() < 0) {
         snprintf(done->error, sizeof(done->error), "HTTP stack init failed.");
+        return;
+    }
+
+    int net_state = SCE_NETCTL_STATE_DISCONNECTED;
+    if (sceNetCtlInetGetState(&net_state) == 0 && net_state != SCE_NETCTL_STATE_CONNECTED) {
+        snprintf(done->error, sizeof(done->error), "Wi-Fi is not connected.");
         return;
     }
 
@@ -334,6 +349,14 @@ static void host_http_perform_sce(const HostHttpJob *job, HostHttpDone *done)
     int send = sceHttpSendRequest(req, job->body, (unsigned int)content_length);
     if (send < 0) {
         snprintf(done->error, sizeof(done->error), "sceHttpSendRequest failed (0x%08X).", send);
+        goto cleanup;
+    }
+
+    char *response_headers = NULL;
+    unsigned int response_header_size = 0;
+    int headers_ret = sceHttpGetAllResponseHeaders(req, &response_headers, &response_header_size);
+    if (headers_ret < 0) {
+        snprintf(done->error, sizeof(done->error), "sceHttpGetAllResponseHeaders failed (0x%08X).", headers_ret);
         goto cleanup;
     }
 

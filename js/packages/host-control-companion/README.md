@@ -13,6 +13,8 @@ pnpm --filter @vitadeck/host-control-companion start -- --vita http://192.168.1.
 
 The companion binds the command listener (default ports **8797–8806**), links to the Vita, then stays running. Deck Apps call the host via the persisted **Host Callback URL**.
 
+**Order matters:** start Vitadeck, then start the companion and wait until you see `linked to Vita` before using **Host echo** in a Deck App. On desktop loopback, pass `--callback-host 127.0.0.1`. On a real Vita, omit that flag so the callback uses your Mac/PC LAN address (the Vita cannot reach `127.0.0.1` on your computer).
+
 ### Options
 
 - `--vita URL` — Vitadeck **LAN HTTP URL** (saved to `~/.vitadeck/host-control.json`)
