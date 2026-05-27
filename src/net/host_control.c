@@ -229,6 +229,17 @@ static int hc_parse_request_id(const char *body, int *out_id)
     return 0;
 }
 
+static char *hc_copy_span(const char *start, const char *end_inclusive)
+{
+    if (!start || !end_inclusive || end_inclusive < start) return NULL;
+    size_t len = (size_t)(end_inclusive - start + 1);
+    char *copy = malloc(len + 1);
+    if (!copy) return NULL;
+    memcpy(copy, start, len);
+    copy[len] = '\0';
+    return copy;
+}
+
 static char *hc_extract_result_json(const char *body)
 {
     const char *key = strstr(body, "\"result\"");
@@ -237,14 +248,47 @@ static char *hc_extract_result_json(const char *body)
     if (!start) return NULL;
     start++;
     while (*start == ' ' || *start == '\t') start++;
-    const char *end = strrchr(start, '}');
-    if (!end || end < start) return NULL;
-    size_t len = (size_t)(end - start + 1);
-    char *copy = malloc(len + 1);
-    if (!copy) return NULL;
-    memcpy(copy, start, len);
-    copy[len] = '\0';
-    return copy;
+
+    if (*start == '{') {
+        int depth = 0;
+        for (const char *p = start; *p; p++) {
+            if (*p == '{') depth++;
+            else if (*p == '}') {
+                depth--;
+                if (depth == 0) return hc_copy_span(start, p);
+            }
+        }
+        return NULL;
+    }
+
+    if (*start == '[') {
+        int depth = 0;
+        for (const char *p = start; *p; p++) {
+            if (*p == '[') depth++;
+            else if (*p == ']') {
+                depth--;
+                if (depth == 0) return hc_copy_span(start, p);
+            }
+        }
+        return NULL;
+    }
+
+    if (*start == '"') {
+        for (const char *p = start + 1; *p; p++) {
+            if (*p == '\\' && p[1]) {
+                p++;
+                continue;
+            }
+            if (*p == '"') return hc_copy_span(start, p);
+        }
+        return NULL;
+    }
+
+    const char *end = start;
+
+    while (*end && *end != ',' && *end != '}' && *end != '\n' && *end != '\r') end++;
+    if (end == start) return NULL;
+    return hc_copy_span(start, end - 1);
 }
 
 void host_control_handle_result(int client_fd, const char *body, size_t body_len)
@@ -302,10 +346,6 @@ static bool hc_enqueue_command(const char *command, const char *payload_json, in
     if (!g_hc.mutex) host_control_init();
 
     vd_mutex_lock(g_hc.mutex);
-    if (!g_hc.poll_active) {
-        vd_mutex_unlock(g_hc.mutex);
-        return false;
-    }
     if (g_hc.has_work) {
         vd_mutex_unlock(g_hc.mutex);
         return false;

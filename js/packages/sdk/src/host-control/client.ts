@@ -18,7 +18,7 @@ function nativeGlobals(): HostControlNativeGlobals {
   return globalThis as unknown as HostControlNativeGlobals;
 }
 
-function callNativeHostControl(
+async function callNativeHostControl(
   command: string,
   payloadJson: string,
   timeoutMs: number,
@@ -27,7 +27,12 @@ function callNativeHostControl(
   if (typeof native !== "function") {
     throw new Error("Host Control native bridge is unavailable.");
   }
-  return Promise.resolve(native(command, payloadJson, timeoutMs));
+  try {
+    return await Promise.resolve(native(command, payloadJson, timeoutMs));
+  } catch (reason) {
+    if (reason instanceof Error) throw reason;
+    throw new Error(typeof reason === "string" ? reason : "Host Control failed.");
+  }
 }
 
 function parseResult<T extends object>(raw: string): VitaDeckLanJsonResult<T> {
