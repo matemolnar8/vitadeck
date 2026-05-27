@@ -63,6 +63,7 @@ export async function runVitaSession(vitaUrl: string, gateway: HostControlGatewa
         payload: work.payload,
       };
       const response = await gateway.handleCommand(request);
+      console.log(`[host-control] handled ${work.command} requestId=${work.requestId}`);
       const payload = {
         requestId: work.requestId,
         result: response.body,

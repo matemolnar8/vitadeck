@@ -1,10 +1,22 @@
 import { Button, Rect, Screen, Text, hostControl, insetContent, useTheme } from "@vitadeck/sdk";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+
+declare global {
+  var __vitadeckE2eHostEcho: boolean | undefined;
+}
 
 export default function App() {
   const { theme } = useTheme();
   const { x, y, width, height } = insetContent();
   const [hostStatus, setHostStatus] = useState("Host: not tested");
+
+  useEffect(() => {
+    if (!globalThis.__vitadeckE2eHostEcho) return;
+    const timer = setTimeout(() => {
+      void testHostEcho();
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, []);
 
   async function testHostEcho() {
     setHostStatus("Host: calling echo...");
