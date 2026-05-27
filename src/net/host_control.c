@@ -274,7 +274,6 @@ static int host_http_sce_init(void)
     if (g_sce_http_ready) return 0;
 
     sceSysmoduleLoadModule(SCE_SYSMODULE_NET);
-    sceSysmoduleLoadModule(SCE_SYSMODULE_NET_CTL);
     sceSysmoduleLoadModule(SCE_SYSMODULE_HTTP);
 
     g_net_mem = malloc(256 * 1024);
