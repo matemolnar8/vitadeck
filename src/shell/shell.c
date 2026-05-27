@@ -2,7 +2,6 @@
 
 #include <raylib.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include "core/package_library.h"
 
@@ -212,14 +211,6 @@ void shell_init(VdShell *shell)
     if (!upload_server_start(&shell->upload_server, error, sizeof(error))) {
         snprintf(shell->bind_error, sizeof(shell->bind_error), "%s", error);
     }
-}
-
-bool shell_try_auto_activate(VdShell *shell, bool *request_runtime_restart)
-{
-    const char *package_name = getenv("VITADECK_AUTO_ACTIVATE");
-    if (!package_name || package_name[0] == '\0') return false;
-    activate_package(shell, package_name, request_runtime_restart);
-    return true;
 }
 
 void shell_shutdown(VdShell *shell)

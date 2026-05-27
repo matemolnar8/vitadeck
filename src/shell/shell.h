@@ -31,6 +31,5 @@ bool shell_is_visible(const VdShell *shell);
 void shell_update(VdShell *shell, bool *request_runtime_restart);
 void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart);
 void shell_render(VdShell *shell);
-bool shell_try_auto_activate(VdShell *shell, bool *request_runtime_restart);
 
 #endif /* VD_SHELL_H */
