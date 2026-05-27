@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-
 import { createHostControlClient } from "./client.js";
 
 describe("createHostControlClient", () => {
@@ -10,8 +9,7 @@ describe("createHostControlClient", () => {
     const client = createHostControlClient();
     await assert.rejects(
       () => client.command("host.echo", { x: 1 }),
-      (error: unknown) =>
-        error instanceof Error && error.message === "Host Control native bridge is unavailable.",
+      (error: unknown) => error instanceof Error && error.message === "Host Control native bridge is unavailable.",
     );
     (globalThis as { nativeHostControlCommand?: unknown }).nativeHostControlCommand = prev;
   });
@@ -21,9 +19,8 @@ describe("createHostControlClient", () => {
     (globalThis as { nativeHostControlCommand?: unknown }).nativeHostControlCommand = "not-a-function";
     const client = createHostControlClient();
     await assert.rejects(
-      () => client.command("host.echo"),
-      (error: unknown) =>
-        error instanceof Error && error.message === "Host Control native bridge is unavailable.",
+      () => client.command("host.echo", {}),
+      (error: unknown) => error instanceof Error && error.message === "Host Control native bridge is unavailable.",
     );
     (globalThis as { nativeHostControlCommand?: unknown }).nativeHostControlCommand = prev;
   });
