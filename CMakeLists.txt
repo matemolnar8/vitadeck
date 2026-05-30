@@ -89,11 +89,20 @@ else()
   list(APPEND PLATFORM_SOURCES src/platform/thread_posix.c)
 endif()
 
+set(JSLIB_SOURCES
+    src/jslib/jslib.c
+    src/jslib/instance.c
+    src/jslib/colors.c
+    src/jslib/timeout.c
+    src/jslib/log.c
+    src/jslib/fetch.c
+)
+
 set(VITADECK_SOURCES
     src/main.c
     src/core/js_runtime.c
     src/core/package_library.c
-    src/jslib/jslib.c
+    ${JSLIB_SOURCES}
     src/ui/instance_tree.c
     src/ui/render.c
     src/ui/input.c

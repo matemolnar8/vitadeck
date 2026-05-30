@@ -3,6 +3,7 @@
 	thread so the JS event loop never blocks; completed requests are polled by
 	run_fetch() on the JS thread, which resolves/rejects the JS Promise.
 */
+#include "jslib_internal.h"
 #include <ctype.h>
 #include <curl/curl.h>
 #include "platform/thread.h"

@@ -1,31 +1,6 @@
-/*
-	This file is the entry point for the JS library for vitadeck.
-	It's a single translation unit including all the JS library functions.
-	Headers are not included in the *.c files, they are included here.
-*/
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include "quickjs.h"
-#include <raylib.h>
-#include "stb_ds.h"
-
-#include "jslib.h"
-#include "ui/instance_tree.h"
+#include "jslib_internal.h"
 #include "core/event_queue.h"
 #include "core/package_library.h"
-
-static void js_set_global_function(JSContext *ctx, const char *name, JSCFunction *func, int length) {
-	JSValue global = JS_GetGlobalObject(ctx);
-	JS_SetPropertyStr(ctx, global, name, JS_NewCFunction(ctx, func, name, length));
-	JS_FreeValue(ctx, global);
-}
-
-#include "instance.c"
-#include "colors.c"
-#include "timeout.c"
-#include "log.c"
-#include "fetch.c"
 
 static JSValue js_get_time(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
 	(void)this_val; (void)argc; (void)argv;
@@ -92,7 +67,6 @@ static JSValue js_native_get_active_deck_app_path(JSContext *ctx, JSValueConst t
 	return JS_NewString(ctx, package_library_active_package_path());
 }
 
-// Called from JS thread to dispatch event to JS
 static void call_input_event_from_native(JSContext *ctx, const char *id, const char *event) {
     JSValue global = JS_GetGlobalObject(ctx);
     JSValue vitadeck = JS_GetPropertyStr(ctx, global, "vitadeck");
@@ -123,7 +97,6 @@ static void call_input_event_from_native(JSContext *ctx, const char *id, const c
     JS_FreeValue(ctx, global);
 }
 
-// Process events from queue (called from JS thread)
 void process_input_events(JSContext *ctx) {
     InputEvent evt;
     while (event_queue_pop(&evt)) {

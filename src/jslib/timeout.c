@@ -1,3 +1,4 @@
+#include "jslib_internal.h"
 
 typedef struct {
     JSValue func;

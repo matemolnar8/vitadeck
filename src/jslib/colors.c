@@ -1,3 +1,5 @@
+#include "jslib_internal.h"
+
 static JSValue create_color_object(JSContext *ctx, Color c) {
     JSValue obj = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, obj, "r", JS_NewInt32(ctx, c.r));

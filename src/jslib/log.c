@@ -2,6 +2,8 @@
 	Log helpers wired to raylib TraceLog. 
 	Joins all args with spaces, converts them to string representation.
 */
+#include "jslib_internal.h"
+
 static JSValue log_with_level(JSContext *ctx, int level, int argc, JSValueConst *argv)
 {
 	char buffer[2048];

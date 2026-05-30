@@ -1,5 +1,8 @@
 // JS bindings for instance tree operations
 
+#include "jslib_internal.h"
+#include "ui/instance_tree.h"
+
 static JSValue native_create_rect(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;

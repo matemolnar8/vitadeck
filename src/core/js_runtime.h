@@ -2,7 +2,6 @@
 #define JS_RUNTIME_H
 
 #include <stdbool.h>
-#include <stddef.h>
 
 typedef struct {
     void *thread;
