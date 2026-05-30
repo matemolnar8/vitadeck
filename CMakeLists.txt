@@ -46,7 +46,7 @@ if(NOT DEFINED ENV{VITASDK})
 endif()
 
 # Set up include directories
-set(VITADECK_INCLUDE_DIRS src vendor vendor/quickjs)
+set(VITADECK_INCLUDE_DIRS src vendor vendor/quickjs vendor/picohttpparser)
 list(APPEND VITADECK_INCLUDE_DIRS ${OPENSSL_INCLUDE_DIR})
 
 if(DEFINED ENV{VITASDK})
@@ -93,6 +93,7 @@ set(VITADECK_SOURCES
     src/main.c
     src/core/js_runtime.c
     src/core/package_library.c
+    src/core/host_control_link.c
     src/jslib/jslib.c
     src/ui/instance_tree.c
     src/ui/render.c
@@ -101,6 +102,8 @@ set(VITADECK_SOURCES
     src/shell/shell.c
     src/upload/archive.c
     src/upload/http_server.c
+    src/net/http_parse.c
+    vendor/picohttpparser/picohttpparser.c
     ${PLATFORM_SOURCES}
 )
 add_executable(${PROJECT_NAME} ${VITADECK_SOURCES})

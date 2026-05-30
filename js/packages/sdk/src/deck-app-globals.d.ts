@@ -15,4 +15,11 @@ declare global {
     warn: (...args: unknown[]) => void;
     error: (...args: unknown[]) => void;
   };
+
+  function nativeGetHostControlBaseUrl(): string;
+  function nativeHostControlFetch(
+    url: string,
+    body: string,
+    timeoutMs: number,
+  ): Promise<string>;
 }

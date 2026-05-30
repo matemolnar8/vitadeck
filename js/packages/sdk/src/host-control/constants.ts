@@ -1,0 +1,11 @@
+export const HOST_CONTROL_PROTOCOL_VERSION = 1;
+export const LAN_HTTP_DEFAULT_PORT = 8787;
+export const LAN_HTTP_PORT_TRIES = 10;
+export const HOST_CONTROL_DEFAULT_PORT = 8797;
+export const HOST_CONTROL_PORT_TRIES = 10;
+export const HOST_CONTROL_REQUEST_MAX_BYTES = 64 * 1024;
+export const HOST_CONTROL_LINK_PATH = "/v1/host/link";
+export const HOST_CONTROL_STATUS_PATH = "/v1/host/status";
+export const HOST_CONTROL_COMMAND_PATH = "/v1/command";
+export const HOST_CONTROL_LINK_RETRY_MS = 2000;
+export const HOST_CONTROL_DECK_TIMEOUT_MS = 10_000;

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "core/package_library.h"
+#include "core/host_control_link.h"
 
 #define SCREEN_WIDTH 960
 #define SCREEN_HEIGHT 544
@@ -19,12 +20,13 @@
 #define SHELL_SPACE_SM 8
 #define SHELL_SPACE_MD 16
 
-#define SHELL_FOOTER_Y (SCREEN_HEIGHT - SHELL_PADDING - SHELL_FONT_CAPTION)
+#define SHELL_FOOTER_HINT_Y (SCREEN_HEIGHT - SHELL_PADDING - SHELL_FONT_CAPTION)
+#define SHELL_LAN_STRIP_Y (SHELL_FOOTER_HINT_Y - SHELL_SPACE_MD - (SHELL_FONT_CAPTION * 3) - (SHELL_SPACE_XS * 2))
 
 #define SHELL_TITLE_Y SHELL_PADDING
 #define SHELL_SECTION_Y (SHELL_TITLE_Y + SHELL_FONT_TITLE + SHELL_SPACE_SM)
 #define SHELL_LIST_Y (SHELL_SECTION_Y + SHELL_FONT_BODY + SHELL_SPACE_MD)
-#define SHELL_LIST_BOTTOM (SHELL_FOOTER_Y - SHELL_SPACE_MD - SHELL_FONT_BODY - SHELL_SPACE_MD)
+#define SHELL_LIST_BOTTOM (SHELL_LAN_STRIP_Y - SHELL_SPACE_MD)
 
 #define SHELL_ROW_H 50
 #define SHELL_ROW_STEP (SHELL_ROW_H + SHELL_SPACE_SM)
@@ -40,9 +42,27 @@ static int shell_text_baseline_y(int row_top, int font_h)
     return row_top + (SHELL_ROW_H - font_h) / 2;
 }
 
+static void shell_draw_lan_strip(const VdShell *shell)
+{
+    int y = SHELL_LAN_STRIP_Y;
+    char host_line[640];
+    DrawText("LAN", SHELL_PADDING, y, SHELL_FONT_CAPTION, (Color){ 140, 160, 190, 255 });
+    y += SHELL_FONT_CAPTION + SHELL_SPACE_XS;
+    if (upload_server_is_running(&shell->upload_server)) {
+        DrawText(upload_server_url(&shell->upload_server), SHELL_PADDING, y, SHELL_FONT_CAPTION, GREEN);
+    } else if (shell->bind_error[0] != '\0') {
+        DrawText(shell->bind_error, SHELL_PADDING, y, SHELL_FONT_CAPTION, (Color){ 220, 120, 120, 255 });
+    } else {
+        DrawText("Starting network listener...", SHELL_PADDING, y, SHELL_FONT_CAPTION, (Color){ 130, 140, 160, 255 });
+    }
+    y += SHELL_FONT_CAPTION + SHELL_SPACE_XS;
+    host_control_link_format_status_line(host_line, sizeof(host_line));
+    DrawText(host_line, SHELL_PADDING, y, SHELL_FONT_CAPTION, (Color){ 160, 200, 160, 255 });
+}
+
 static void shell_draw_footer_hint(void)
 {
-    DrawText("Start / F1 · Confirm · Back", SHELL_PADDING, SHELL_FOOTER_Y, SHELL_FONT_CAPTION, GRAY);
+    DrawText("Start / F1 · Confirm · Back", SHELL_PADDING, SHELL_FOOTER_HINT_Y, SHELL_FONT_CAPTION, GRAY);
 }
 
 static bool start_pressed(void)
@@ -92,18 +112,14 @@ static void draw_checkmark(int cx, int cy, Color c)
 static int shell_row_count(void)
 {
     VdPackageInfo packages[VD_PACKAGE_LIST_MAX];
-    int n = package_library_list(packages, VD_PACKAGE_LIST_MAX);
-    return n + 1;
-}
-
-static bool row_is_upload(int row, int package_count)
-{
-    return row == package_count;
+    return package_library_list(packages, VD_PACKAGE_LIST_MAX);
 }
 
 static int row_band_height(int row, int package_count)
 {
-    return row_is_upload(row, package_count) ? SHELL_UPLOAD_ROW_H : SHELL_ROW_H;
+    (void)row;
+    (void)package_count;
+    return SHELL_ROW_H;
 }
 
 static int shell_visible_rows_from(int start_row, int package_count, int row_count)
@@ -156,30 +172,6 @@ static void clear_remove_confirm(VdShell *shell)
     shell->remove_confirm_row = -1;
 }
 
-static bool start_upload_server(VdShell *shell)
-{
-    shell->bind_error[0] = '\0';
-    char error[256];
-    if (!upload_server_start(&shell->upload_server, error, sizeof(error))) {
-        snprintf(shell->bind_error, sizeof(shell->bind_error), "%s", error);
-        snprintf(shell->message, sizeof(shell->message), "%s", error);
-        return false;
-    }
-    snprintf(shell->message, sizeof(shell->message), "Upload server started.");
-    return true;
-}
-
-static void toggle_upload_server(VdShell *shell)
-{
-    if (upload_server_is_running(&shell->upload_server)) {
-        upload_server_stop(&shell->upload_server);
-        shell->bind_error[0] = '\0';
-        snprintf(shell->message, sizeof(shell->message), "Upload server stopped.");
-        return;
-    }
-    start_upload_server(shell);
-}
-
 static void hide_shell_to_deck(VdShell *shell)
 {
     shell->state = VD_SHELL_HIDDEN;
@@ -220,6 +212,10 @@ void shell_init(VdShell *shell)
     shell->state = VD_SHELL_HOME;
     shell->remove_confirm_row = -1;
     upload_server_init(&shell->upload_server);
+    char error[256];
+    if (!upload_server_start(&shell->upload_server, error, sizeof(error))) {
+        snprintf(shell->bind_error, sizeof(shell->bind_error), "%s", error);
+    }
 }
 
 void shell_shutdown(VdShell *shell)
@@ -289,12 +285,8 @@ void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart)
         shell->focus_col = 0;
     }
 
-    if (row_is_upload(shell->focus_row, package_count)) {
-        shell->focus_col = 0;
-    } else {
-        if (left_pressed() && shell->focus_col > 0) shell->focus_col--;
-        if (right_pressed() && shell->focus_col < 1) shell->focus_col++;
-    }
+    if (left_pressed() && shell->focus_col > 0) shell->focus_col--;
+    if (right_pressed() && shell->focus_col < 1) shell->focus_col++;
 
     ensure_focus_row_visible(shell, package_count, row_count);
 
@@ -304,11 +296,6 @@ void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart)
     }
 
     if (!confirm_pressed()) return;
-
-    if (row_is_upload(shell->focus_row, package_count)) {
-        toggle_upload_server(shell);
-        return;
-    }
 
     const VdPackageInfo *pkg = &packages[shell->focus_row];
     if (shell->focus_col == 0) {
@@ -412,9 +399,7 @@ void shell_render(VdShell *shell)
         int hint_y = SHELL_SECTION_Y + SHELL_FONT_BODY + SHELL_SPACE_XS;
         DrawText("No Deck Apps installed yet.", SHELL_PADDING, hint_y, SHELL_FONT_CAPTION, (Color){ 150, 160, 180, 255 });
         hint_y += SHELL_FONT_CAPTION + SHELL_SPACE_XS;
-        DrawText("Select Upload, confirm to start the server, then open the URL shown below on", SHELL_PADDING, hint_y, SHELL_FONT_CAPTION, (Color){ 130, 140, 160, 255 });
-        hint_y += SHELL_FONT_CAPTION + SHELL_SPACE_XS;
-        DrawText("another device on this network and upload a zip containing one .vdapp folder.", SHELL_PADDING, hint_y, SHELL_FONT_CAPTION, (Color){ 130, 140, 160, 255 });
+        DrawText("Use the LAN URL below to upload a .vdapp zip or pair Host Control.", SHELL_PADDING, hint_y, SHELL_FONT_CAPTION, (Color){ 130, 140, 160, 255 });
         list_top = hint_y + SHELL_FONT_CAPTION + SHELL_SPACE_MD;
     }
 
@@ -429,39 +414,21 @@ void shell_render(VdShell *shell)
     int end_row = shell->scroll_row;
     for (int row = shell->scroll_row; row < row_count; row++) {
         bool row_focus = row == shell->focus_row && shell->remove_confirm_package[0] == '\0';
-        bool upload_row = row_is_upload(row, package_count);
-        bool upload_running = upload_row && upload_server_is_running(&shell->upload_server);
-
         int row_w = SCREEN_WIDTH - SHELL_PADDING - SHELL_PADDING;
         int band_h = row_band_height(row, package_count);
         int bottom_reserve = row + 1 < row_count ? SHELL_OVERFLOW_ROW_STEP : 0;
         if (row_top + band_h + bottom_reserve > SHELL_LIST_BOTTOM) break;
         Color band_color = row_focus ? (Color){ 42, 52, 72, 255 } : (Color){ 28, 34, 44, 255 };
-        if (upload_running) band_color = row_focus ? (Color){ 34, 64, 58, 255 } : (Color){ 24, 48, 44, 255 };
-        DrawRectangle(SHELL_PADDING, row_top, row_w, band_h,
-            band_color);
+        DrawRectangle(SHELL_PADDING, row_top, row_w, band_h, band_color);
 
         int text_y = shell_text_baseline_y(row_top, SHELL_FONT_BODY);
-        if (upload_row) text_y = row_top + SHELL_SPACE_MD;
-
-        if (upload_row) {
-            int pad = SHELL_SPACE_MD;
-            DrawText("Upload", SHELL_NAME_X + pad, text_y, SHELL_FONT_BODY, upload_running ? GREEN : RAYWHITE);
-            int sub_y = text_y + SHELL_FONT_BODY + SHELL_SPACE_XS;
-            if (upload_running) {
-                DrawText(upload_server_url(&shell->upload_server), SHELL_NAME_X + pad, sub_y, SHELL_FONT_CAPTION, GREEN);
-            } else {
-                DrawText("Confirm to start server", SHELL_NAME_X + pad, sub_y, SHELL_FONT_CAPTION, (Color){ 130, 140, 160, 255 });
-            }
-        } else {
-            const VdPackageInfo *pkg = &packages[row];
-            char name_line[VD_DISPLAY_NAME_MAX + VD_VERSION_MAX + 12];
-            snprintf(name_line, sizeof(name_line), "%s   %s", pkg->display_name, pkg->version);
-            Color name_color = pkg->is_active ? GREEN : RAYWHITE;
-            DrawText(name_line, SHELL_NAME_X + SHELL_SPACE_MD, text_y, SHELL_FONT_BODY, name_color);
-            draw_tick_cell(SHELL_TICK_CX, row_top, pkg->is_active, row_focus, shell->focus_col == 0);
-            draw_x_cell(SHELL_X_CX, row_top, row_focus, shell->focus_col == 1);
-        }
+        const VdPackageInfo *pkg = &packages[row];
+        char name_line[VD_DISPLAY_NAME_MAX + VD_VERSION_MAX + 12];
+        snprintf(name_line, sizeof(name_line), "%s   %s", pkg->display_name, pkg->version);
+        Color name_color = pkg->is_active ? GREEN : RAYWHITE;
+        DrawText(name_line, SHELL_NAME_X + SHELL_SPACE_MD, text_y, SHELL_FONT_BODY, name_color);
+        draw_tick_cell(SHELL_TICK_CX, row_top, pkg->is_active, row_focus, shell->focus_col == 0);
+        draw_x_cell(SHELL_X_CX, row_top, row_focus, shell->focus_col == 1);
         row_top += band_h + SHELL_SPACE_SM;
         end_row = row + 1;
     }
@@ -477,8 +444,9 @@ void shell_render(VdShell *shell)
     }
 
     if (shell->message[0] != '\0') {
-        int msg_y = SHELL_FOOTER_Y - SHELL_SPACE_MD - SHELL_FONT_BODY;
+        int msg_y = SHELL_LAN_STRIP_Y - SHELL_SPACE_MD - SHELL_FONT_BODY;
         DrawText(shell->message, SHELL_PADDING, msg_y, SHELL_FONT_BODY, YELLOW);
     }
+    shell_draw_lan_strip(shell);
     shell_draw_footer_hint();
 }

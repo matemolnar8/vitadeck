@@ -108,9 +108,69 @@ _Avoid_: Mouse click, Deck App **Press**, text field submission in **Deck Apps**
 The macOS keyboard key that maps to Circle back in **Shell Face Input** while the **VitaDeck Shell** has focus (Backspace).
 _Avoid_: Browser back, undo typing in **Deck Apps**, delete file shortcuts
 
+**LAN HTTP Listener**:
+The VitaDeck-owned HTTP server on the LAN that multiplexes **Runtime Upload** and **Host Control** routes on one bound port for the lifetime of a Vitadeck process—from launch until the user quits Vitadeck. The user does not turn it on or off from the **VitaDeck Shell**; it keeps running while a **Deck App** owns the **Render Surface** (Shell hidden) as well as while the **VitaDeck Shell** is visible.
+_Avoid_: Shell upload toggle, per-feature enable switches, listener scoped only to Shell visibility
+
+**LAN HTTP URL**:
+The `http://IP:PORT/` address of the bound **LAN HTTP Listener**, using a LAN-reachable **IP** and the **PORT** actually bound.
+_Avoid_: Host computer URL, FTP URL, deep link
+
+**Shell LAN Strip**:
+The permanent **VitaDeck Shell** area on the **Shell Home Screen** that always shows the **LAN HTTP URL** and listener status (listening or bind failure), plus **Host Control** link state from **Host Control Status** (e.g. linked **Host Name** and **Host Callback URL**, or not linked). Used for **Runtime Upload** and **Host Control Link** without a start/stop control.
+_Avoid_: Upload server toggle, hidden network submenu, URL only on a separate screen, dedicated Host Control settings screen in v1
+
+**LAN HTTP Listener Recovery**:
+Automatic stop and restart of the **LAN HTTP Listener** when the network is unavailable or binding fails, with retry until service is restored. Optional future hardening; initial implementation may only surface bind failure without retry.
+_Avoid_: Manual server toggle, treating recovery as required for the first ship
+
+**Host Control**:
+The Vitadeck capability for **Deck Apps** to ask a nearby computer on the LAN to run actions through a **Host Control Companion**. Pairing uses **Host Control Link** on the **LAN HTTP Listener**; steady-state commands are HTTP requests from Vitadeck to the persisted **Host Callback URL**.
+_Avoid_: Runtime Upload, USB control, cloud remote desktop
+
+**Host Control Link**:
+The registration step where the **Host Control Companion** calls **`POST /v1/host/link`** on the **LAN HTTP URL** with its **Host Callback URL**. Vitadeck persists that URL for subsequent commands; a later successful link **replaces** the previous **Host Callback URL** (latest link wins). Served on the always-on **LAN HTTP Listener** alongside **Runtime Upload**.
+_Avoid_: Long-poll session, typing the host address on the Vita, permanent Vita-side command queue, requiring explicit unlink before every re-link in v1
+
+**Host Control Status**:
+Read-only **Host Control** state on the **LAN HTTP Listener** via **`GET /v1/host/status`** (linked or not, **Host Name**, **Host Callback URL** when linked). Used by the **Shell LAN Strip** and diagnostics—not for executing commands.
+_Avoid_: Health probe for **Runtime Upload**, command polling endpoint
+
+**Host Callback URL**:
+The LAN-reachable base URL (`http://HOST:PORT`) where the **Host Control Companion** accepts steady-state **`POST /v1/command`** requests. Vitadeck **persists** it on the device after a successful **Host Control Link** (survives Vitadeck restarts) and uses it for every **Deck App** host action until replaced by a new link.
+_Avoid_: **LAN HTTP URL**, host-only loopback address when the Vita is separate hardware, Vita-side upload address, session-only link state cleared on quit
+
+**Host Control Command Listener**:
+The HTTP server on the host computer (inside the **Host Control Companion**) that handles **`POST /v1/command`** for the **Host Control Contract**. Distinct port range from the Vita **LAN HTTP Listener** (default host base port **8797**, up to **10** consecutive tries).
+_Avoid_: **LAN HTTP Listener**, **Runtime Upload Listener**, WebSocket control plane
+
+**Host Control Unavailable**:
+The state where a **Deck App** invokes **Host Control** but Vitadeck has no persisted **Host Callback URL**, or a command HTTP request to that URL fails before a result is returned. Vitadeck fails the call immediately with a typed error; the **Deck App** decides how to present that to the user.
+_Avoid_: Vita-side command queue, silent no-ops, automatic retries inside Vitadeck for Deck App calls
+
+**Host Control Companion**:
+The host-side program in the **Deck App Workspace** that performs **Host Control Link** against the user-configured **LAN HTTP URL**, runs the **Host Control Command Listener**, and executes **Host Control Contract** commands on that computer. A single **`start`** run binds the command listener, then links to the Vita (retrying **Host Control Link** with backoff if the **LAN HTTP Listener** is not up yet), and stays running until stopped. It is not published to npm in the initial iteration.
+_Avoid_: VitaDeck runtime, Deck App Package, npm package Deck App authors install, browser upload client, separate link-then-exit as the primary v1 flow
+
+**Host Control Companion Reconnect**:
+Automatic **Host Control Link** retries while the companion is running when the Vita was unreachable at startup. After the first successful link in a run, the companion does not re-link again until the process is restarted (or a future manual reconnect). A manual reconnect trigger may be added later; not required in v1.
+_Avoid_: Long-poll session, Vita-side command queue, periodic re-link every N minutes in v1
+
+**Host Control Companion Configuration**:
+Persistent settings on the host for the **Host Control Companion**, including the Vitadeck **LAN HTTP URL** used for **Host Control Link**. A command-line override may replace the stored URL for a single run without changing persistence.
+_Avoid_: Vita-side settings file, typing the host PC address into the Vita
+
+**Host Control Callback Override**:
+An optional **Host Control Companion** CLI flag (e.g. `--callback-host`) that sets the host part of the **Host Callback URL** for one run. Default registration uses a LAN-reachable host address, not loopback, so hardware Vitae can reach the **Host Control Command Listener**; loopback is for same-machine desktop development only.
+_Avoid_: Persisting loopback as the default callback, Vita-side host URL entry
+
+**Host Control LAN Trust**:
+The initial **Host Control** security model: any peer on the local network may use **Host Control** routes while the **LAN HTTP Listener** is up, with no pairing token—same trust class as initial **Runtime Upload**. Optional future hardening may mirror **Upload Pairing**.
+_Avoid_: Account login, internet-wide access, per-command user approval on the Vita
+
 **Runtime Upload Listener**:
-The VitaDeck-owned HTTP server that serves the **Runtime Upload Web UI** and receives **Runtime Upload Archive** uploads. VitaDeck starts it when the user opens **Runtime Upload** from **Shell Home Screen** and binding succeeds. It binds on all network interfaces so LAN clients can reach it, uses a default TCP listen port with consecutive port fallback when that port is already in use (initially default **8787**, trying up to **10** ports), and the **Shell Upload Screen** shows the **Runtime Upload URL** for the address and port actually bound; reopening **Runtime Upload** shows the same URL while the listener is still running. After a successful publish, VitaDeck may keep the listener running on **Shell Home Screen** so further uploads work without rebinding. VitaDeck stops the listener when **Shell Upload Cancel** runs from the **Shell Upload Screen**, or when the user hides the **VitaDeck Shell** to the **Deck App** (**Start Input** from **Shell Home Screen** or back from **Shell Home Screen**), or when choosing a different **Active Deck App** (which hides the shell). If no port in that range can be bound, the listener does not run and the **Shell Upload Screen** shows bind failure instead.
-_Avoid_: Public API, always-on LAN service independent of the shell, background upload daemon
+The **Runtime Upload** routes on the **LAN HTTP Listener** (including the **Runtime Upload Web UI** and **Runtime Upload POST**). Not a separate server process from **Host Control** routes.
+_Avoid_: Standalone upload-only daemon, public REST catalog
 
 **Runtime Upload Web UI**:
 The LAN web page served by the **Runtime Upload Listener** for choosing, dragging/dropping, and uploading a **Runtime Upload Archive**, showing success and failure results in the browser.
@@ -121,8 +181,8 @@ The **Runtime Upload Listener** author-facing HTTP surface is **`GET /`** for th
 _Avoid_: Public REST catalog, mandatory OpenAPI, extension plugin routes
 
 **Runtime Upload URL**:
-The `http://IP:PORT/` address of the **Runtime Upload Web UI** shown on the **Shell Upload Screen** when the **Runtime Upload Listener** has successfully bound, using a LAN-reachable **IP** for the device and the **PORT** actually bound.
-_Avoid_: FTP URL, deep link, marketplace URL
+The **LAN HTTP URL** used to reach the **Runtime Upload Web UI** in a browser while the **LAN HTTP Listener** is listening.
+_Avoid_: FTP URL, deep link, marketplace URL, host-only address
 
 **Runtime Upload POST**:
 The HTTP `POST /upload` endpoint on the **Runtime Upload Listener** that ingests a **Runtime Upload Archive** as either `multipart/form-data` (browser-primary) or `application/zip` (automation-friendly). For `multipart/form-data`, the file part field name is **`archive`** (single file part per request). Responses are always JSON (`Content-Type: application/json`): on success, `ok: true` plus **`packageName`** (**Deck App Package Name**) and **`version`** (**Deck App Package Version**); on failure, `ok: false` plus a short machine **`code`** and human **`message`**. Typical HTTP statuses include **200** success, **413** over **Runtime Upload Limits**, **400** malformed request body, **415** unsupported `Content-Type`, **422** archive layout or manifest validation failure, and **409** when **Runtime Upload Single-Flight** rejects a concurrent ingest.
@@ -181,8 +241,12 @@ A JavaScript dependency provided by the **VitaDeck Runtime Bundle** rather than 
 _Avoid_: App dependency, bundled dependency, peer package
 
 **VitaDeck SDK**:
-The npm package that provides the **VitaDeck Runtime API** and Deck App build tooling, distributed on the public npm registry as `@vitadeck/sdk` so **Deck App** projects can live outside the **Deck App Workspace**.
-_Avoid_: Runtime package, CLI package, app framework
+The npm package that provides the **VitaDeck Runtime API** and Deck App build tooling, distributed on the public npm registry as `@vitadeck/sdk` so **Deck App** projects can live outside the **Deck App Workspace**. It is the single published package **Deck App** authors use for **Host Control** types and calls (e.g. via a dedicated subpath export).
+_Avoid_: Runtime package, CLI package, app framework, separate npm package authors must install for Host Control
+
+**Host Control Contract**:
+The versioned set of **Host Control** command names, payloads, and results defined in the **VitaDeck SDK** and shared by **Deck Apps**, the **Host Control Companion**, and the **Host Control Link** / **`POST /v1/command`** wire format.
+_Avoid_: Ad hoc JSON strings, per-Deck-App command tables, duplicate registries on host and Vita
 
 **Deck App Project Scaffold**:
 The SDK-generated starting project layout for authoring one standalone **Deck App**. Outside the **Deck App Workspace**, the scaffold pins `@vitadeck/sdk` with a **caret range** anchored to the **VitaDeck SDK** version that produced the scaffold.
@@ -254,13 +318,34 @@ _Avoid_: Click, mouse down, mouse up, hover
 - A **Deck App Component** explicitly renders **Screen**.
 - **Button** is the only public interactable UI component in the MVP.
 - **Button** exposes press-oriented callbacks: `onPress`, `onPressStart`, and `onPressEnd`.
-- **Runtime Upload** should eventually use a **Runtime Upload Listener** on the Vita.
-- The **Runtime Upload Listener** starts when the user opens **Runtime Upload**; after a successful publish it may keep running on **Shell Home Screen** until the user hides the shell to the **Deck App**, **Shell Upload Cancel** from the **Shell Upload Screen**, or activation hides the shell.
-- The **Runtime Upload Listener** listens on all interfaces with default port **8787** and falls forward to following ports until one binds or **10** attempts fail; the **Runtime Upload URL** reflects the bound port when binding succeeds.
+- **Runtime Upload** and **Host Control** share one **LAN HTTP Listener** on one port; route families differ, not separate servers.
+- The **LAN HTTP Listener** starts when Vitadeck launches and stops when Vitadeck exits; the user does not start or stop it from Shell.
+- The **LAN HTTP Listener** remains up while the **VitaDeck Shell** is hidden and a **Deck App** is active.
+- **LAN HTTP Listener Recovery** is optional later work; first ship may only report bind failure without automatic retry.
+- The **LAN HTTP URL** is the single address for browser upload and **Host Control Companion** pairing while listening.
+- The **Shell LAN Strip** permanently displays the **LAN HTTP URL**, listener status, and **Host Control** link state (**Host Name** / **Host Callback URL** when linked, or not linked) on the **Shell Home Screen**.
+- **Runtime Upload** uses **Runtime Upload Listener** routes on the always-shared **LAN HTTP Listener**.
+- **Host Control Link** and **Host Control Status** are the only **Host Control** routes on the always-on **LAN HTTP Listener**; steady-state commands use the persisted **Host Callback URL** on the **Host Control Command Listener**.
+- **Host Control** initially uses **Host Control LAN Trust** (open LAN, no pairing token).
+- The **Host Control Companion** **`start`** command binds the **Host Control Command Listener**, performs **Host Control Link**, then runs until stopped.
+- The **Host Control Companion** retries **Host Control Link** with backoff when the **LAN HTTP Listener** is not yet available at startup (**Host Control Companion Reconnect**).
+- After a successful link in a run, the companion does not **Host Control Link** again until restart (or a future manual reconnect).
+- Optional later: manual reconnect trigger; periodic re-link; explicit unlink-before-relink (**Host Control LAN Trust** hardening).
+- When **Host Control Unavailable**, **Deck App** calls fail fast; UI handling is the **Deck App** author’s responsibility, not VitaDeck’s.
+- **Host Control** steady-state HTTP from Vitadeck to the host must not block VitaDeck rendering or Deck App JavaScript; calls are asynchronous through the native bridge.
+- The **Host Control Companion** reads **Host Control Companion Configuration** on start; a one-run **LAN HTTP URL** override does not require editing the saved configuration.
+- **Host Control Link** registers a **Host Callback URL** using a LAN-reachable host address by default; **Host Control Callback Override** allows loopback for same-machine desktop development only.
+- A successful **Host Control Link** overwrites any previously stored **Host Callback URL**; optional future hardening may require explicit unlink before accepting a new host (same class as **Upload Pairing**).
+- The **Host Callback URL** persists across Vitadeck launches until replaced by a new **Host Control Link**.
+- **Deck App** authors use only the **VitaDeck SDK** for **Host Control Contract** types and client APIs—not a second npm package.
+- The **Host Control Companion** imports the same **Host Control Contract** from the **VitaDeck SDK** (subpath export), keeping one registry source of truth.
+- The **Host Control Companion** ships as an in-repo workspace package first, not as a separate public npm package for **Deck App** authors.
+- The **LAN HTTP Listener** uses the same default port **8787** and **10**-port consecutive fallback as the former standalone **Runtime Upload Listener** (8787–8796); the **LAN HTTP URL** reflects the port actually bound.
 - If all **10** listen attempts fail, the **Shell Upload Screen** shows a bind-failure state (no **Runtime Upload URL**, no **Runtime Upload Web UI**); **Shell Upload Cancel** returns to **Shell Home Screen** without an in-screen retry control.
 - **Runtime Upload** primary author interaction is the **Runtime Upload Web UI** served locally by the **Runtime Upload Listener**.
 - The **Runtime Upload HTTP Contract** limits documented listener behavior to **`GET /`** (and required same-origin Web UI assets) and **`POST /upload`**; other paths **404**, wrong method on **`/upload`** **405**; no **GET /health**-style probe in the initial **Runtime Upload** iteration.
 - Initial **Runtime Upload** trusts the local network; **Upload Pairing** is optional future hardening.
+- Initial **Host Control** uses **Host Control LAN Trust**; optional future pairing may mirror **Upload Pairing**.
 - **Runtime Upload** accepts exactly one **Runtime Upload Archive** per request via **Runtime Upload POST**, using `multipart/form-data` for browsers (file field **`archive`**) and `application/zip` for simple HTTP clients.
 - **Runtime Upload POST** returns JSON only: success includes **`packageName`** and **`version`**; failures include **`code`** and **`message`**, with HTTP status reflecting the error class.
 - **Runtime Upload Single-Flight** applies to **Runtime Upload POST**: concurrent ingests get **409** and no queue.
@@ -471,6 +556,12 @@ _Avoid_: Click, mouse down, mouse up, hover
 >
 > **Dev:** "How should the **Shell Home Screen** order installed apps?"
 > **Domain expert:** "Alphabetical by **`name`** in **Deck App Package Manifest**, case-insensitive, with **Deck App Package Name** as a stable tie-break."
+>
+> **Dev:** "If Host Control shares the upload HTTP port, does the server run all the time?"
+> **Domain expert:** "Yes — one **LAN HTTP Listener** from Vitadeck launch until quit, including while a **Deck App** is fullscreen. No Shell toggle. **LAN HTTP Listener Recovery** can come later."
+>
+> **Dev:** "Where does the user read the Vita IP for the host companion?"
+> **Domain expert:** "The **Shell LAN Strip** on **Shell Home Screen** — always visible: **LAN HTTP URL** and status, no start/stop toggle."
 
 ## Flagged ambiguities
 
@@ -506,7 +597,10 @@ _Avoid_: Click, mouse down, mouse up, hover
 - "`Start` input" is not Deck App input; resolved: it is **Start Input** (**System Input**) reserved for VitaDeck, mapped on macOS via **Host Start Mapping** (F1), toggling between the **Deck App** and **VitaDeck Shell** except on the **Shell Upload Screen**.
 - "cancel upload" could mean leaving the Shell entirely; resolved: **Shell Upload Cancel** returns to **Shell Home Screen** while keeping the Shell open.
 - "cancel control" could imply a host keyboard binding; resolved: **Shell Upload Cancel** is on-screen only on macOS at first.
-- "HTTP server on Vita" could imply an always-on network service; resolved: use a **Runtime Upload Listener** started from **Runtime Upload**, stopped when the shell is hidden to the **Deck App** or **Shell Upload Cancel** runs from the **Shell Upload Screen** (it may persist across **Shell Home Screen** after success until then).
+- "HTTP server on Vita" could imply a user toggle or a global OS daemon; resolved: **LAN HTTP Listener** runs for the Vitadeck process lifetime (launch to quit), including hidden Shell; **LAN HTTP Listener Recovery** deferred.
+- "shared listener" could imply optional features; resolved: one listener, always multiplexing **Runtime Upload** and **Host Control** routes when listening—not per-feature enable switches.
+- "Runtime Upload Listener" vs **LAN HTTP Listener** could imply two servers; resolved: **Runtime Upload Listener** is the upload route family on the shared **LAN HTTP Listener**.
+- "Shell upload toggle" vs continuous listener; resolved: superseded—upload row shows **LAN HTTP URL** / status, not start/stop (see implementation migration from current toggle build).
 - "upload server API" could sprawl into many routes; resolved: **Runtime Upload HTTP Contract** — **`GET /`** + Web UI assets and **`POST /upload`** only as the documented surface; **404**/**405** as above; no health endpoint initially.
 - "upload URL" could hide port collisions or loopback-only binds; resolved: **Runtime Upload URL** uses LAN IP and the port actually bound; default **8787** with consecutive fallback up to **10** attempts; all interfaces.
 - "ports exhausted" could leave the user stuck or imply auto-retry; resolved: **Shell Upload Screen** bind-failure state, no URL, **Shell Upload Cancel** only (no required in-screen retry).

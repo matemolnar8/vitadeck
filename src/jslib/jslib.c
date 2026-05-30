@@ -25,6 +25,7 @@ static void js_set_global_function(JSContext *ctx, const char *name, JSCFunction
 #include "colors.c"
 #include "timeout.c"
 #include "log.c"
+#include "../net/host_control.c"
 
 static JSValue js_get_time(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
 	(void)this_val; (void)argc; (void)argv;
@@ -142,4 +143,14 @@ void register_js_lib(JSContext *ctx) {
 	js_set_global_function(ctx, "nativeReadTextFile", js_native_read_text_file, 1);
 	js_set_global_function(ctx, "nativeEvalFile", js_native_eval_file, 1);
 	js_set_global_function(ctx, "nativeGetActiveDeckAppPath", js_native_get_active_deck_app_path, 0);
+	js_set_global_function(ctx, "nativeHostControlFetch", native_host_control_fetch, 3);
+	js_set_global_function(ctx, "nativeGetHostControlBaseUrl", native_get_host_control_base_url, 0);
+	host_control_init();
+
+	const char *e2e_host_echo = getenv("VITADECK_E2E_HOST_ECHO");
+	if (e2e_host_echo && strcmp(e2e_host_echo, "1") == 0) {
+		JSValue global = JS_GetGlobalObject(ctx);
+		JS_SetPropertyStr(ctx, global, "__vitadeckE2eHostEcho", JS_TRUE);
+		JS_FreeValue(ctx, global);
+	}
 }

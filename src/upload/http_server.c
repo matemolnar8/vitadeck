@@ -1,5 +1,8 @@
 #include "upload/http_server.h"
 
+#include "core/host_control_link.h"
+#include "net/http_parse.h"
+
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdbool.h>
@@ -18,7 +21,7 @@
 
 #define VD_UPLOAD_DEFAULT_PORT 8787
 #define VD_UPLOAD_PORT_TRIES 10
-#define VD_UPLOAD_HEADER_MAX 32768
+#define VD_HOST_CONTROL_MAX_BODY (64 * 1024)
 
 typedef struct {
     VdUploadServer *server;
@@ -66,33 +69,6 @@ static void send_response(int fd, int status, const char *status_text, const cha
     send(fd, body, (size_t)body_len, 0);
 }
 
-static void drain_request_headers(int fd)
-{
-    char buffer[1024];
-    char window[4] = {0};
-    int window_len = 0;
-
-    while (true) {
-        ssize_t n = recv(fd, buffer, sizeof(buffer), 0);
-        if (n <= 0) return;
-        for (ssize_t i = 0; i < n; i++) {
-            if (window_len < 4) {
-                window[window_len++] = buffer[i];
-            } else {
-                memmove(window, window + 1, 3);
-                window[3] = buffer[i];
-            }
-            if (window_len == 4 && memcmp(window, "\r\n\r\n", 4) == 0) return;
-        }
-    }
-}
-
-static void send_simple_response(int fd, int status, const char *status_text, const char *content_type, const char *body)
-{
-    drain_request_headers(fd);
-    send_response(fd, status, status_text, content_type, body);
-}
-
 static void send_json_error(int fd, int status, const char *code, const char *message)
 {
     char body[512];
@@ -124,31 +100,9 @@ static void detect_lan_ip(char *out, size_t out_size)
 #endif
 }
 
-static const char *header_value(const char *headers, const char *name)
+static bool content_type_has_req(const VdHttpRequest *req, const char *needle)
 {
-    size_t name_len = strlen(name);
-    const char *p = headers;
-    while ((p = strstr(p, name))) {
-        if ((p == headers || p[-1] == '\n') && p[name_len] == ':') {
-            p += name_len + 1;
-            while (*p == ' ' || *p == '\t') p++;
-            return p;
-        }
-        p += name_len;
-    }
-    return NULL;
-}
-
-static long parse_content_length(const char *headers)
-{
-    const char *value = header_value(headers, "Content-Length");
-    if (!value) return -1;
-    return strtol(value, NULL, 10);
-}
-
-static bool content_type_has(const char *headers, const char *needle)
-{
-    const char *value = header_value(headers, "Content-Type");
+    const char *value = vd_http_header_value(req, "Content-Type");
     return value && strstr(value, needle);
 }
 
@@ -161,9 +115,9 @@ static bool write_bytes(const char *path, const unsigned char *data, size_t size
     return ok;
 }
 
-static bool extract_boundary(const char *headers, char *boundary, size_t boundary_size)
+static bool extract_boundary_req(const VdHttpRequest *req, char *boundary, size_t boundary_size)
 {
-    const char *ct = header_value(headers, "Content-Type");
+    const char *ct = vd_http_header_value(req, "Content-Type");
     if (!ct) return false;
     const char *p = strstr(ct, "boundary=");
     if (!p) return false;
@@ -187,10 +141,12 @@ static unsigned char *find_bytes(unsigned char *haystack, size_t haystack_len, c
     return NULL;
 }
 
-static bool multipart_archive_to_file(const char *headers, unsigned char *body, size_t body_len, const char *out_path)
+static bool multipart_archive_to_file(const VdHttpRequest *req, const char *out_path)
 {
     char boundary[128];
-    if (!extract_boundary(headers, boundary, sizeof(boundary))) return false;
+    if (!extract_boundary_req(req, boundary, sizeof(boundary))) return false;
+    unsigned char *body = req->body;
+    size_t body_len = req->body_len;
 
     unsigned char *part = find_bytes(body, body_len, "name=\"archive\"");
     if (!part) return false;
@@ -206,18 +162,18 @@ static bool multipart_archive_to_file(const char *headers, unsigned char *body, 
     return write_bytes(out_path, data_start, (size_t)(data_end - data_start));
 }
 
-static bool request_body_to_file(const char *headers, unsigned char *body, size_t body_len, const char *out_path, int *status, const char **code, const char **message)
+static bool request_body_to_file(const VdHttpRequest *req, const char *out_path, int *status, const char **code, const char **message)
 {
-    if (content_type_has(headers, "application/zip")) {
-        if (!write_bytes(out_path, body, body_len)) {
+    if (content_type_has_req(req, "application/zip")) {
+        if (!write_bytes(out_path, req->body, req->body_len)) {
             *status = 400; *code = "write_failed"; *message = "Could not write uploaded archive.";
             return false;
         }
         return true;
     }
 
-    if (content_type_has(headers, "multipart/form-data")) {
-        if (!multipart_archive_to_file(headers, body, body_len, out_path)) {
+    if (content_type_has_req(req, "multipart/form-data")) {
+        if (!multipart_archive_to_file(req, out_path)) {
             *status = 400; *code = "malformed_multipart"; *message = "Multipart upload must include file field archive.";
             return false;
         }
@@ -226,73 +182,6 @@ static bool request_body_to_file(const char *headers, unsigned char *body, size_
 
     *status = 415; *code = "unsupported_content_type"; *message = "Use application/zip or multipart/form-data.";
     return false;
-}
-
-static bool read_request(int fd, char **out_headers, unsigned char **out_body, size_t *out_body_len, int *error_status)
-{
-    unsigned char *buffer = malloc(VD_UPLOAD_HEADER_MAX);
-    if (!buffer) return false;
-
-    size_t used = 0;
-    unsigned char *header_end = NULL;
-    while (used < VD_UPLOAD_HEADER_MAX) {
-        ssize_t n = recv(fd, buffer + used, VD_UPLOAD_HEADER_MAX - used, 0);
-        if (n <= 0) break;
-        used += (size_t)n;
-        header_end = find_bytes(buffer, used, "\r\n\r\n");
-        if (header_end) break;
-    }
-    if (!header_end) {
-        free(buffer);
-        *error_status = 400;
-        return false;
-    }
-
-    size_t header_len = (size_t)(header_end - buffer) + 4;
-    char *headers = malloc(header_len + 1);
-    if (!headers) {
-        free(buffer);
-        return false;
-    }
-    memcpy(headers, buffer, header_len);
-    headers[header_len] = '\0';
-
-    long content_length = parse_content_length(headers);
-    if (content_length < 0 || content_length > VD_UPLOAD_MAX_BYTES) {
-        free(headers);
-        free(buffer);
-        *error_status = content_length > VD_UPLOAD_MAX_BYTES ? 413 : 400;
-        return false;
-    }
-
-    unsigned char *body = malloc((size_t)content_length);
-    if (!body) {
-        free(headers);
-        free(buffer);
-        return false;
-    }
-    size_t already = used - header_len;
-    if (already > (size_t)content_length) already = (size_t)content_length;
-    memcpy(body, buffer + header_len, already);
-    free(buffer);
-
-    size_t body_used = already;
-    while (body_used < (size_t)content_length) {
-        ssize_t n = recv(fd, body + body_used, (size_t)content_length - body_used, 0);
-        if (n <= 0) break;
-        body_used += (size_t)n;
-    }
-    if (body_used != (size_t)content_length) {
-        free(headers);
-        free(body);
-        *error_status = 400;
-        return false;
-    }
-
-    *out_headers = headers;
-    *out_body = body;
-    *out_body_len = body_used;
-    return true;
 }
 
 static bool take_ingest_lock(VdUploadServer *server)
@@ -314,7 +203,7 @@ static void release_ingest_lock(VdUploadServer *server)
     vd_mutex_unlock(server->mutex);
 }
 
-static void handle_upload(HandlerArg *arg, const char *headers)
+static void handle_upload(HandlerArg *arg, VdHttpRequest *req)
 {
     VdUploadServer *server = arg->server;
     if (!take_ingest_lock(server)) {
@@ -322,32 +211,17 @@ static void handle_upload(HandlerArg *arg, const char *headers)
         return;
     }
 
-    char *request_headers = NULL;
-    unsigned char *body = NULL;
-    size_t body_len = 0;
-    int read_error = 400;
-    if (!read_request(arg->fd, &request_headers, &body, &body_len, &read_error)) {
-        send_json_error(arg->fd, read_error, read_error == 413 ? "upload_too_large" : "malformed_request", read_error == 413 ? "Uploaded archive exceeds 16MB." : "Could not read upload request.");
-        release_ingest_lock(server);
-        return;
-    }
-
-    (void)headers;
     char archive_path[VD_PATH_MAX];
     snprintf(archive_path, sizeof(archive_path), "%s/upload.zip", package_library_staging_root());
     int status = 400;
     const char *code = "malformed_request";
     const char *message = "Could not parse upload.";
-    if (!request_body_to_file(request_headers, body, body_len, archive_path, &status, &code, &message)) {
+    if (!request_body_to_file(req, archive_path, &status, &code, &message)) {
         send_json_error(arg->fd, status, code, message);
         set_last_message(server, message);
-        free(request_headers);
-        free(body);
         release_ingest_lock(server);
         return;
     }
-    free(request_headers);
-    free(body);
 
     char error[256];
     VdArchiveExtractResult extract;
@@ -383,20 +257,35 @@ static void handle_upload(HandlerArg *arg, const char *headers)
 static void *handler_thread(void *raw)
 {
     HandlerArg *arg = raw;
-    char first[1024];
-    ssize_t n = recv(arg->fd, first, sizeof(first) - 1, MSG_PEEK);
-    if (n <= 0) goto done;
-    first[n] = '\0';
+    VdHttpRequest req;
+    vd_http_request_init(&req);
 
-    char method[16] = {0};
-    char path[128] = {0};
-    sscanf(first, "%15s %127s", method, path);
+    size_t max_body = VD_UPLOAD_MAX_BYTES;
+    int read_error = 400;
 
-    if (strcmp(path, "/upload") == 0 && strcmp(method, "POST") != 0) {
-        send_simple_response(arg->fd, 405, "Method Not Allowed", "text/plain", "Method Not Allowed");
-    } else if (strcmp(path, "/upload") == 0) {
-        handle_upload(arg, first);
-    } else if (strcmp(path, "/") == 0 && strcmp(method, "GET") == 0) {
+    if (!vd_http_read_request(arg->fd, max_body, &req, &read_error)) {
+        send_json_error(arg->fd, read_error, read_error == 413 ? "payload_too_large" : "malformed_request",
+            read_error == 413 ? "Request body too large." : "Could not read HTTP request.");
+        goto done;
+    }
+
+    if (strcmp(req.path, "/v1/host/link") == 0 && strcmp(req.method, "POST") == 0) {
+        host_control_link_handle_post(arg->fd, (const char *)req.body, req.body_len);
+    } else if (strcmp(req.path, "/v1/host/link") == 0) {
+        send_response(arg->fd, 405, "Method Not Allowed", "text/plain", "Method Not Allowed");
+    } else if (strcmp(req.path, "/v1/host/status") == 0 && strcmp(req.method, "GET") == 0) {
+        host_control_link_handle_status_get(arg->fd);
+    } else if (strcmp(req.path, "/v1/host/status") == 0) {
+        send_response(arg->fd, 405, "Method Not Allowed", "text/plain", "Method Not Allowed");
+    } else if (strcmp(req.path, "/upload") == 0 && strcmp(req.method, "POST") != 0) {
+        send_response(arg->fd, 405, "Method Not Allowed", "text/plain", "Method Not Allowed");
+    } else if (strcmp(req.path, "/upload") == 0 && strcmp(req.method, "POST") == 0) {
+        if (req.body_len > VD_UPLOAD_MAX_BYTES) {
+            send_json_error(arg->fd, 413, "upload_too_large", "Uploaded archive exceeds 16MB.");
+        } else {
+            handle_upload(arg, &req);
+        }
+    } else if (strcmp(req.path, "/") == 0 && strcmp(req.method, "GET") == 0) {
         const char *html =
             "<!doctype html><html><head><meta charset=\"utf-8\"><title>VitaDeck Upload</title>"
             "<style>body{font-family:system-ui;margin:2rem;max-width:42rem}button{font-size:1rem;padding:.6rem 1rem}</style></head>"
@@ -404,10 +293,12 @@ static void *handler_thread(void *raw)
             "<form id=\"form\"><input id=\"archive\" name=\"archive\" type=\"file\" accept=\".zip\" required><button>Upload</button></form>"
             "<pre id=\"result\"></pre><script>form.onsubmit=async e=>{e.preventDefault();const fd=new FormData();fd.append('archive',archive.files[0]);"
             "const r=await fetch('/upload',{method:'POST',body:fd});result.textContent=JSON.stringify(await r.json(),null,2)}</script></body></html>";
-        send_simple_response(arg->fd, 200, "OK", "text/html; charset=utf-8", html);
+        send_response(arg->fd, 200, "OK", "text/html; charset=utf-8", html);
     } else {
-        send_simple_response(arg->fd, 404, "Not Found", "text/plain", "Not Found");
+        send_response(arg->fd, 404, "Not Found", "text/plain", "Not Found");
     }
+
+    vd_http_request_free(&req);
 
 done:
     remove_client_fd(arg->server, arg->fd);
