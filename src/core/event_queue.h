@@ -3,10 +3,7 @@
 
 #include <stdbool.h>
 
-typedef enum {
-    EVT_INPUT,
-    EVT_SHUTDOWN
-} EventType;
+typedef enum { EVT_INPUT, EVT_SHUTDOWN } EventType;
 
 typedef struct {
     EventType type;
@@ -16,8 +13,8 @@ typedef struct {
 
 bool event_queue_init(void);
 void event_queue_destroy(void);
-void event_queue_push(const InputEvent* evt);
-bool event_queue_pop(InputEvent* evt);
+void event_queue_push(const InputEvent *evt);
+bool event_queue_pop(InputEvent *evt);
 void event_queue_shutdown(void);
 bool event_queue_is_shutdown(void);
 void event_queue_clear(void);

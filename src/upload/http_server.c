@@ -57,12 +57,12 @@ static void send_response(int fd, int status, const char *status_text, const cha
     char header[512];
     int body_len = (int)strlen(body);
     int header_len = snprintf(header, sizeof(header),
-        "HTTP/1.1 %d %s\r\n"
-        "Content-Type: %s\r\n"
-        "Content-Length: %d\r\n"
-        "Connection: close\r\n"
-        "\r\n",
-        status, status_text, content_type, body_len);
+                              "HTTP/1.1 %d %s\r\n"
+                              "Content-Type: %s\r\n"
+                              "Content-Length: %d\r\n"
+                              "Connection: close\r\n"
+                              "\r\n",
+                              status, status_text, content_type, body_len);
     send(fd, header, (size_t)header_len, 0);
     send(fd, body, (size_t)body_len, 0);
 }
@@ -88,7 +88,8 @@ static void drain_request_headers(int fd)
     }
 }
 
-static void send_simple_response(int fd, int status, const char *status_text, const char *content_type, const char *body)
+static void send_simple_response(int fd, int status, const char *status_text, const char *content_type,
+                                 const char *body)
 {
     drain_request_headers(fd);
     send_response(fd, status, status_text, content_type, body);
@@ -98,7 +99,13 @@ static void send_json_error(int fd, int status, const char *code, const char *me
 {
     char body[512];
     snprintf(body, sizeof(body), "{\"ok\":false,\"code\":\"%s\",\"message\":\"%s\"}", code, message);
-    send_response(fd, status, status == 409 ? "Conflict" : status == 413 ? "Payload Too Large" : status == 415 ? "Unsupported Media Type" : status == 422 ? "Unprocessable Entity" : "Bad Request", "application/json", body);
+    send_response(fd, status,
+                  status == 409   ? "Conflict"
+                  : status == 413 ? "Payload Too Large"
+                  : status == 415 ? "Unsupported Media Type"
+                  : status == 422 ? "Unprocessable Entity"
+                                  : "Bad Request",
+                  "application/json", body);
 }
 
 static void detect_lan_ip(char *out, size_t out_size)
@@ -132,7 +139,8 @@ static const char *header_value(const char *headers, const char *name)
     while ((p = strstr(p, name))) {
         if ((p == headers || p[-1] == '\n') && p[name_len] == ':') {
             p += name_len + 1;
-            while (*p == ' ' || *p == '\t') p++;
+            while (*p == ' ' || *p == '\t')
+                p++;
             return p;
         }
         p += name_len;
@@ -207,11 +215,14 @@ static bool multipart_archive_to_file(const char *headers, unsigned char *body, 
     return write_bytes(out_path, data_start, (size_t)(data_end - data_start));
 }
 
-static bool request_body_to_file(const char *headers, unsigned char *body, size_t body_len, const char *out_path, int *status, const char **code, const char **message)
+static bool request_body_to_file(const char *headers, unsigned char *body, size_t body_len, const char *out_path,
+                                 int *status, const char **code, const char **message)
 {
     if (content_type_has(headers, "application/zip")) {
         if (!write_bytes(out_path, body, body_len)) {
-            *status = 400; *code = "write_failed"; *message = "Could not write uploaded archive.";
+            *status = 400;
+            *code = "write_failed";
+            *message = "Could not write uploaded archive.";
             return false;
         }
         return true;
@@ -219,17 +230,22 @@ static bool request_body_to_file(const char *headers, unsigned char *body, size_
 
     if (content_type_has(headers, "multipart/form-data")) {
         if (!multipart_archive_to_file(headers, body, body_len, out_path)) {
-            *status = 400; *code = "malformed_multipart"; *message = "Multipart upload must include file field archive.";
+            *status = 400;
+            *code = "malformed_multipart";
+            *message = "Multipart upload must include file field archive.";
             return false;
         }
         return true;
     }
 
-    *status = 415; *code = "unsupported_content_type"; *message = "Use application/zip or multipart/form-data.";
+    *status = 415;
+    *code = "unsupported_content_type";
+    *message = "Use application/zip or multipart/form-data.";
     return false;
 }
 
-static bool read_request(Arena *arena, int fd, char **out_headers, unsigned char **out_body, size_t *out_body_len, int *error_status)
+static bool read_request(Arena *arena, int fd, char **out_headers, unsigned char **out_body, size_t *out_body_len,
+                         int *error_status)
 {
     unsigned char *buffer = arena_alloc(arena, VD_UPLOAD_HEADER_MAX);
     if (!buffer) return false;
@@ -319,7 +335,8 @@ static void handle_upload(HandlerArg *arg, const char *headers)
     size_t body_len = 0;
     int read_error = 400;
     if (!read_request(&arena, arg->fd, &request_headers, &body, &body_len, &read_error)) {
-        send_json_error(arg->fd, read_error, read_error == 413 ? "upload_too_large" : "malformed_request", read_error == 413 ? "Uploaded archive exceeds 16MB." : "Could not read upload request.");
+        send_json_error(arg->fd, read_error, read_error == 413 ? "upload_too_large" : "malformed_request",
+                        read_error == 413 ? "Uploaded archive exceeds 16MB." : "Could not read upload request.");
         goto done;
     }
 
@@ -345,14 +362,16 @@ static void handle_upload(HandlerArg *arg, const char *headers)
 
     bool replaced_active = false;
     VdPackageInfo info;
-    if (!package_library_publish_package(extract.package_path, extract.package_name, &replaced_active, &info, error, sizeof(error))) {
+    if (!package_library_publish_package(extract.package_path, extract.package_name, &replaced_active, &info, error,
+                                         sizeof(error))) {
         send_json_error(arg->fd, 422, "invalid_package", error);
         set_last_message(server, error);
         goto done;
     }
 
     char body_json[512];
-    snprintf(body_json, sizeof(body_json), "{\"ok\":true,\"packageName\":\"%s\",\"version\":\"%s\"}", info.package_name, info.version);
+    snprintf(body_json, sizeof(body_json), "{\"ok\":true,\"packageName\":\"%s\",\"version\":\"%s\"}", info.package_name,
+             info.version);
     send_response(arg->fd, 200, "OK", "application/json", body_json);
 
     vd_mutex_lock(server->mutex);
@@ -386,11 +405,15 @@ static void *handler_thread(void *raw)
     } else if (strcmp(path, "/") == 0 && strcmp(method, "GET") == 0) {
         const char *html =
             "<!doctype html><html><head><meta charset=\"utf-8\"><title>VitaDeck Upload</title>"
-            "<style>body{font-family:system-ui;margin:2rem;max-width:42rem}button{font-size:1rem;padding:.6rem 1rem}</style></head>"
+            "<style>body{font-family:system-ui;margin:2rem;max-width:42rem}button{font-size:1rem;padding:.6rem "
+            "1rem}</style></head>"
             "<body><h1>VitaDeck</h1><p>Select a zip containing exactly one .vdapp directory.</p>"
-            "<form id=\"form\"><input id=\"archive\" name=\"archive\" type=\"file\" accept=\".zip\" required><button>Upload</button></form>"
-            "<pre id=\"result\"></pre><script>form.onsubmit=async e=>{e.preventDefault();const fd=new FormData();fd.append('archive',archive.files[0]);"
-            "const r=await fetch('/upload',{method:'POST',body:fd});result.textContent=JSON.stringify(await r.json(),null,2)}</script></body></html>";
+            "<form id=\"form\"><input id=\"archive\" name=\"archive\" type=\"file\" accept=\".zip\" "
+            "required><button>Upload</button></form>"
+            "<pre id=\"result\"></pre><script>form.onsubmit=async e=>{e.preventDefault();const fd=new "
+            "FormData();fd.append('archive',archive.files[0]);"
+            "const r=await fetch('/upload',{method:'POST',body:fd});result.textContent=JSON.stringify(await "
+            "r.json(),null,2)}</script></body></html>";
         send_simple_response(arg->fd, 200, "OK", "text/html; charset=utf-8", html);
     } else {
         send_simple_response(arg->fd, 404, "Not Found", "text/plain", "Not Found");
@@ -525,7 +548,8 @@ void upload_server_stop(VdUploadServer *server)
     int pending_n = 0;
     vd_mutex_lock(server->mutex);
     pending_n = server->open_client_count;
-    for (int i = 0; i < pending_n; i++) pending_fds[i] = server->open_client_fds[i];
+    for (int i = 0; i < pending_n; i++)
+        pending_fds[i] = server->open_client_fds[i];
     server->open_client_count = 0;
     vd_mutex_unlock(server->mutex);
     for (int i = 0; i < pending_n; i++) {

@@ -16,6 +16,10 @@
   "[javascript]": {
     "editor.defaultFormatter": "oxc.oxc-vscode"
   },
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "[c]": {
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+  },
   "oxc.typeAware": true,
   "oxc.path.oxlint": "./js/node_modules/oxlint/bin/oxlint",
   "oxc.path.oxfmt": "./js/node_modules/oxfmt/bin/oxfmt"

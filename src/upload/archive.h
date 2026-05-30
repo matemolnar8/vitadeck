@@ -15,6 +15,7 @@ typedef struct {
     char package_path[VD_PATH_MAX];
 } VdArchiveExtractResult;
 
-bool upload_archive_extract(Arena *arena, const char *zip_path, VdArchiveExtractResult *result, char *error, size_t error_size);
+bool upload_archive_extract(Arena *arena, const char *zip_path, VdArchiveExtractResult *result, char *error,
+                            size_t error_size);
 
 #endif /* VD_UPLOAD_ARCHIVE_H */

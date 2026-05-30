@@ -70,17 +70,20 @@ static bool up_pressed(void)
 
 static bool down_pressed(void)
 {
-    return (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_DOWN)) || IsKeyPressed(KEY_DOWN);
+    return (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_DOWN)) ||
+           IsKeyPressed(KEY_DOWN);
 }
 
 static bool left_pressed(void)
 {
-    return (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_LEFT)) || IsKeyPressed(KEY_LEFT);
+    return (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_LEFT)) ||
+           IsKeyPressed(KEY_LEFT);
 }
 
 static bool right_pressed(void)
 {
-    return (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_RIGHT)) || IsKeyPressed(KEY_RIGHT);
+    return (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_RIGHT)) ||
+           IsKeyPressed(KEY_RIGHT);
 }
 
 static void draw_checkmark(int cx, int cy, Color c)
@@ -317,14 +320,15 @@ void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart)
     }
 
     snprintf(shell->remove_confirm_package, sizeof(shell->remove_confirm_package), "%s", pkg->package_name);
-    snprintf(shell->remove_confirm_label, sizeof(shell->remove_confirm_label), "Remove %s %s?", pkg->display_name, pkg->version);
+    snprintf(shell->remove_confirm_label, sizeof(shell->remove_confirm_label), "Remove %s %s?", pkg->display_name,
+             pkg->version);
     shell->remove_confirm_row = shell->focus_row;
 }
 
 static void draw_panel(void)
 {
-    DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, (Color){ 18, 22, 30, 200 });
-    DrawRectangleLines(24, 24, SCREEN_WIDTH - 48, SCREEN_HEIGHT - 48, (Color){ 120, 150, 190, 200 });
+    DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, (Color){18, 22, 30, 200});
+    DrawRectangleLines(24, 24, SCREEN_WIDTH - 48, SCREEN_HEIGHT - 48, (Color){120, 150, 190, 200});
 }
 
 static void draw_tick_cell(int cx, int row_top, bool is_active, bool row_focused, bool col_focused)
@@ -332,16 +336,16 @@ static void draw_tick_cell(int cx, int row_top, bool is_active, bool row_focused
     const int cell_h = 34;
     const int half = 22;
     int cell_y = row_top + (SHELL_ROW_H - cell_h) / 2;
-    Rectangle r = { (float)(cx - half), (float)cell_y, (float)(half * 2), (float)cell_h };
+    Rectangle r = {(float)(cx - half), (float)cell_y, (float)(half * 2), (float)cell_h};
     bool slot_focus = row_focused && col_focused;
-    Color fill = slot_focus ? (Color){ 55, 75, 110, 255 } : (Color){ 38, 46, 60, 255 };
+    Color fill = slot_focus ? (Color){55, 75, 110, 255} : (Color){38, 46, 60, 255};
     DrawRectangleRec(r, fill);
-    DrawRectangleLinesEx(r, 1.5f, (Color){ 100, 120, 150, 255 });
+    DrawRectangleLinesEx(r, 1.5f, (Color){100, 120, 150, 255});
     int mid_y = row_top + SHELL_ROW_H / 2;
     if (is_active) {
         draw_checkmark(cx, mid_y + 2, GREEN);
     } else {
-        Color hint = slot_focus ? RAYWHITE : (Color){ 160, 170, 190, 255 };
+        Color hint = slot_focus ? RAYWHITE : (Color){160, 170, 190, 255};
         const char *go = "Run";
         int ty = shell_text_baseline_y(row_top, SHELL_FONT_BODY);
         DrawText(go, cx - MeasureText(go, SHELL_FONT_BODY) / 2, ty, SHELL_FONT_BODY, hint);
@@ -353,12 +357,12 @@ static void draw_x_cell(int cx, int row_top, bool row_focused, bool col_focused)
     const int cell_h = 34;
     const int half = 22;
     int cell_y = row_top + (SHELL_ROW_H - cell_h) / 2;
-    Rectangle r = { (float)(cx - half), (float)cell_y, (float)(half * 2), (float)cell_h };
+    Rectangle r = {(float)(cx - half), (float)cell_y, (float)(half * 2), (float)cell_h};
     bool slot_focus = row_focused && col_focused;
-    Color fill = slot_focus ? (Color){ 90, 55, 55, 255 } : (Color){ 38, 46, 60, 255 };
+    Color fill = slot_focus ? (Color){90, 55, 55, 255} : (Color){38, 46, 60, 255};
     DrawRectangleRec(r, fill);
-    DrawRectangleLinesEx(r, 1.5f, (Color){ 140, 100, 100, 255 });
-    Color t = slot_focus ? (Color){ 255, 200, 200, 255 } : (Color){ 200, 140, 140, 255 };
+    DrawRectangleLinesEx(r, 1.5f, (Color){140, 100, 100, 255});
+    Color t = slot_focus ? (Color){255, 200, 200, 255} : (Color){200, 140, 140, 255};
     const char *label = " X ";
     int ty = shell_text_baseline_y(row_top, SHELL_FONT_BODY);
     DrawText(label, cx - MeasureText(label, SHELL_FONT_BODY) / 2, ty, SHELL_FONT_BODY, t);
@@ -367,30 +371,22 @@ static void draw_x_cell(int cx, int row_top, bool row_focused, bool col_focused)
 static void draw_overflow_row(int row_top, bool points_up)
 {
     int row_w = SCREEN_WIDTH - SHELL_PADDING - SHELL_PADDING;
-    DrawRectangle(SHELL_PADDING, row_top, row_w, SHELL_OVERFLOW_ROW_H, (Color){ 24, 30, 40, 255 });
+    DrawRectangle(SHELL_PADDING, row_top, row_w, SHELL_OVERFLOW_ROW_H, (Color){24, 30, 40, 255});
 
-    Color chevron = (Color){ 120, 140, 170, 255 };
+    Color chevron = (Color){120, 140, 170, 255};
     int cy = row_top + SHELL_OVERFLOW_ROW_H / 2;
     for (int i = -1; i <= 1; i++) {
         int cx = SCREEN_WIDTH / 2 + i * 20;
         if (points_up) {
-            DrawLineEx((Vector2){ (float)(cx - 6), (float)(cy + 3) },
-                (Vector2){ (float)cx, (float)(cy - 4) },
-                2.0f,
-                chevron);
-            DrawLineEx((Vector2){ (float)cx, (float)(cy - 4) },
-                (Vector2){ (float)(cx + 6), (float)(cy + 3) },
-                2.0f,
-                chevron);
+            DrawLineEx((Vector2){(float)(cx - 6), (float)(cy + 3)}, (Vector2){(float)cx, (float)(cy - 4)}, 2.0f,
+                       chevron);
+            DrawLineEx((Vector2){(float)cx, (float)(cy - 4)}, (Vector2){(float)(cx + 6), (float)(cy + 3)}, 2.0f,
+                       chevron);
         } else {
-            DrawLineEx((Vector2){ (float)(cx - 6), (float)(cy - 3) },
-                (Vector2){ (float)cx, (float)(cy + 4) },
-                2.0f,
-                chevron);
-            DrawLineEx((Vector2){ (float)cx, (float)(cy + 4) },
-                (Vector2){ (float)(cx + 6), (float)(cy - 3) },
-                2.0f,
-                chevron);
+            DrawLineEx((Vector2){(float)(cx - 6), (float)(cy - 3)}, (Vector2){(float)cx, (float)(cy + 4)}, 2.0f,
+                       chevron);
+            DrawLineEx((Vector2){(float)cx, (float)(cy + 4)}, (Vector2){(float)(cx + 6), (float)(cy - 3)}, 2.0f,
+                       chevron);
         }
     }
 }
@@ -410,11 +406,13 @@ void shell_render(VdShell *shell)
     int list_top = SHELL_LIST_Y;
     if (package_count == 0) {
         int hint_y = SHELL_SECTION_Y + SHELL_FONT_BODY + SHELL_SPACE_XS;
-        DrawText("No Deck Apps installed yet.", SHELL_PADDING, hint_y, SHELL_FONT_CAPTION, (Color){ 150, 160, 180, 255 });
+        DrawText("No Deck Apps installed yet.", SHELL_PADDING, hint_y, SHELL_FONT_CAPTION, (Color){150, 160, 180, 255});
         hint_y += SHELL_FONT_CAPTION + SHELL_SPACE_XS;
-        DrawText("Select Upload, confirm to start the server, then open the URL shown below on", SHELL_PADDING, hint_y, SHELL_FONT_CAPTION, (Color){ 130, 140, 160, 255 });
+        DrawText("Select Upload, confirm to start the server, then open the URL shown below on", SHELL_PADDING, hint_y,
+                 SHELL_FONT_CAPTION, (Color){130, 140, 160, 255});
         hint_y += SHELL_FONT_CAPTION + SHELL_SPACE_XS;
-        DrawText("another device on this network and upload a zip containing one .vdapp folder.", SHELL_PADDING, hint_y, SHELL_FONT_CAPTION, (Color){ 130, 140, 160, 255 });
+        DrawText("another device on this network and upload a zip containing one .vdapp folder.", SHELL_PADDING, hint_y,
+                 SHELL_FONT_CAPTION, (Color){130, 140, 160, 255});
         list_top = hint_y + SHELL_FONT_CAPTION + SHELL_SPACE_MD;
     }
 
@@ -436,10 +434,9 @@ void shell_render(VdShell *shell)
         int band_h = row_band_height(row, package_count);
         int bottom_reserve = row + 1 < row_count ? SHELL_OVERFLOW_ROW_STEP : 0;
         if (row_top + band_h + bottom_reserve > SHELL_LIST_BOTTOM) break;
-        Color band_color = row_focus ? (Color){ 42, 52, 72, 255 } : (Color){ 28, 34, 44, 255 };
-        if (upload_running) band_color = row_focus ? (Color){ 34, 64, 58, 255 } : (Color){ 24, 48, 44, 255 };
-        DrawRectangle(SHELL_PADDING, row_top, row_w, band_h,
-            band_color);
+        Color band_color = row_focus ? (Color){42, 52, 72, 255} : (Color){28, 34, 44, 255};
+        if (upload_running) band_color = row_focus ? (Color){34, 64, 58, 255} : (Color){24, 48, 44, 255};
+        DrawRectangle(SHELL_PADDING, row_top, row_w, band_h, band_color);
 
         int text_y = shell_text_baseline_y(row_top, SHELL_FONT_BODY);
         if (upload_row) text_y = row_top + SHELL_SPACE_MD;
@@ -449,9 +446,11 @@ void shell_render(VdShell *shell)
             DrawText("Upload", SHELL_NAME_X + pad, text_y, SHELL_FONT_BODY, upload_running ? GREEN : RAYWHITE);
             int sub_y = text_y + SHELL_FONT_BODY + SHELL_SPACE_XS;
             if (upload_running) {
-                DrawText(upload_server_url(&shell->upload_server), SHELL_NAME_X + pad, sub_y, SHELL_FONT_CAPTION, GREEN);
+                DrawText(upload_server_url(&shell->upload_server), SHELL_NAME_X + pad, sub_y, SHELL_FONT_CAPTION,
+                         GREEN);
             } else {
-                DrawText("Confirm to start server", SHELL_NAME_X + pad, sub_y, SHELL_FONT_CAPTION, (Color){ 130, 140, 160, 255 });
+                DrawText("Confirm to start server", SHELL_NAME_X + pad, sub_y, SHELL_FONT_CAPTION,
+                         (Color){130, 140, 160, 255});
             }
         } else {
             const VdPackageInfo *pkg = &packages[row];
@@ -470,10 +469,11 @@ void shell_render(VdShell *shell)
 
     if (shell->remove_confirm_package[0] != '\0') {
         int box_y = (int)(SCREEN_HEIGHT * 0.40f);
-        DrawRectangle(0, box_y, SCREEN_WIDTH, 112, (Color){ 10, 12, 18, 255 });
+        DrawRectangle(0, box_y, SCREEN_WIDTH, 112, (Color){10, 12, 18, 255});
         int ly = box_y + SHELL_SPACE_MD;
         DrawText(shell->remove_confirm_label, SHELL_PADDING, ly, SHELL_FONT_BODY, RAYWHITE);
-        DrawText("Confirm: remove · Back: cancel", SHELL_PADDING, ly + SHELL_FONT_BODY + SHELL_SPACE_SM, SHELL_FONT_CAPTION, GRAY);
+        DrawText("Confirm: remove · Back: cancel", SHELL_PADDING, ly + SHELL_FONT_BODY + SHELL_SPACE_SM,
+                 SHELL_FONT_CAPTION, GRAY);
     }
 
     if (shell->message[0] != '\0') {

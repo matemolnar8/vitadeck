@@ -12,177 +12,181 @@
 
 static int run_function(JSContext *ctx, const char *func_name)
 {
-	JSValue global = JS_GetGlobalObject(ctx);
-	JSValue vitadeck = JS_GetPropertyStr(ctx, global, "vitadeck");
-	JSValue func = JS_GetPropertyStr(ctx, vitadeck, func_name);
+    JSValue global = JS_GetGlobalObject(ctx);
+    JSValue vitadeck = JS_GetPropertyStr(ctx, global, "vitadeck");
+    JSValue func = JS_GetPropertyStr(ctx, vitadeck, func_name);
 
-	JSValue result = JS_Call(ctx, func, vitadeck, 0, NULL);
+    JSValue result = JS_Call(ctx, func, vitadeck, 0, NULL);
 
-	int ret = 0;
-	if (JS_IsException(result)) {
-		JSValue exc = JS_GetException(ctx);
-		const char *str = JS_ToCString(ctx, exc);
-		TraceLog(LOG_ERROR, "%s: an exception occurred in the javascript function", func_name);
-		TraceLog(LOG_ERROR, "%s", str ? str : "unknown error");
-		JS_FreeCString(ctx, str);
-		JS_FreeValue(ctx, exc);
-		ret = -1;
-	}
+    int ret = 0;
+    if (JS_IsException(result)) {
+        JSValue exc = JS_GetException(ctx);
+        const char *str = JS_ToCString(ctx, exc);
+        TraceLog(LOG_ERROR, "%s: an exception occurred in the javascript function", func_name);
+        TraceLog(LOG_ERROR, "%s", str ? str : "unknown error");
+        JS_FreeCString(ctx, str);
+        JS_FreeValue(ctx, exc);
+        ret = -1;
+    }
 
-	JS_FreeValue(ctx, result);
-	JS_FreeValue(ctx, func);
-	JS_FreeValue(ctx, vitadeck);
-	JS_FreeValue(ctx, global);
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, func);
+    JS_FreeValue(ctx, vitadeck);
+    JS_FreeValue(ctx, global);
 
-	return ret;
+    return ret;
 }
 
 static void drain_microtasks(JSRuntime *rt)
 {
-	JSContext *pctx;
-	int err;
-	while ((err = JS_ExecutePendingJob(rt, &pctx)) != 0) {
-		if (err < 0) {
-			JSValue exc = JS_GetException(pctx);
-			const char *str = JS_ToCString(pctx, exc);
-			TraceLog(LOG_ERROR, "[microtask] %s", str ? str : "unknown error");
-			JS_FreeCString(pctx, str);
-			JS_FreeValue(pctx, exc);
-		}
-	}
+    JSContext *pctx;
+    int err;
+    while ((err = JS_ExecutePendingJob(rt, &pctx)) != 0) {
+        if (err < 0) {
+            JSValue exc = JS_GetException(pctx);
+            const char *str = JS_ToCString(pctx, exc);
+            TraceLog(LOG_ERROR, "[microtask] %s", str ? str : "unknown error");
+            JS_FreeCString(pctx, str);
+            JS_FreeValue(pctx, exc);
+        }
+    }
 }
 
-static char *read_file(const char *filename, size_t *out_len) {
-	FILE *f = fopen(filename, "rb");
-	if (!f) return NULL;
-	fseek(f, 0, SEEK_END);
-	long len = ftell(f);
-	fseek(f, 0, SEEK_SET);
-	char *buf = malloc((size_t)len + 1);
-	if (!buf) { fclose(f); return NULL; }
-	fread(buf, 1, (size_t)len, f);
-	buf[len] = '\0';
-	fclose(f);
-	if (out_len) *out_len = (size_t)len;
-	return buf;
+static char *read_file(const char *filename, size_t *out_len)
+{
+    FILE *f = fopen(filename, "rb");
+    if (!f) return NULL;
+    fseek(f, 0, SEEK_END);
+    long len = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    char *buf = malloc((size_t)len + 1);
+    if (!buf) {
+        fclose(f);
+        return NULL;
+    }
+    fread(buf, 1, (size_t)len, f);
+    buf[len] = '\0';
+    fclose(f);
+    if (out_len) *out_len = (size_t)len;
+    return buf;
 }
 
 static void *js_thread_func(void *arg)
 {
-	VdJsRuntime *runtime = arg;
-	JSRuntime *rt = NULL;
-	JSContext *ctx = NULL;
-	void *result = NULL;
+    VdJsRuntime *runtime = arg;
+    JSRuntime *rt = NULL;
+    JSContext *ctx = NULL;
+    void *result = NULL;
 
-	rt = JS_NewRuntime();
-	if (!rt) {
-		TraceLog(LOG_ERROR, "Could not initialize QuickJS runtime.");
-		runtime->failed = true;
-		return NULL;
-	}
+    rt = JS_NewRuntime();
+    if (!rt) {
+        TraceLog(LOG_ERROR, "Could not initialize QuickJS runtime.");
+        runtime->failed = true;
+        return NULL;
+    }
 
-	ctx = JS_NewContext(rt);
-	if (!ctx) {
-		TraceLog(LOG_ERROR, "Could not initialize QuickJS context.");
-		runtime->failed = true;
-		goto defer;
-	}
+    ctx = JS_NewContext(rt);
+    if (!ctx) {
+        TraceLog(LOG_ERROR, "Could not initialize QuickJS context.");
+        runtime->failed = true;
+        goto defer;
+    }
 
-	register_js_lib(ctx);
+    register_js_lib(ctx);
 
-	size_t len = 0;
-	char *code = read_file("js/runtime.js", &len);
-	if (!code) {
-		TraceLog(LOG_ERROR, "Could not load runtime.js.");
-		runtime->failed = true;
-		goto defer;
-	}
+    size_t len = 0;
+    char *code = read_file("js/runtime.js", &len);
+    if (!code) {
+        TraceLog(LOG_ERROR, "Could not load runtime.js.");
+        runtime->failed = true;
+        goto defer;
+    }
 
-	JSValue eval_result = JS_Eval(ctx, code, len, "runtime.js", JS_EVAL_TYPE_GLOBAL);
-	free(code);
+    JSValue eval_result = JS_Eval(ctx, code, len, "runtime.js", JS_EVAL_TYPE_GLOBAL);
+    free(code);
 
-	if (JS_IsException(eval_result)) {
-		JSValue exc = JS_GetException(ctx);
-		const char *str = JS_ToCString(ctx, exc);
-		TraceLog(LOG_ERROR, "Error evaluating runtime.js: %s", str ? str : "unknown error");
-		JS_FreeCString(ctx, str);
-		JS_FreeValue(ctx, exc);
-		JS_FreeValue(ctx, eval_result);
-		runtime->failed = true;
-		goto defer;
-	}
-	JS_FreeValue(ctx, eval_result);
+    if (JS_IsException(eval_result)) {
+        JSValue exc = JS_GetException(ctx);
+        const char *str = JS_ToCString(ctx, exc);
+        TraceLog(LOG_ERROR, "Error evaluating runtime.js: %s", str ? str : "unknown error");
+        JS_FreeCString(ctx, str);
+        JS_FreeValue(ctx, exc);
+        JS_FreeValue(ctx, eval_result);
+        runtime->failed = true;
+        goto defer;
+    }
+    JS_FreeValue(ctx, eval_result);
 
-	if (run_function(ctx, "updateContainer") != 0) {
-		runtime->failed = true;
-		goto defer;
-	}
+    if (run_function(ctx, "updateContainer") != 0) {
+        runtime->failed = true;
+        goto defer;
+    }
 
-	drain_microtasks(rt);
-	instance_tree_swap();
-	runtime->ready = true;
+    drain_microtasks(rt);
+    instance_tree_swap();
+    runtime->ready = true;
 
-	while (!runtime->stop_requested && !event_queue_is_shutdown()) {
-		process_input_events(ctx);
-		run_timeouts(ctx);
-		run_fetch(ctx);
-		drain_microtasks(rt);
-		instance_tree_swap();
-		vd_thread_yield();
-	}
+    while (!runtime->stop_requested && !event_queue_is_shutdown()) {
+        process_input_events(ctx);
+        run_timeouts(ctx);
+        run_fetch(ctx);
+        drain_microtasks(rt);
+        instance_tree_swap();
+        vd_thread_yield();
+    }
 
 defer:
-	if (ctx) fetch_shutdown(ctx);
-	if (ctx) JS_FreeContext(ctx);
-	if (rt) JS_FreeRuntime(rt);
-	return result;
+    if (ctx) fetch_shutdown(ctx);
+    if (ctx) JS_FreeContext(ctx);
+    if (rt) JS_FreeRuntime(rt);
+    return result;
 }
 
 void js_runtime_init(VdJsRuntime *runtime)
 {
-	runtime->thread = NULL;
-	runtime->stop_requested = false;
-	runtime->ready = false;
-	runtime->failed = false;
+    runtime->thread = NULL;
+    runtime->stop_requested = false;
+    runtime->ready = false;
+    runtime->failed = false;
 }
 
 bool js_runtime_start(VdJsRuntime *runtime)
 {
-	if (runtime->thread) return true;
-	runtime->stop_requested = false;
-	runtime->ready = false;
-	runtime->failed = false;
-	event_queue_clear();
-	input_clear_focus();
-	runtime->thread = vd_thread_create(js_thread_func, runtime);
-	return runtime->thread != NULL;
+    if (runtime->thread) return true;
+    runtime->stop_requested = false;
+    runtime->ready = false;
+    runtime->failed = false;
+    event_queue_clear();
+    input_clear_focus();
+    runtime->thread = vd_thread_create(js_thread_func, runtime);
+    return runtime->thread != NULL;
 }
 
 void js_runtime_stop(VdJsRuntime *runtime)
 {
-	if (!runtime->thread) return;
-	runtime->stop_requested = true;
-	vd_thread_join((vd_thread *)runtime->thread);
-	vd_thread_destroy((vd_thread *)runtime->thread);
-	runtime->thread = NULL;
-	runtime->ready = false;
-	input_clear_focus();
-	instance_tree_clear();
-	event_queue_clear();
+    if (!runtime->thread) return;
+    runtime->stop_requested = true;
+    vd_thread_join((vd_thread *)runtime->thread);
+    vd_thread_destroy((vd_thread *)runtime->thread);
+    runtime->thread = NULL;
+    runtime->ready = false;
+    input_clear_focus();
+    instance_tree_clear();
+    event_queue_clear();
 }
 
 bool js_runtime_restart(VdJsRuntime *runtime)
 {
-	js_runtime_stop(runtime);
-	return js_runtime_start(runtime);
+    js_runtime_stop(runtime);
+    return js_runtime_start(runtime);
 }
 
 bool js_runtime_is_ready(const VdJsRuntime *runtime)
 {
-	return runtime->ready;
+    return runtime->ready;
 }
 
 bool js_runtime_failed(const VdJsRuntime *runtime)
 {
-	return runtime->failed;
+    return runtime->failed;
 }

@@ -7,10 +7,7 @@
 
 #define VD_SHELL_REMOVE_LABEL_MAX 192
 
-typedef enum {
-    VD_SHELL_HIDDEN,
-    VD_SHELL_HOME
-} VdShellState;
+typedef enum { VD_SHELL_HIDDEN, VD_SHELL_HOME } VdShellState;
 
 typedef struct {
     VdShellState state;

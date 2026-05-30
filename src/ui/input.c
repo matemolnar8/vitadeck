@@ -23,7 +23,8 @@ static char *gamepad_down_id = NULL;
 static bool prev_confirm_down = false;
 
 // Push an input event to the queue (called from UI thread)
-static void push_input_event(const char *id, const char *event) {
+static void push_input_event(const char *id, const char *event)
+{
     InputEvent evt;
     evt.type = EVT_INPUT;
     strncpy(evt.id, id, sizeof(evt.id) - 1);
@@ -33,7 +34,8 @@ static void push_input_event(const char *id, const char *event) {
     event_queue_push(&evt);
 }
 
-void input_clear_focus(void) {
+void input_clear_focus(void)
+{
     if (focused_id) {
         push_input_event(focused_id, "mouseleave");
         free(focused_id);
@@ -45,7 +47,8 @@ void input_clear_focus(void) {
     }
 }
 
-void poll_mouse_input(void) {
+void poll_mouse_input(void)
+{
     const int x = GetMouseX();
     const int y = GetMouseY();
 
@@ -93,7 +96,10 @@ void poll_mouse_input(void) {
     if (just_pressed) {
         input_clear_focus();
         if (top_id) {
-            if (mouse_down_id) { free(mouse_down_id); mouse_down_id = NULL; }
+            if (mouse_down_id) {
+                free(mouse_down_id);
+                mouse_down_id = NULL;
+            }
             mouse_down_id = strdup(top_id);
             TraceLog(LOG_DEBUG, "mousedown: %s", mouse_down_id);
             push_input_event(mouse_down_id, "mousedown");
@@ -111,15 +117,16 @@ void poll_mouse_input(void) {
                 push_input_event(mouse_down_id, "click");
             }
 
-            free(mouse_down_id); 
-            mouse_down_id = NULL; 
+            free(mouse_down_id);
+            mouse_down_id = NULL;
         }
     }
 
     prev_is_mouse_down = is_mouse_down;
 }
 
-void poll_touch_input(void) {
+void poll_touch_input(void)
+{
     const int count = GetTouchPointCount();
     const bool is_down = count > 0;
 
@@ -166,7 +173,10 @@ void poll_touch_input(void) {
     if (just_pressed) {
         input_clear_focus();
         if (top_id) {
-            if (touch_down_id) { free(touch_down_id); touch_down_id = NULL; }
+            if (touch_down_id) {
+                free(touch_down_id);
+                touch_down_id = NULL;
+            }
             touch_down_id = strdup(top_id);
             push_input_event(touch_down_id, "mousedown");
         }
@@ -180,15 +190,20 @@ void poll_touch_input(void) {
             if (touch_hovered_id && strcmp(touch_down_id, touch_hovered_id) == 0) {
                 push_input_event(touch_down_id, "click");
             }
-
         }
 
         if (touch_hovered_id) {
             push_input_event(touch_hovered_id, "mouseleave");
         }
 
-        if (touch_down_id) { free(touch_down_id); touch_down_id = NULL; }
-        if (touch_hovered_id) { free(touch_hovered_id); touch_hovered_id = NULL; }
+        if (touch_down_id) {
+            free(touch_down_id);
+            touch_down_id = NULL;
+        }
+        if (touch_hovered_id) {
+            free(touch_hovered_id);
+            touch_hovered_id = NULL;
+        }
     }
 
     prev_touch_down = is_down;
@@ -196,7 +211,8 @@ void poll_touch_input(void) {
 
 typedef enum { NAV_UP, NAV_DOWN, NAV_LEFT, NAV_RIGHT } NavDirection;
 
-static void set_focus(const char *new_id) {
+static void set_focus(const char *new_id)
+{
     if (focused_id) {
         if (new_id && strcmp(focused_id, new_id) == 0) return;
         push_input_event(focused_id, "mouseleave");
@@ -209,7 +225,8 @@ static void set_focus(const char *new_id) {
     }
 }
 
-static const char *find_nearest_focusable(NavDirection dir) {
+static const char *find_nearest_focusable(NavDirection dir)
+{
     int elem_count = 0;
     FocusableElement *elems = get_focusable_elements(&elem_count);
     if (!elems || elem_count == 0) return NULL;
@@ -251,26 +268,34 @@ static const char *find_nearest_focusable(NavDirection dir) {
         // Check if element is in the correct direction
         bool valid = false;
         switch (dir) {
-            case NAV_UP:    valid = dy < 0; break;
-            case NAV_DOWN:  valid = dy > 0; break;
-            case NAV_LEFT:  valid = dx < 0; break;
-            case NAV_RIGHT: valid = dx > 0; break;
+        case NAV_UP:
+            valid = dy < 0;
+            break;
+        case NAV_DOWN:
+            valid = dy > 0;
+            break;
+        case NAV_LEFT:
+            valid = dx < 0;
+            break;
+        case NAV_RIGHT:
+            valid = dx > 0;
+            break;
         }
         if (!valid) continue;
 
         // Calculate weighted distance (favor elements more aligned with direction)
         float primary = 0, secondary = 0;
         switch (dir) {
-            case NAV_UP:
-            case NAV_DOWN:
-                primary = fabsf((float)dy);
-                secondary = fabsf((float)dx);
-                break;
-            case NAV_LEFT:
-            case NAV_RIGHT:
-                primary = fabsf((float)dx);
-                secondary = fabsf((float)dy);
-                break;
+        case NAV_UP:
+        case NAV_DOWN:
+            primary = fabsf((float)dy);
+            secondary = fabsf((float)dx);
+            break;
+        case NAV_LEFT:
+        case NAV_RIGHT:
+            primary = fabsf((float)dx);
+            secondary = fabsf((float)dy);
+            break;
         }
         float score = primary + secondary * 2.0f;
 
@@ -285,7 +310,8 @@ static const char *find_nearest_focusable(NavDirection dir) {
     return result;
 }
 
-void poll_gamepad_input(void) {
+void poll_gamepad_input(void)
+{
     // Check if focused element still exists
     if (focused_id && !instance_exists(focused_id)) {
         free(focused_id);
@@ -330,7 +356,10 @@ void poll_gamepad_input(void) {
     bool just_released = !confirm_down && prev_confirm_down;
 
     if (just_pressed && focused_id) {
-        if (gamepad_down_id) { free(gamepad_down_id); gamepad_down_id = NULL; }
+        if (gamepad_down_id) {
+            free(gamepad_down_id);
+            gamepad_down_id = NULL;
+        }
         gamepad_down_id = strdup(focused_id);
         push_input_event(gamepad_down_id, "mousedown");
     }
@@ -364,4 +393,3 @@ bool input_is_pressed(const char *id)
     if (gamepad_down_id && strcmp(gamepad_down_id, id) == 0) return true;
     return false;
 }
-

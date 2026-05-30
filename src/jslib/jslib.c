@@ -2,84 +2,94 @@
 #include "core/event_queue.h"
 #include "core/package_library.h"
 
-static JSValue js_get_time(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
-	(void)this_val; (void)argc; (void)argv;
-	return JS_NewFloat64(ctx, GetTime());
+static JSValue js_get_time(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+    return JS_NewFloat64(ctx, GetTime());
 }
 
-static char *jslib_read_file(const char *filename, size_t *out_len) {
-	FILE *f = fopen(filename, "rb");
-	if (!f) return NULL;
-	fseek(f, 0, SEEK_END);
-	long len = ftell(f);
-	fseek(f, 0, SEEK_SET);
-	char *buf = malloc(len + 1);
-	if (!buf) { fclose(f); return NULL; }
-	fread(buf, 1, len, f);
-	buf[len] = '\0';
-	fclose(f);
-	if (out_len) *out_len = len;
-	return buf;
+static char *jslib_read_file(const char *filename, size_t *out_len)
+{
+    FILE *f = fopen(filename, "rb");
+    if (!f) return NULL;
+    fseek(f, 0, SEEK_END);
+    long len = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    char *buf = malloc(len + 1);
+    if (!buf) {
+        fclose(f);
+        return NULL;
+    }
+    fread(buf, 1, len, f);
+    buf[len] = '\0';
+    fclose(f);
+    if (out_len) *out_len = len;
+    return buf;
 }
 
-static JSValue js_native_read_text_file(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
-	(void)this_val;
-	if (argc < 1) return JS_ThrowTypeError(ctx, "nativeReadTextFile requires a path");
+static JSValue js_native_read_text_file(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    if (argc < 1) return JS_ThrowTypeError(ctx, "nativeReadTextFile requires a path");
 
-	const char *filename = JS_ToCString(ctx, argv[0]);
-	if (!filename) return JS_EXCEPTION;
+    const char *filename = JS_ToCString(ctx, argv[0]);
+    if (!filename) return JS_EXCEPTION;
 
-	size_t len = 0;
-	char *contents = jslib_read_file(filename, &len);
-	if (!contents) {
-		JS_FreeCString(ctx, filename);
-		return JS_ThrowReferenceError(ctx, "Could not read file");
-	}
+    size_t len = 0;
+    char *contents = jslib_read_file(filename, &len);
+    if (!contents) {
+        JS_FreeCString(ctx, filename);
+        return JS_ThrowReferenceError(ctx, "Could not read file");
+    }
 
-	JSValue result = JS_NewStringLen(ctx, contents, len);
-	free(contents);
-	JS_FreeCString(ctx, filename);
-	return result;
+    JSValue result = JS_NewStringLen(ctx, contents, len);
+    free(contents);
+    JS_FreeCString(ctx, filename);
+    return result;
 }
 
-static JSValue js_native_eval_file(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
-	(void)this_val;
-	if (argc < 1) return JS_ThrowTypeError(ctx, "nativeEvalFile requires a path");
+static JSValue js_native_eval_file(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    if (argc < 1) return JS_ThrowTypeError(ctx, "nativeEvalFile requires a path");
 
-	const char *filename = JS_ToCString(ctx, argv[0]);
-	if (!filename) return JS_EXCEPTION;
+    const char *filename = JS_ToCString(ctx, argv[0]);
+    if (!filename) return JS_EXCEPTION;
 
-	size_t len = 0;
-	char *code = jslib_read_file(filename, &len);
-	if (!code) {
-		JS_FreeCString(ctx, filename);
-		return JS_ThrowReferenceError(ctx, "Could not read file");
-	}
+    size_t len = 0;
+    char *code = jslib_read_file(filename, &len);
+    if (!code) {
+        JS_FreeCString(ctx, filename);
+        return JS_ThrowReferenceError(ctx, "Could not read file");
+    }
 
-	JSValue result = JS_Eval(ctx, code, len, filename, JS_EVAL_TYPE_GLOBAL);
-	free(code);
-	JS_FreeCString(ctx, filename);
-	return result;
+    JSValue result = JS_Eval(ctx, code, len, filename, JS_EVAL_TYPE_GLOBAL);
+    free(code);
+    JS_FreeCString(ctx, filename);
+    return result;
 }
 
-static JSValue js_native_get_active_deck_app_path(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
-	(void)this_val; (void)argc; (void)argv;
-	return JS_NewString(ctx, package_library_active_package_path());
+static JSValue js_native_get_active_deck_app_path(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+    return JS_NewString(ctx, package_library_active_package_path());
 }
 
-static void call_input_event_from_native(JSContext *ctx, const char *id, const char *event) {
+static void call_input_event_from_native(JSContext *ctx, const char *id, const char *event)
+{
     JSValue global = JS_GetGlobalObject(ctx);
     JSValue vitadeck = JS_GetPropertyStr(ctx, global, "vitadeck");
     JSValue input = JS_GetPropertyStr(ctx, vitadeck, "input");
     JSValue fn = JS_GetPropertyStr(ctx, input, "onInputEventFromNative");
 
-    JSValue args[2] = {
-        JS_NewString(ctx, id),
-        JS_NewString(ctx, event)
-    };
+    JSValue args[2] = {JS_NewString(ctx, id), JS_NewString(ctx, event)};
 
     JSValue result = JS_Call(ctx, fn, input, 2, args);
-    
+
     if (JS_IsException(result)) {
         JSValue exc = JS_GetException(ctx);
         const char *str = JS_ToCString(ctx, exc);
@@ -97,7 +107,8 @@ static void call_input_event_from_native(JSContext *ctx, const char *id, const c
     JS_FreeValue(ctx, global);
 }
 
-void process_input_events(JSContext *ctx) {
+void process_input_events(JSContext *ctx)
+{
     InputEvent evt;
     while (event_queue_pop(&evt)) {
         if (evt.type == EVT_INPUT) {
@@ -106,15 +117,16 @@ void process_input_events(JSContext *ctx) {
     }
 }
 
-void register_js_lib(JSContext *ctx) {
-	register_js_log(ctx);
-	register_js_colors(ctx);
-	register_js_timeout(ctx);
-	register_js_fetch(ctx);
-	register_instance_tree(ctx);
+void register_js_lib(JSContext *ctx)
+{
+    register_js_log(ctx);
+    register_js_colors(ctx);
+    register_js_timeout(ctx);
+    register_js_fetch(ctx);
+    register_instance_tree(ctx);
 
-	js_set_global_function(ctx, "getTime", js_get_time, 0);
-	js_set_global_function(ctx, "nativeReadTextFile", js_native_read_text_file, 1);
-	js_set_global_function(ctx, "nativeEvalFile", js_native_eval_file, 1);
-	js_set_global_function(ctx, "nativeGetActiveDeckAppPath", js_native_get_active_deck_app_path, 0);
+    js_set_global_function(ctx, "getTime", js_get_time, 0);
+    js_set_global_function(ctx, "nativeReadTextFile", js_native_read_text_file, 1);
+    js_set_global_function(ctx, "nativeEvalFile", js_native_eval_file, 1);
+    js_set_global_function(ctx, "nativeGetActiveDeckAppPath", js_native_get_active_deck_app_path, 0);
 }

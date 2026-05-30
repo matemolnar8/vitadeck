@@ -126,7 +126,8 @@ static bool write_stored(const unsigned char *data, size_t size, const char *out
     return ok;
 }
 
-static bool write_deflated(Arena *arena, const unsigned char *data, size_t compressed_size, size_t uncompressed_size, const char *out_path)
+static bool write_deflated(Arena *arena, const unsigned char *data, size_t compressed_size, size_t uncompressed_size,
+                           const char *out_path)
 {
     unsigned char *out = arena_alloc(arena, uncompressed_size);
     if (!out) return false;
@@ -149,7 +150,8 @@ static bool write_deflated(Arena *arena, const unsigned char *data, size_t compr
     return ok;
 }
 
-bool upload_archive_extract(Arena *arena, const char *zip_path, VdArchiveExtractResult *result, char *error, size_t error_size)
+bool upload_archive_extract(Arena *arena, const char *zip_path, VdArchiveExtractResult *result, char *error,
+                            size_t error_size)
 {
     memset(result, 0, sizeof(*result));
 
@@ -233,7 +235,8 @@ bool upload_archive_extract(Arena *arena, const char *zip_path, VdArchiveExtract
         if (is_directory) continue;
 
         total_unpacked += uncompressed_size;
-        if (total_unpacked > VD_UPLOAD_MAX_UNPACKED_BYTES || local_offset + 30 > zip_size || le32(zip + local_offset) != 0x04034b50) {
+        if (total_unpacked > VD_UPLOAD_MAX_UNPACKED_BYTES || local_offset + 30 > zip_size ||
+            le32(zip + local_offset) != 0x04034b50) {
             set_error(error, error_size, "Archive exceeds unpacked size limit or has invalid local data.");
             return false;
         }

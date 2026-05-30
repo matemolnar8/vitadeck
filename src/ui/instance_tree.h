@@ -4,12 +4,7 @@
 #include <stdbool.h>
 #include <raylib.h>
 
-typedef enum {
-    NT_RECT = 1,
-    NT_TEXT = 2,
-    NT_BUTTON = 3,
-    NT_RAW_TEXT = 4
-} NodeType;
+typedef enum { NT_RECT = 1, NT_TEXT = 2, NT_BUTTON = 3, NT_RAW_TEXT = 4 } NodeType;
 
 typedef struct {
     int x, y, width, height;
@@ -87,4 +82,3 @@ void instance_back_root_remove(ReactInstance *child);
 void instance_back_root_clear(void);
 
 #endif /* INSTANCE_TREE_H */
-

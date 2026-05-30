@@ -28,8 +28,10 @@ const char *package_library_active_package_path(void);
 int package_library_list(VdPackageInfo *items, int max_items);
 bool package_library_set_active(const char *package_name, char *error, size_t error_size);
 bool package_library_remove(const char *package_name, char *error, size_t error_size);
-bool package_library_validate_package(const char *package_path, const char *package_name, VdPackageInfo *out_info, char *error, size_t error_size);
-bool package_library_publish_package(const char *source_path, const char *package_name, bool *replaced_active, VdPackageInfo *out_info, char *error, size_t error_size);
+bool package_library_validate_package(const char *package_path, const char *package_name, VdPackageInfo *out_info,
+                                      char *error, size_t error_size);
+bool package_library_publish_package(const char *source_path, const char *package_name, bool *replaced_active,
+                                     VdPackageInfo *out_info, char *error, size_t error_size);
 void package_library_clear_staging(void);
 
 #endif /* PACKAGE_LIBRARY_H */

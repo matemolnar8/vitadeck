@@ -13,88 +13,93 @@
 #define SCREEN_WIDTH 960
 #define SCREEN_HEIGHT 544
 
-#define return_defer(value) do { result = (value); goto defer; } while(0)
+#define return_defer(value)                                                                                            \
+    do {                                                                                                               \
+        result = (value);                                                                                              \
+        goto defer;                                                                                                    \
+    } while (0)
 
-int main(int argc, char *argv[]) {
-	(void)argc;
-	(void)argv;
-	int result = 0;
-	bool window_ready = false;
-	VdJsRuntime js_runtime;
-	VdShell shell;
-	char init_error[256];
-	js_runtime_init(&js_runtime);
-	shell_init(&shell);
+int main(int argc, char *argv[])
+{
+    (void)argc;
+    (void)argv;
+    int result = 0;
+    bool window_ready = false;
+    VdJsRuntime js_runtime;
+    VdShell shell;
+    char init_error[256];
+    js_runtime_init(&js_runtime);
+    shell_init(&shell);
 
-	if (!event_queue_init()) {
-		TraceLog(LOG_ERROR, "Could not initialize event queue.");
-		return 1;
-	}
-	instance_tree_init();
-	if (!package_library_init(init_error, sizeof(init_error))) {
-		TraceLog(LOG_ERROR, "%s", init_error);
-		return_defer(1);
-	}
+    if (!event_queue_init()) {
+        TraceLog(LOG_ERROR, "Could not initialize event queue.");
+        return 1;
+    }
+    instance_tree_init();
+    if (!package_library_init(init_error, sizeof(init_error))) {
+        TraceLog(LOG_ERROR, "%s", init_error);
+        return_defer(1);
+    }
 
-	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "VitaDeck");	
-	window_ready = true;
-	SetTargetFPS(60);
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "VitaDeck");
+    window_ready = true;
+    SetTargetFPS(60);
 
-	BeginDrawing();
-		ClearBackground(BLACK);
-		if (package_library_has_active_deck_app()) DrawText("Loading...", 10, 10, 20, WHITE);
-	EndDrawing();
+    BeginDrawing();
+    ClearBackground(BLACK);
+    if (package_library_has_active_deck_app()) DrawText("Loading...", 10, 10, 20, WHITE);
+    EndDrawing();
 
-	if (package_library_has_active_deck_app() && !js_runtime_start(&js_runtime)) {
-		TraceLog(LOG_ERROR, "Could not create JS thread.");
-		return_defer(1);
-	}
+    if (package_library_has_active_deck_app() && !js_runtime_start(&js_runtime)) {
+        TraceLog(LOG_ERROR, "Could not create JS thread.");
+        return_defer(1);
+    }
 
-	while (!WindowShouldClose()) {
-		bool request_runtime_restart = false;
-		shell_update(&shell, &request_runtime_restart);
-		shell_poll_system_input(&shell, &request_runtime_restart);
-		if (request_runtime_restart) {
-			if (package_library_has_active_deck_app()) {
-				js_runtime_restart(&js_runtime);
-			} else {
-				js_runtime_stop(&js_runtime);
-			}
-		}
+    while (!WindowShouldClose()) {
+        bool request_runtime_restart = false;
+        shell_update(&shell, &request_runtime_restart);
+        shell_poll_system_input(&shell, &request_runtime_restart);
+        if (request_runtime_restart) {
+            if (package_library_has_active_deck_app()) {
+                js_runtime_restart(&js_runtime);
+            } else {
+                js_runtime_stop(&js_runtime);
+            }
+        }
 
-		if (!shell_is_visible(&shell) && package_library_has_active_deck_app() && js_runtime_is_ready(&js_runtime)) {
-			poll_mouse_input();
-			poll_touch_input();
-			poll_gamepad_input();
-		}
+        if (!shell_is_visible(&shell) && package_library_has_active_deck_app() && js_runtime_is_ready(&js_runtime)) {
+            poll_mouse_input();
+            poll_touch_input();
+            poll_gamepad_input();
+        }
 
-		BeginDrawing();
-			ClearBackground(BLACK);
-			if (!package_library_has_active_deck_app()) {
-				/* Shell shows setup instructions; keep canvas black underneath. */
-			} else if (js_runtime_failed(&js_runtime)) {
-				DrawText("Deck App Runtime failed to start.", 10, 10, 24, RED);
-				DrawText("Open the Shell with F1/Start to choose another Deck App.", 10, 44, 20, RAYWHITE);
-			} else if (!js_runtime_is_ready(&js_runtime)) {
-				DrawText("Loading JavaScript...", 10, 10, 20, WHITE);
-			} else {
-				render_draw_list();
-			}
-			shell_render(&shell);
-			DrawFPS(SCREEN_WIDTH - 100, 10);
+        BeginDrawing();
+        ClearBackground(BLACK);
+        if (!package_library_has_active_deck_app()) {
+            /* Shell shows setup instructions; keep canvas black underneath. */
+        } else if (js_runtime_failed(&js_runtime)) {
+            DrawText("Deck App Runtime failed to start.", 10, 10, 24, RED);
+            DrawText("Open the Shell with F1/Start to choose another Deck App.", 10, 44, 20, RAYWHITE);
+        } else if (!js_runtime_is_ready(&js_runtime)) {
+            DrawText("Loading JavaScript...", 10, 10, 20, WHITE);
+        } else {
+            render_draw_list();
+        }
+        shell_render(&shell);
+        DrawFPS(SCREEN_WIDTH - 100, 10);
 
-			for (int i = 0; i < GetTouchPointCount(); i++) {
-				Vector2 position = GetTouchPosition(i);
-				DrawCircle(position.x, position.y, 10, RED);
-			}
-		EndDrawing();
-	}
+        for (int i = 0; i < GetTouchPointCount(); i++) {
+            Vector2 position = GetTouchPosition(i);
+            DrawCircle(position.x, position.y, 10, RED);
+        }
+        EndDrawing();
+    }
 
 defer:
-	shell_shutdown(&shell);
-	js_runtime_stop(&js_runtime);
-	event_queue_shutdown();
-	event_queue_destroy();
-	if (window_ready) CloseWindow();
-	return result;
+    shell_shutdown(&shell);
+    js_runtime_stop(&js_runtime);
+    event_queue_shutdown();
+    event_queue_destroy();
+    if (window_ready) CloseWindow();
+    return result;
 }

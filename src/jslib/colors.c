@@ -1,6 +1,7 @@
 #include "jslib_internal.h"
 
-static JSValue create_color_object(JSContext *ctx, Color c) {
+static JSValue create_color_object(JSContext *ctx, Color c)
+{
     JSValue obj = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, obj, "r", JS_NewInt32(ctx, c.r));
     JS_SetPropertyStr(ctx, obj, "g", JS_NewInt32(ctx, c.g));
@@ -9,7 +10,8 @@ static JSValue create_color_object(JSContext *ctx, Color c) {
     return obj;
 }
 
-void register_js_colors(JSContext *ctx) {
+void register_js_colors(JSContext *ctx)
+{
     JSValue colors = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, colors, "LIGHTGRAY", create_color_object(ctx, LIGHTGRAY));
     JS_SetPropertyStr(ctx, colors, "GRAY", create_color_object(ctx, GRAY));
@@ -37,7 +39,7 @@ void register_js_colors(JSContext *ctx) {
     JS_SetPropertyStr(ctx, colors, "BLANK", create_color_object(ctx, BLANK));
     JS_SetPropertyStr(ctx, colors, "MAGENTA", create_color_object(ctx, MAGENTA));
     JS_SetPropertyStr(ctx, colors, "RAYWHITE", create_color_object(ctx, RAYWHITE));
-    
+
     JSValue global = JS_GetGlobalObject(ctx);
     JS_SetPropertyStr(ctx, global, "Colors", colors);
     JS_FreeValue(ctx, global);

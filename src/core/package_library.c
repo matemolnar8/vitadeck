@@ -132,7 +132,8 @@ static bool json_string_value(const char *json, const char *key, char *out, size
     p = strchr(p + strlen(needle), ':');
     if (!p) return false;
     p++;
-    while (*p && isspace((unsigned char)*p)) p++;
+    while (*p && isspace((unsigned char)*p))
+        p++;
     if (*p != '"') return false;
     p++;
 
@@ -155,7 +156,8 @@ static bool json_int_value(const char *json, const char *key, int *out)
     p = strchr(p + strlen(needle), ':');
     if (!p) return false;
     p++;
-    while (*p && isspace((unsigned char)*p)) p++;
+    while (*p && isspace((unsigned char)*p))
+        p++;
     char *end = NULL;
     long value = strtol(p, &end, 10);
     if (end == p) return false;
@@ -188,7 +190,8 @@ static bool safe_package_name(const char *package_name)
            !strstr(package_name, "/") && !strstr(package_name, "\\") && !strstr(package_name, "..");
 }
 
-bool package_library_validate_package(const char *package_path, const char *package_name, VdPackageInfo *out_info, char *error, size_t error_size)
+bool package_library_validate_package(const char *package_path, const char *package_name, VdPackageInfo *out_info,
+                                      char *error, size_t error_size)
 {
     if (!safe_package_name(package_name)) {
         set_error(error, error_size, "Invalid Deck App Package Name.");
@@ -339,10 +342,22 @@ bool package_library_init(char *error, size_t error_size)
     return true;
 }
 
-const char *package_library_root(void) { return g_root; }
-const char *package_library_staging_root(void) { return g_staging_root; }
-const char *package_library_active_package_name(void) { return g_active_name; }
-const char *package_library_active_package_path(void) { return g_active_path; }
+const char *package_library_root(void)
+{
+    return g_root;
+}
+const char *package_library_staging_root(void)
+{
+    return g_staging_root;
+}
+const char *package_library_active_package_name(void)
+{
+    return g_active_name;
+}
+const char *package_library_active_package_path(void)
+{
+    return g_active_path;
+}
 
 bool package_library_set_active(const char *package_name, char *error, size_t error_size)
 {
@@ -381,7 +396,8 @@ bool package_library_remove(const char *package_name, char *error, size_t error_
     return true;
 }
 
-bool package_library_publish_package(const char *source_path, const char *package_name, bool *replaced_active, VdPackageInfo *out_info, char *error, size_t error_size)
+bool package_library_publish_package(const char *source_path, const char *package_name, bool *replaced_active,
+                                     VdPackageInfo *out_info, char *error, size_t error_size)
 {
     bool had_no_active = (g_active_name[0] == '\0');
     VdPackageInfo info;
