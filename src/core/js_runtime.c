@@ -37,6 +37,21 @@ static int run_function(JSContext *ctx, const char *func_name)
 	return ret;
 }
 
+static void drain_microtasks(JSRuntime *rt)
+{
+	JSContext *pctx;
+	int err;
+	while ((err = JS_ExecutePendingJob(rt, &pctx)) != 0) {
+		if (err < 0) {
+			JSValue exc = JS_GetException(pctx);
+			const char *str = JS_ToCString(pctx, exc);
+			TraceLog(LOG_ERROR, "[microtask] %s", str ? str : "unknown error");
+			JS_FreeCString(pctx, str);
+			JS_FreeValue(pctx, exc);
+		}
+	}
+}
+
 static char *read_file(const char *filename, size_t *out_len) {
 	FILE *f = fopen(filename, "rb");
 	if (!f) return NULL;
@@ -103,12 +118,14 @@ static void *js_thread_func(void *arg)
 		goto defer;
 	}
 
+	drain_microtasks(rt);
 	instance_tree_swap();
 	runtime->ready = true;
 
 	while (!runtime->stop_requested && !event_queue_is_shutdown()) {
 		process_input_events(ctx);
 		run_timeouts(ctx);
+		drain_microtasks(rt);
 		instance_tree_swap();
 		vd_thread_yield();
 	}

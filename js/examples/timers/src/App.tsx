@@ -1,6 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Button, Rect, Screen, Text, insetContent, useTheme } from "@vitadeck/sdk";
 
+const timeoutPromise = new Promise<string>((resolve) => {
+  setTimeout(() => {
+    resolve("Hello from promise");
+  }, 2000);
+});
+
 export default function TimersDeckApp() {
   const { theme } = useTheme();
   const [timeoutMsg, setTimeoutMsg] = useState("Idle");
@@ -9,6 +15,17 @@ export default function TimersDeckApp() {
   const [ticks, setTicks] = useState(0);
   const intervalIdRef = useRef<number | undefined>();
   const [intervalRunning, setIntervalRunning] = useState(false);
+  const [asyncResult, setAsyncResult] = useState("");
+
+  useEffect(() => {
+    timeoutPromise.then((result) => {
+      setAsyncResult(result);
+    });
+
+    setTimeout(() => {
+      setAsyncResult("Hello from timeout");
+    }, 1000);
+  }, []);
 
   useEffect(() => {
     if (timeoutActive) {
@@ -49,7 +66,7 @@ export default function TimersDeckApp() {
 
   const { x: insetX, y: insetY, width: cw, height: ch } = insetContent();
   const stackGap = 16;
-  const rowH = (ch - stackGap) / 2;
+  const rowH = (ch - 2 * stackGap) / 3;
 
   return (
     <Screen>
@@ -114,6 +131,22 @@ export default function TimersDeckApp() {
           textColor={theme.navText}
           borderRadius={0.12}
         />
+      </Rect>
+
+      <Rect
+        x={insetX}
+        y={insetY + 2 * (rowH + stackGap)}
+        width={cw}
+        height={rowH}
+        color={theme.surface}
+        borderRadius={0.08}
+      >
+        <Text fontSize={24} color={theme.text}>
+          Promise vs setTimeout: {asyncResult || "…"}
+        </Text>
+        <Text fontSize={18} color={theme.outline}>
+          Timeout at 1s, promise at 2s — final text should be from the promise
+        </Text>
       </Rect>
     </Screen>
   );
