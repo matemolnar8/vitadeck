@@ -100,6 +100,7 @@ set(JSLIB_SOURCES
 
 set(VITADECK_SOURCES
     src/main.c
+    src/core/arena.c
     src/core/js_runtime.c
     src/core/package_library.c
     ${JSLIB_SOURCES}

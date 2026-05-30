@@ -64,7 +64,7 @@ static bool mkdir_parent(const char *path)
     return mkdir_p(parent);
 }
 
-static bool read_file(const char *path, unsigned char **out_data, size_t *out_size)
+static bool read_file(Arena *arena, const char *path, unsigned char **out_data, size_t *out_size)
 {
     FILE *f = fopen(path, "rb");
     if (!f) return false;
@@ -75,7 +75,7 @@ static bool read_file(const char *path, unsigned char **out_data, size_t *out_si
         fclose(f);
         return false;
     }
-    unsigned char *data = malloc((size_t)len);
+    unsigned char *data = arena_alloc(arena, (size_t)len);
     if (!data) {
         fclose(f);
         return false;
@@ -83,7 +83,6 @@ static bool read_file(const char *path, unsigned char **out_data, size_t *out_si
     size_t read_len = fread(data, 1, (size_t)len, f);
     fclose(f);
     if (read_len != (size_t)len) {
-        free(data);
         return false;
     }
     *out_data = data;
@@ -127,9 +126,9 @@ static bool write_stored(const unsigned char *data, size_t size, const char *out
     return ok;
 }
 
-static bool write_deflated(const unsigned char *data, size_t compressed_size, size_t uncompressed_size, const char *out_path)
+static bool write_deflated(Arena *arena, const unsigned char *data, size_t compressed_size, size_t uncompressed_size, const char *out_path)
 {
-    unsigned char *out = malloc(uncompressed_size);
+    unsigned char *out = arena_alloc(arena, uncompressed_size);
     if (!out) return false;
 
     z_stream stream;
@@ -147,17 +146,16 @@ static bool write_deflated(const unsigned char *data, size_t compressed_size, si
     inflateEnd(&stream);
 
     if (ok) ok = write_stored(out, uncompressed_size, out_path);
-    free(out);
     return ok;
 }
 
-bool upload_archive_extract(const char *zip_path, VdArchiveExtractResult *result, char *error, size_t error_size)
+bool upload_archive_extract(Arena *arena, const char *zip_path, VdArchiveExtractResult *result, char *error, size_t error_size)
 {
     memset(result, 0, sizeof(*result));
 
     unsigned char *zip = NULL;
     size_t zip_size = 0;
-    if (!read_file(zip_path, &zip, &zip_size)) {
+    if (!read_file(arena, zip_path, &zip, &zip_size)) {
         set_error(error, error_size, "Archive is missing or exceeds upload size limit.");
         return false;
     }
@@ -172,7 +170,6 @@ bool upload_archive_extract(const char *zip_path, VdArchiveExtractResult *result
         if (i == 0) break;
     }
     if (eocd_pos == (size_t)-1) {
-        free(zip);
         set_error(error, error_size, "Archive is not a supported zip file.");
         return false;
     }
@@ -181,7 +178,6 @@ bool upload_archive_extract(const char *zip_path, VdArchiveExtractResult *result
     uint32_t central_size = le32(zip + eocd_pos + 12);
     uint32_t central_offset = le32(zip + eocd_pos + 16);
     if (entry_count == 0 || entry_count > VD_UPLOAD_MAX_ENTRIES || central_offset + central_size > zip_size) {
-        free(zip);
         set_error(error, error_size, "Archive entry count or directory is invalid.");
         return false;
     }
@@ -193,7 +189,6 @@ bool upload_archive_extract(const char *zip_path, VdArchiveExtractResult *result
     size_t pos = central_offset;
     for (unsigned int i = 0; i < entry_count; i++) {
         if (pos + 46 > zip_size || le32(zip + pos) != 0x02014b50) {
-            free(zip);
             set_error(error, error_size, "Archive central directory is invalid.");
             return false;
         }
@@ -206,7 +201,6 @@ bool upload_archive_extract(const char *zip_path, VdArchiveExtractResult *result
         uint16_t comment_len = le16(zip + pos + 32);
         uint32_t local_offset = le32(zip + pos + 42);
         if (pos + 46 + name_len + extra_len + comment_len > zip_size || name_len >= VD_PATH_MAX) {
-            free(zip);
             set_error(error, error_size, "Archive entry metadata is invalid.");
             return false;
         }
@@ -219,21 +213,18 @@ bool upload_archive_extract(const char *zip_path, VdArchiveExtractResult *result
         if (is_macos_metadata_path(entry_name)) continue;
 
         if (!safe_zip_path(entry_name)) {
-            free(zip);
             set_error(error, error_size, "Archive contains an unsafe path.");
             return false;
         }
 
         char entry_top[VD_PACKAGE_NAME_MAX];
         if (!top_level_name(entry_name, entry_top, sizeof(entry_top)) || !has_suffix(entry_top, ".vdapp")) {
-            free(zip);
             set_error(error, error_size, "Archive must contain exactly one top-level .vdapp directory.");
             return false;
         }
         if (top_name[0] == '\0') {
             snprintf(top_name, sizeof(top_name), "%s", entry_top);
         } else if (strcmp(top_name, entry_top) != 0) {
-            free(zip);
             set_error(error, error_size, "Archive contains more than one top-level entry.");
             return false;
         }
@@ -243,7 +234,6 @@ bool upload_archive_extract(const char *zip_path, VdArchiveExtractResult *result
 
         total_unpacked += uncompressed_size;
         if (total_unpacked > VD_UPLOAD_MAX_UNPACKED_BYTES || local_offset + 30 > zip_size || le32(zip + local_offset) != 0x04034b50) {
-            free(zip);
             set_error(error, error_size, "Archive exceeds unpacked size limit or has invalid local data.");
             return false;
         }
@@ -252,7 +242,6 @@ bool upload_archive_extract(const char *zip_path, VdArchiveExtractResult *result
         uint16_t local_extra_len = le16(zip + local_offset + 28);
         size_t data_offset = local_offset + 30 + local_name_len + local_extra_len;
         if (data_offset + compressed_size > zip_size) {
-            free(zip);
             set_error(error, error_size, "Archive entry data is invalid.");
             return false;
         }
@@ -263,16 +252,14 @@ bool upload_archive_extract(const char *zip_path, VdArchiveExtractResult *result
         if (method == 0) {
             ok = compressed_size == uncompressed_size && write_stored(zip + data_offset, uncompressed_size, out_path);
         } else if (method == 8) {
-            ok = write_deflated(zip + data_offset, compressed_size, uncompressed_size, out_path);
+            ok = write_deflated(arena, zip + data_offset, compressed_size, uncompressed_size, out_path);
         }
         if (!ok) {
-            free(zip);
             set_error(error, error_size, "Archive contains an unsupported or invalid compressed entry.");
             return false;
         }
     }
 
-    free(zip);
     if (top_name[0] == '\0') {
         set_error(error, error_size, "Archive did not contain a Deck App Package Directory.");
         return false;

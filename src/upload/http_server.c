@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include "arena.h"
 #include "upload/archive.h"
 
 #ifdef __vita__
@@ -228,9 +229,9 @@ static bool request_body_to_file(const char *headers, unsigned char *body, size_
     return false;
 }
 
-static bool read_request(int fd, char **out_headers, unsigned char **out_body, size_t *out_body_len, int *error_status)
+static bool read_request(Arena *arena, int fd, char **out_headers, unsigned char **out_body, size_t *out_body_len, int *error_status)
 {
-    unsigned char *buffer = malloc(VD_UPLOAD_HEADER_MAX);
+    unsigned char *buffer = arena_alloc(arena, VD_UPLOAD_HEADER_MAX);
     if (!buffer) return false;
 
     size_t used = 0;
@@ -243,38 +244,27 @@ static bool read_request(int fd, char **out_headers, unsigned char **out_body, s
         if (header_end) break;
     }
     if (!header_end) {
-        free(buffer);
         *error_status = 400;
         return false;
     }
 
     size_t header_len = (size_t)(header_end - buffer) + 4;
-    char *headers = malloc(header_len + 1);
-    if (!headers) {
-        free(buffer);
-        return false;
-    }
+    char *headers = arena_alloc(arena, header_len + 1);
+    if (!headers) return false;
     memcpy(headers, buffer, header_len);
     headers[header_len] = '\0';
 
     long content_length = parse_content_length(headers);
     if (content_length < 0 || content_length > VD_UPLOAD_MAX_BYTES) {
-        free(headers);
-        free(buffer);
         *error_status = content_length > VD_UPLOAD_MAX_BYTES ? 413 : 400;
         return false;
     }
 
-    unsigned char *body = malloc((size_t)content_length);
-    if (!body) {
-        free(headers);
-        free(buffer);
-        return false;
-    }
+    unsigned char *body = arena_alloc(arena, (size_t)content_length);
+    if (!body) return false;
     size_t already = used - header_len;
     if (already > (size_t)content_length) already = (size_t)content_length;
     memcpy(body, buffer + header_len, already);
-    free(buffer);
 
     size_t body_used = already;
     while (body_used < (size_t)content_length) {
@@ -283,8 +273,6 @@ static bool read_request(int fd, char **out_headers, unsigned char **out_body, s
         body_used += (size_t)n;
     }
     if (body_used != (size_t)content_length) {
-        free(headers);
-        free(body);
         *error_status = 400;
         return false;
     }
@@ -317,19 +305,22 @@ static void release_ingest_lock(VdUploadServer *server)
 static void handle_upload(HandlerArg *arg, const char *headers)
 {
     VdUploadServer *server = arg->server;
+    Arena arena = {0};
+    bool locked = false;
+
     if (!take_ingest_lock(server)) {
         send_json_error(arg->fd, 409, "upload_in_progress", "Another Runtime Upload is already in progress.");
-        return;
+        goto done;
     }
+    locked = true;
 
     char *request_headers = NULL;
     unsigned char *body = NULL;
     size_t body_len = 0;
     int read_error = 400;
-    if (!read_request(arg->fd, &request_headers, &body, &body_len, &read_error)) {
+    if (!read_request(&arena, arg->fd, &request_headers, &body, &body_len, &read_error)) {
         send_json_error(arg->fd, read_error, read_error == 413 ? "upload_too_large" : "malformed_request", read_error == 413 ? "Uploaded archive exceeds 16MB." : "Could not read upload request.");
-        release_ingest_lock(server);
-        return;
+        goto done;
     }
 
     (void)headers;
@@ -341,21 +332,15 @@ static void handle_upload(HandlerArg *arg, const char *headers)
     if (!request_body_to_file(request_headers, body, body_len, archive_path, &status, &code, &message)) {
         send_json_error(arg->fd, status, code, message);
         set_last_message(server, message);
-        free(request_headers);
-        free(body);
-        release_ingest_lock(server);
-        return;
+        goto done;
     }
-    free(request_headers);
-    free(body);
 
     char error[256];
     VdArchiveExtractResult extract;
-    if (!upload_archive_extract(archive_path, &extract, error, sizeof(error))) {
+    if (!upload_archive_extract(&arena, archive_path, &extract, error, sizeof(error))) {
         send_json_error(arg->fd, 422, "invalid_archive", error);
         set_last_message(server, error);
-        release_ingest_lock(server);
-        return;
+        goto done;
     }
 
     bool replaced_active = false;
@@ -363,8 +348,7 @@ static void handle_upload(HandlerArg *arg, const char *headers)
     if (!package_library_publish_package(extract.package_path, extract.package_name, &replaced_active, &info, error, sizeof(error))) {
         send_json_error(arg->fd, 422, "invalid_package", error);
         set_last_message(server, error);
-        release_ingest_lock(server);
-        return;
+        goto done;
     }
 
     char body_json[512];
@@ -377,7 +361,10 @@ static void handle_upload(HandlerArg *arg, const char *headers)
     server->last_package = info;
     snprintf(server->last_message, sizeof(server->last_message), "Installed %s %s.", info.display_name, info.version);
     vd_mutex_unlock(server->mutex);
-    release_ingest_lock(server);
+
+done:
+    if (locked) release_ingest_lock(server);
+    arena_free(&arena);
 }
 
 static void *handler_thread(void *raw)
