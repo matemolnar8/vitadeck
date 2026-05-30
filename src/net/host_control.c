@@ -485,7 +485,7 @@ static void host_http_reject_pending(JSContext *ctx, int index, const char *mess
     host_http_free_pending(ctx, index);
 }
 
-void host_control_drain_completions(JSContext *ctx, JSRuntime *rt)
+void host_control_drain_completions(JSContext *ctx)
 {
     HostHttpDone done;
     while (host_http_pop_done(&done)) {
@@ -515,8 +515,6 @@ void host_control_drain_completions(JSContext *ctx, JSRuntime *rt)
         }
         free(done.body);
     }
-
-    while (JS_ExecutePendingJob(rt, NULL) > 0) {}
 }
 
 void host_control_shutdown(JSContext *ctx)

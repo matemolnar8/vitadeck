@@ -125,7 +125,7 @@ static void *js_thread_func(void *arg)
 
 	while (!runtime->stop_requested && !event_queue_is_shutdown()) {
 		process_input_events(ctx);
-		host_control_drain_completions(ctx, rt);
+		host_control_drain_completions(ctx);
 		run_timeouts(ctx);
 		drain_microtasks(rt);
 		instance_tree_swap();
