@@ -6,23 +6,19 @@
 #include "jslib_internal.h"
 #include <ctype.h>
 #include <curl/curl.h>
+#include "arena.h"
 #include "platform/thread.h"
 
-static char *fetch_strdup(const char *s) {
-	if (!s) s = "";
-	size_t len = strlen(s);
-	char *copy = malloc(len + 1);
-	if (copy) memcpy(copy, s, len + 1);
-	return copy;
-}
-
 typedef struct {
-	char *data;
-	size_t len;
-	size_t cap;
+	char *items;
+	size_t count;
+	size_t capacity;
 } FetchBuffer;
 
 typedef struct {
+	Arena arena;
+	Arena response_body;
+	Arena response_headers;
 	char *url;
 	char *method;
 	char *body;
@@ -31,6 +27,7 @@ typedef struct {
 
 	FetchBuffer resp_body;
 	FetchBuffer resp_headers;
+	Arena_Mark header_mark;
 	char *status_line;
 	long status;
 
@@ -47,24 +44,14 @@ typedef struct {
 static FetchRequest **fetch_pending = NULL;
 static vd_mutex *fetch_mutex = NULL;
 
-static void buffer_append(FetchBuffer *buf, const char *data, size_t len) {
-	if (buf->len + len + 1 > buf->cap) {
-		size_t new_cap = buf->cap ? buf->cap * 2 : 1024;
-		while (new_cap < buf->len + len + 1) new_cap *= 2;
-		char *grown = realloc(buf->data, new_cap);
-		if (!grown) return;
-		buf->data = grown;
-		buf->cap = new_cap;
-	}
-	memcpy(buf->data + buf->len, data, len);
-	buf->len += len;
-	buf->data[buf->len] = '\0';
+static void buffer_append(Arena *arena, FetchBuffer *buf, const char *data, size_t len) {
+	arena_da_append_many(arena, buf, data, len);
 }
 
 static size_t fetch_write_cb(char *ptr, size_t size, size_t nmemb, void *userdata) {
 	FetchRequest *req = userdata;
 	size_t total = size * nmemb;
-	buffer_append(&req->resp_body, ptr, total);
+	buffer_append(&req->response_body, &req->resp_body, ptr, total);
 	return total;
 }
 
@@ -73,27 +60,28 @@ static size_t fetch_header_cb(char *buffer, size_t size, size_t nitems, void *us
 	size_t total = size * nitems;
 
 	if (total >= 5 && strncmp(buffer, "HTTP/", 5) == 0) {
-		// New status line (could be a redirect): drop headers gathered so far
-		// so we only keep the final response's headers.
-		req->resp_headers.len = 0;
-		if (req->resp_headers.data) req->resp_headers.data[0] = '\0';
+		arena_rewind(&req->response_headers, req->header_mark);
+		req->resp_headers = (FetchBuffer){0};
+		req->status_line = NULL;
 
 		size_t n = total;
 		while (n > 0 && (buffer[n - 1] == '\r' || buffer[n - 1] == '\n')) n--;
-		free(req->status_line);
-		req->status_line = malloc(n + 1);
+		req->status_line = arena_alloc(&req->response_headers, n + 1);
 		if (req->status_line) {
 			memcpy(req->status_line, buffer, n);
 			req->status_line[n] = '\0';
 		}
+		req->header_mark = arena_snapshot(&req->response_headers);
 	} else {
-		buffer_append(&req->resp_headers, buffer, total);
+		buffer_append(&req->response_headers, &req->resp_headers, buffer, total);
 	}
 	return total;
 }
 
 static void *fetch_worker(void *arg) {
 	FetchRequest *req = arg;
+	req->header_mark = arena_snapshot(&req->response_headers);
+
 	CURL *curl = curl_easy_init();
 	if (!curl) {
 		req->failed = true;
@@ -133,9 +121,9 @@ static void *fetch_worker(void *arg) {
 	return NULL;
 }
 
-static JSValue build_headers_object(JSContext *ctx, const FetchRequest *req) {
+static JSValue build_headers_object(JSContext *ctx, FetchRequest *req) {
 	JSValue headers = JS_NewObject(ctx);
-	const char *p = req->resp_headers.data;
+	const char *p = req->resp_headers.items;
 	if (!p) return headers;
 
 	while (*p) {
@@ -150,12 +138,11 @@ static JSValue build_headers_object(JSContext *ctx, const FetchRequest *req) {
 			while (value < line_end && (*value == ' ' || *value == '\t')) value++;
 			size_t value_len = (size_t)(line_end - value);
 
-			char *name = malloc(name_len + 1);
+			char *name = arena_alloc(&req->arena, name_len + 1);
 			if (name) {
 				for (size_t i = 0; i < name_len; i++) name[i] = (char)tolower((unsigned char)p[i]);
 				name[name_len] = '\0';
 				JS_SetPropertyStr(ctx, headers, name, JS_NewStringLen(ctx, value, value_len));
-				free(name);
 			}
 		}
 
@@ -170,7 +157,7 @@ static const char *status_text_from_line(const char *status_line) {
 	const char *p = strchr(status_line, ' ');
 	if (!p) return "";
 	p++;
-	while (*p && *p != ' ') p++; // skip status code
+	while (*p && *p != ' ') p++;
 	while (*p == ' ') p++;
 	return p;
 }
@@ -189,8 +176,8 @@ static void resolve_fetch(JSContext *ctx, FetchRequest *req) {
 		JS_SetPropertyStr(ctx, resp, "ok", JS_NewBool(ctx, req->status >= 200 && req->status < 300));
 		JS_SetPropertyStr(ctx, resp, "statusText", JS_NewString(ctx, status_text_from_line(req->status_line)));
 		JS_SetPropertyStr(ctx, resp, "headers", build_headers_object(ctx, req));
-		if (req->resp_body.data) {
-			JS_SetPropertyStr(ctx, resp, "body", JS_NewStringLen(ctx, req->resp_body.data, req->resp_body.len));
+		if (req->resp_body.items) {
+			JS_SetPropertyStr(ctx, resp, "body", JS_NewStringLen(ctx, req->resp_body.items, req->resp_body.count));
 		} else {
 			JS_SetPropertyStr(ctx, resp, "body", JS_NewString(ctx, ""));
 		}
@@ -213,13 +200,10 @@ static void resolve_fetch(JSContext *ctx, FetchRequest *req) {
 static void free_fetch_request(JSContext *ctx, FetchRequest *req) {
 	JS_FreeValue(ctx, req->resolve);
 	JS_FreeValue(ctx, req->reject);
-	free(req->url);
-	free(req->method);
-	free(req->body);
-	free(req->status_line);
-	free(req->resp_body.data);
-	free(req->resp_headers.data);
 	if (req->headers) curl_slist_free_all(req->headers);
+	arena_free(&req->response_headers);
+	arena_free(&req->response_body);
+	arena_free(&req->arena);
 	free(req);
 }
 
@@ -237,14 +221,13 @@ static JSValue js_native_fetch(JSContext *ctx, JSValueConst this_val, int argc, 
 		JS_FreeValue(ctx, promise_funcs[1]);
 		return JS_ThrowOutOfMemory(ctx);
 	}
-	req->status_line = NULL;
 	req->resolve = promise_funcs[0];
 	req->reject = promise_funcs[1];
 
 	const char *url = JS_ToCString(ctx, argv[0]);
 	const char *method = JS_ToCString(ctx, argv[1]);
-	req->url = fetch_strdup(url ? url : "");
-	req->method = fetch_strdup(method ? method : "GET");
+	req->url = arena_strdup(&req->arena, url ? url : "");
+	req->method = arena_strdup(&req->arena, method ? method : "GET");
 	if (url) JS_FreeCString(ctx, url);
 	if (method) JS_FreeCString(ctx, method);
 
@@ -268,7 +251,7 @@ static JSValue js_native_fetch(JSContext *ctx, JSValueConst this_val, int argc, 
 		size_t body_len = 0;
 		const char *body = JS_ToCStringLen(ctx, &body_len, argv[3]);
 		if (body) {
-			req->body = malloc(body_len + 1);
+			req->body = arena_alloc(&req->arena, body_len + 1);
 			if (req->body) {
 				memcpy(req->body, body, body_len);
 				req->body[body_len] = '\0';
