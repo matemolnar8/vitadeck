@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <raylib.h>
+#include "arena.h"
 #include "stb_ds.h"
 #include "instance_tree.h"
 #include "platform/thread.h"
@@ -12,6 +13,7 @@ typedef struct {
 
 // Snapshot structure for thread-safe access
 typedef struct {
+    Arena arena;
     InstanceEntry *registry;
     ReactInstance **root_children;
 } InstanceSnapshot;
@@ -62,6 +64,18 @@ static void free_instance_tree(ReactInstance *inst)
     free(inst);
 }
 
+// Free stb_ds child arrays in a front-snapshot tree (instance data lives in the arena).
+static void free_snapshot_children_arrays(ReactInstance *inst)
+{
+    if (!inst) return;
+
+    int count = arrlen(inst->children);
+    for (int i = 0; i < count; i++) {
+        free_snapshot_children_arrays(inst->children[i]);
+    }
+    arrfree(inst->children);
+}
+
 // Free a snapshot
 static void free_snapshot(InstanceSnapshot *snap)
 {
@@ -69,20 +83,23 @@ static void free_snapshot(InstanceSnapshot *snap)
 
     int count = arrlen(snap->root_children);
     for (int i = 0; i < count; i++) {
-        free_instance_tree(snap->root_children[i]);
+        free_snapshot_children_arrays(snap->root_children[i]);
     }
     arrfree(snap->root_children);
     shfree(snap->registry);
+    arena_free(&snap->arena);
     free(snap);
 }
 
 // Deep copy a single instance (without children links)
-static ReactInstance *copy_instance(ReactInstance *src)
+static ReactInstance *copy_instance(Arena *arena, ReactInstance *src)
 {
     if (!src) return NULL;
 
-    ReactInstance *dst = calloc(1, sizeof(ReactInstance));
-    dst->id = src->id ? strdup(src->id) : NULL;
+    ReactInstance *dst = arena_alloc(arena, sizeof(ReactInstance));
+    if (!dst) return NULL;
+    memset(dst, 0, sizeof(ReactInstance));
+    dst->id = src->id ? arena_strdup(arena, src->id) : NULL;
     dst->type = src->type;
     dst->children = NULL;
     dst->parent = NULL;
@@ -96,10 +113,10 @@ static ReactInstance *copy_instance(ReactInstance *src)
         break;
     case NT_BUTTON:
         dst->props.button = src->props.button;
-        dst->props.button.label = src->props.button.label ? strdup(src->props.button.label) : NULL;
+        dst->props.button.label = src->props.button.label ? arena_strdup(arena, src->props.button.label) : NULL;
         break;
     case NT_RAW_TEXT:
-        dst->props.raw_text = src->props.raw_text ? strdup(src->props.raw_text) : NULL;
+        dst->props.raw_text = src->props.raw_text ? arena_strdup(arena, src->props.raw_text) : NULL;
         break;
     }
 
@@ -107,11 +124,12 @@ static ReactInstance *copy_instance(ReactInstance *src)
 }
 
 // Recursively copy instance and all children
-static ReactInstance *deep_copy_instance(ReactInstance *src, InstanceEntry **new_registry)
+static ReactInstance *deep_copy_instance(Arena *arena, ReactInstance *src, InstanceEntry **new_registry)
 {
     if (!src) return NULL;
 
-    ReactInstance *dst = copy_instance(src);
+    ReactInstance *dst = copy_instance(arena, src);
+    if (!dst) return NULL;
     if (dst->id) {
         shput(*new_registry, dst->id, dst);
     }
@@ -119,7 +137,7 @@ static ReactInstance *deep_copy_instance(ReactInstance *src, InstanceEntry **new
     int child_count = arrlen(src->children);
     for (int i = 0; i < child_count; i++) {
         if (src->children[i]) {
-            ReactInstance *child_copy = deep_copy_instance(src->children[i], new_registry);
+            ReactInstance *child_copy = deep_copy_instance(arena, src->children[i], new_registry);
             if (child_copy) {
                 child_copy->parent = dst;
                 arrput(dst->children, child_copy);
@@ -147,7 +165,7 @@ void instance_tree_swap(void)
     int count = arrlen(back_root_children);
     for (int i = 0; i < count; i++) {
         if (back_root_children[i]) {
-            ReactInstance *copy = deep_copy_instance(back_root_children[i], &new_snap->registry);
+            ReactInstance *copy = deep_copy_instance(&new_snap->arena, back_root_children[i], &new_snap->registry);
             arrput(new_snap->root_children, copy);
         }
     }
