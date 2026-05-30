@@ -98,6 +98,22 @@ importers:
         specifier: 7.0.0-dev.20260501.1
         version: 7.0.0-dev.20260501.1
 
+  examples/fetch:
+    dependencies:
+      '@vitadeck/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.28
+        version: 18.3.28
+      '@typescript/native-preview':
+        specifier: 7.0.0-dev.20260501.1
+        version: 7.0.0-dev.20260501.1
+
   examples/hello:
     dependencies:
       '@vitadeck/sdk':

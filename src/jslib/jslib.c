@@ -25,6 +25,7 @@ static void js_set_global_function(JSContext *ctx, const char *name, JSCFunction
 #include "colors.c"
 #include "timeout.c"
 #include "log.c"
+#include "fetch.c"
 
 static JSValue js_get_time(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
 	(void)this_val; (void)argc; (void)argv;
@@ -136,6 +137,7 @@ void register_js_lib(JSContext *ctx) {
 	register_js_log(ctx);
 	register_js_colors(ctx);
 	register_js_timeout(ctx);
+	register_js_fetch(ctx);
 	register_instance_tree(ctx);
 
 	js_set_global_function(ctx, "getTime", js_get_time, 0);

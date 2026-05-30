@@ -8,6 +8,25 @@ declare global {
 
   function getTime(): number;
 
+  type VitaHeadersInit = Record<string, string> | Array<[string, string]>;
+
+  interface VitaRequestInit {
+    method?: string;
+    headers?: VitaHeadersInit;
+    body?: string;
+  }
+
+  interface VitaResponse {
+    readonly status: number;
+    readonly ok: boolean;
+    readonly statusText: string;
+    readonly headers: Record<string, string>;
+    text(): Promise<string>;
+    json<T = unknown>(): Promise<T>;
+  }
+
+  function fetch(url: string, init?: VitaRequestInit): Promise<VitaResponse>;
+
   var console: {
     log: (...args: unknown[]) => void;
     info: (...args: unknown[]) => void;

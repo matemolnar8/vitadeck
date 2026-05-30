@@ -2,6 +2,7 @@ import * as vitadeckSdk from "@vitadeck/sdk";
 import { ThemeProvider } from "@vitadeck/sdk/internal";
 import React, { StrictMode, type ComponentType } from "react";
 import * as reactCompilerRuntime from "react-compiler-runtime";
+import { installFetch } from "./fetch";
 import { onInputEventFromNative } from "./input";
 import type { MetricSummary } from "./reconciler-metrics";
 import { getMetrics, render, resetMetrics } from "./vitadeck-react-reconciler-mutation";
@@ -19,6 +20,7 @@ let packageLoaded = false;
 globalThis.React = React;
 globalThis.reactCompilerRuntime = reactCompilerRuntime;
 globalThis.vitadeckSdk = vitadeckSdk;
+installFetch();
 globalThis.vitadeckPackage = {
   register(component) {
     deckAppComponent = component;

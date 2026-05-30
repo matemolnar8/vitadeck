@@ -1,0 +1,5 @@
+{
+  "name": "Fetch",
+  "entry": "./src/App.tsx",
+  "outDir": "./dist"
+}

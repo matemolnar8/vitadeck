@@ -125,12 +125,14 @@ static void *js_thread_func(void *arg)
 	while (!runtime->stop_requested && !event_queue_is_shutdown()) {
 		process_input_events(ctx);
 		run_timeouts(ctx);
+		run_fetch(ctx);
 		drain_microtasks(rt);
 		instance_tree_swap();
 		vd_thread_yield();
 	}
 
 defer:
+	if (ctx) fetch_shutdown(ctx);
 	if (ctx) JS_FreeContext(ctx);
 	if (rt) JS_FreeRuntime(rt);
 	return result;

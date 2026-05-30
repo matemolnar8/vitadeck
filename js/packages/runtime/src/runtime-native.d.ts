@@ -128,6 +128,35 @@ declare global {
   function nativeEvalFile(path: string): void;
   function nativeGetActiveDeckAppPath(): string;
 
+  function nativeFetch(
+    url: string,
+    method: string,
+    headers: string[],
+    body?: string,
+  ): Promise<{
+    status: number;
+    ok: boolean;
+    statusText: string;
+    headers: Record<string, string>;
+    body: string;
+  }>;
+
+  function fetch(
+    url: string,
+    init?: {
+      method?: string;
+      headers?: Record<string, string> | Array<[string, string]>;
+      body?: string;
+    },
+  ): Promise<{
+    status: number;
+    ok: boolean;
+    statusText: string;
+    headers: Record<string, string>;
+    text(): Promise<string>;
+    json<T = unknown>(): Promise<T>;
+  }>;
+
   var React: typeof React;
   var reactCompilerRuntime: typeof ReactCompilerRuntime;
   var vitadeckSdk: typeof VitaDeckSdk;
