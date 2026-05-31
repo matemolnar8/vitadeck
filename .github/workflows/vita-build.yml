@@ -61,8 +61,8 @@ jobs:
           platforms: linux/amd64
           load: true
           tags: vitadeck-vitasdk:ci
-          cache-from: type=gha,scope=vitadeck-vitasdk
-          cache-to: type=gha,mode=max,scope=vitadeck-vitasdk
+          cache-from: type=gha,scope=vitadeck-vitasdk-v2
+          cache-to: type=gha,mode=max,scope=vitadeck-vitasdk-v2
 
       - name: Build Vita target in Vitasdk container
         run: |
@@ -73,7 +73,10 @@ jobs:
             -e CCACHE_COMPILERCHECK=content \
             -e CCACHE_MAXSIZE=500M \
             vitadeck-vitasdk:ci \
-            bash -lc 'cmake -S . -B out-vita \
+            bash -lc 'if ! command -v ccache >/dev/null 2>&1; then \
+                apt-get update && apt-get install -y --no-install-recommends ccache; \
+              fi && \
+              cmake -S . -B out-vita \
               -DCMAKE_C_COMPILER_LAUNCHER=ccache \
               -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && \
               cmake --build out-vita --parallel "$(nproc)"'
@@ -86,7 +89,7 @@ jobs:
             -w /build/git \
             -e CCACHE_DIR=/build/git/.ccache \
             vitadeck-vitasdk:ci \
-            ccache -s
+            bash -lc 'command -v ccache >/dev/null && ccache -s || true'
 
       - name: Upload VPK
         uses: actions/upload-artifact@v6
