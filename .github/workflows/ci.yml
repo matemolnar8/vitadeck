@@ -51,7 +51,7 @@ jobs:
       - name: Cache Homebrew prefix
         uses: Homebrew/actions/cache-homebrew-prefix@main
         with:
-          install: raylib pkg-config cmake ccache
+          install: raylib pkgconf cmake ccache
           workflow-key: vitadeck-ci
           uninstall: true
 
@@ -68,7 +68,7 @@ jobs:
           cmake --build out --parallel "$(sysctl -n hw.logicalcpu)"
 
       - name: ccache stats
-        if: always()
+        if: success()
         run: '"$(brew --prefix ccache)/libexec/ccache" -s'
 
       # Placeholder: replace with test runner (e.g. ctest, pnpm test) when tests exist.
