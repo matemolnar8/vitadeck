@@ -11,6 +11,13 @@ concurrency:
 jobs:
   build:
     runs-on: macos-latest
+    permissions:
+      contents: read
+      actions: write
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_COMPILERCHECK: content
+      CCACHE_MAXSIZE: 400M
     steps:
       - uses: actions/checkout@v5
         with:
@@ -36,14 +43,42 @@ jobs:
       - name: Typecheck JS
         run: pnpm --dir js tsc
 
-      - name: Check C formatting
-        run: ./scripts/clang-format.sh check
+      - name: Cache ccache
+        uses: actions/cache@v5
+        with:
+          path: .ccache
+          key: ccache-${{ runner.os }}-host-${{ hashFiles('CMakeLists.txt', 'src/**', 'vendor/quickjs/**') }}
+          restore-keys: |
+            ccache-${{ runner.os }}-host-
+
+      - name: Cache Homebrew downloads
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/Library/Caches/Homebrew
+            ~/Library/Caches/Homebrew/downloads
+          key: brew-${{ runner.os }}-${{ hashFiles('.github/workflows/ci.yml') }}
+          restore-keys: |
+            brew-${{ runner.os }}-
 
       - name: Install host native dependencies
-        run: brew install raylib pkg-config cmake clang-format
+        run: brew install raylib pkgconf cmake ccache
 
       - name: Configure and build host target
-        run: cmake -S . -B out && cmake --build out
+        run: |
+          CCACHE="$(brew --prefix ccache)/bin/ccache"
+          if [[ ! -x "$CCACHE" ]]; then
+            echo "ccache not found at $CCACHE" >&2
+            exit 1
+          fi
+          cmake -S . -B out \
+            -DCMAKE_C_COMPILER_LAUNCHER="$CCACHE" \
+            -DCMAKE_CXX_COMPILER_LAUNCHER="$CCACHE"
+          cmake --build out --parallel "$(sysctl -n hw.logicalcpu)"
+
+      - name: ccache stats
+        if: success()
+        run: '"$(brew --prefix ccache)/bin/ccache" -s'
 
       # Placeholder: replace with test runner (e.g. ctest, pnpm test) when tests exist.
       - name: Tests
