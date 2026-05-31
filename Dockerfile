@@ -11,7 +11,6 @@ ENV PATH=${PATH}:${VITASDK}/bin
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
-        ccache \
         cmake \
         curl \
         file \
@@ -29,7 +28,7 @@ COPY --from=vitasdk-base /usr/local/vitasdk /usr/local/vitasdk
 WORKDIR /build
 RUN git clone --depth=1 https://github.com/Rinnegatamante/vitaGL.git
 WORKDIR /build/vitaGL
-RUN HAVE_GLSL_SUPPORT=1 make install
+RUN HAVE_GLSL_SUPPORT=1 make -j"$(nproc)" install
 
 # SDL
 WORKDIR /build
