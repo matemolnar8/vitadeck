@@ -11,6 +11,9 @@ concurrency:
 jobs:
   build:
     runs-on: macos-latest
+    permissions:
+      contents: read
+      actions: write
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_COMPILERCHECK: content
@@ -41,19 +44,25 @@ jobs:
         run: pnpm --dir js tsc
 
       - name: Cache ccache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .ccache
           key: ccache-${{ runner.os }}-host-${{ hashFiles('CMakeLists.txt', 'src/**', 'vendor/quickjs/**') }}
           restore-keys: |
             ccache-${{ runner.os }}-host-
 
-      - name: Cache Homebrew prefix
-        uses: Homebrew/actions/cache-homebrew-prefix@main
+      - name: Cache Homebrew downloads
+        uses: actions/cache@v5
         with:
-          install: raylib pkgconf cmake ccache
-          workflow-key: vitadeck-ci
-          uninstall: true
+          path: |
+            ~/Library/Caches/Homebrew
+            ~/Library/Caches/Homebrew/downloads
+          key: brew-${{ runner.os }}-${{ hashFiles('.github/workflows/ci.yml') }}
+          restore-keys: |
+            brew-${{ runner.os }}-
+
+      - name: Install host native dependencies
+        run: brew install raylib pkgconf cmake ccache
 
       - name: Configure and build host target
         run: |
