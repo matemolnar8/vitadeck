@@ -57,7 +57,7 @@ jobs:
 
       - name: Configure and build host target
         run: |
-          CCACHE="$(brew --prefix ccache)/libexec/ccache"
+          CCACHE="$(brew --prefix ccache)/bin/ccache"
           if [[ ! -x "$CCACHE" ]]; then
             echo "ccache not found at $CCACHE" >&2
             exit 1
@@ -69,7 +69,7 @@ jobs:
 
       - name: ccache stats
         if: success()
-        run: '"$(brew --prefix ccache)/libexec/ccache" -s'
+        run: '"$(brew --prefix ccache)/bin/ccache" -s'
 
       # Placeholder: replace with test runner (e.g. ctest, pnpm test) when tests exist.
       - name: Tests
