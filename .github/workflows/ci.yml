@@ -11,6 +11,10 @@ concurrency:
 jobs:
   build:
     runs-on: macos-latest
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_COMPILERCHECK: content
+      CCACHE_MAXSIZE: 400M
     steps:
       - uses: actions/checkout@v5
         with:
@@ -36,11 +40,31 @@ jobs:
       - name: Typecheck JS
         run: pnpm --dir js tsc
 
-      - name: Install host native dependencies
-        run: brew install raylib pkg-config cmake
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-${{ runner.os }}-host-${{ hashFiles('CMakeLists.txt', 'src/**', 'vendor/quickjs/**') }}
+          restore-keys: |
+            ccache-${{ runner.os }}-host-
+
+      - name: Cache Homebrew prefix
+        uses: Homebrew/actions/cache-homebrew-prefix@main
+        with:
+          install: raylib pkg-config cmake ccache
+          workflow-key: vitadeck-ci
+          uninstall: true
 
       - name: Configure and build host target
-        run: cmake -S . -B out && cmake --build out
+        run: |
+          cmake -S . -B out \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build out --parallel "$(sysctl -n hw.logicalcpu)"
+
+      - name: ccache stats
+        if: always()
+        run: ccache -s
 
       # Placeholder: replace with test runner (e.g. ctest, pnpm test) when tests exist.
       - name: Tests
