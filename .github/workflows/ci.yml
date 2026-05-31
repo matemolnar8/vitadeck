@@ -69,7 +69,7 @@ jobs:
 
       - name: ccache stats
         if: always()
-        run: "$(brew --prefix ccache)/libexec/ccache" -s
+        run: '"$(brew --prefix ccache)/libexec/ccache" -s'
 
       # Placeholder: replace with test runner (e.g. ctest, pnpm test) when tests exist.
       - name: Tests
