@@ -43,6 +43,12 @@ declare global {
     colorB: number,
     colorA: number,
     border: boolean,
+    x: number,
+    y: number,
+    width: number,
+    lineHeight: number,
+    align: number,
+    wrap: number,
   ): void;
 
   function nativeCreateButton(
@@ -99,6 +105,12 @@ declare global {
     colorB: number,
     colorA: number,
     border: boolean,
+    x: number,
+    y: number,
+    width: number,
+    lineHeight: number,
+    align: number,
+    wrap: number,
   ): void;
 
   function nativeUpdateButton(

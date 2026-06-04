@@ -71,6 +71,26 @@ const extractHandlers = (props: Props) => ({
   onPressEnd: (props as { onPressEnd?: () => void }).onPressEnd,
 });
 
+const textAlignToNative = (align: PropsByType["vita-text"]["align"]): number => {
+  if (align === "center") return 1;
+  if (align === "right") return 2;
+  return 0;
+};
+
+const textWrapToNative = (wrap: PropsByType["vita-text"]["wrap"]): number => {
+  return wrap === "word" ? 1 : 0;
+};
+
+const textLayoutArgs = (p: PropsByType["vita-text"]) =>
+  [
+    p.x ?? 8,
+    p.y ?? 8,
+    p.width ?? 0,
+    p.lineHeight ?? 0,
+    textAlignToNative(p.align),
+    textWrapToNative(p.wrap),
+  ] as const;
+
 // Create native instance based on type
 const createNativeInstance = (id: string, type: Type, props: Props): void => {
   if (type === "vita-rect") {
@@ -102,7 +122,8 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
   } else if (type === "vita-text") {
     const p = props as PropsByType["vita-text"];
     const [hasColor, r, g, b, a] = colorToArgs(p.color, Colors.BLACK);
-    nativeCreateText(id, p.fontSize || 30, hasColor, r, g, b, a, p.border || false);
+    const [tx, ty, tw, tlh, talign, twrap] = textLayoutArgs(p);
+    nativeCreateText(id, p.fontSize || 30, hasColor, r, g, b, a, p.border || false, tx, ty, tw, tlh, talign, twrap);
   } else if (type === "vita-button") {
     const p = props as PropsByType["vita-button"];
     const color = p.color || Colors.DARKBLUE;
@@ -162,7 +183,8 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
   } else if (type === "vita-text") {
     const p = props as PropsByType["vita-text"];
     const [hasColor, r, g, b, a] = colorToArgs(p.color, Colors.BLACK);
-    nativeUpdateText(id, p.fontSize || 30, hasColor, r, g, b, a, p.border || false);
+    const [tx, ty, tw, tlh, talign, twrap] = textLayoutArgs(p);
+    nativeUpdateText(id, p.fontSize || 30, hasColor, r, g, b, a, p.border || false, tx, ty, tw, tlh, talign, twrap);
   } else if (type === "vita-button") {
     const p = props as PropsByType["vita-button"];
     const color = p.color || Colors.DARKBLUE;

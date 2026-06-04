@@ -4,11 +4,20 @@ import type { Color } from "./types";
 type TextChild = string | number | boolean | null | undefined;
 type WithKey<T> = T & { key?: string };
 
+export type TextAlign = "left" | "center" | "right";
+export type TextWrap = "none" | "word";
+
 export type VitaTextProps = WithKey<{
   children: TextChild | TextChild[];
   color?: Color;
   border?: boolean;
   fontSize?: number;
+  x?: number;
+  y?: number;
+  width?: number;
+  align?: TextAlign;
+  wrap?: TextWrap;
+  lineHeight?: number;
 }>;
 
 export type VitaRectProps = WithKey<{

@@ -1,8 +1,20 @@
+#include <stdio.h>
 #include <string.h>
 #include <raylib.h>
 #include "stb_ds.h"
 #include "instance_tree.h"
 #include "input.h"
+
+#define TEXT_LAYOUT_MAX_LINES 128
+#define TEXT_LAYOUT_MAX_LINE_CHARS 512
+#define TEXT_SOURCE_MAX 4096
+
+typedef struct {
+    char lines[TEXT_LAYOUT_MAX_LINES][TEXT_LAYOUT_MAX_LINE_CHARS];
+    int count;
+    int block_width;
+    int block_height;
+} TextLayout;
 
 static Color mix_color(Color c, Color mix_with, float amount)
 {
@@ -20,6 +32,171 @@ typedef struct {
 } RenderContext;
 
 static void render_instance(ReactInstance *inst, RenderContext ctx);
+
+static int text_glyph_height(int font_size)
+{
+    Font font = GetFontDefault();
+    Vector2 size = MeasureTextEx(font, "Ay", (float)font_size, 1.0f);
+    int height = (int)(size.y + 0.5f);
+    return height > 0 ? height : font_size;
+}
+
+static int text_line_height(const TextProps *t)
+{
+    int font_size = t->font_size > 0 ? t->font_size : 30;
+    if (t->line_height > 0) return t->line_height;
+    return text_glyph_height(font_size) + 4;
+}
+
+static int text_block_height(int line_count, int line_height, int font_size)
+{
+    if (line_count <= 0) return 0;
+    if (line_count == 1) return text_glyph_height(font_size);
+    return (line_count - 1) * line_height + text_glyph_height(font_size);
+}
+
+static void text_layout_add_line(TextLayout *layout, const char *line, int font_size)
+{
+    if (layout->count >= TEXT_LAYOUT_MAX_LINES) return;
+
+    strncpy(layout->lines[layout->count], line, TEXT_LAYOUT_MAX_LINE_CHARS - 1);
+    layout->lines[layout->count][TEXT_LAYOUT_MAX_LINE_CHARS - 1] = '\0';
+
+    int line_width = MeasureText(layout->lines[layout->count], font_size);
+    if (line_width > layout->block_width) layout->block_width = line_width;
+
+    layout->count++;
+}
+
+static void text_layout_wrap_word(const char *paragraph, int font_size, int max_width, TextLayout *layout)
+{
+    const char *cursor = paragraph;
+    char current[TEXT_LAYOUT_MAX_LINE_CHARS] = {0};
+    int current_len = 0;
+
+    while (*cursor != '\0') {
+        while (*cursor == ' ') cursor++;
+        if (*cursor == '\0') break;
+
+        const char *word_start = cursor;
+        while (*cursor != '\0' && *cursor != ' ') cursor++;
+        int word_len = (int)(cursor - word_start);
+
+        char word[TEXT_LAYOUT_MAX_LINE_CHARS] = {0};
+        if (word_len >= TEXT_LAYOUT_MAX_LINE_CHARS) word_len = TEXT_LAYOUT_MAX_LINE_CHARS - 1;
+        memcpy(word, word_start, (size_t)word_len);
+        word[word_len] = '\0';
+
+        int word_width = MeasureText(word, font_size);
+        if (word_width > max_width) {
+            if (current_len > 0) {
+                text_layout_add_line(layout, current, font_size);
+                current[0] = '\0';
+                current_len = 0;
+            }
+
+            int chunk_start = 0;
+            while (chunk_start < word_len) {
+                int chunk_end = chunk_start + 1;
+                while (chunk_end <= word_len) {
+                    char probe[TEXT_LAYOUT_MAX_LINE_CHARS] = {0};
+                    int probe_len = chunk_end - chunk_start;
+                    memcpy(probe, word + chunk_start, (size_t)probe_len);
+                    if (MeasureText(probe, font_size) > max_width && chunk_end - chunk_start > 1) {
+                        chunk_end--;
+                        break;
+                    }
+                    if (chunk_end == word_len) break;
+                    chunk_end++;
+                }
+
+                char chunk[TEXT_LAYOUT_MAX_LINE_CHARS] = {0};
+                int chunk_len = chunk_end - chunk_start;
+                memcpy(chunk, word + chunk_start, (size_t)chunk_len);
+                text_layout_add_line(layout, chunk, font_size);
+                chunk_start = chunk_end;
+            }
+            continue;
+        }
+
+        char candidate[TEXT_LAYOUT_MAX_LINE_CHARS] = {0};
+        if (current_len == 0) {
+            strncpy(candidate, word, sizeof(candidate) - 1);
+        } else {
+            snprintf(candidate, sizeof(candidate), "%s %s", current, word);
+        }
+
+        if (MeasureText(candidate, font_size) <= max_width) {
+            strncpy(current, candidate, sizeof(current) - 1);
+            current_len = (int)strlen(current);
+        } else {
+            if (current_len > 0) text_layout_add_line(layout, current, font_size);
+            strncpy(current, word, sizeof(current) - 1);
+            current_len = word_len;
+        }
+    }
+
+    if (current_len > 0 || layout->count == 0) text_layout_add_line(layout, current, font_size);
+}
+
+static void text_layout_build(const char *text, const TextProps *t, TextLayout *layout)
+{
+    memset(layout, 0, sizeof(*layout));
+
+    int font_size = t->font_size > 0 ? t->font_size : 30;
+    int line_height = text_line_height(t);
+    int max_width = t->width;
+
+    if (max_width <= 0 || t->wrap != TEXT_WRAP_WORD) {
+        const char *start = text;
+        for (const char *p = text; ; p++) {
+            if (*p == '\n' || *p == '\0') {
+                char line[TEXT_LAYOUT_MAX_LINE_CHARS] = {0};
+                int len = (int)(p - start);
+                if (len >= TEXT_LAYOUT_MAX_LINE_CHARS) len = TEXT_LAYOUT_MAX_LINE_CHARS - 1;
+                memcpy(line, start, (size_t)len);
+                text_layout_add_line(layout, line, font_size);
+                if (*p == '\0') break;
+                start = p + 1;
+            }
+        }
+    } else {
+        const char *start = text;
+        for (const char *p = text; ; p++) {
+            if (*p == '\n' || *p == '\0') {
+                char paragraph[TEXT_LAYOUT_MAX_LINE_CHARS] = {0};
+                int len = (int)(p - start);
+                if (len >= TEXT_LAYOUT_MAX_LINE_CHARS) len = TEXT_LAYOUT_MAX_LINE_CHARS - 1;
+                memcpy(paragraph, start, (size_t)len);
+                if (len == 0) {
+                    text_layout_add_line(layout, "", font_size);
+                } else {
+                    text_layout_wrap_word(paragraph, font_size, max_width, layout);
+                }
+                if (*p == '\0') break;
+                start = p + 1;
+            }
+        }
+    }
+
+    if (layout->count == 0) text_layout_add_line(layout, "", font_size);
+
+    if (t->width > 0 && layout->block_width < t->width) layout->block_width = t->width;
+    layout->block_height = text_block_height(layout->count, line_height, font_size);
+}
+
+static int text_layout_line_x(int base_x, int box_width, int line_width, TextAlign align)
+{
+    if (box_width <= 0) return base_x;
+    switch (align) {
+    case TEXT_ALIGN_CENTER:
+        return base_x + (box_width - line_width) / 2;
+    case TEXT_ALIGN_RIGHT:
+        return base_x + (box_width - line_width);
+    default:
+        return base_x;
+    }
+}
 
 static void render_rect_instance(ReactInstance *inst, RenderContext ctx)
 {
@@ -60,7 +237,7 @@ static void render_text_instance(ReactInstance *inst, RenderContext ctx)
 {
     TextProps *t = &inst->props.text;
 
-    char text_buffer[1024] = {0};
+    char text_buffer[TEXT_SOURCE_MAX] = {0};
     int count = arrlen(inst->children);
     for (int i = 0; i < count; i++) {
         ReactInstance *child = inst->children[i];
@@ -69,21 +246,30 @@ static void render_text_instance(ReactInstance *inst, RenderContext ctx)
         }
     }
 
-    const int padding = 8;
     int font_size = t->font_size > 0 ? t->font_size : 30;
-    int text_x = ctx.x + padding;
-    int text_y = ctx.y + padding + ctx.text_index * font_size;
+    int line_height = text_line_height(t);
+    int base_x = ctx.x + t->x;
+    int base_y = ctx.y + t->y + ctx.text_index * line_height;
     Color color = t->has_color ? t->color : BLACK;
 
+    TextLayout layout;
+    text_layout_build(text_buffer, t, &layout);
+
+    int align_box_width = t->width > 0 ? t->width : layout.block_width;
+
     if (t->border) {
-        int text_width = MeasureText(text_buffer, font_size);
         int border_padding = 4;
-        Rectangle rect = {text_x - border_padding, text_y - border_padding, text_width + border_padding * 2,
-                          font_size + border_padding * 2};
+        Rectangle rect = {base_x - border_padding, base_y - border_padding,
+                          layout.block_width + border_padding * 2, layout.block_height + border_padding * 2};
         DrawRectangleLinesEx(rect, 2, color);
     }
 
-    DrawText(text_buffer, text_x, text_y, font_size, color);
+    for (int i = 0; i < layout.count; i++) {
+        int line_width = MeasureText(layout.lines[i], font_size);
+        int line_x = text_layout_line_x(base_x, align_box_width, line_width, t->align);
+        int line_y = base_y + i * line_height;
+        DrawText(layout.lines[i], line_x, line_y, font_size, color);
+    }
 }
 
 static void render_button_instance(ReactInstance *inst, RenderContext ctx)

@@ -13,11 +13,21 @@ typedef struct {
     float border_radius;
 } RectProps;
 
+typedef enum { TEXT_ALIGN_LEFT = 0, TEXT_ALIGN_CENTER = 1, TEXT_ALIGN_RIGHT = 2 } TextAlign;
+
+typedef enum { TEXT_WRAP_NONE = 0, TEXT_WRAP_WORD = 1 } TextWrap;
+
 typedef struct {
     int font_size;
     bool has_color;
     Color color;
     bool border;
+    int x;
+    int y;
+    int width;
+    int line_height;
+    TextAlign align;
+    TextWrap wrap;
 } TextProps;
 
 typedef struct {

@@ -1,0 +1,5 @@
+{
+  "name": "Chat",
+  "entry": "./src/App.tsx",
+  "outDir": "./dist"
+}
