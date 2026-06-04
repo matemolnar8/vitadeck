@@ -3,3 +3,23 @@ packages:
   - "packages/sdk/cli/templates/scaffold"
   - "examples"
   - "examples/*"
+
+catalog:
+  "@babel/preset-react": 7.29.7
+  "@babel/preset-typescript": 7.29.7
+  "@rollup/plugin-babel": 7.1.0
+  "@types/node": 25.9.1
+  "@types/react": 18.3.30
+  "@types/react-reconciler": 0.28.9
+  "babel-plugin-react-compiler": 1.0.0
+  "fflate": 0.8.3
+  "oxfmt": 0.53.0
+  "oxlint": 1.68.0
+  "oxlint-tsgolint": 0.23.0
+  "react": 18.3.1
+  "react-compiler-runtime": 1.0.0
+  "react-reconciler": 0.29.2
+  "rolldown": 1.0.0-rc.18
+  "tslib": 2.8.1
+  "tsx": 4.22.4
+  "typescript": 6.0.3

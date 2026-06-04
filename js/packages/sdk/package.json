@@ -64,20 +64,20 @@
     "tsc": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@babel/preset-react": "^7.28.5",
-    "@babel/preset-typescript": "^7.28.5",
-    "@rollup/plugin-babel": "^7.0.0",
-    "babel-plugin-react-compiler": "^1.0.0",
-    "fflate": "^0.8.2",
-    "rolldown": "1.0.0-rc.18"
+    "@babel/preset-react": "catalog:",
+    "@babel/preset-typescript": "catalog:",
+    "@rollup/plugin-babel": "catalog:",
+    "babel-plugin-react-compiler": "catalog:",
+    "fflate": "catalog:",
+    "rolldown": "catalog:"
   },
   "devDependencies": {
-    "@types/node": "^25.6.0",
-    "@types/react": "^18.3.28",
-    "react": "^18.3.1",
-    "tsx": "^4.21.0"
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "react": "catalog:",
+    "tsx": "catalog:"
   },
   "peerDependencies": {
-    "react": "^18.3.1"
+    "react": "catalog:"
   }
 }

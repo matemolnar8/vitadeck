@@ -10,18 +10,18 @@
   },
   "dependencies": {
     "@vitadeck/sdk": "workspace:*",
-    "react": "^18.3.1",
-    "react-compiler-runtime": "^1.0.0",
-    "react-reconciler": "^0.29.2",
-    "tslib": "^2.8.1"
+    "react": "catalog:",
+    "react-compiler-runtime": "catalog:",
+    "react-reconciler": "catalog:",
+    "tslib": "catalog:"
   },
   "devDependencies": {
-    "@babel/preset-react": "^7.28.5",
-    "@babel/preset-typescript": "^7.28.5",
-    "@rollup/plugin-babel": "^7.0.0",
-    "@types/react": "^18.3.28",
-    "@types/react-reconciler": "^0.28.9",
-    "babel-plugin-react-compiler": "^1.0.0",
-    "rolldown": "1.0.0-rc.18"
+    "@babel/preset-react": "catalog:",
+    "@babel/preset-typescript": "catalog:",
+    "@rollup/plugin-babel": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-reconciler": "catalog:",
+    "babel-plugin-react-compiler": "catalog:",
+    "rolldown": "catalog:"
   }
 }
