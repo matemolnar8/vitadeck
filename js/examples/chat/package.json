@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vitadeck build",
-    "tsc": "tsc"
+    "ensure-genesys-local": "node scripts/ensure-genesys-local.mjs",
+    "build": "pnpm run ensure-genesys-local && vitadeck build",
+    "tsc": "pnpm run ensure-genesys-local && tsc"
   },
   "dependencies": {
     "@vitadeck/sdk": "workspace:*",

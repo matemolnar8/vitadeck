@@ -24,7 +24,8 @@
     "vitadeck": "./dist/cli.mjs"
   },
   "files": [
-    "dist"
+    "dist",
+    "tsconfig.deck-app.json"
   ],
   "type": "module",
   "main": "./dist/index.js",
@@ -40,7 +41,7 @@
       "import": "./dist/internal.js",
       "default": "./dist/internal.js"
     },
-    "./tsconfig": "./dist/tsconfig.deck-app.json",
+    "./tsconfig": "./tsconfig.deck-app.json",
     "./types": {
       "types": "./dist/types.d.ts",
       "import": "./dist/types.js",
