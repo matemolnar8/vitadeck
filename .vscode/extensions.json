@@ -1,6 +1,5 @@
 {
   "recommendations": [
-    "typescriptteam.native-preview",
     "oxc.oxc-vscode",
     "llvm-vs-code-extensions.vscode-clangd"
   ]

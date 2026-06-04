@@ -57,11 +57,11 @@
     "access": "public"
   },
   "scripts": {
-    "build:lib": "tsgo -p tsconfig.build.json",
+    "build:lib": "tsc -p tsconfig.build.json",
     "build:cli": "rolldown -c rolldown.cli.config.mjs && tsx cli/copy-templates.ts",
     "build": "tsx cli/clean-dist.ts && pnpm run build:lib && pnpm run build:cli",
     "prepublishOnly": "pnpm run build",
-    "tsc": "tsgo -p tsconfig.json"
+    "tsc": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@babel/preset-react": "^7.28.5",

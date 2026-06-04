@@ -26,9 +26,6 @@ importers:
       '@types/react-reconciler':
         specifier: ^0.28.9
         version: 0.28.9(@types/react@18.3.28)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260501.1
-        version: 7.0.0-dev.20260501.1
       babel-plugin-react-compiler:
         specifier: ^1.0.0
         version: 1.0.0
@@ -59,6 +56,9 @@ importers:
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
 
   examples:
     devDependencies:
@@ -78,9 +78,9 @@ importers:
       '@types/react':
         specifier: ^18.3.28
         version: 18.3.28
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260501.1
-        version: 7.0.0-dev.20260501.1
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
 
   examples/counters:
     dependencies:
@@ -94,9 +94,9 @@ importers:
       '@types/react':
         specifier: ^18.3.28
         version: 18.3.28
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260501.1
-        version: 7.0.0-dev.20260501.1
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
 
   examples/default:
     dependencies:
@@ -110,9 +110,9 @@ importers:
       '@types/react':
         specifier: ^18.3.28
         version: 18.3.28
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260501.1
-        version: 7.0.0-dev.20260501.1
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
 
   examples/fetch:
     dependencies:
@@ -126,9 +126,9 @@ importers:
       '@types/react':
         specifier: ^18.3.28
         version: 18.3.28
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260501.1
-        version: 7.0.0-dev.20260501.1
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
 
   examples/hello:
     dependencies:
@@ -142,9 +142,9 @@ importers:
       '@types/react':
         specifier: ^18.3.28
         version: 18.3.28
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260501.1
-        version: 7.0.0-dev.20260501.1
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
 
   examples/minesweeper:
     dependencies:
@@ -158,9 +158,9 @@ importers:
       '@types/react':
         specifier: ^18.3.28
         version: 18.3.28
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260501.1
-        version: 7.0.0-dev.20260501.1
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
 
   examples/timers:
     dependencies:
@@ -174,9 +174,9 @@ importers:
       '@types/react':
         specifier: ^18.3.28
         version: 18.3.28
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260501.1
-        version: 7.0.0-dev.20260501.1
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
 
   packages/runtime:
     dependencies:
@@ -264,9 +264,9 @@ importers:
       '@types/react':
         specifier: ^18.3.28
         version: 18.3.28
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260501.1
-        version: 7.0.0-dev.20260501.1
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
 
 packages:
 
@@ -1154,53 +1154,6 @@ packages:
   '@types/react@18.3.28':
     resolution: {integrity: sha512-z9VXpC7MWrhfWipitjNdgCauoMLRdIILQsAEV+ZesIzBq/oUlxk0m3ApZuMFCXdnS4U7KrI+l3WRUEGQ8K1QKw==}
 
-  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260501.1':
-    resolution: {integrity: sha512-OIYsqKouI2U7W5Q6VgUz7+t9FpIXNFk30xSUG7gGlN1bdDniWfW7t5n6mzEtiHUVTxRgJQBjXGAlhVa6A9h+pg==}
-    engines: {node: '>=16.20.0'}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260501.1':
-    resolution: {integrity: sha512-hQ5UsEyOz3ErQE3sKKHMCfJJGQenD0DSCi2ob+ywElXirG2NyFNA8cmx1g+MIm1lpQeEQslWZhe9EGwo9DJAbg==}
-    engines: {node: '>=16.20.0'}
-    cpu: [x64]
-    os: [darwin]
-
-  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260501.1':
-    resolution: {integrity: sha512-fbaFKE1UvtsQ6i1eJjBiNbglR9ywXrW/CH1sqYPEtr0WgTUpixbE6inQOXjB0jlEA9RzQq+QMzDyaCDmU82Dkw==}
-    engines: {node: '>=16.20.0'}
-    cpu: [arm64]
-    os: [linux]
-
-  '@typescript/native-preview-linux-arm@7.0.0-dev.20260501.1':
-    resolution: {integrity: sha512-agkTW/t85XSJKWGcXdUV9ZmSi3Akh3POK+HhWehigEJR3W/jebiO9njifETfoUF6cpoYkFn+CZvfAJ00IWGZfA==}
-    engines: {node: '>=16.20.0'}
-    cpu: [arm]
-    os: [linux]
-
-  '@typescript/native-preview-linux-x64@7.0.0-dev.20260501.1':
-    resolution: {integrity: sha512-Sd8D+S88P7K0IH1U+a8pK20ZD+GM54t48/GLw9ebSklfCdt0iKdHgprjKIcl54C3SocGCcvEBPr1thwtTO9Vtg==}
-    engines: {node: '>=16.20.0'}
-    cpu: [x64]
-    os: [linux]
-
-  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260501.1':
-    resolution: {integrity: sha512-07sJNDnU7KHfo/trv/cBXpgFBELDYJAsTx5kNvBckSQUxbX+p/b9oQ3eFbtK3zDP4EEKdeiD9EelIy22atBnzA==}
-    engines: {node: '>=16.20.0'}
-    cpu: [arm64]
-    os: [win32]
-
-  '@typescript/native-preview-win32-x64@7.0.0-dev.20260501.1':
-    resolution: {integrity: sha512-8rzd/eQZyBuR+IRiPnIQrCwSuXIGBFiL8LsUMFqQt2WAUlQ0gGWBlLJHUVU4YNlju9QROjNHUGpJ52XGZbFv0Q==}
-    engines: {node: '>=16.20.0'}
-    cpu: [x64]
-    os: [win32]
-
-  '@typescript/native-preview@7.0.0-dev.20260501.1':
-    resolution: {integrity: sha512-skD0ig8IzPwSY1L8VmNgfaxkfT8ImBwKeIypfZyJA+zHzWvroRKbRbT2GryOSREl22ZqLOuDfcq+7BdA0rjF2Q==}
-    engines: {node: '>=16.20.0'}
-    hasBin: true
-
   babel-plugin-react-compiler@1.0.0:
     resolution: {integrity: sha512-Ixm8tFfoKKIPYdCCKYTsqv+Fd4IJ0DQqMyEimo+pxUOMUR9cVPlwTrFt9Avu+3cb6Zp3mAzl+t1MrG2fxxKsxw==}
 
@@ -1359,6 +1312,11 @@ packages:
   tsx@4.21.0:
     resolution: {integrity: sha512-5C1sg4USs1lfG0GFb2RLXsdpXqBSEhAaA/0kPL01wxzpMqLILNxIxIOKiILz+cdg/pLnOUxFYOR5yhHU666wbw==}
     engines: {node: '>=18.0.0'}
+    hasBin: true
+
+  typescript@6.0.3:
+    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
+    engines: {node: '>=14.17'}
     hasBin: true
 
   undici-types@7.19.2:
@@ -2013,37 +1971,6 @@ snapshots:
       '@types/prop-types': 15.7.15
       csstype: 3.2.3
 
-  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260501.1':
-    optional: true
-
-  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260501.1':
-    optional: true
-
-  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260501.1':
-    optional: true
-
-  '@typescript/native-preview-linux-arm@7.0.0-dev.20260501.1':
-    optional: true
-
-  '@typescript/native-preview-linux-x64@7.0.0-dev.20260501.1':
-    optional: true
-
-  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260501.1':
-    optional: true
-
-  '@typescript/native-preview-win32-x64@7.0.0-dev.20260501.1':
-    optional: true
-
-  '@typescript/native-preview@7.0.0-dev.20260501.1':
-    optionalDependencies:
-      '@typescript/native-preview-darwin-arm64': 7.0.0-dev.20260501.1
-      '@typescript/native-preview-darwin-x64': 7.0.0-dev.20260501.1
-      '@typescript/native-preview-linux-arm': 7.0.0-dev.20260501.1
-      '@typescript/native-preview-linux-arm64': 7.0.0-dev.20260501.1
-      '@typescript/native-preview-linux-x64': 7.0.0-dev.20260501.1
-      '@typescript/native-preview-win32-arm64': 7.0.0-dev.20260501.1
-      '@typescript/native-preview-win32-x64': 7.0.0-dev.20260501.1
-
   babel-plugin-react-compiler@1.0.0:
     dependencies:
       '@babel/types': 7.29.0
@@ -2274,6 +2201,8 @@ snapshots:
       get-tsconfig: 4.14.0
     optionalDependencies:
       fsevents: 2.3.3
+
+  typescript@6.0.3: {}
 
   undici-types@7.19.2: {}
 

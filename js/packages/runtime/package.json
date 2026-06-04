@@ -6,7 +6,7 @@
   "scripts": {
     "build": "rolldown -c",
     "build:prod": "NODE_ENV=production rolldown -c",
-    "tsc": "tsgo -p tsconfig.json"
+    "tsc": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@vitadeck/sdk": "workspace:*",
