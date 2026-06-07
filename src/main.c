@@ -16,8 +16,8 @@
 
 static bool load_active_package_fonts(char *error, size_t error_size)
 {
-    return font_registry_load_package(package_library_has_active_deck_app() ? package_library_active_package_path() : "",
-                                      error, error_size);
+    return font_registry_load_package(
+        package_library_has_active_deck_app() ? package_library_active_package_path() : "", error, error_size);
 }
 
 #define return_defer(value)                                                                                            \

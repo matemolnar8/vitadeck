@@ -212,8 +212,7 @@ static bool supported_font_path(const char *path)
     if (len >= sizeof(ext)) return false;
     for (size_t i = 0; i <= len; i++)
         ext[i] = (char)tolower((unsigned char)dot[i]);
-    return strcmp(ext, ".ttf") == 0 || strcmp(ext, ".otf") == 0 || strcmp(ext, ".fnt") == 0 ||
-           strcmp(ext, ".bdf") == 0;
+    return strcmp(ext, ".ttf") == 0 || strcmp(ext, ".otf") == 0 || strcmp(ext, ".fnt") == 0 || strcmp(ext, ".bdf") == 0;
 }
 
 static const char *skip_ws(const char *p)

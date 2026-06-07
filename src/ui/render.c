@@ -81,11 +81,13 @@ static void text_layout_wrap_word(const char *paragraph, Font font, int font_siz
     int current_len = 0;
 
     while (*cursor != '\0') {
-        while (*cursor == ' ') cursor++;
+        while (*cursor == ' ')
+            cursor++;
         if (*cursor == '\0') break;
 
         const char *word_start = cursor;
-        while (*cursor != '\0' && *cursor != ' ') cursor++;
+        while (*cursor != '\0' && *cursor != ' ')
+            cursor++;
         int word_len = (int)(cursor - word_start);
 
         char word[TEXT_LAYOUT_MAX_LINE_CHARS] = {0};
@@ -156,7 +158,7 @@ static void text_layout_build(const char *text, const TextProps *t, TextLayout *
 
     if (max_width <= 0 || t->wrap != TEXT_WRAP_WORD) {
         const char *start = text;
-        for (const char *p = text; ; p++) {
+        for (const char *p = text;; p++) {
             if (*p == '\n' || *p == '\0') {
                 char line[TEXT_LAYOUT_MAX_LINE_CHARS] = {0};
                 int len = (int)(p - start);
@@ -169,7 +171,7 @@ static void text_layout_build(const char *text, const TextProps *t, TextLayout *
         }
     } else {
         const char *start = text;
-        for (const char *p = text; ; p++) {
+        for (const char *p = text;; p++) {
             if (*p == '\n' || *p == '\0') {
                 char paragraph[TEXT_LAYOUT_MAX_LINE_CHARS] = {0};
                 int len = (int)(p - start);
@@ -267,8 +269,8 @@ static void render_text_instance(ReactInstance *inst, RenderContext ctx)
 
     if (t->border) {
         int border_padding = 4;
-        Rectangle rect = {base_x - border_padding, base_y - border_padding,
-                          layout.block_width + border_padding * 2, layout.block_height + border_padding * 2};
+        Rectangle rect = {base_x - border_padding, base_y - border_padding, layout.block_width + border_padding * 2,
+                          layout.block_height + border_padding * 2};
         DrawRectangleLinesEx(rect, 2, color);
     }
 
