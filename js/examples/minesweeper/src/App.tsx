@@ -261,7 +261,7 @@ export default function MinesweeperDeckApp() {
             onPress={reset}
             color={theme.accent}
             textColor={theme.navText}
-            borderRadius={0.12}
+            borderRadius={2}
           />
         </Rect>
         {grid.map((row, r) => {
@@ -286,7 +286,7 @@ export default function MinesweeperDeckApp() {
                 label={label}
                 onPressStart={() => onCellPressStart(r, c)}
                 onPressEnd={() => onCellPressEnd(r, c)}
-                borderRadius={0.08}
+                borderRadius={2}
               />
             );
           });

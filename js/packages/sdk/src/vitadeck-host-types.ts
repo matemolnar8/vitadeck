@@ -29,6 +29,7 @@ export type VitaRectProps = WithKey<{
   variant?: "fill" | "outline";
   color?: Color;
   borderColor?: Color;
+  /** Corner radius in pixels (CSS `border-radius` semantics). */
   borderRadius?: number;
   children?: ReactNode | ReactNode[];
 }>;
@@ -40,6 +41,7 @@ export type VitaButtonProps = WithKey<{
   height: number;
   color?: Color;
   textColor?: Color;
+  /** Corner radius in pixels (CSS `border-radius` semantics). */
   borderRadius?: number;
   label: string;
   onPress?: () => void;

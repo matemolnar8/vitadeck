@@ -49,6 +49,7 @@ export type ButtonProps = {
   height: number;
   color?: Color;
   textColor?: Color;
+  /** Corner radius in pixels (CSS `border-radius` semantics). */
   borderRadius?: number;
   label: string;
   onPress?: () => void;

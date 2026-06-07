@@ -70,7 +70,7 @@ export default function TimersDeckApp() {
 
   return (
     <Screen>
-      <Rect x={insetX} y={insetY} width={cw} height={rowH} color={theme.surface} borderRadius={0.08}>
+      <Rect x={insetX} y={insetY} width={cw} height={rowH} color={theme.surface} borderRadius={6}>
         <Text fontSize={24} color={theme.text}>
           setTimeout demo: {timeoutMsg}
         </Text>
@@ -83,7 +83,7 @@ export default function TimersDeckApp() {
           onPress={() => setTimeoutActive(true)}
           color={theme.success}
           textColor={theme.navText}
-          borderRadius={0.12}
+          borderRadius={4}
         />
         <Button
           x={210}
@@ -94,7 +94,7 @@ export default function TimersDeckApp() {
           onPress={() => setTimeoutActive(false)}
           color={theme.danger}
           textColor={theme.navText}
-          borderRadius={0.12}
+          borderRadius={4}
         />
       </Rect>
 
@@ -104,7 +104,7 @@ export default function TimersDeckApp() {
         width={cw}
         height={rowH}
         color={theme.surfaceAlt}
-        borderRadius={0.08}
+        borderRadius={6}
       >
         <Text fontSize={24} color={theme.text}>
           setInterval demo: ticks = {ticks}
@@ -118,7 +118,7 @@ export default function TimersDeckApp() {
           onPress={() => setIntervalRunning(true)}
           color={theme.success}
           textColor={theme.navText}
-          borderRadius={0.12}
+          borderRadius={4}
         />
         <Button
           x={210}
@@ -129,7 +129,7 @@ export default function TimersDeckApp() {
           onPress={() => setIntervalRunning(false)}
           color={theme.danger}
           textColor={theme.navText}
-          borderRadius={0.12}
+          borderRadius={4}
         />
       </Rect>
 
@@ -139,7 +139,7 @@ export default function TimersDeckApp() {
         width={cw}
         height={rowH}
         color={theme.surface}
-        borderRadius={0.08}
+        borderRadius={6}
       >
         <Text fontSize={24} color={theme.text}>
           Promise vs setTimeout: {asyncResult || "…"}

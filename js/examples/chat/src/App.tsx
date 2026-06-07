@@ -39,7 +39,7 @@ export default function ChatDeckApp() {
         width={bubbleWidth}
         height={userBubbleHeight}
         color={theme.primary}
-        borderRadius={0.12}
+        borderRadius={12}
       >
         <Text
           x={bubblePadding}
@@ -61,7 +61,7 @@ export default function ChatDeckApp() {
         width={bubbleWidth}
         height={agentBubbleHeight}
         color={theme.surface}
-        borderRadius={0.12}
+        borderRadius={12}
       >
         <Text
           x={bubblePadding}

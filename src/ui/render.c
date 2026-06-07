@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <raylib.h>
@@ -25,6 +26,14 @@ static Color mix_color(Color c, Color mix_with, float amount)
     out.b = (unsigned char)(c.b + (mix_with.b - c.b) * amount);
     out.a = c.a;
     return out;
+}
+
+static float border_radius_to_roundness(Rectangle rect, float radius_px)
+{
+    float shorter = (rect.width > rect.height) ? rect.height : rect.width;
+    if (shorter <= 0.0f || radius_px <= 0.0f) return 0.0f;
+    float clamped = fminf(radius_px, shorter / 2.0f);
+    return (2.0f * clamped) / shorter;
 }
 
 typedef struct {
@@ -215,11 +224,12 @@ static void render_rect_instance(ReactInstance *inst, RenderContext ctx)
     Rectangle rect = {abs_x, abs_y, r->width, r->height};
 
     if (r->border_radius > 0.0f) {
+        float roundness = border_radius_to_roundness(rect, r->border_radius);
         if (r->has_fill) {
-            DrawRectangleRounded(rect, r->border_radius, 8, r->fill_color);
+            DrawRectangleRounded(rect, roundness, 8, r->fill_color);
         }
         if (r->has_outline) {
-            DrawRectangleRoundedLinesEx(rect, r->border_radius, 8, 2.0f, r->border_color);
+            DrawRectangleRoundedLinesEx(rect, roundness, 8, 2.0f, r->border_color);
         }
     } else {
         if (r->has_fill) {
@@ -299,7 +309,8 @@ static void render_button_instance(ReactInstance *inst, RenderContext ctx)
 
     if (b->border_radius > 0.0f) {
         Rectangle rect = {abs_x, abs_y, b->width, b->height};
-        DrawRectangleRounded(rect, b->border_radius, 8, visual);
+        float roundness = border_radius_to_roundness(rect, b->border_radius);
+        DrawRectangleRounded(rect, roundness, 8, visual);
     } else {
         DrawRectangle(abs_x, abs_y, b->width, b->height, visual);
     }

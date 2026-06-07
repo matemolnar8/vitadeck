@@ -15,7 +15,7 @@ export default function HelloDeckApp() {
 
   return (
     <Screen>
-      <Rect x={insetX} y={insetY} width={cw} height={bannerH} color={theme.surface} borderRadius={0.08}>
+      <Rect x={insetX} y={insetY} width={cw} height={bannerH} color={theme.surface} borderRadius={3}>
         <Text fontSize={28} color={theme.text}>
           Hello, world!
         </Text>
@@ -23,7 +23,7 @@ export default function HelloDeckApp() {
 
       <Counter x={insetX + 10} y={counterY} />
 
-      <Rect x={insetX} y={panelY} width={cw} height={panelH} color={theme.surface} borderRadius={0.08}>
+      <Rect x={insetX} y={panelY} width={cw} height={panelH} color={theme.surface} borderRadius={6}>
         <Text fontSize={22} color={theme.text}>
           Overlapping Buttons Test
         </Text>
@@ -43,7 +43,7 @@ export default function HelloDeckApp() {
           textColor={theme.navText}
           label="Bottom Button"
           onPress={() => setPressedButton("bottom")}
-          borderRadius={0.12}
+          borderRadius={4}
         />
 
       <Button
@@ -55,7 +55,7 @@ export default function HelloDeckApp() {
         textColor={theme.navText}
         label="Top Button"
         onPress={() => setPressedButton("top")}
-        borderRadius={0.12}
+        borderRadius={4}
       />
       </Rect>
     </Screen>

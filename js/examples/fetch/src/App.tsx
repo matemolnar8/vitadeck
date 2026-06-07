@@ -66,7 +66,7 @@ export default function FetchDeckApp() {
 
   return (
     <Screen>
-      <Rect x={x} y={y} width={width} height={rowH} color={theme.surface} borderRadius={0.06}>
+      <Rect x={x} y={y} width={width} height={rowH} color={theme.surface} borderRadius={7}>
         <Text fontSize={22} color={theme.text}>
           GET catfact.ninja — {factStatus}
         </Text>
@@ -84,11 +84,11 @@ export default function FetchDeckApp() {
           }}
           color={theme.success}
           textColor={theme.navText}
-          borderRadius={0.12}
+          borderRadius={4}
         />
       </Rect>
 
-      <Rect x={x} y={y + rowH + gap} width={width} height={rowH} color={theme.surfaceAlt} borderRadius={0.06}>
+      <Rect x={x} y={y + rowH + gap} width={width} height={rowH} color={theme.surfaceAlt} borderRadius={7}>
         <Text fontSize={22} color={theme.text}>
           POST httpbin.org — {echoStatus}
         </Text>
@@ -106,7 +106,7 @@ export default function FetchDeckApp() {
           }}
           color={theme.accent}
           textColor={theme.navText}
-          borderRadius={0.12}
+          borderRadius={4}
         />
       </Rect>
     </Screen>
