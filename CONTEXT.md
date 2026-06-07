@@ -241,6 +241,7 @@ _Avoid_: Click, mouse down, mouse up, hover
 - **Deck App Font** names cannot use VitaDeck-reserved font names.
 - The **VitaDeck SDK** copies declared **Deck App Fonts** into the built **Deck App Package Directory**.
 - A **Deck App Package** is invalid when a declared **Deck App Font** is missing or uses an unsupported font file format.
+- VitaDeck loads declared **Deck App Fonts** when a **Deck App Package** starts, before rendering the **Deck App**.
 - Deck App authors export a **Deck App Component**; they do not call VitaDeck registration APIs directly.
 - A **Deck App Source Entry** may use normal TypeScript and ES module syntax; the **VitaDeck SDK** compiles it into the **Deck App Package Entry**.
 - **Runtime Upload** transports a **Deck App Package Directory** as a **Runtime Upload Archive** without changing the package contents.
@@ -390,6 +391,9 @@ _Avoid_: Click, mouse down, mouse up, hover
 > **Dev:** "Should VitaDeck ignore a missing declared font and fall back to default?"
 > **Domain expert:** "No — a missing or unsupported declared **Deck App Font** makes the **Deck App Package** invalid, the same way a missing package entry does."
 >
+> **Dev:** "Should declared fonts be loaded lazily during render?"
+> **Domain expert:** "No — load declared **Deck App Fonts** when the **Deck App Package** starts so rendering does not partially proceed with font errors."
+>
 > **Dev:** "Do authors copy fonts into the package output by hand?"
 > **Domain expert:** "No — authors declare **Deck App Fonts** in SDK configuration, and the **VitaDeck SDK** copies them into the built **Deck App Package Directory**."
 >
@@ -538,6 +542,7 @@ _Avoid_: Click, mouse down, mouse up, hover
 - "default font" could mean Raylib's built-in bitmap font or a bundled VitaDeck typeface; resolved: use a VitaDeck-provided sans-serif **Runtime Default Font**.
 - "`default` font" could mean an app-declared font name or VitaDeck fallback; resolved: `default` is VitaDeck-reserved and selects the **Runtime Default Font**.
 - "font fallback" could hide invalid packages; resolved: missing or unsupported declared **Deck App Fonts** fail package validation instead of silently falling back.
+- "font loading" could mean lazy render-time loading or package startup loading; resolved: declared **Deck App Fonts** load when the **Deck App Package** starts.
 - "providing fonts" could mean hand-editing the package output; resolved: authors declare **Deck App Fonts** in SDK configuration and the **VitaDeck SDK** copies them into the package.
 - "manifest" could mean runtime configuration or build metadata; resolved: **Deck App Manifest** is build-time metadata in the MVP.
 - "artifact" could mean either a complete VitaDeck runtime bundle or a portable **Deck App Package**; resolved: the package excludes the VitaDeck runtime.
