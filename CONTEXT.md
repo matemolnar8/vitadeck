@@ -231,6 +231,7 @@ _Avoid_: Click, mouse down, mouse up, hover
 - The **Package Registration Hook** is an internal compatibility convention, not a security boundary.
 - A **Deck App Font** is stored inside a **Deck App Package** and declared by the **Deck App Package Manifest**.
 - **Deck Apps** reference **Deck App Fonts** by declared name rather than by filesystem path.
+- **Deck App Font** references in author code are flat names, not font style objects.
 - Text uses the **Runtime Default Font** when no font is requested or when the reserved default font name is requested.
 - **Deck App Font** names cannot use VitaDeck-reserved font names.
 - The **VitaDeck SDK** copies declared **Deck App Fonts** into the built **Deck App Package Directory**.
@@ -368,6 +369,9 @@ _Avoid_: Click, mouse down, mouse up, hover
 >
 > **Dev:** "Should a Text component point straight at `fonts/body.ttf`?"
 > **Domain expert:** "No — include the file as a **Deck App Font** and reference the declared name from author code, so package validation owns file resolution."
+>
+> **Dev:** "Should Text accept CSS-like font objects with weight and style?"
+> **Domain expert:** "No — author code references a flat **Deck App Font** name; separate weights or styles can be separate declared font names."
 >
 > **Dev:** "What font does Text use when no font is specified?"
 > **Domain expert:** "Use the **Runtime Default Font**, a VitaDeck-provided sans-serif font, so basic Deck Apps render text without packaging a font."
@@ -521,6 +525,7 @@ _Avoid_: Click, mouse down, mouse up, hover
 - "entry" can mean author source or generated package code; resolved: **Deck App Source Entry** is authored, **Deck App Package Entry** is generated.
 - "generated registration" could imply restricted author syntax; resolved: author code supports TypeScript and ES modules before SDK compilation.
 - "font" could mean a raw file path, a platform-installed family, or a package-declared asset; resolved: author-provided fonts are **Deck App Fonts** declared by name in the **Deck App Package Manifest**.
+- "font family" could imply CSS-style weight and style resolution; resolved: **Deck App Font** references are flat names for concrete font files.
 - "default font" could mean Raylib's built-in bitmap font or a bundled VitaDeck typeface; resolved: use a VitaDeck-provided sans-serif **Runtime Default Font**.
 - "`default` font" could mean an app-declared font name or VitaDeck fallback; resolved: `default` is VitaDeck-reserved and selects the **Runtime Default Font**.
 - "font fallback" could hide invalid packages; resolved: missing or unsupported declared **Deck App Fonts** fail package validation instead of silently falling back.
