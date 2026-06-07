@@ -56,6 +56,10 @@ _Avoid_: Raw font path, system font, hardcoded font
 The VitaDeck-provided sans-serif font used for text when a **Deck App** does not request a **Deck App Font** or explicitly requests the reserved default font name.
 _Avoid_: Built-in Raylib font, implicit app font, serif default
 
+**Font Size**:
+The pixel height requested by **Deck App** author code for text rendering.
+_Avoid_: Text scale, named text size, point size
+
 **Package Registration Hook**:
 The internal global convention used by generated **Deck App Package Entries** to hand their compiled component to the **VitaDeck Runtime Bundle**.
 _Avoid_: Public SDK API, security boundary, author API
@@ -233,6 +237,7 @@ _Avoid_: Click, mouse down, mouse up, hover
 - **Deck Apps** reference **Deck App Fonts** by declared name rather than by filesystem path.
 - **Deck App Font** references in author code are flat names, not font style objects.
 - Text uses the **Runtime Default Font** when no font is requested or when the reserved default font name is requested.
+- **Font Size** is expressed as raw pixels in the **VitaDeck Runtime API**.
 - **Deck App Font** names cannot use VitaDeck-reserved font names.
 - The **VitaDeck SDK** copies declared **Deck App Fonts** into the built **Deck App Package Directory**.
 - A **Deck App Package** is invalid when a declared **Deck App Font** is missing or uses an unsupported font file format.
@@ -372,6 +377,9 @@ _Avoid_: Click, mouse down, mouse up, hover
 >
 > **Dev:** "Should Text accept CSS-like font objects with weight and style?"
 > **Domain expert:** "No — author code references a flat **Deck App Font** name; separate weights or styles can be separate declared font names."
+>
+> **Dev:** "Should text sizing use names like `body` or `caption`?"
+> **Domain expert:** "No — expose **Font Size** as raw pixels; Deck Apps can define their own named constants."
 >
 > **Dev:** "What font does Text use when no font is specified?"
 > **Domain expert:** "Use the **Runtime Default Font**, a VitaDeck-provided sans-serif font, so basic Deck Apps render text without packaging a font."
@@ -526,6 +534,7 @@ _Avoid_: Click, mouse down, mouse up, hover
 - "generated registration" could imply restricted author syntax; resolved: author code supports TypeScript and ES modules before SDK compilation.
 - "font" could mean a raw file path, a platform-installed family, or a package-declared asset; resolved: author-provided fonts are **Deck App Fonts** declared by name in the **Deck App Package Manifest**.
 - "font family" could imply CSS-style weight and style resolution; resolved: **Deck App Font** references are flat names for concrete font files.
+- "font size" could mean CSS points, scaling, or theme tokens; resolved: **Font Size** is a raw pixel value in the **VitaDeck Runtime API**.
 - "default font" could mean Raylib's built-in bitmap font or a bundled VitaDeck typeface; resolved: use a VitaDeck-provided sans-serif **Runtime Default Font**.
 - "`default` font" could mean an app-declared font name or VitaDeck fallback; resolved: `default` is VitaDeck-reserved and selects the **Runtime Default Font**.
 - "font fallback" could hide invalid packages; resolved: missing or unsupported declared **Deck App Fonts** fail package validation instead of silently falling back.
