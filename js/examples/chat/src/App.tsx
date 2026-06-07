@@ -69,6 +69,7 @@ export default function ChatDeckApp() {
           width={textWidth}
           align="left"
           wrap="word"
+          font="chatSerif"
           fontSize={fontSize}
           lineHeight={lineHeight}
           color={theme.text}
