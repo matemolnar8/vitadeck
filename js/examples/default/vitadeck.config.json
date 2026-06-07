@@ -1,5 +1,8 @@
 {
   "name": "default",
   "entry": "./src/App.tsx",
-  "outDir": "./dist"
+  "outDir": "./dist",
+  "fonts": {
+    "body": "../../../assets/fonts/DejaVuSans.ttf"
+  }
 }

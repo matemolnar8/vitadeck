@@ -1,6 +1,6 @@
 import babel from "@rollup/plugin-babel";
 import { zipSync } from "fflate";
-import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
@@ -11,10 +11,14 @@ type DeckAppConfig = {
   entry: string;
   outDir: string;
   version?: string;
+  fonts?: Record<string, string>;
 };
 
 const PACKAGE_SCHEMA_VERSION = 1;
 const SUPPORTED_REACT_PREFIX = "18.3.";
+const RESERVED_FONT_NAMES = new Set(["default"]);
+const SUPPORTED_FONT_EXTENSIONS = new Set([".ttf", ".otf", ".fnt", ".bdf"]);
+const FONT_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,62}$/;
 /** Must match `name` / copy in `cli/templates/scaffold` so the template is a valid workspace package and typechecks; replaced with the author's slug on `create`. */
 const SCAFFOLD_TEMPLATE_LABEL = "vitadeck-scaffold-template";
 const requireFromHere = createRequire(import.meta.url);
@@ -42,6 +46,22 @@ function requireString(value: unknown, field: string, sourcePath: string): strin
   return value;
 }
 
+function readFonts(value: unknown, sourcePath: string): Record<string, string> | undefined {
+  if (value === undefined) return undefined;
+  const raw = requireObject(value, `${sourcePath} "fonts"`);
+  const fonts: Record<string, string> = {};
+  for (const [name, fontPath] of Object.entries(raw)) {
+    if (!FONT_NAME_PATTERN.test(name)) {
+      throw new Error(`${sourcePath} font name "${name}" must match ${FONT_NAME_PATTERN.toString()}.`);
+    }
+    if (RESERVED_FONT_NAMES.has(name)) {
+      throw new Error(`${sourcePath} font name "${name}" is reserved by VitaDeck.`);
+    }
+    fonts[name] = requireString(fontPath, `fonts.${name}`, sourcePath);
+  }
+  return fonts;
+}
+
 async function readConfig(projectRoot: string): Promise<DeckAppConfig> {
   const configPath = path.join(projectRoot, "vitadeck.config.json");
   const raw = requireObject(await readJson(configPath), configPath);
@@ -53,6 +73,7 @@ async function readConfig(projectRoot: string): Promise<DeckAppConfig> {
   if (raw.version !== undefined) {
     config.version = requireString(raw.version, "version", configPath);
   }
+  config.fonts = readFonts(raw.fonts, configPath);
   return config;
 }
 
@@ -83,6 +104,24 @@ async function validateReact(projectRoot: string): Promise<void> {
 function validatePackageVersion(version: string, sourcePath: string): void {
   if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)) {
     throw new Error(`${sourcePath} must define "version" as a semver string.`);
+  }
+}
+
+function validateFontSourcePath(fontPath: string, sourcePath: string): void {
+  if (path.isAbsolute(fontPath)) {
+    throw new Error(`${sourcePath} font path "${fontPath}" must be relative to the Deck App project.`);
+  }
+  const extension = path.extname(fontPath).toLowerCase();
+  if (!SUPPORTED_FONT_EXTENSIONS.has(extension)) {
+    throw new Error(`${sourcePath} font path "${fontPath}" must use a supported font extension.`);
+  }
+}
+
+async function assertFileExists(filePath: string, sourcePath: string): Promise<void> {
+  try {
+    await access(filePath);
+  } catch (error) {
+    throw new Error(`${sourcePath} font file is missing: ${filePath}`, { cause: error });
   }
 }
 
@@ -125,6 +164,46 @@ async function writeRuntimeUploadArchive(packageDir: string, zipOutPath: string)
   await walk("");
   const zipped = zipSync(filesForZip, { level: 6 });
   await writeFile(zipOutPath, zipped);
+}
+
+async function writeFontTypes(generatedDir: string, fonts: Record<string, string> | undefined): Promise<void> {
+  const names = Object.keys(fonts ?? {}).sort();
+  const declarations =
+    names.length === 0 ? "" : names.map((name) => `    ${JSON.stringify(name)}: true;`).join("\n") + "\n";
+  await writeFile(
+    path.join(generatedDir, "font-names.d.ts"),
+    `import "@vitadeck/sdk/types";
+
+declare module "@vitadeck/sdk/types" {
+  interface VitaDeckFontMap {
+${declarations}  }
+}
+`,
+  );
+}
+
+async function copyFonts(
+  projectRoot: string,
+  packageDir: string,
+  fonts: Record<string, string> | undefined,
+): Promise<Record<string, string> | undefined> {
+  const entries = Object.entries(fonts ?? {});
+  if (entries.length === 0) return undefined;
+
+  const manifestFonts: Record<string, string> = {};
+  const outFontsDir = path.join(packageDir, "fonts");
+  await mkdir(outFontsDir, { recursive: true });
+
+  for (const [name, sourceRel] of entries) {
+    validateFontSourcePath(sourceRel, "vitadeck.config.json");
+    const sourceAbs = path.resolve(projectRoot, sourceRel);
+    await assertFileExists(sourceAbs, "vitadeck.config.json");
+    const packageRel = `fonts/${name}${path.extname(sourceRel).toLowerCase()}`;
+    await copyFile(sourceAbs, path.join(packageDir, packageRel));
+    manifestFonts[name] = packageRel;
+  }
+
+  return manifestFonts;
 }
 
 async function copyScaffold(templateRoot: string, targetRoot: string, slug: string): Promise<void> {
@@ -171,6 +250,7 @@ async function build(projectRoot = process.cwd(), options: BuildOptions = {}): P
   await rm(archivePath, { force: true });
   await mkdir(packageDir, { recursive: true });
   await mkdir(generatedDir, { recursive: true });
+  await writeFontTypes(generatedDir, config.fonts);
 
   await writeFile(
     generatedEntry,
@@ -210,12 +290,20 @@ globalThis.vitadeckPackage.register(DeckApp);
     },
   });
   await bundle.close();
+  const manifestFonts = await copyFonts(projectRoot, packageDir, config.fonts);
 
+  const manifest = {
+    schemaVersion: PACKAGE_SCHEMA_VERSION,
+    name: config.name,
+    version,
+    entry: "app.js",
+    ...(manifestFonts ? { fonts: manifestFonts } : {}),
+  };
   await writeFile(
     path.join(packageDir, "manifest.json"),
-    JSON.stringify({ schemaVersion: PACKAGE_SCHEMA_VERSION, name: config.name, version, entry: "app.js" }, null, 2) + "\n",
+    JSON.stringify(manifest, null, 2) + "\n",
   );
-  await rm(generatedDir, { recursive: true, force: true });
+  await rm(generatedEntry, { force: true });
 
   console.log(`Built ${path.relative(projectRoot, packageDir)}`);
   if (!options.noZip) {

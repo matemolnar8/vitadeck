@@ -2,6 +2,7 @@
 #include <stdio.h>
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
+#include "ui/fonts.h"
 #include "ui/instance_tree.h"
 #include "ui/input.h"
 #include "ui/render.h"
@@ -12,6 +13,12 @@
 
 #define SCREEN_WIDTH 960
 #define SCREEN_HEIGHT 544
+
+static bool load_active_package_fonts(char *error, size_t error_size)
+{
+    return font_registry_load_package(
+        package_library_has_active_deck_app() ? package_library_active_package_path() : "", error, error_size);
+}
 
 #define return_defer(value)                                                                                            \
     do {                                                                                                               \
@@ -45,12 +52,21 @@ int main(int argc, char *argv[])
     window_ready = true;
     SetTargetFPS(60);
 
+    if (!font_registry_init(init_error, sizeof(init_error))) {
+        TraceLog(LOG_ERROR, "%s", init_error);
+        return_defer(1);
+    }
+    if (!load_active_package_fonts(init_error, sizeof(init_error))) {
+        TraceLog(LOG_ERROR, "%s", init_error);
+        js_runtime.failed = true;
+    }
+
     BeginDrawing();
     ClearBackground(BLACK);
     if (package_library_has_active_deck_app()) DrawText("Loading...", 10, 10, 20, WHITE);
     EndDrawing();
 
-    if (package_library_has_active_deck_app() && !js_runtime_start(&js_runtime)) {
+    if (!js_runtime.failed && package_library_has_active_deck_app() && !js_runtime_start(&js_runtime)) {
         TraceLog(LOG_ERROR, "Could not create JS thread.");
         return_defer(1);
     }
@@ -60,10 +76,19 @@ int main(int argc, char *argv[])
         shell_update(&shell, &request_runtime_restart);
         shell_poll_system_input(&shell, &request_runtime_restart);
         if (request_runtime_restart) {
+            js_runtime_stop(&js_runtime);
             if (package_library_has_active_deck_app()) {
-                js_runtime_restart(&js_runtime);
+                char font_error[256];
+                if (!load_active_package_fonts(font_error, sizeof(font_error))) {
+                    TraceLog(LOG_ERROR, "%s", font_error);
+                    js_runtime.failed = true;
+                } else if (!js_runtime_start(&js_runtime)) {
+                    TraceLog(LOG_ERROR, "Could not create JS thread.");
+                    js_runtime.failed = true;
+                }
             } else {
-                js_runtime_stop(&js_runtime);
+                char font_error[256];
+                if (!load_active_package_fonts(font_error, sizeof(font_error))) TraceLog(LOG_ERROR, "%s", font_error);
             }
         }
 
@@ -98,6 +123,7 @@ int main(int argc, char *argv[])
 defer:
     shell_shutdown(&shell);
     js_runtime_stop(&js_runtime);
+    font_registry_shutdown();
     event_queue_shutdown();
     event_queue_destroy();
     if (window_ready) CloseWindow();

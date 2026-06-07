@@ -33,6 +33,9 @@ void instance_back_free(ReactInstance *inst)
 {
     if (!inst) return;
     if (inst->id) free(inst->id);
+    if (inst->type == NT_TEXT && inst->props.text.font_name) {
+        free(inst->props.text.font_name);
+    }
     if (inst->type == NT_BUTTON && inst->props.button.label) {
         free(inst->props.button.label);
     }
@@ -54,6 +57,9 @@ static void free_instance_tree(ReactInstance *inst)
     }
 
     if (inst->id) free(inst->id);
+    if (inst->type == NT_TEXT && inst->props.text.font_name) {
+        free(inst->props.text.font_name);
+    }
     if (inst->type == NT_BUTTON && inst->props.button.label) {
         free(inst->props.button.label);
     }
@@ -110,6 +116,7 @@ static ReactInstance *copy_instance(Arena *arena, ReactInstance *src)
         break;
     case NT_TEXT:
         dst->props.text = src->props.text;
+        dst->props.text.font_name = src->props.text.font_name ? arena_strdup(arena, src->props.text.font_name) : NULL;
         break;
     case NT_BUTTON:
         dst->props.button = src->props.button;

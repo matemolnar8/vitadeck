@@ -73,34 +73,37 @@ static void read_text_layout_props(JSContext *ctx, TextProps *text, JSValueConst
 static JSValue native_create_text(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    if (argc < 14) return JS_UNDEFINED;
+    if (argc < 15) return JS_UNDEFINED;
 
     const char *id = JS_ToCString(ctx, argv[0]);
     if (!id) return JS_UNDEFINED;
+    const char *font_name = JS_ToCString(ctx, argv[1]);
 
     ReactInstance *inst = calloc(1, sizeof(ReactInstance));
     inst->id = strdup(id);
     inst->type = NT_TEXT;
+    inst->props.text.font_name = strdup(font_name ? font_name : "default");
 
     int32_t tmp;
-    JS_ToInt32(ctx, &tmp, argv[1]);
+    JS_ToInt32(ctx, &tmp, argv[2]);
     inst->props.text.font_size = tmp;
-    inst->props.text.has_color = JS_ToBool(ctx, argv[2]);
+    inst->props.text.has_color = JS_ToBool(ctx, argv[3]);
     if (inst->props.text.has_color) {
         int32_t r, g, b, a;
-        JS_ToInt32(ctx, &r, argv[3]);
-        JS_ToInt32(ctx, &g, argv[4]);
-        JS_ToInt32(ctx, &b, argv[5]);
-        JS_ToInt32(ctx, &a, argv[6]);
+        JS_ToInt32(ctx, &r, argv[4]);
+        JS_ToInt32(ctx, &g, argv[5]);
+        JS_ToInt32(ctx, &b, argv[6]);
+        JS_ToInt32(ctx, &a, argv[7]);
         inst->props.text.color = (Color){r, g, b, a};
     }
-    inst->props.text.border = JS_ToBool(ctx, argv[7]);
-    read_text_layout_props(ctx, &inst->props.text, argv, 8);
+    inst->props.text.border = JS_ToBool(ctx, argv[8]);
+    read_text_layout_props(ctx, &inst->props.text, argv, 9);
     inst->children = NULL;
     inst->parent = NULL;
 
     instance_back_put(inst);
     JS_FreeCString(ctx, id);
+    JS_FreeCString(ctx, font_name);
     return JS_UNDEFINED;
 }
 
@@ -388,32 +391,38 @@ static JSValue native_update_rect(JSContext *ctx, JSValueConst this_val, int arg
 static JSValue native_update_text(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    if (argc < 14) return JS_UNDEFINED;
+    if (argc < 15) return JS_UNDEFINED;
 
     const char *id = JS_ToCString(ctx, argv[0]);
     if (!id) return JS_UNDEFINED;
+    const char *font_name = JS_ToCString(ctx, argv[1]);
 
     ReactInstance *inst = instance_back_find(id);
     if (!inst || inst->type != NT_TEXT) {
         JS_FreeCString(ctx, id);
+        JS_FreeCString(ctx, font_name);
         return JS_UNDEFINED;
     }
 
+    if (inst->props.text.font_name) free(inst->props.text.font_name);
+    inst->props.text.font_name = strdup(font_name ? font_name : "default");
+
     int32_t tmp;
-    JS_ToInt32(ctx, &tmp, argv[1]);
+    JS_ToInt32(ctx, &tmp, argv[2]);
     inst->props.text.font_size = tmp;
-    inst->props.text.has_color = JS_ToBool(ctx, argv[2]);
+    inst->props.text.has_color = JS_ToBool(ctx, argv[3]);
     if (inst->props.text.has_color) {
         int32_t r, g, b, a;
-        JS_ToInt32(ctx, &r, argv[3]);
-        JS_ToInt32(ctx, &g, argv[4]);
-        JS_ToInt32(ctx, &b, argv[5]);
-        JS_ToInt32(ctx, &a, argv[6]);
+        JS_ToInt32(ctx, &r, argv[4]);
+        JS_ToInt32(ctx, &g, argv[5]);
+        JS_ToInt32(ctx, &b, argv[6]);
+        JS_ToInt32(ctx, &a, argv[7]);
         inst->props.text.color = (Color){r, g, b, a};
     }
-    inst->props.text.border = JS_ToBool(ctx, argv[7]);
-    read_text_layout_props(ctx, &inst->props.text, argv, 8);
+    inst->props.text.border = JS_ToBool(ctx, argv[8]);
+    read_text_layout_props(ctx, &inst->props.text, argv, 9);
 
+    JS_FreeCString(ctx, font_name);
     JS_FreeCString(ctx, id);
     return JS_UNDEFINED;
 }
@@ -508,7 +517,7 @@ static JSValue native_clear_container(JSContext *ctx, JSValueConst this_val, int
 void register_instance_tree(JSContext *ctx)
 {
     js_set_global_function(ctx, "nativeCreateRect", native_create_rect, 16);
-    js_set_global_function(ctx, "nativeCreateText", native_create_text, 14);
+    js_set_global_function(ctx, "nativeCreateText", native_create_text, 15);
     js_set_global_function(ctx, "nativeCreateButton", native_create_button, 16);
     js_set_global_function(ctx, "nativeCreateRawText", native_create_raw_text, 2);
     js_set_global_function(ctx, "nativeAppendChild", native_append_child, 2);
@@ -516,7 +525,7 @@ void register_instance_tree(JSContext *ctx)
     js_set_global_function(ctx, "nativeRemoveChild", native_remove_child, 2);
     js_set_global_function(ctx, "nativeDestroyInstance", native_destroy_instance, 1);
     js_set_global_function(ctx, "nativeUpdateRect", native_update_rect, 16);
-    js_set_global_function(ctx, "nativeUpdateText", native_update_text, 14);
+    js_set_global_function(ctx, "nativeUpdateText", native_update_text, 15);
     js_set_global_function(ctx, "nativeUpdateButton", native_update_button, 16);
     js_set_global_function(ctx, "nativeUpdateRawText", native_update_raw_text, 2);
     js_set_global_function(ctx, "nativeClearContainer", native_clear_container, 0);

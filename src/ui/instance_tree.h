@@ -18,6 +18,7 @@ typedef enum { TEXT_ALIGN_LEFT = 0, TEXT_ALIGN_CENTER = 1, TEXT_ALIGN_RIGHT = 2 
 typedef enum { TEXT_WRAP_NONE = 0, TEXT_WRAP_WORD = 1 } TextWrap;
 
 typedef struct {
+    char *font_name;
     int font_size;
     bool has_color;
     Color color;

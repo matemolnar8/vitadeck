@@ -123,7 +123,23 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
     const p = props as PropsByType["vita-text"];
     const [hasColor, r, g, b, a] = colorToArgs(p.color, Colors.BLACK);
     const [tx, ty, tw, tlh, talign, twrap] = textLayoutArgs(p);
-    nativeCreateText(id, p.fontSize || 30, hasColor, r, g, b, a, p.border || false, tx, ty, tw, tlh, talign, twrap);
+    nativeCreateText(
+      id,
+      p.font ?? "default",
+      p.fontSize || 30,
+      hasColor,
+      r,
+      g,
+      b,
+      a,
+      p.border || false,
+      tx,
+      ty,
+      tw,
+      tlh,
+      talign,
+      twrap,
+    );
   } else if (type === "vita-button") {
     const p = props as PropsByType["vita-button"];
     const color = p.color || Colors.DARKBLUE;
@@ -184,7 +200,23 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
     const p = props as PropsByType["vita-text"];
     const [hasColor, r, g, b, a] = colorToArgs(p.color, Colors.BLACK);
     const [tx, ty, tw, tlh, talign, twrap] = textLayoutArgs(p);
-    nativeUpdateText(id, p.fontSize || 30, hasColor, r, g, b, a, p.border || false, tx, ty, tw, tlh, talign, twrap);
+    nativeUpdateText(
+      id,
+      p.font ?? "default",
+      p.fontSize || 30,
+      hasColor,
+      r,
+      g,
+      b,
+      a,
+      p.border || false,
+      tx,
+      ty,
+      tw,
+      tlh,
+      talign,
+      twrap,
+    );
   } else if (type === "vita-button") {
     const p = props as PropsByType["vita-button"];
     const color = p.color || Colors.DARKBLUE;
