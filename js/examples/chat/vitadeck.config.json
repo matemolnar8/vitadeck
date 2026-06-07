@@ -3,6 +3,6 @@
   "entry": "./src/App.tsx",
   "outDir": "./dist",
   "fonts": {
-    "chatSerif": "./assets/fonts/DejaVuSerif.ttf"
+    "chatMono": "./assets/fonts/DejaVuSansMono.ttf"
   }
 }
