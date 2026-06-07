@@ -1,5 +1,11 @@
 export type Color = { r: number; g: number; b: number; a: number };
 
+export interface VitaDeckFontMap {
+  default: true;
+}
+
+export type FontName = Extract<keyof VitaDeckFontMap, string>;
+
 export type ColorName =
   | "LIGHTGRAY"
   | "GRAY"

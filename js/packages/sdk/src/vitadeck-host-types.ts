@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { Color } from "./types";
+import type { Color, FontName } from "./types";
 
 type TextChild = string | number | boolean | null | undefined;
 type WithKey<T> = T & { key?: string };
@@ -11,6 +11,7 @@ export type VitaTextProps = WithKey<{
   children: TextChild | TextChild[];
   color?: Color;
   border?: boolean;
+  font?: FontName;
   fontSize?: number;
   x?: number;
   y?: number;

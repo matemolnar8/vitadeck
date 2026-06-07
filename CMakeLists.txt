@@ -105,6 +105,7 @@ set(VITADECK_SOURCES
     src/core/package_library.c
     ${JSLIB_SOURCES}
     src/ui/instance_tree.c
+    src/ui/fonts.c
     src/ui/render.c
     src/ui/input.c
     src/core/event_queue.c
@@ -176,6 +177,7 @@ add_custom_target(js_copy
   COMMENT "Copying js/dist/runtime to ${CMAKE_BINARY_DIR}/js"
   COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/deck-app
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/js/dist/runtime ${CMAKE_BINARY_DIR}/js
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets ${CMAKE_BINARY_DIR}/assets
   BYPRODUCTS ${CMAKE_BINARY_DIR}/js
 )
 
@@ -205,6 +207,8 @@ if(DEFINED ENV{VITASDK})
       NAME ${VITA_APP_NAME}
       FILE module module
       FILE js/dist/runtime/runtime.js js/runtime.js
+      FILE assets/fonts/DejaVuSans.ttf assets/fonts/DejaVuSans.ttf
+      FILE assets/fonts/DejaVuSans-LICENSE.txt assets/fonts/DejaVuSans-LICENSE.txt
   )
 
   # Create an explicit `upload_vpk` target to upload the VPK file to Vita's download folder
@@ -229,6 +233,8 @@ if(DEFINED ENV{VITASDK})
     # Upload runtime and active Deck App package
     COMMAND echo "Sending ${VITA_TITLEID}/js/runtime.js to vita"
     COMMAND curl -T ${CMAKE_SOURCE_DIR}/js/dist/runtime/runtime.js ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/js/runtime.js
+    COMMAND echo "Sending ${VITA_TITLEID}/assets/fonts/DejaVuSans.ttf to vita"
+    COMMAND curl --ftp-create-dirs -T ${CMAKE_SOURCE_DIR}/assets/fonts/DejaVuSans.ttf ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/assets/fonts/DejaVuSans.ttf
     # Launch the app
     COMMAND echo "Launching ${VITA_TITLEID}"
     COMMAND echo launch ${VITA_TITLEID} | nc ${PSVITAIP} 1338

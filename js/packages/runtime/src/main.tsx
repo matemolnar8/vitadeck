@@ -12,6 +12,7 @@ type DeckAppPackageManifest = {
   name: string;
   version: string;
   entry: string;
+  fonts?: Record<string, string>;
 };
 
 let deckAppComponent: ComponentType | null = null;

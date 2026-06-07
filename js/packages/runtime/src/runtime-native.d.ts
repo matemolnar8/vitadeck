@@ -36,6 +36,7 @@ declare global {
 
   function nativeCreateText(
     id: string,
+    fontName: string,
     fontSize: number,
     hasColor: boolean,
     colorR: number,
@@ -98,6 +99,7 @@ declare global {
 
   function nativeUpdateText(
     id: string,
+    fontName: string,
     fontSize: number,
     hasColor: boolean,
     colorR: number,

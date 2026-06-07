@@ -63,4 +63,4 @@ export function Button({ onPress, onPressStart, onPressEnd, ...props }: ButtonPr
 const runtimeColors = (globalThis as unknown as { Colors: ColorsMap }).Colors;
 export { runtimeColors as Colors, useTheme };
 export type { Theme, ThemeContextValue, ThemeName };
-export type { Color, ColorName, ColorsMap } from "./types";
+export type { Color, ColorName, ColorsMap, FontName, VitaDeckFontMap } from "./types";
