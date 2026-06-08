@@ -44,7 +44,7 @@ jobs:
         run: pnpm --dir js build
 
       - name: Cache ccache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .ccache
           key: ccache-${{ runner.os }}-vita-${{ hashFiles('CMakeLists.txt', 'src/**', 'vendor/quickjs/**') }}
@@ -52,10 +52,10 @@ jobs:
             ccache-${{ runner.os }}-vita-
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build vitasdk image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64
