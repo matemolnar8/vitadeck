@@ -163,6 +163,10 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
       textColor.a,
     );
     registerHandlers(id, extractHandlers(props));
+  } else if (type === "vita-scroll") {
+    const p = props as PropsByType["vita-scroll"];
+    const [hasFill, r, g, b, a] = colorToArgs(p.color, Colors.BLANK);
+    nativeCreateScroll(id, p.x, p.y, p.width, p.height, hasFill, r, g, b, a, p.gap ?? 0, p.padding ?? 0);
   } else {
     exhaustiveGuard(type, `Unsupported element type: ${type}`);
   }
@@ -240,6 +244,10 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
       textColor.a,
     );
     updateHandlers(id, extractHandlers(props));
+  } else if (type === "vita-scroll") {
+    const p = props as PropsByType["vita-scroll"];
+    const [hasFill, r, g, b, a] = colorToArgs(p.color, Colors.BLANK);
+    nativeUpdateScroll(id, p.x, p.y, p.width, p.height, hasFill, r, g, b, a, p.gap ?? 0, p.padding ?? 0);
   } else {
     exhaustiveGuard(type, `Unsupported element type: ${type}`);
   }

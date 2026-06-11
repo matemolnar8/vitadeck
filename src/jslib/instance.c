@@ -161,6 +161,72 @@ static JSValue native_create_button(JSContext *ctx, JSValueConst this_val, int a
     return JS_UNDEFINED;
 }
 
+static void read_scroll_props(JSContext *ctx, ScrollProps *scroll, JSValueConst *argv)
+{
+    int32_t tmp;
+    JS_ToInt32(ctx, &tmp, argv[1]);
+    scroll->x = tmp;
+    JS_ToInt32(ctx, &tmp, argv[2]);
+    scroll->y = tmp;
+    JS_ToInt32(ctx, &tmp, argv[3]);
+    scroll->width = tmp;
+    JS_ToInt32(ctx, &tmp, argv[4]);
+    scroll->height = tmp;
+    scroll->has_fill = JS_ToBool(ctx, argv[5]);
+    if (scroll->has_fill) {
+        int32_t r, g, b, a;
+        JS_ToInt32(ctx, &r, argv[6]);
+        JS_ToInt32(ctx, &g, argv[7]);
+        JS_ToInt32(ctx, &b, argv[8]);
+        JS_ToInt32(ctx, &a, argv[9]);
+        scroll->fill_color = (Color){r, g, b, a};
+    }
+    JS_ToInt32(ctx, &tmp, argv[10]);
+    scroll->gap = tmp;
+    JS_ToInt32(ctx, &tmp, argv[11]);
+    scroll->padding = tmp;
+}
+
+static JSValue native_create_scroll(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    if (argc < 12) return JS_UNDEFINED;
+
+    const char *id = JS_ToCString(ctx, argv[0]);
+    if (!id) return JS_UNDEFINED;
+
+    ReactInstance *inst = calloc(1, sizeof(ReactInstance));
+    inst->id = strdup(id);
+    inst->type = NT_SCROLL;
+    read_scroll_props(ctx, &inst->props.scroll, argv);
+    inst->children = NULL;
+    inst->parent = NULL;
+
+    instance_back_put(inst);
+    JS_FreeCString(ctx, id);
+    return JS_UNDEFINED;
+}
+
+static JSValue native_update_scroll(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    if (argc < 12) return JS_UNDEFINED;
+
+    const char *id = JS_ToCString(ctx, argv[0]);
+    if (!id) return JS_UNDEFINED;
+
+    ReactInstance *inst = instance_back_find(id);
+    if (!inst || inst->type != NT_SCROLL) {
+        JS_FreeCString(ctx, id);
+        return JS_UNDEFINED;
+    }
+
+    read_scroll_props(ctx, &inst->props.scroll, argv);
+
+    JS_FreeCString(ctx, id);
+    return JS_UNDEFINED;
+}
+
 static JSValue native_create_raw_text(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
@@ -519,6 +585,7 @@ void register_instance_tree(JSContext *ctx)
     js_set_global_function(ctx, "nativeCreateRect", native_create_rect, 16);
     js_set_global_function(ctx, "nativeCreateText", native_create_text, 15);
     js_set_global_function(ctx, "nativeCreateButton", native_create_button, 16);
+    js_set_global_function(ctx, "nativeCreateScroll", native_create_scroll, 12);
     js_set_global_function(ctx, "nativeCreateRawText", native_create_raw_text, 2);
     js_set_global_function(ctx, "nativeAppendChild", native_append_child, 2);
     js_set_global_function(ctx, "nativeInsertBefore", native_insert_before, 3);
@@ -527,6 +594,7 @@ void register_instance_tree(JSContext *ctx)
     js_set_global_function(ctx, "nativeUpdateRect", native_update_rect, 16);
     js_set_global_function(ctx, "nativeUpdateText", native_update_text, 15);
     js_set_global_function(ctx, "nativeUpdateButton", native_update_button, 16);
+    js_set_global_function(ctx, "nativeUpdateScroll", native_update_scroll, 12);
     js_set_global_function(ctx, "nativeUpdateRawText", native_update_raw_text, 2);
     js_set_global_function(ctx, "nativeClearContainer", native_clear_container, 0);
 }

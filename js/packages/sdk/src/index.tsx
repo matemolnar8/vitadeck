@@ -2,7 +2,7 @@ import React, { type ReactNode } from "react";
 import { vitaHost } from "./host-elements";
 import { useTheme, type Theme, type ThemeContextValue, type ThemeName } from "./theme";
 import type { Color, ColorsMap } from "./types";
-import type { VitaRectProps, VitaTextProps } from "./vitadeck-host-types";
+import type { VitaRectProps, VitaScrollProps, VitaTextProps } from "./vitadeck-host-types";
 
 export const VITA_SCREEN = { width: 960, height: 544 } as const;
 export const VITA_INSET = 20;
@@ -40,6 +40,20 @@ export type TextProps = Omit<VitaTextProps, "key">;
 
 export function Text(props: TextProps) {
   return vitaHost("vita-text", props);
+}
+
+export type ScrollProps = Omit<VitaScrollProps, "key">;
+
+/**
+ * Scrollable container with a minimal column layout: direct Rect and Button
+ * children are stacked vertically (`gap` pixels apart, inside `padding`).
+ * A stacked child's `y` acts as a top margin and its `x` is relative to the
+ * padded content area. Content taller than the viewport can be scrolled by
+ * focusing the container and using D-pad/arrow keys, the left analog stick,
+ * or the mouse wheel.
+ */
+export function Scroll(props: ScrollProps) {
+  return vitaHost("vita-scroll", props);
 }
 
 export type ButtonProps = {

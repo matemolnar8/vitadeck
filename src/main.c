@@ -6,6 +6,7 @@
 #include "ui/instance_tree.h"
 #include "ui/input.h"
 #include "ui/render.h"
+#include "ui/scroll.h"
 #include "core/event_queue.h"
 #include "core/js_runtime.h"
 #include "core/package_library.h"
@@ -77,6 +78,7 @@ int main(int argc, char *argv[])
         shell_poll_system_input(&shell, &request_runtime_restart);
         if (request_runtime_restart) {
             js_runtime_stop(&js_runtime);
+            scroll_reset();
             if (package_library_has_active_deck_app()) {
                 char font_error[256];
                 if (!load_active_package_fonts(font_error, sizeof(font_error))) {

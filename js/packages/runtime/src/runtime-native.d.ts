@@ -71,6 +71,21 @@ declare global {
     textColorA: number,
   ): void;
 
+  function nativeCreateScroll(
+    id: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    hasFill: boolean,
+    fillR: number,
+    fillG: number,
+    fillB: number,
+    fillA: number,
+    gap: number,
+    padding: number,
+  ): void;
+
   function nativeCreateRawText(id: string, text: string): void;
 
   function nativeAppendChild(parentId: string, childId: string): void;
@@ -132,6 +147,21 @@ declare global {
     textColorG: number,
     textColorB: number,
     textColorA: number,
+  ): void;
+
+  function nativeUpdateScroll(
+    id: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    hasFill: boolean,
+    fillR: number,
+    fillG: number,
+    fillB: number,
+    fillA: number,
+    gap: number,
+    padding: number,
   ): void;
 
   function nativeUpdateRawText(id: string, text: string): void;

@@ -108,6 +108,7 @@ set(VITADECK_SOURCES
     src/ui/fonts.c
     src/ui/render.c
     src/ui/input.c
+    src/ui/scroll.c
     src/core/event_queue.c
     src/shell/shell.c
     src/upload/archive.c
