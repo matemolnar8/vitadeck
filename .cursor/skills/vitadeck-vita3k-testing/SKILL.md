@@ -95,6 +95,17 @@ Hardware builds call `sceGxmVshInitialize`; Vita3K builds call `sceGxmInitialize
 
 **Linux pref-path:** `~/.local/share/Vita3K/Vita3K/`
 
+## Current boot status
+
+As of 2026-06-12 testing, **even `out-vita3k/` VPKs crash on launch** in Vita3K v0.2.1 (cloud VM, OpenGL backend):
+
+```
+sceGxmCreateContext returned SCE_GXM_ERROR_ALREADY_INITIALIZED (0x805B0001)
+Unhandled SIGSEGV
+```
+
+The pipeline (build, CI artifact, install, computerUse launch) works; in-app UI does not yet. Still use Vita3K-target builds — do not fall back to hardware VPKs. Next things to try: firmware install, different Vita3K version, deeper raylib/vitaGL init debugging.
+
 ## Limitations
 
 - Not a hardware replacement; use `upload_vita` for FTP deploy to real Vitas.
