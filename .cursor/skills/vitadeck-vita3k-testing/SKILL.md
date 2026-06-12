@@ -21,24 +21,20 @@ This uses the `vitasdk-vita3k` Docker Compose service (`Dockerfile` with `VITA3K
 
 ### Cloud agents and Docker
 
-Docker is **not pre-installed** on Cursor Cloud VMs but can be installed:
+Docker is **not pre-installed** on Cursor Cloud VMs. It can be installed, but **image builds often fail** inside cloud agents (nested overlay/`buildkit` mount errors). Prefer CI for cloud agents:
 
 ```sh
-sudo apt-get update && sudo apt-get install -y docker.io
-sudo service docker start
-sudo usermod -aG docker "$USER"   # new shell may be needed for group
-docker compose version
+# Optional local attempt (works on dev machines; may fail on cloud VMs):
+sudo apt-get update && sudo apt-get install -y docker.io docker-compose-v2
+sudo dockerd >/tmp/dockerd.log 2>&1 &
+sleep 2 && scripts/vita3k-deploy.sh build-vpk
 ```
 
-Then run `scripts/vita3k-deploy.sh build-vpk` as above. First image build is slow (vitaGL + SDL + raylib from source).
-
-**Without Docker on a cloud agent:** push your branch and wait for the **Vita (VPK)** workflow job `vpk-vita3k`, then:
+**Cloud agent fallback** — wait for CI job `vpk-vita3k`, then:
 
 ```sh
 scripts/vita3k-deploy.sh download-vpk
 ```
-
-This fetches only `vitadeck-vpk-vita3k-*` artifacts, never hardware `vitadeck-vpk-*`.
 
 ## Deploy and launch
 
