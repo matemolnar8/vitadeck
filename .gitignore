@@ -2,6 +2,7 @@
 
 out
 out-vita
+out-vita3k
 .ccache
 
 module/*.suprx

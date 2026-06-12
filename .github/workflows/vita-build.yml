@@ -60,6 +60,8 @@ jobs:
           context: .
           platforms: linux/amd64
           load: true
+          build-args: |
+            VITA3K_SUPPORT=0
           tags: vitadeck-vitasdk:ci
           cache-from: type=gha,scope=vitadeck-vitasdk-v2
           cache-to: type=gha,mode=max,scope=vitadeck-vitasdk-v2
@@ -96,3 +98,90 @@ jobs:
         with:
           name: vitadeck-vpk-${{ github.sha }}
           path: out-vita/vitadeck.vpk
+
+  vpk-vita3k:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache-vita3k
+      CCACHE_COMPILERCHECK: content
+      CCACHE_MAXSIZE: 500M
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: js/package.json
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          package-manager-cache: false
+          cache: pnpm
+          cache-dependency-path: js/pnpm-lock.yaml
+
+      - name: Install JS dependencies
+        run: pnpm --dir js install --frozen-lockfile
+
+      - name: Build JS (required before Vita CMake; stages js/dist)
+        run: pnpm --dir js build
+
+      - name: Cache ccache
+        uses: actions/cache@v5
+        with:
+          path: .ccache-vita3k
+          key: ccache-${{ runner.os }}-vita3k-${{ hashFiles('CMakeLists.txt', 'src/**', 'vendor/quickjs/**', 'Dockerfile') }}
+          restore-keys: |
+            ccache-${{ runner.os }}-vita3k-
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build vitasdk-vita3k image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          build-args: |
+            VITA3K_SUPPORT=1
+          tags: vitadeck-vitasdk-vita3k:ci
+          cache-from: type=gha,scope=vitadeck-vitasdk-vita3k-v1
+          cache-to: type=gha,mode=max,scope=vitadeck-vitasdk-vita3k-v1
+
+      - name: Build Vita3K target in Vitasdk container
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/build/git" \
+            -w /build/git \
+            -e CCACHE_DIR=/build/git/.ccache-vita3k \
+            -e CCACHE_COMPILERCHECK=content \
+            -e CCACHE_MAXSIZE=500M \
+            vitadeck-vitasdk-vita3k:ci \
+            bash -lc 'if ! command -v ccache >/dev/null 2>&1; then \
+                apt-get update && apt-get install -y --no-install-recommends ccache; \
+              fi && \
+              cmake -S . -B out-vita3k \
+              -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && \
+              cmake --build out-vita3k --parallel "$(nproc)"'
+
+      - name: ccache stats
+        if: always()
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/build/git" \
+            -w /build/git \
+            -e CCACHE_DIR=/build/git/.ccache-vita3k \
+            vitadeck-vitasdk-vita3k:ci \
+            bash -lc 'command -v ccache >/dev/null && ccache -s || true'
+
+      - name: Upload Vita3K VPK
+        uses: actions/upload-artifact@v6
+        with:
+          name: vitadeck-vpk-vita3k-${{ github.sha }}
+          path: out-vita3k/vitadeck.vpk

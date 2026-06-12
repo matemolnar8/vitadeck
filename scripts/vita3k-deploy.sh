@@ -3,8 +3,8 @@ set -euo pipefail
 
 TITLE_ID="${VITA_TITLE_ID:-PGRI00001}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-OUT_VITA="${REPO_ROOT}/out-vita"
-VPK="${OUT_VITA}/vitadeck.vpk"
+OUT_VITA3K="${REPO_ROOT}/out-vita3k"
+VPK="${OUT_VITA3K}/vitadeck.vpk"
 VITA3K_BIN="${VITA3K_BIN:-}"
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
@@ -24,9 +24,10 @@ usage() {
 Usage: $(basename "$0") <command>
 
 Commands:
-  download-vpk    Fetch vitadeck.vpk from latest successful GitHub Actions run
+  build-vpk       Build out-vita3k/vitadeck.vpk (vitasdk-vita3k Docker image)
+  download-vpk    Fetch vitadeck-vpk-vita3k-* CI artifact (cloud agents without Docker)
   setup-vita3k    Fix shader paths for extracted AppImage (once per install)
-  install-vpk     Unzip out-vita/vitadeck.vpk into Vita3K ux0/app/${TITLE_ID}
+  install-vpk     Unzip out-vita3k/vitadeck.vpk into Vita3K ux0/app/${TITLE_ID}
   sync            Copy eboot.bin, js/runtime.js, and fonts (fast rebuild deploy)
   seed-deck-app   Copy js/dist/deck-app and set active-package.txt
                   Optional arg: package name (default: chat → chat.vdapp)
@@ -40,8 +41,9 @@ EOF
 
 require_vpk() {
   if [[ ! -f "${VPK}" ]]; then
-    echo "Missing ${VPK}. Run: $(basename "$0") download-vpk" >&2
-    echo "Or build the Vita target (see vitadeck-build skill)." >&2
+    echo "Missing ${VPK}." >&2
+    echo "Build a Vita3K-target VPK: $(basename "$0") build-vpk" >&2
+    echo "Or download from CI:      $(basename "$0") download-vpk" >&2
     exit 1
   fi
 }
@@ -61,6 +63,10 @@ normalize_package_name() {
   printf '%s' "${name}"
 }
 
+build_vpk() {
+  "${REPO_ROOT}/scripts/build-vita3k-vpk.sh"
+}
+
 download_vpk() {
   if ! command -v gh >/dev/null 2>&1; then
     echo "gh CLI is required to download CI artifacts." >&2
@@ -70,7 +76,7 @@ download_vpk() {
   local run_id="${1:-}"
   if [[ -z "${run_id}" ]]; then
     run_id="$(gh run list --repo "$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null || echo matemolnar8/vitadeck)" \
-      --workflow="Vita (VPK)" --limit 20 --json databaseId,conclusion \
+      --workflow="Vita (VPK)" --limit 30 --json databaseId,conclusion \
       -q '.[] | select(.conclusion=="success") | .databaseId' | head -1)"
   fi
   if [[ -z "${run_id}" ]]; then
@@ -80,14 +86,15 @@ download_vpk() {
 
   local artifact
   artifact="$(gh api "repos/matemolnar8/vitadeck/actions/runs/${run_id}/artifacts" \
-    --jq '.artifacts[] | select(.name | startswith("vitadeck-vpk")) | .name' | head -1)"
+    --jq '.artifacts[] | select(.name | startswith("vitadeck-vpk-vita3k")) | .name' | head -1)"
   if [[ -z "${artifact}" ]]; then
-    echo "No vitadeck-vpk artifact on run ${run_id}." >&2
+    echo "No vitadeck-vpk-vita3k artifact on run ${run_id}." >&2
+    echo "Do not use vitadeck-vpk-* (hardware) artifacts for Vita3K testing." >&2
     exit 1
   fi
 
-  mkdir -p "${OUT_VITA}"
-  gh run download "${run_id}" -n "${artifact}" -D "${OUT_VITA}"
+  mkdir -p "${OUT_VITA3K}"
+  gh run download "${run_id}" -n "${artifact}" -D "${OUT_VITA3K}"
   if [[ ! -f "${VPK}" ]]; then
     echo "Download finished but ${VPK} is missing." >&2
     exit 1
@@ -120,13 +127,12 @@ install_vpk() {
 
 sync_app() {
   require_runtime
-  if [[ ! -f "${OUT_VITA}/eboot.bin" ]]; then
-    echo "Missing ${OUT_VITA}/eboot.bin. sync only works after a local out-vita build." >&2
-    echo "For CI VPK-only artifacts, re-run install-vpk after downloading a new VPK." >&2
+  if [[ ! -f "${OUT_VITA3K}/eboot.bin" ]]; then
+    echo "Missing ${OUT_VITA3K}/eboot.bin. Re-run build-vpk or install-vpk." >&2
     exit 1
   fi
   mkdir -p "${APP_DIR}/js" "${APP_DIR}/assets/fonts"
-  cp "${OUT_VITA}/eboot.bin" "${APP_DIR}/eboot.bin"
+  cp "${OUT_VITA3K}/eboot.bin" "${APP_DIR}/eboot.bin"
   cp "${RUNTIME_SRC}" "${APP_DIR}/js/runtime.js"
   cp "${FONT_SRC}" "${APP_DIR}/assets/fonts/DejaVuSans.ttf"
   cp "${FONT_LICENSE_SRC}" "${APP_DIR}/assets/fonts/DejaVuSans-LICENSE.txt"
@@ -154,6 +160,7 @@ seed_deck_app() {
 
 cmd="${1:-}"
 case "${cmd}" in
+  build-vpk) build_vpk ;;
   download-vpk) download_vpk "${2:-}" ;;
   setup-vita3k) setup_vita3k ;;
   install-vpk) install_vpk ;;

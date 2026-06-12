@@ -1,6 +1,23 @@
 services:
   vitasdk:
-    build: .
+    build:
+      context: .
+      args:
+        VITA3K_SUPPORT: "0"
+    platform: linux/amd64
+    volumes:
+      - ./:/build/git
+    working_dir: /build/git
+    stdin_open: true
+    tty: true
+    restart: "no"
+
+  vitasdk-vita3k:
+    build:
+      context: .
+      args:
+        VITA3K_SUPPORT: "1"
+    image: vitadeck-vitasdk-vita3k
     platform: linux/amd64
     volumes:
       - ./:/build/git

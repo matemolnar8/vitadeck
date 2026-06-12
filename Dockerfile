@@ -4,6 +4,9 @@ FROM --platform=linux/amd64 gnuton/vitasdk-docker AS vitasdk-base
 
 FROM --platform=linux/amd64 ubuntu:24.04
 
+# 0 = retail Vita (sceGxmVshInitialize). 1 = Vita3K emulator (sceGxmInitialize).
+ARG VITA3K_SUPPORT=0
+
 ENV DEBIAN_FRONTEND=noninteractive
 ENV VITASDK=/usr/local/vitasdk
 ENV PATH=${PATH}:${VITASDK}/bin
@@ -29,7 +32,11 @@ COPY --from=vitasdk-base /usr/local/vitasdk /usr/local/vitasdk
 WORKDIR /build
 RUN git clone --depth=1 https://github.com/Rinnegatamante/vitaGL.git
 WORKDIR /build/vitaGL
-RUN HAVE_GLSL_SUPPORT=1 make -j"$(nproc)" install
+RUN if [ "${VITA3K_SUPPORT}" = "1" ]; then \
+      HAVE_GLSL_SUPPORT=1 HAVE_VITA3K_SUPPORT=1 make -j"$(nproc)" install; \
+    else \
+      HAVE_GLSL_SUPPORT=1 make -j"$(nproc)" install; \
+    fi
 
 # SDL
 WORKDIR /build
