@@ -1,160 +1,168 @@
 ---
 name: vitadeck-vita3k-testing
-description: Installs and runs out-vita/vitadeck.vpk in Vita3K for PSVita-target smoke testing. Use when validating Vita builds without hardware, testing VPK boot/rendering/shell flow, or when the user mentions Vita3K, PSVita emulator, or VPK testing.
+description: Installs and runs out-vita/vitadeck.vpk in Vita3K for PSVita-target smoke testing with computerUse. Use when validating Vita builds without hardware, testing VPK boot/rendering/shell flow, or when the user mentions Vita3K, PSVita emulator, or VPK testing.
 ---
 
 # VitaDeck Vita3K testing
 
-Vita3K is **feasible as a dev smoke-test** for the Vita target: install the built VPK, seed Deck App data under `ux0:data/vitadeck`, and verify boot, shell navigation, and rendering. It is **not** a replacement for hardware — use it alongside the host build (`vitadeck-manual-testing`) and real-Vita `upload_vita` when available.
+Vita3K can validate **VPK install, app discovery, and boot attempts** without hardware. As of hands-on testing (2026-06), **CI-built VPKs crash on launch** until vitaGL is rebuilt with `HAVE_VITA3K_SUPPORT=1`. Treat Vita3K as a complement to host testing (`vitadeck-manual-testing`) and real-Vita `upload_vita`.
 
-## Feasibility summary
+**Title ID:** `PGRI00001`
 
-| Area | Vita3K | Notes |
+## Feasibility (verified)
+
+| Area | Status | Notes |
 | --- | --- | --- |
-| VPK install / launch | Yes | GUI install or unzip into `ux0/app/PGRI00001` |
-| raylib + vitaGL rendering | Yes, with build flags | Prefer `HAVE_VITA3K_SUPPORT=1` when building vitaGL (see below) |
-| Shell + Deck App UI | Yes | Seed `ux0:data/vitadeck` like desktop `vitadeck-data` |
-| JS runtime / QuickJS | Yes | Same `js/runtime.js` path as hardware |
-| Incremental deploy | Yes | Copy `eboot.bin` + `js/runtime.js` after first install |
-| Runtime Upload (HTTP) | Partial | Port 8787 may work locally; `sceNetCtl` IP display differs from hardware |
-| FTP / `upload_vita` workflow | No | Use file copy into Vita3K `pref-path` instead |
-| CI / headless automation | Poor | Needs GUI + firmware; do not wrap launches in `timeout` |
-
-**Title ID:** `PGRI00001` (from `CMakeLists.txt`).
+| VPK install (unzip) | Works | `scripts/vita3k-deploy.sh install-vpk` |
+| App appears in Vita3K library | Works | PGRI00001 visible after install |
+| Boot with default CI VPK | **Fails** | SIGSEGV after `SCE_GXM_ERROR_ALREADY_INITIALIZED` |
+| Deck App UI / Shell | Not reached | Blocked by GXM crash with current build |
+| GH Actions VPK download | Works | `scripts/vita3k-deploy.sh download-vpk` |
+| computerUse GUI testing | Works | For emulator setup + launch; read tmux logs for crashes |
+| Runtime Upload | Untested | Blocked until app boots |
+| Real-hardware parity | No | Requires Vita3K-specific vitaGL build |
 
 ## Prerequisites
 
-1. **Built Vita artifacts** — follow `vitadeck-build`: `pnpm --dir js build`, then Docker Vitasdk build → `out-vita/vitadeck.vpk`.
-2. **Vita3K** — [continuous release](https://github.com/Vita3K/Vita3K/releases/tag/continuous):
-   - Linux x86_64: `Vita3K-x86_64.AppImage` (extract with `--appimage-extract` if FUSE is unavailable)
-   - macOS: `macos-latest.dmg` or `macos-arm64-latest.dmg`
-   - Windows: `windows-latest.zip`
-3. **Firmware (one-time)** — install **both** in Vita3K before running homebrew:
-   - Main: `PSVUPDAT.PUP` (3.65 or 3.74 from PlayStation update pages)
-   - Fonts: `PSP2UPDAT.PUP` (font package; see [Vita3K quickstart](https://vita3k.org/quickstart.html))
-   - GUI: **File → Install Firmware** (install each file once)
-   - CLI (main firmware only): `Vita3K --firmware /path/to/PSVUPDAT.PUP`
+1. **VPK** — local Docker build or CI artifact (see below).
+2. **JS bundle** — `pnpm --dir js build` (needed to seed Deck Apps).
+3. **Vita3K** — [continuous release](https://github.com/Vita3K/Vita3K/releases/tag/continuous). On Linux without FUSE: extract AppImage with `--appimage-extract`, then run `squashfs-root/usr/bin/Vita3K`.
+4. **Firmware (recommended)** — install both via **File → Install Firmware**:
+   - `PSVUPDAT.PUP` (main firmware)
+   - `PSP2UPDAT.PUP` (font package)
+   - CLI for main only: `Vita3K --firmware /path/to/PSVUPDAT.PUP`
 
 **Linux pref-path:** `~/.local/share/Vita3K/Vita3K/`
 
 ## Quick start
 
 ```sh
-# 1. Build (see vitadeck-build skill)
 pnpm --dir js build
-docker-compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"
 
-# 2. Install VPK into emulator (pick one)
-#    A) GUI: File → Install .zip, .vpk → select out-vita/vitadeck.vpk
-#    B) CLI unzip (no GUI dialog):
+# VPK: build locally OR download from CI
+scripts/vita3k-deploy.sh download-vpk
+# scripts/vita3k-deploy.sh download-vpk 27437425077   # optional: specific run id
+
+scripts/vita3k-deploy.sh setup-vita3k   # once, for extracted AppImage
 scripts/vita3k-deploy.sh install-vpk
+scripts/vita3k-deploy.sh seed-deck-app  # → chat.vdapp
 
-# 3. Seed an active Deck App (required — VPK does not bundle deck apps)
-scripts/vita3k-deploy.sh seed-deck-app chat
-
-# 4. Launch (keep running — do NOT use timeout on the GUI)
-Vita3K -r PGRI00001
+# Launch in tmux (never wrap in timeout)
+SESSION_NAME="vita3k-vitadeck"
+tmux -f /exec-daemon/tmux.portal.conf new-session -d -s "$SESSION_NAME" \
+  "DISPLAY=:1 \$HOME/vita3k/squashfs-root/usr/bin/Vita3K -r PGRI00001"
 ```
 
-Run Vita3K in a dedicated tmux session (e.g. `vita3k`) when testing on Linux with a display. Prefer `computerUse` for visual verification, same as `vitadeck-manual-testing`.
+Deck App package names **must** end in `.vdapp` (see `package_library.c`).
 
-## Workflows
+## computerUse workflow
 
-### First-time emulator setup
+Use this after CLI setup above. Same pattern as `vitadeck-manual-testing`, but the window is Vita3K (Qt), not raylib directly.
 
-1. Download and launch Vita3K once; complete language / pref-path wizard if shown.
-2. Install both firmware `.pup` files (main + font package).
-3. In **Configuration → Settings → Core**, leave **Modules Mode** on **Automatic** unless a module crash is suspected.
-4. Optional renderer: **OpenGL** is the safer default; try **Vulkan** if rendering glitches.
+### Before calling computerUse
 
-### Install or update the VPK
+1. Confirm VPK + deck app are deployed (`install-vpk`, `seed-deck-app`).
+2. Start Vita3K in tmux session `vita3k-vitadeck` (see quick start).
+3. On cloud VMs, set renderer to **OpenGL** — Vulkan fails with `ErrorIncompatibleDriver`:
+   - GUI: **Configuration → Settings → GPU → Backend Renderer → OpenGL**
+   - Or edit `~/.config/Vita3K/config.yml`: `backend-renderer: OpenGL`
+4. Run `scripts/vita3k-deploy.sh setup-vita3k` if shader load errors appear.
 
-**GUI (recommended first time):** drag `out-vita/vitadeck.vpk` onto the Vita3K window, or **File → Install .zip, .vpk**.
+### computerUse prompt checklist
 
-**CLI unzip** (repeatable, no install dialog):
+Ask computerUse to:
+
+1. Focus the Vita3K window on `DISPLAY=:1`.
+2. Confirm **VitaDeck** (PGRI00001) appears in the app list.
+3. Launch VitaDeck (double-click or select + Start).
+4. If boot succeeds: verify chat Deck App UI, then **F1 / Start** for Shell toggle, **Enter** / **Backspace** for Shell navigation (same map as `vitadeck-manual-testing`).
+5. If boot fails: capture the on-screen error and check tmux log:
 
 ```sh
-scripts/vita3k-deploy.sh install-vpk
+tmux -f /exec-daemon/tmux.portal.conf capture-pane -p -t vita3k-vitadeck:0.0 -S -80
 ```
 
-Positional `Vita3K /path/to/file.vpk` often opens the emulator without installing ([issue #3115](https://github.com/Vita3K/Vita3K/issues/3115)); prefer GUI or unzip.
+### Known crash (current CI VPK)
 
-### Fast iteration after C or JS changes
+Logs show raylib modules loading, then:
 
-Skip full VPK reinstall — copy built artifacts only:
-
-```sh
-scripts/vita3k-deploy.sh sync
-Vita3K -r PGRI00001
+```
+sceGxmCreateContext returned SCE_GXM_ERROR_ALREADY_INITIALIZED (0x805B0001)
+Unhandled SIGSEGV
 ```
 
-This mirrors the `upload_vita` CMake target but writes into the Vita3K `pref-path`.
+This matches a **hardware-targeted vitaGL build** running under Vita3K. Fix: rebuild vitaGL with `HAVE_VITA3K_SUPPORT=1` in the Vitasdk Docker image, produce a new VPK, reinstall, and retest. Until then, computerUse can verify install/library/launch path but not in-app UI.
 
-### Seed Deck App data
+### Recording
 
-Vita stores packages under `ux0:data/vitadeck/` (see `src/core/package_library.c`). On Vita3K:
+Record only a successful end-to-end walkthrough. Discard failed recordings.
+
+## Get VPK without local Docker
 
 ```sh
-scripts/vita3k-deploy.sh seed-deck-app chat
-# or manually:
-V3K="$HOME/.local/share/Vita3K/Vita3K"
-mkdir -p "$V3K/ux0/data/vitadeck/installed-deck-apps"
-cp -R js/dist/deck-app "$V3K/ux0/data/vitadeck/installed-deck-apps/chat.vdapp"
-printf 'chat.vdapp\n' > "$V3K/ux0/data/vitadeck/active-package.txt"
+gh run list --workflow="Vita (VPK)" --limit 5
+scripts/vita3k-deploy.sh download-vpk
+```
+
+Manual fallback:
+
+```sh
+RUN_ID=27437425077
+ARTIFACT=$(gh api repos/matemolnar8/vitadeck/actions/runs/$RUN_ID/artifacts \
+  --jq '.artifacts[] | select(.name | startswith("vitadeck-vpk")) | .name')
+mkdir -p out-vita
+gh run download "$RUN_ID" -n "$ARTIFACT" -D out-vita
+```
+
+There are no GitHub **releases**; use Actions artifacts only.
+
+## Deploy commands
+
+| Command | Purpose |
+| --- | --- |
+| `download-vpk` | Fetch latest successful CI VPK into `out-vita/` |
+| `setup-vita3k` | Symlink `shaders-builtin` next to extracted binary |
+| `install-vpk` | Unzip VPK → `ux0/app/PGRI00001/` |
+| `seed-deck-app` | Copy `js/dist/deck-app` → `ux0/data/vitadeck/...` |
+| `sync` | Fast copy of `eboot.bin` + `js/runtime.js` (needs local `out-vita/eboot.bin`) |
+
+Positional `Vita3K file.vpk` often opens the GUI without installing ([issue #3115](https://github.com/Vita3K/Vita3K/issues/3115)); prefer unzip.
+
+## Seed Deck App data
+
+VPK does not bundle Deck Apps. Package data lives at `ux0:data/vitadeck/`:
+
+```sh
+scripts/vita3k-deploy.sh seed-deck-app chat   # creates chat.vdapp
 ```
 
 Restart VitaDeck after changing seeded packages.
 
-### What to verify
+## Vita3K-compatible builds (required for boot)
 
-Use the same navigation map as `vitadeck-manual-testing`:
+The Docker image builds vitaGL with `HAVE_GLSL_SUPPORT=1` for **real hardware**. For emulator boot, vitaGL needs `HAVE_VITA3K_SUPPORT=1` ([vitaGL README](https://github.com/Rinnegatamante/vitaGL)). Consider a dedicated Vitasdk image or `out-vita3k` target so hardware builds stay unchanged.
 
-- **Start / F1** — Deck App ↔ Shell
-- **Shell** — list installed packages, **Upload** entry
-- Deck App renders with expected fonts and layout
-- Check Vita3K log window for `TraceLog` / startup errors
-
-### Runtime Upload on emulator
-
-Only when explicitly testing upload behavior:
-
-1. Open Shell → Upload.
-2. From the host: `curl -X POST http://localhost:8787/upload -F archive=@js/examples/chat/dist/chat.vdapp.zip`
-3. Confirm files under `$V3K/ux0/data/vitadeck/installed-deck-apps/`.
-
-Network behavior can differ from a real Vita; treat pass/fail as indicative, not authoritative.
-
-## Vita3K-compatible builds (important)
-
-The repo Docker image builds vitaGL with `HAVE_GLSL_SUPPORT=1` for **real hardware**. vitaGL also documents `HAVE_VITA3K_SUPPORT=1` for emulator compatibility ([vitaGL README](https://github.com/Rinnegatamante/vitaGL)).
-
-If VitaDeck **crashes or renders black** on Vita3K but works on hardware:
-
-1. Rebuild vitaGL in the Vitasdk image with `HAVE_VITA3K_SUPPORT=1` (and vitaShaRK adjusted per upstream docs).
-2. Rebuild `out-vita` from scratch.
-3. Reinstall the VPK.
-
-Until a dedicated `out-vita3k` target exists, document any local Dockerfile tweak in the PR that needs emulator testing.
+After a Vita3K-target build: `install-vpk` again and relaunch with computerUse.
 
 ## Platform notes
 
 ### Linux / Cloud VM
 
-- AppImage may fail without FUSE: `./Vita3K-x86_64.AppImage --appimage-extract`, then run `./squashfs-root/usr/bin/Vita3K`.
-- Requires a display (`DISPLAY` set, X11 socket present).
-- **Do not** pipe Vita3K through `timeout` — it launches a long-lived GUI; use tmux instead.
+- Extract AppImage if FUSE is missing; run `setup-vita3k` once.
+- Requires `DISPLAY` and an X11 socket.
+- **Do not** pipe Vita3K through `timeout` — use tmux.
+- Software rendering (llvmpipe) works for emulator UI; app boot still needs Vita3K-target binaries.
 
 ### macOS
 
-- Install from the `.dmg`; pref-path defaults to `~/Library/Application Support/Vita3K/`.
-- Adjust `VITA3K_PREF` in `scripts/vita3k-deploy.sh` or export it before running.
+- Pref-path: `~/Library/Application Support/Vita3K/Vita3K/`
+- Set `VITA3K_PREF` when running deploy script from a non-default location.
 
-## Limitations (when to use hardware instead)
+## When to use hardware instead
 
-- Shader / vitaGL paths differ; emulator-specific build flags may be required.
-- Performance, touch, and motion are approximated.
-- `upload_vita` / FTP / `make run` targets target a real Vita IP — not Vita3K.
-- Automated CI smoke tests on Vita3K are impractical (firmware, GUI, GPU).
+- Any feature validation beyond “does the VPK install and attempt boot?”
+- Runtime Upload, FTP/`upload_vita`, performance, touch
+- Authoritative rendering or shader behaviour
 
 ## Related skills
 
