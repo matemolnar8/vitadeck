@@ -48,6 +48,7 @@ int main(int argc, char *argv[])
         TraceLog(LOG_ERROR, "%s", init_error);
         return_defer(1);
     }
+    if (!package_library_has_active_deck_app()) shell_show_home(&shell);
 
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "VitaDeck");
     window_ready = true;
