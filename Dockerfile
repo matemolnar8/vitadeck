@@ -28,6 +28,13 @@ RUN apt-get update \
 
 COPY --from=vitasdk-base /usr/local/vitasdk /usr/local/vitasdk
 
+# Vita3K builds need a recent vitaShaRK (shark_init_simple); vitasdk's bundled header is too old.
+WORKDIR /build
+RUN if [ "${VITA3K_SUPPORT}" = "1" ]; then \
+      git clone --depth=1 https://github.com/Rinnegatamante/vitaShaRK.git && \
+      cd vitaShaRK && make -j"$(nproc)" install; \
+    fi
+
 # vitaGL
 WORKDIR /build
 RUN git clone --depth=1 https://github.com/Rinnegatamante/vitaGL.git
