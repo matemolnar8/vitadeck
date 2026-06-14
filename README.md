@@ -16,3 +16,9 @@ Start building an app with the SDK:
 ```bash
 npx @vitadeck/sdk create my-deck-app
 ```
+
+Agent skills (Cursor, Claude Code, etc.):
+
+```bash
+npx skills add matemolnar8/vitadeck
+```
