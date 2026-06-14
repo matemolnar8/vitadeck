@@ -220,9 +220,17 @@ static void remove_package_confirmed(VdShell *shell, const char *package_name, i
 void shell_init(VdShell *shell)
 {
     memset(shell, 0, sizeof(*shell));
-    shell->state = VD_SHELL_HOME;
+    shell->state = VD_SHELL_HIDDEN;
     shell->remove_confirm_row = -1;
     upload_server_init(&shell->upload_server);
+}
+
+void shell_show_home(VdShell *shell)
+{
+    shell->state = VD_SHELL_HOME;
+    shell->focus_row = 0;
+    shell->scroll_row = 0;
+    shell->focus_col = 0;
 }
 
 void shell_shutdown(VdShell *shell)

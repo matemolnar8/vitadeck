@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <raylib.h>
 
-typedef enum { NT_RECT = 1, NT_TEXT = 2, NT_BUTTON = 3, NT_RAW_TEXT = 4 } NodeType;
+typedef enum { NT_RECT = 1, NT_TEXT = 2, NT_BUTTON = 3, NT_RAW_TEXT = 4, NT_SCROLL = 5 } NodeType;
 
 typedef struct {
     int x, y, width, height;
@@ -40,6 +40,14 @@ typedef struct {
     float border_radius;
 } ButtonProps;
 
+typedef struct {
+    int x, y, width, height;
+    bool has_fill;
+    Color fill_color;
+    int gap;
+    int padding;
+} ScrollProps;
+
 typedef struct ReactInstance ReactInstance;
 
 struct ReactInstance {
@@ -49,11 +57,29 @@ struct ReactInstance {
         RectProps rect;
         TextProps text;
         ButtonProps button;
+        ScrollProps scroll;
         char *raw_text;
     } props;
     ReactInstance **children;
     ReactInstance *parent;
 };
+
+// Minimal column layout for scroll containers. Rect and button children
+// participate in the flow: each is placed at the current flow position
+// (its own y acts as a top margin) and advances the flow by margin +
+// height + gap. Returns false for children that are not part of the flow.
+bool scroll_flow_step(const ReactInstance *child, int gap, int *flow_y, int *base_y_out);
+
+// Total stacked content height of a scroll container, including padding.
+int scroll_content_height(const ReactInstance *scroll);
+
+// Look up a scroll container in the front snapshot (thread-safe).
+// Returns false when id is not a scroll container.
+bool instance_scroll_metrics(const char *id, int *viewport_height, int *content_height);
+
+// Deepest scroll container whose viewport contains (x, y).
+// Returns a malloc'd id (caller frees) or NULL.
+char *instance_scroll_at(int x, int y);
 
 // Initialize the instance tree (call once at startup before any threads)
 void instance_tree_init(void);

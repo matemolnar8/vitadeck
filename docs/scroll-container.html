@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>VitaDeck Internals — The Scroll Container</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #0a0e1c;
+  --panel: #111729;
+  --panel-2: #161e36;
+  --line: #232c4a;
+  --text: #ccd4ea;
+  --muted: #7a86a8;
+  --accent: #2ee6c8;
+  --accent-dim: rgba(46, 230, 200, 0.14);
+  --amber: #ffb454;
+  --user: #2b5dd7;
+  --agent: #1d2742;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  --sans: "IBM Plex Sans", sans-serif;
+  --display: "Chakra Petch", var(--sans);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.65;
+  overflow-x: hidden;
+}
+/* scanline + vignette atmosphere */
+body::before {
+  content: "";
+  position: fixed; inset: 0; z-index: 999; pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 3px);
+  mix-blend-mode: overlay;
+}
+body::after {
+  content: "";
+  position: fixed; inset: 0; z-index: 998; pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 0%, transparent 55%, rgba(0,0,0,0.5));
+}
+.wrap { max-width: 1060px; margin: 0 auto; padding: 0 28px; }
+
+/* ---------- header ---------- */
+header {
+  padding: 96px 0 72px;
+  position: relative;
+  border-bottom: 1px solid var(--line);
+  background:
+    radial-gradient(700px 360px at 18% 0%, rgba(46,230,200,0.07), transparent 70%),
+    radial-gradient(620px 320px at 85% 20%, rgba(43,93,215,0.10), transparent 70%);
+}
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--accent);
+  display: flex; align-items: center; gap: 14px;
+  animation: rise 0.7s 0.05s cubic-bezier(.2,.7,.2,1) both;
+}
+.eyebrow::before { content: ""; width: 42px; height: 1px; background: var(--accent); }
+h1 {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(44px, 7.5vw, 84px);
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  margin: 22px 0 18px;
+  animation: rise 0.7s 0.15s cubic-bezier(.2,.7,.2,1) both;
+}
+h1 .dim { color: var(--muted); font-weight: 400; }
+h1 .glow { color: var(--accent); text-shadow: 0 0 32px rgba(46,230,200,0.45); }
+.lede {
+  max-width: 620px;
+  color: var(--muted);
+  font-size: 17px;
+  animation: rise 0.7s 0.25s cubic-bezier(.2,.7,.2,1) both;
+}
+.lede strong { color: var(--text); font-weight: 500; }
+.keys {
+  margin-top: 30px; display: flex; gap: 10px; flex-wrap: wrap;
+  animation: rise 0.7s 0.35s cubic-bezier(.2,.7,.2,1) both;
+}
+.keys span {
+  font-family: var(--mono); font-size: 12px;
+  border: 1px solid var(--line); border-bottom-width: 2px;
+  padding: 5px 11px; border-radius: 6px; color: var(--muted);
+  background: var(--panel);
+}
+@keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+
+/* ---------- sections ---------- */
+section { padding: 72px 0; border-bottom: 1px solid var(--line); }
+.sec-head { display: flex; align-items: baseline; gap: 18px; margin-bottom: 14px; }
+.sec-num {
+  font-family: var(--mono); font-size: 13px; color: var(--accent);
+  letter-spacing: 0.18em;
+}
+h2 {
+  font-family: var(--display); font-weight: 600;
+  font-size: clamp(26px, 3.4vw, 36px); letter-spacing: -0.01em;
+}
+.sec-intro { color: var(--muted); max-width: 680px; margin-bottom: 36px; }
+.sec-intro code, p code, li code, td code {
+  font-family: var(--mono); font-size: 0.86em;
+  background: var(--panel-2); border: 1px solid var(--line);
+  padding: 1px 6px; border-radius: 4px; color: var(--accent); white-space: nowrap;
+}
+
+/* ---------- pipeline diagram ---------- */
+.pipeline { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.lane { padding: 26px 26px 30px; }
+.lane + .lane { border-left: 1px dashed var(--line); }
+.lane-js { background: linear-gradient(180deg, rgba(43,93,215,0.07), transparent 60%); }
+.lane-ui { background: linear-gradient(180deg, rgba(46,230,200,0.06), transparent 60%); }
+.lane-tag {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.26em;
+  text-transform: uppercase; margin-bottom: 20px;
+  display: flex; align-items: center; gap: 8px;
+}
+.lane-js .lane-tag { color: #7fa3ff; }
+.lane-ui .lane-tag { color: var(--accent); }
+.lane-tag::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 12px currentColor; }
+.node {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 13px 16px; position: relative;
+}
+.node + .node, .node + .flow-note, .flow-note + .node { margin-top: 34px; }
+.node h4 { font-family: var(--display); font-size: 15px; font-weight: 600; }
+.node p { font-size: 13.5px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+.node .file { font-family: var(--mono); font-size: 11px; color: var(--accent); display: block; margin-top: 8px; opacity: 0.85; }
+.node::after {
+  content: "▼"; position: absolute; left: 50%; bottom: -26px; transform: translateX(-50%);
+  color: var(--muted); font-size: 11px; opacity: 0.7;
+}
+.node.last::after { content: none; }
+.flow-note {
+  font-family: var(--mono); font-size: 11.5px; color: var(--amber);
+  text-align: center; padding: 2px 0; letter-spacing: 0.04em;
+}
+.bridge {
+  grid-column: 1 / -1; border-top: 1px dashed var(--line);
+  padding: 16px 26px; display: flex; gap: 14px; align-items: center;
+  font-family: var(--mono); font-size: 12.5px; color: var(--amber);
+  background: rgba(255,180,84,0.04);
+}
+.bridge b { color: var(--text); font-weight: 500; }
+
+/* ---------- layout diagram ---------- */
+.layout-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 36px; align-items: start; }
+@media (max-width: 880px) { .layout-grid, .pipeline { grid-template-columns: 1fr; } .lane + .lane { border-left: 0; border-top: 1px dashed var(--line); } }
+.diagram {
+  position: relative; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 14px; padding: 34px; min-height: 420px;
+}
+.d-viewport {
+  position: relative; border: 2px solid var(--accent); border-radius: 8px;
+  height: 360px; overflow: hidden;
+  box-shadow: 0 0 0 4px var(--accent-dim), inset 0 0 60px rgba(0,0,0,0.35);
+}
+.d-pad { position: absolute; inset: 0; border: 14px dashed transparent; }
+.d-bubble {
+  position: absolute; border-radius: 9px; padding: 8px 12px;
+  font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,0.85);
+  display: flex; align-items: center;
+}
+.d-bubble.agent { background: var(--agent); border: 1px solid #2b3a66; left: 26px; }
+.d-bubble.user { background: var(--user); right: 26px; }
+.d-label {
+  position: absolute; font-family: var(--mono); font-size: 10.5px;
+  color: var(--amber); letter-spacing: 0.06em; white-space: nowrap;
+}
+.d-label .tick { color: var(--muted); }
+.measure { position: absolute; border-left: 1px dashed var(--amber); opacity: 0.85; }
+.measure::before, .measure::after {
+  content: ""; position: absolute; left: -4px; width: 9px; height: 1px; background: var(--amber);
+}
+.measure::before { top: 0; } .measure::after { bottom: 0; }
+.rules { display: flex; flex-direction: column; gap: 14px; }
+.rule {
+  border: 1px solid var(--line); border-left: 3px solid var(--accent);
+  background: var(--panel); border-radius: 0 10px 10px 0; padding: 14px 18px;
+}
+.rule h4 { font-family: var(--display); font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.rule p { font-size: 13.5px; color: var(--muted); }
+.formula {
+  margin-top: 8px; font-family: var(--mono); font-size: 13px;
+  background: #0d1224; border: 1px solid var(--line); border-radius: 10px;
+  padding: 16px 18px; color: var(--text); overflow-x: auto; line-height: 1.9;
+}
+.formula .c { color: var(--muted); }
+.formula .k { color: var(--accent); }
+.formula .n { color: var(--amber); }
+
+/* ---------- code ---------- */
+pre.code {
+  font-family: var(--mono); font-size: 13px; line-height: 1.75;
+  background: #0d1224; border: 1px solid var(--line); border-radius: 12px;
+  padding: 20px 22px; overflow-x: auto; margin-top: 18px;
+}
+.code .cm { color: #5b6584; font-style: italic; }
+.code .kw { color: #7fa3ff; }
+.code .fn { color: var(--accent); }
+.code .st { color: var(--amber); }
+.code .nu { color: #ff8f6b; }
+
+/* ---------- input table ---------- */
+table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+th, td { text-align: left; padding: 13px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--muted); font-weight: 500;
+}
+td { font-size: 14px; }
+td:first-child { font-family: var(--display); font-weight: 600; white-space: nowrap; }
+tr:hover td { background: rgba(46,230,200,0.03); }
+.pill {
+  display: inline-block; font-family: var(--mono); font-size: 11px;
+  border: 1px solid var(--line); border-radius: 99px; padding: 2px 10px;
+  color: var(--muted); margin-right: 6px;
+}
+.pill.on { color: var(--accent); border-color: rgba(46,230,200,0.4); }
+
+/* ---------- demo ---------- */
+.demo-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 30px; align-items: start; }
+@media (max-width: 880px) { .demo-wrap { grid-template-columns: 1fr; } }
+.vita {
+  background: linear-gradient(165deg, #181f38, #0e1326);
+  border: 1px solid var(--line); border-radius: 26px; padding: 26px 30px;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05);
+  position: relative;
+}
+.vita-screen {
+  position: relative; background: #0c1020; border-radius: 8px;
+  height: 300px; outline: none; overflow: hidden; cursor: pointer;
+  border: 2px solid #1b2440; transition: border-color 0.18s, box-shadow 0.18s;
+}
+.vita-screen:focus-visible, .vita-screen.focused {
+  border-color: #fff;
+  box-shadow: 0 0 0 4px rgba(255,255,255,0.12), 0 0 28px rgba(46,230,200,0.2);
+}
+.vita-screen canvas { display: block; width: 100%; height: 100%; }
+.vita-hint {
+  margin-top: 14px; font-family: var(--mono); font-size: 11.5px;
+  color: var(--muted); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.vita-hint b { color: var(--accent); font-weight: 500; }
+.readout { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 24px; }
+.stat {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 18px;
+}
+.stat .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); }
+.stat .v { font-family: var(--display); font-size: 26px; font-weight: 700; color: var(--accent); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.stat .v small { font-size: 13px; color: var(--muted); font-weight: 400; }
+.stat.amber .v { color: var(--amber); }
+.gauge { height: 6px; border-radius: 99px; background: var(--panel-2); margin-top: 10px; overflow: hidden; }
+.gauge i { display: block; height: 100%; width: 0%; background: var(--accent); border-radius: 99px; transition: width 0.08s linear; }
+
+/* ---------- file map ---------- */
+.files { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.fcard {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 16px 18px; transition: border-color 0.2s, transform 0.2s;
+}
+.fcard:hover { border-color: rgba(46,230,200,0.45); transform: translateY(-2px); }
+.fcard .path { font-family: var(--mono); font-size: 12px; color: var(--accent); word-break: break-all; }
+.fcard p { font-size: 13px; color: var(--muted); margin-top: 7px; line-height: 1.55; }
+
+footer {
+  padding: 50px 0 70px; color: var(--muted);
+  font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em;
+  display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+footer b { color: var(--accent); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">VitaDeck Internals · 01</div>
+    <h1>The <span class="glow">Scroll</span> Container<br /><span class="dim">&amp; the minimal layout engine</span></h1>
+    <p class="lede">
+      How a React <code>&lt;Scroll&gt;</code> element becomes a clipped, focusable,
+      D-pad-scrollable viewport on a PlayStation Vita — <strong>without a layout engine</strong>,
+      except for the one tiny rule it ships with: <strong>stack children in a column</strong>.
+    </p>
+    <div class="keys">
+      <span>↑ ↓ D-pad / arrows</span><span>◀ analog stick</span><span>⊙ mouse wheel</span><span>✛ scissor clipping</span>
+    </div>
+  </div>
+</header>
+
+<section id="pipeline">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">01</span><h2>Two threads, one tree</h2></div>
+    <p class="sec-intro">
+      VitaDeck renders React on a QuickJS thread and draws with raylib on the UI thread.
+      The two meet at a double-buffered <em>instance tree</em>: JS mutates a back buffer,
+      then swaps an immutable snapshot to the front. Scroll <em>position</em> deliberately
+      lives on neither side of that handoff — it is UI-thread state keyed by instance id,
+      so scrolling never round-trips through React.
+    </p>
+
+    <div class="pipeline">
+      <div class="lane lane-js">
+        <div class="lane-tag">JS thread · QuickJS</div>
+        <div class="node">
+          <h4>&lt;Scroll x y width height gap padding&gt;</h4>
+          <p>The SDK component emits a <code>vita-scroll</code> host element.</p>
+          <span class="file">js/packages/sdk/src/index.tsx</span>
+        </div>
+        <div class="node">
+          <h4>React reconciler</h4>
+          <p>Diffs the element tree; create/update flows into flat native calls.</p>
+          <span class="file">vitadeck-react-reconciler-mutation.ts</span>
+        </div>
+        <div class="node last">
+          <h4>nativeCreateScroll(id, …, gap, padding)</h4>
+          <p>QuickJS binding builds an <code>NT_SCROLL</code> node in the <b>back buffer</b>.</p>
+          <span class="file">src/jslib/instance.c</span>
+        </div>
+      </div>
+      <div class="lane lane-ui">
+        <div class="lane-tag">UI thread · raylib @ 60 fps</div>
+        <div class="node">
+          <h4>Front snapshot</h4>
+          <p>Arena-allocated deep copy, swapped in under a mutex after each commit.</p>
+          <span class="file">src/ui/instance_tree.c</span>
+        </div>
+        <div class="node">
+          <h4>Input polling</h4>
+          <p>Focus, D-pad, analog stick and wheel mutate the scroll-offset map.</p>
+          <span class="file">src/ui/input.c · src/ui/scroll.c</span>
+        </div>
+        <div class="node last">
+          <h4>Render</h4>
+          <p>Column flow → scissor clip → children → scrollbar → focus ring.</p>
+          <span class="file">src/ui/render.c</span>
+        </div>
+      </div>
+      <div class="bridge">
+        <span>⟿ &nbsp;<b>scroll offsets survive the swap</b> — the map in <b>scroll.c</b> is keyed by instance id,
+        so a re-render (new snapshot, same ids) keeps your place in the list.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="layout">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">02</span><h2>The minimal layout engine</h2></div>
+    <p class="sec-intro">
+      Every other VitaDeck element is absolutely positioned. <code>Scroll</code> introduces exactly
+      one layout behavior — <strong>column flow</strong> — implemented in ~20 lines
+      (<code>scroll_flow_step</code>). Direct <code>Rect</code> and <code>Button</code> children
+      participate; anything else renders at its own coordinates and is skipped by the flow.
+    </p>
+
+    <div class="layout-grid">
+      <div class="diagram">
+        <div class="d-viewport">
+          <div class="d-bubble user"  style="top: 26px;  width: 46%; height: 56px;">message[0] · user</div>
+          <div class="d-bubble agent" style="top: 122px; width: 52%; height: 84px;">message[1] · agent</div>
+          <div class="d-bubble user"  style="top: 246px; width: 42%; height: 48px;">message[2] · user</div>
+          <div class="d-bubble agent" style="top: 334px; width: 52%; height: 70px;">message[3] · clipped ↓</div>
+
+          <div class="measure" style="left: 12px; top: 0;   height: 26px;"></div>
+          <div class="d-label" style="left: 22px; top: 6px;">padding</div>
+          <div class="measure" style="left: 12px; top: 82px; height: 40px;"></div>
+          <div class="d-label" style="left: 22px; top: 94px;">gap</div>
+          <div class="measure" style="left: 12px; top: 206px; height: 40px;"></div>
+          <div class="d-label" style="left: 22px; top: 218px;">gap</div>
+        </div>
+        <div class="d-label" style="right: 34px; bottom: 8px;">viewport clips at height — <span class="tick">BeginScissorMode()</span></div>
+      </div>
+
+      <div class="rules">
+        <div class="rule">
+          <h4>y is a margin, not a position</h4>
+          <p>A stacked child's <code>y</code> nudges it down from its flow slot and pushes every later sibling — exactly like <code>margin-top</code>.</p>
+        </div>
+        <div class="rule">
+          <h4>x is free</h4>
+          <p><code>x</code> is relative to the padded content area, untouched by the flow. That single degree of freedom is what lets chat bubbles alternate left / right.</p>
+        </div>
+        <div class="rule">
+          <h4>Heights must be explicit</h4>
+          <p>The flow reads <code>height</code> straight from props — no text measuring. That keeps hit-testing font-free and the whole engine trivially small.</p>
+        </div>
+        <div class="formula">
+<span class="c">// scroll_flow_step, per child:</span><br />
+base&nbsp;&nbsp;&nbsp;&nbsp;= flow_y<br />
+place_y&nbsp;= base <span class="k">+</span> child.y<br />
+flow_y &nbsp;= place_y <span class="k">+</span> child.height <span class="k">+</span> gap<br />
+<br />
+<span class="c">// after the loop:</span><br />
+content_height = flow_y <span class="k">−</span> gap <span class="k">+</span> <span class="n">2</span>·padding<br />
+max_scroll&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= max(<span class="n">0</span>, content_height <span class="k">−</span> viewport_height)
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="render">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">03</span><h2>Drawing one frame</h2></div>
+    <p class="sec-intro">
+      Rendering re-runs the same flow math, offsets everything by the stored scroll position,
+      and lets the GPU do the overflow work via raylib's scissor test. The offset is clamped
+      against <code>max_scroll</code> every frame, so content that shrinks can never strand
+      the viewport in empty space.
+    </p>
+<pre class="code"><span class="cm">// src/ui/render.c — render_scroll_instance (shape of it)</span>
+offset = <span class="fn">clamp</span>(scroll_get_offset(id), <span class="nu">0</span>, max_scroll);   <span class="cm">// self-healing</span>
+
+<span class="fn">BeginScissorMode</span>(abs_x, abs_y, width, height);          <span class="cm">// ✂ overflow:hidden</span>
+content_origin = (abs_x + padding, abs_y + padding <span class="kw">-</span> offset);
+<span class="kw">for each</span> child:
+    <span class="kw">if</span> <span class="fn">scroll_flow_step</span>(child, gap, &amp;flow_y, &amp;base)   <span class="cm">// rect / button → stacked</span>
+        <span class="fn">render</span>(child <span class="kw">at</span> content_origin + base)
+    <span class="kw">else</span>
+        <span class="fn">render</span>(child <span class="kw">at</span> content_origin)               <span class="cm">// text etc → free placement</span>
+<span class="fn">EndScissorMode</span>();
+
+<span class="kw">if</span> (max_scroll &gt; <span class="nu">0</span>)  <span class="fn">draw_scrollbar</span>(thumb ∝ viewport / content);
+<span class="kw">if</span> (<span class="fn">focused</span>(id))     <span class="fn">draw_focus_ring</span>();                <span class="cm">// white 2px outline</span></pre>
+    <p class="sec-intro" style="margin-top: 22px; margin-bottom: 0;">
+      Hit-testing in <code>instance_tree.c</code> mirrors this exactly: it walks the same flow,
+      subtracts the same offset, and refuses to hit children outside the viewport — so a button
+      scrolled out of view can't be clicked through the clip edge.
+    </p>
+  </div>
+</section>
+
+<section id="input">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">04</span><h2>Focus, then scroll</h2></div>
+    <p class="sec-intro">
+      The container registers itself as a single focusable element (its children don't compete).
+      Once focused, it <strong>consumes</strong> up/down — navigation only wins back the D-pad
+      when the list is already at an edge. One press at the limit moves focus away; anywhere
+      else, it scrolls.
+    </p>
+    <table>
+      <thead><tr><th>Input</th><th>Behavior</th><th>Speed</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>D-pad / arrow keys</td>
+          <td><span class="pill on">held</span> scrolls continuously while the container has focus; consumed until the edge is reached, then the next <span class="pill">press</span> navigates focus away.</td>
+          <td><code>8 px / frame</code> ≈ 480 px/s</td>
+        </tr>
+        <tr>
+          <td>Left analog stick</td>
+          <td>Proportional smooth scrolling past a 25% deadzone — tilt gently for slow reading, slam it to fly.</td>
+          <td><code>±14 px / frame</code> max</td>
+        </tr>
+        <tr>
+          <td>Mouse wheel</td>
+          <td>No focus needed: <code>instance_scroll_at(x, y)</code> finds the <em>deepest</em> scroll container under the cursor and nudges it.</td>
+          <td><code>40 px / notch</code></td>
+        </tr>
+        <tr>
+          <td>Runtime restart</td>
+          <td>The Shell swapping Deck Apps calls <code>scroll_reset()</code> — stale offsets from the previous app's ids are dropped wholesale.</td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="demo">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">05</span><h2>Live replica</h2></div>
+    <p class="sec-intro">
+      The exact native algorithm — flow, clamping, scrollbar, focus ring, edge-consume —
+      re-implemented below at half Vita scale. <strong>Click the screen</strong> to focus it,
+      then hold <strong>↑ / ↓</strong> or use the <strong>wheel</strong>.
+    </p>
+    <div class="demo-wrap">
+      <div class="vita">
+        <div class="vita-screen" id="screen" tabindex="0" aria-label="Interactive scroll container demo">
+          <canvas id="cv" width="960" height="600"></canvas>
+        </div>
+        <div class="vita-hint">
+          <span><b>↑↓</b> held = 4 px/frame (half scale)</span>
+          <span><b>wheel</b> = 20 px/notch</span>
+          <span id="focus-state">unfocused — click to focus</span>
+        </div>
+      </div>
+      <div class="readout">
+        <div class="stat">
+          <div class="k">offset / max_scroll</div>
+          <div class="v"><span id="r-offset">0</span> <small>/ <span id="r-max">0</span> px</small></div>
+          <div class="gauge"><i id="r-gauge"></i></div>
+        </div>
+        <div class="stat amber">
+          <div class="k">content_height</div>
+          <div class="v"><span id="r-content">0</span> <small>px</small></div>
+        </div>
+        <div class="stat">
+          <div class="k">viewport_height</div>
+          <div class="v"><span id="r-viewport">0</span> <small>px</small></div>
+        </div>
+        <div class="stat amber">
+          <div class="k">edge consume</div>
+          <div class="v" style="font-size: 15px; line-height: 1.5;" id="r-edge">scrolling — D-pad consumed</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="files" style="border-bottom: 0;">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">06</span><h2>Where to read the code</h2></div>
+    <div class="files">
+      <div class="fcard"><div class="path">src/ui/scroll.c · scroll.h</div><p>The whole scroll-state "database": a string-keyed hash map of offsets, UI-thread only, plus <code>scroll_reset()</code>.</p></div>
+      <div class="fcard"><div class="path">src/ui/instance_tree.h · .c</div><p><code>NT_SCROLL</code>, <code>ScrollProps</code>, <code>scroll_flow_step</code>, <code>scroll_content_height</code>, flow-aware hit-testing, focusable collection, <code>instance_scroll_metrics</code> / <code>instance_scroll_at</code>.</p></div>
+      <div class="fcard"><div class="path">src/ui/render.c</div><p><code>render_scroll_instance</code>: scissor clip, stacked children, clamping, scrollbar, focus outline.</p></div>
+      <div class="fcard"><div class="path">src/ui/input.c</div><p>Edge-consume D-pad logic, analog-stick smooth scrolling, wheel-to-deepest-container routing.</p></div>
+      <div class="fcard"><div class="path">src/jslib/instance.c</div><p><code>nativeCreateScroll</code> / <code>nativeUpdateScroll</code> QuickJS bindings (12 flat args, no object marshalling).</p></div>
+      <div class="fcard"><div class="path">js/packages/sdk/src/index.tsx</div><p>The <code>&lt;Scroll&gt;</code> component and its prop contract; host type in <code>vitadeck-host-types.ts</code>; reconciler wiring in the runtime package.</p></div>
+      <div class="fcard"><div class="path">js/examples/chat/src/App.tsx</div><p>The proving ground: six alternating chat bubbles in one <code>&lt;Scroll&gt;</code>, alternating sides purely via child <code>x</code>.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap" style="display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 0;">
+    <span><b>VitaDeck</b> · scroll container explainer</span>
+    <span>column flow → scissor → offset map · no layout engine harmed</span>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const screen = document.getElementById("screen");
+  const cv = document.getElementById("cv");
+  const ctx = cv.getContext("2d");
+  const DPR = 2; // canvas is laid out at half its pixel size for crispness
+
+  // viewport in "demo px" (canvas drawn at 2x)
+  const VW = cv.width / DPR;   // 480
+  const VH = cv.height / DPR;  // 300
+  const PADDING = 14, GAP = 18;
+
+  const MESSAGES = [
+    { side: "user",  h: 56, label: "Hey! What is VitaDeck?" },
+    { side: "agent", h: 88, label: "Deck-style React UIs,\nrunning on a PS Vita." },
+    { side: "user",  h: 44, label: "How do bubbles stack?" },
+    { side: "agent", h: 88, label: "Column flow: y is margin,\nx is yours to keep." },
+    { side: "user",  h: 44, label: "And the overflow?" },
+    { side: "agent", h: 72, label: "Scissor-clipped. Offset\nclamped every frame." },
+    { side: "user",  h: 44, label: "D-pad friendly?" },
+    { side: "agent", h: 72, label: "Focused container eats\n↑↓ until the edge." },
+  ];
+
+  // --- the native algorithm, verbatim ---
+  function contentHeight() {
+    let flow = 0;
+    for (const m of MESSAGES) flow += m.h + GAP; // child.y margin = 0 here
+    return (MESSAGES.length ? flow - GAP : 0) + PADDING * 2;
+  }
+
+  const CONTENT = contentHeight();
+  const MAX = Math.max(0, CONTENT - VH);
+  let offset = 0;
+  let focused = false;
+  const held = { up: false, down: false };
+
+  const $ = (id) => document.getElementById(id);
+  $("r-content").textContent = CONTENT;
+  $("r-viewport").textContent = VH;
+  $("r-max").textContent = MAX;
+
+  const BUBBLE_W = 0.52;
+
+  function draw() {
+    ctx.save();
+    ctx.scale(DPR, DPR);
+    ctx.clearRect(0, 0, VW, VH);
+    ctx.fillStyle = "#0c1020";
+    ctx.fillRect(0, 0, VW, VH);
+
+    // children, scissor handled by canvas bounds itself
+    let flow = 0;
+    const cx = PADDING, cy = PADDING - offset;
+    ctx.font = "11px 'IBM Plex Mono', monospace";
+    for (const m of MESSAGES) {
+      const w = VW * BUBBLE_W - PADDING;
+      const x = m.side === "user" ? VW - PADDING * 2 - w : 0;
+      const y = flow;
+      ctx.beginPath();
+      ctx.roundRect(cx + x, cy + y, w, m.h, 9);
+      ctx.fillStyle = m.side === "user" ? "#2b5dd7" : "#1d2742";
+      ctx.fill();
+      if (m.side === "agent") { ctx.strokeStyle = "#2b3a66"; ctx.lineWidth = 1; ctx.stroke(); }
+      ctx.fillStyle = "rgba(255,255,255,0.82)";
+      const lines = m.label.split("\n");
+      lines.forEach((line, i) => {
+        const tw = ctx.measureText(line).width;
+        const tx = m.side === "user" ? cx + x + w - 12 - tw : cx + x + 12;
+        ctx.fillText(line, tx, cy + y + m.h / 2 - (lines.length - 1) * 7 + i * 14 + 4);
+      });
+      flow += m.h + GAP;
+    }
+
+    // scrollbar (∝ viewport / content)
+    if (MAX > 0) {
+      const trackY = 4, trackH = VH - 8, barX = VW - 7;
+      const thumbH = Math.max(16, trackH * VH / CONTENT);
+      const thumbY = trackY + (trackH - thumbH) * (offset / MAX);
+      ctx.fillStyle = "rgba(255,255,255,0.10)";
+      ctx.beginPath(); ctx.roundRect(barX, trackY, 4, trackH, 2); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.45)";
+      ctx.beginPath(); ctx.roundRect(barX, thumbY, 4, thumbH, 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function readout() {
+    $("r-offset").textContent = offset;
+    $("r-gauge").style.width = MAX ? (offset / MAX) * 100 + "%" : "0%";
+    const edge = $("r-edge");
+    if (offset <= 0) edge.textContent = "top edge — ↑ press navigates away";
+    else if (offset >= MAX) edge.textContent = "bottom edge — ↓ press navigates away";
+    else edge.textContent = "scrolling — D-pad consumed";
+  }
+
+  function frame() {
+    let delta = 0;
+    if (focused) {
+      if (held.up) delta -= 4;   // half of native 8 px/frame
+      if (held.down) delta += 4;
+    }
+    if (delta !== 0) {
+      offset = Math.min(MAX, Math.max(0, offset + delta));
+      readout();
+    }
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  screen.addEventListener("focus", () => { focused = true; screen.classList.add("focused"); $("focus-state").innerHTML = "<b>focused</b> — container consumes ↑↓"; });
+  screen.addEventListener("blur", () => { focused = false; held.up = held.down = false; screen.classList.remove("focused"); $("focus-state").textContent = "unfocused — click to focus"; });
+  screen.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowUp") { held.up = true; e.preventDefault(); }
+    if (e.key === "ArrowDown") { held.down = true; e.preventDefault(); }
+  });
+  screen.addEventListener("keyup", (e) => {
+    if (e.key === "ArrowUp") held.up = false;
+    if (e.key === "ArrowDown") held.down = false;
+  });
+  screen.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    offset = Math.min(MAX, Math.max(0, offset + Math.sign(e.deltaY) * 20));
+    readout();
+  }, { passive: false });
+
+  readout();
+  frame();
+})();
+</script>
+</body>
+</html>

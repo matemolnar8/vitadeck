@@ -49,10 +49,25 @@ export type VitaButtonProps = WithKey<{
   onPressEnd?: () => void;
 }>;
 
+export type VitaScrollProps = WithKey<{
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** Optional background fill. */
+  color?: Color;
+  /** Vertical gap in pixels between stacked children. */
+  gap?: number;
+  /** Inner padding in pixels around the stacked content. */
+  padding?: number;
+  children?: ReactNode | ReactNode[];
+}>;
+
 export type VitaHostPropsByType = {
   "vita-text": VitaTextProps;
   "vita-rect": VitaRectProps;
   "vita-button": VitaButtonProps;
+  "vita-scroll": VitaScrollProps;
 };
 
 export type VitaHostType = keyof VitaHostPropsByType;

@@ -23,6 +23,7 @@ typedef struct {
 } VdShell;
 
 void shell_init(VdShell *shell);
+void shell_show_home(VdShell *shell);
 void shell_shutdown(VdShell *shell);
 bool shell_is_visible(const VdShell *shell);
 void shell_update(VdShell *shell, bool *request_runtime_restart);

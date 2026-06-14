@@ -6,6 +6,7 @@
 #include "fonts.h"
 #include "instance_tree.h"
 #include "input.h"
+#include "scroll.h"
 
 #define TEXT_LAYOUT_MAX_LINES 128
 #define TEXT_LAYOUT_MAX_LINE_CHARS 512
@@ -321,6 +322,82 @@ static void render_button_instance(ReactInstance *inst, RenderContext ctx)
                b->text_color);
 }
 
+static void render_scrollbar(Rectangle viewport, int content_height, int offset)
+{
+    const int track_margin = 4;
+    const int bar_width = 4;
+    float track_x = viewport.x + viewport.width - bar_width - track_margin;
+    float track_y = viewport.y + track_margin;
+    float track_height = viewport.height - track_margin * 2;
+    if (track_height <= 0 || content_height <= 0) return;
+
+    float thumb_height = track_height * viewport.height / (float)content_height;
+    if (thumb_height < 16.0f) thumb_height = 16.0f;
+    if (thumb_height > track_height) thumb_height = track_height;
+
+    int max_scroll = content_height - (int)viewport.height;
+    float thumb_y = track_y;
+    if (max_scroll > 0) {
+        thumb_y += (track_height - thumb_height) * ((float)offset / (float)max_scroll);
+    }
+
+    DrawRectangleRounded((Rectangle){track_x, track_y, bar_width, track_height}, 1.0f, 4, (Color){255, 255, 255, 30});
+    DrawRectangleRounded((Rectangle){track_x, thumb_y, bar_width, thumb_height}, 1.0f, 4, (Color){255, 255, 255, 120});
+}
+
+static void render_scroll_instance(ReactInstance *inst, RenderContext ctx)
+{
+    ScrollProps *s = &inst->props.scroll;
+    int abs_x = ctx.x + s->x;
+    int abs_y = ctx.y + s->y;
+    Rectangle viewport = {abs_x, abs_y, s->width, s->height};
+
+    if (s->has_fill) {
+        DrawRectangle(abs_x, abs_y, s->width, s->height, s->fill_color);
+    }
+
+    int content_height = scroll_content_height(inst);
+    int max_scroll = content_height - s->height;
+    if (max_scroll < 0) max_scroll = 0;
+
+    int offset = scroll_get_offset(inst->id);
+    if (offset > max_scroll) {
+        offset = max_scroll;
+        scroll_set_offset(inst->id, offset);
+    }
+
+    int content_x = abs_x + s->padding;
+    int content_y = abs_y + s->padding - offset;
+
+    BeginScissorMode(abs_x, abs_y, s->width, s->height);
+    int flow_y = 0;
+    RenderContext free_ctx = {content_x, content_y, 0};
+    int count = arrlen(inst->children);
+    for (int i = 0; i < count; i++) {
+        ReactInstance *child = inst->children[i];
+        if (!child) continue;
+        int base_y = 0;
+        if (scroll_flow_step(child, s->gap, &flow_y, &base_y)) {
+            RenderContext child_ctx = {content_x, content_y + base_y, 0};
+            render_instance(child, child_ctx);
+        } else {
+            render_instance(child, free_ctx);
+            if (child->type == NT_TEXT) {
+                free_ctx.text_index++;
+            }
+        }
+    }
+    EndScissorMode();
+
+    if (max_scroll > 0) {
+        render_scrollbar(viewport, content_height, offset);
+    }
+
+    if (input_is_hovered(inst->id)) {
+        DrawRectangleLinesEx(viewport, 2.0f, (Color){255, 255, 255, 200});
+    }
+}
+
 static void render_instance(ReactInstance *inst, RenderContext ctx)
 {
     if (!inst) return;
@@ -334,6 +411,9 @@ static void render_instance(ReactInstance *inst, RenderContext ctx)
         break;
     case NT_BUTTON:
         render_button_instance(inst, ctx);
+        break;
+    case NT_SCROLL:
+        render_scroll_instance(inst, ctx);
         break;
     case NT_RAW_TEXT:
         break;
