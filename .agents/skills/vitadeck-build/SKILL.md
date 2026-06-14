@@ -1,6 +1,8 @@
 ---
 name: vitadeck-build
 description: Builds the JS runtime (pnpm in js/), then vitadeck for the host (CMake + raylib) and for PSVita in the Vitasdk Docker Compose service. Use when editing vitadeck C/native or JS/deck-app code, verifying desktop and Vita targets, producing out/vitadeck or out-vita/vitadeck.vpk, or when the user mentions macOS build, PSVita, VPK, VITASDK, docker-compose vitasdk, or js/dist.
+metadata:
+  internal: true
 ---
 
 # vitadeck dual-target build

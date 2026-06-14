@@ -1,6 +1,8 @@
 ---
 name: vitadeck-manual-testing
 description: Guides manual GUI testing of VitaDeck Deck Apps, Shell navigation, Runtime Upload, and walkthrough recording. Use when testing VitaDeck visually, using computerUse with the raylib window, validating Deck App rendering, or producing screenshots/videos for UI changes.
+metadata:
+  internal: true
 ---
 
 # VitaDeck manual testing
