@@ -43,17 +43,23 @@ function extractMarkdownText(message: CopilotMessage): string {
 export async function sendCopilotMessage(
   accessToken: string,
   content: string,
+  sessionId?: string,
 ): Promise<CopilotSendResponse> {
+  const body: Record<string, unknown> = {
+    source: "QuickAction",
+    content,
+    navigationContext: genesysConfig.navigationContext,
+    preferredLanguage: genesysConfig.preferredLanguage,
+    timezone: genesysConfig.timezone,
+  };
+  if (sessionId) {
+    body.sessionId = sessionId;
+  }
+
   const res = await fetch(`${apiBaseUrl()}/api/v2/apps/agentic/copilots/messages`, {
     method: "POST",
     headers: genesysApiHeaders(accessToken),
-    body: JSON.stringify({
-      source: "QuickAction",
-      content,
-      navigationContext: genesysConfig.navigationContext,
-      preferredLanguage: genesysConfig.preferredLanguage,
-      timezone: genesysConfig.timezone,
-    }),
+    body: JSON.stringify(body),
   });
   return readJsonResponse<CopilotSendResponse>(res);
 }
@@ -73,25 +79,52 @@ export async function getSessionMessages(
 }
 
 function findLatestAssistantMessage(messages: CopilotMessage[]): CopilotMessage | undefined {
-  return messages.find((m) => m.originatingEntity === "Assistant");
+  const assistants = messages.filter((m) => m.originatingEntity === "Assistant");
+  if (assistants.length === 0) return undefined;
+
+  return assistants.reduce((latest, message) => {
+    if (!latest) return message;
+    const latestTime = latest.dateSent ? Date.parse(latest.dateSent) : 0;
+    const messageTime = message.dateSent ? Date.parse(message.dateSent) : 0;
+    return messageTime >= latestTime ? message : latest;
+  });
 }
 
-export async function sendCopilotMessageAndWaitForReply(content: string): Promise<string> {
+export type CopilotReply = {
+  reply: string;
+  sessionId: string;
+};
+
+export async function sendCopilotMessageAndWaitForReply(
+  content: string,
+  sessionId?: string,
+): Promise<CopilotReply> {
   const accessToken = await getAccessToken();
-  const sent = await sendCopilotMessage(accessToken, content);
-  const sessionId = sent.session?.id;
-  if (!sessionId) {
+
+  let baselineAssistantId: string | undefined;
+  if (sessionId) {
+    const existing = await getSessionMessages(accessToken, sessionId);
+    baselineAssistantId = findLatestAssistantMessage(existing.entities ?? [])?.id;
+  }
+
+  const sent = await sendCopilotMessage(accessToken, content, sessionId);
+  const activeSessionId = sent.session?.id ?? sessionId;
+  if (!activeSessionId) {
     throw new Error("Copilot response missing session id");
   }
 
   for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
     await delay(POLL_INTERVAL_MS);
-    const listing = await getSessionMessages(accessToken, sessionId);
+    const listing = await getSessionMessages(accessToken, activeSessionId);
     const assistant = findLatestAssistantMessage(listing.entities ?? []);
-    if (assistant) {
-      const text = extractMarkdownText(assistant);
-      return text || "(empty Copilot reply)";
-    }
+    if (!assistant) continue;
+    if (baselineAssistantId && assistant.id === baselineAssistantId) continue;
+
+    const text = extractMarkdownText(assistant);
+    return {
+      reply: text || "(empty Copilot reply)",
+      sessionId: activeSessionId,
+    };
   }
 
   throw new Error("Timed out waiting for Copilot reply");
