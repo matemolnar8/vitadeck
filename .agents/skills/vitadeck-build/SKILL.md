@@ -11,7 +11,7 @@ description: Builds the JS runtime (pnpm in js/), then vitadeck for the host (CM
 
 - Node.js 22+ (Rolldown uses Node 22+ APIs)
 - Dependencies once: `pnpm --dir js install`
-- Produce bundles and selected Deck App package: `pnpm --dir js build` → writes `js/dist/runtime/runtime.js` and `js/dist/deck-app/`
+- Produce runtime bundle and example `.vdapp` packages: `pnpm --dir js build` → writes `js/dist/runtime/runtime.js` and `js/examples/*/dist/*.vdapp`
 - Typecheck: `pnpm --dir js tsc`; watch dev: `pnpm --dir js dev`; lint/format: `pnpm --dir js lint` / `pnpm --dir js format`
 
 **Host (current machine)** — e.g. macOS:
@@ -29,7 +29,7 @@ description: Builds the JS runtime (pnpm in js/), then vitadeck for the host (CM
 
 From the **vitadeck repository root**, in order:
 
-**1. JS** (stages runtime and active Deck App under `js/dist/`):
+**1. JS** (stages runtime under `js/dist/runtime/`; examples build to `js/examples/*/dist/*.vdapp`):
 
 ```sh
 pnpm --dir js install

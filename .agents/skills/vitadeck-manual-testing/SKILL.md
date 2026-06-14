@@ -10,10 +10,10 @@ description: Guides manual GUI testing of VitaDeck Deck Apps, Shell navigation, 
 1. Build JavaScript and native first:
    - `pnpm --dir js build`
    - `CC=gcc CXX=g++ cmake -S . -B out -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group" && cmake --build out`
-2. Stage the active Deck App for local runs when `out/vitadeck-data` is missing or stale:
+2. Stage a Deck App for local runs when `out/vitadeck-data` is missing or stale:
    - `mkdir -p out/vitadeck-data/installed-deck-apps`
    - `rm -rf out/vitadeck-data/installed-deck-apps/chat.vdapp`
-   - `cp -R js/dist/deck-app out/vitadeck-data/installed-deck-apps/chat.vdapp`
+   - `cp -R js/examples/chat/dist/chat.vdapp out/vitadeck-data/installed-deck-apps/chat.vdapp`
    - `printf 'chat.vdapp\n' > out/vitadeck-data/active-package.txt`
 3. Run from `out/`, not the repo root:
    - `./vitadeck`
@@ -34,9 +34,9 @@ Use direct staging for deterministic UI tests. Runtime Upload is useful only whe
 
 Checklist:
 
-- Confirm `js/dist/deck-app/manifest.json` matches the expected package.
-- Confirm package assets exist, e.g. `js/dist/deck-app/fonts/*.ttf`.
-- Copy `js/dist/deck-app` into `out/vitadeck-data/installed-deck-apps/<name>.vdapp`.
+- Confirm `js/examples/<name>/dist/<name>.vdapp/manifest.json` matches the expected package.
+- Confirm package assets exist, e.g. `js/examples/chat/dist/chat.vdapp/fonts/*.ttf`.
+- Copy the built `.vdapp` directory into `out/vitadeck-data/installed-deck-apps/<name>.vdapp`.
 - Set `out/vitadeck-data/active-package.txt` to that package name.
 - Restart `out/vitadeck` after changing staged package contents.
 - Inspect the tmux log for startup evidence such as loaded package fonts:
@@ -67,7 +67,7 @@ Only use this when testing upload behavior:
 ## Common pitfalls
 
 - Running from the repo root makes `vitadeck` miss `js/runtime.js`; always run from `out/`.
-- `pnpm --dir js build` updates `js/dist/deck-app`; it does not automatically update `out/vitadeck-data`.
+- `pnpm --dir js build` rebuilds example `.vdapp` packages; it does not automatically update `out/vitadeck-data`.
 - A visible old UI usually means the installed package was not replaced or the app was not restarted.
 - The upload URL shown on-device can omit the port; use `localhost:8787` for local curl tests unless the task specifically needs LAN behavior.
 - Do not keep failed walkthrough recordings as artifacts.

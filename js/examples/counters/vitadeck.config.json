@@ -1,5 +1,0 @@
-{
-  "name": "Counters",
-  "entry": "./src/App.tsx",
-  "outDir": "./dist"
-}

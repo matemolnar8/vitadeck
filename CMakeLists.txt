@@ -176,7 +176,6 @@ add_custom_target(js_build
 
 add_custom_target(js_copy
   COMMENT "Copying js/dist/runtime to ${CMAKE_BINARY_DIR}/js"
-  COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/deck-app
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/js/dist/runtime ${CMAKE_BINARY_DIR}/js
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets ${CMAKE_BINARY_DIR}/assets
   BYPRODUCTS ${CMAKE_BINARY_DIR}/js
