@@ -77,6 +77,10 @@ int scroll_content_height(const ReactInstance *scroll);
 // Returns false when id is not a scroll container.
 bool instance_scroll_metrics(const char *id, int *viewport_height, int *content_height);
 
+// Nearest scroll container containing this instance, or the instance itself if it is a scroll.
+// Returns a malloc'd id (caller frees) or NULL.
+char *instance_scroll_for_descendant(const char *id);
+
 // Deepest scroll container whose viewport contains (x, y).
 // Returns a malloc'd id (caller frees) or NULL.
 char *instance_scroll_at(int x, int y);

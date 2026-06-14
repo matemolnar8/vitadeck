@@ -7,7 +7,6 @@
 #include "core/event_queue.h"
 
 // Scroll speeds in pixels per frame (60 FPS target)
-#define SCROLL_DPAD_STEP 8
 #define SCROLL_ANALOG_SPEED 14.0f
 #define SCROLL_WHEEL_STEP 40.0f
 #define SCROLL_ANALOG_DEADZONE 0.25f
@@ -349,7 +348,6 @@ void poll_gamepad_input(void)
 
     // Read d-pad input (gamepad or keyboard)
     bool up = false, down = false, left = false, right = false;
-    bool up_held = false, down_held = false;
     bool confirm_down = false;
     float stick_y = 0.0f;
 
@@ -358,8 +356,6 @@ void poll_gamepad_input(void)
         down = IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_DOWN);
         left = IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_LEFT);
         right = IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_RIGHT);
-        up_held = IsGamepadButtonDown(0, GAMEPAD_BUTTON_LEFT_FACE_UP);
-        down_held = IsGamepadButtonDown(0, GAMEPAD_BUTTON_LEFT_FACE_DOWN);
         confirm_down = IsGamepadButtonDown(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
         stick_y = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_Y);
     }
@@ -369,34 +365,27 @@ void poll_gamepad_input(void)
     down = down || IsKeyPressed(KEY_DOWN);
     left = left || IsKeyPressed(KEY_LEFT);
     right = right || IsKeyPressed(KEY_RIGHT);
-    up_held = up_held || IsKeyDown(KEY_UP);
-    down_held = down_held || IsKeyDown(KEY_DOWN);
     confirm_down = confirm_down || IsKeyDown(KEY_ENTER);
 
-    // A focused scroll container consumes up/down to scroll; navigation only
-    // takes over once the container can no longer scroll in that direction.
     int viewport_h = 0, content_h = 0;
-    if (focused_id && instance_scroll_metrics(focused_id, &viewport_h, &content_h)) {
+    char *scroll_id = focused_id ? instance_scroll_for_descendant(focused_id) : NULL;
+    if (scroll_id && instance_scroll_metrics(scroll_id, &viewport_h, &content_h)) {
         int max_scroll = content_h - viewport_h;
         if (max_scroll < 0) max_scroll = 0;
-        int offset = scroll_get_offset(focused_id);
+        int offset = scroll_get_offset(scroll_id);
         if (offset > max_scroll) offset = max_scroll;
 
         int delta = 0;
-        if (up_held) delta -= SCROLL_DPAD_STEP;
-        if (down_held) delta += SCROLL_DPAD_STEP;
         if (fabsf(stick_y) > SCROLL_ANALOG_DEADZONE) delta += (int)(stick_y * SCROLL_ANALOG_SPEED);
 
         if (delta != 0) {
             int next = offset + delta;
             if (next < 0) next = 0;
             if (next > max_scroll) next = max_scroll;
-            scroll_set_offset(focused_id, next);
+            scroll_set_offset(scroll_id, next);
         }
-
-        if (up && offset > 0) up = false;
-        if (down && offset < max_scroll) down = false;
     }
+    if (scroll_id) free(scroll_id);
 
     // Navigation
     if (up || down || left || right) {

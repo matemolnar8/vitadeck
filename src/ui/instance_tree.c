@@ -368,38 +368,108 @@ const char *instance_hit_test(int x, int y)
     return result;
 }
 
+static bool rect_intersects_clip(int x, int y, int width, int height, bool has_clip, int clip_x, int clip_y,
+                                int clip_width, int clip_height)
+{
+    if (!has_clip) return true;
+    return x < clip_x + clip_width && x + width > clip_x && y < clip_y + clip_height && y + height > clip_y;
+}
+
+static void add_focusable_if_visible(const char *id, int x, int y, int width, int height, bool has_clip, int clip_x,
+                                     int clip_y, int clip_width, int clip_height, FocusableElement **out_elems)
+{
+    if (!id || !rect_intersects_clip(x, y, width, height, has_clip, clip_x, clip_y, clip_width, clip_height)) return;
+
+    FocusableElement elem = {.id = strdup(id), .x = x, .y = y, .width = width, .height = height};
+    arrput(*out_elems, elem);
+}
+
+static bool intersect_clip(bool has_a, int ax, int ay, int aw, int ah, int bx, int by, int bw, int bh, bool *has_out,
+                           int *out_x, int *out_y, int *out_w, int *out_h)
+{
+    if (!has_a) {
+        *has_out = true;
+        *out_x = bx;
+        *out_y = by;
+        *out_w = bw;
+        *out_h = bh;
+        return bw > 0 && bh > 0;
+    }
+
+    int x1 = ax > bx ? ax : bx;
+    int y1 = ay > by ? ay : by;
+    int x2 = ax + aw < bx + bw ? ax + aw : bx + bw;
+    int y2 = ay + ah < by + bh ? ay + ah : by + bh;
+
+    *has_out = true;
+    *out_x = x1;
+    *out_y = y1;
+    *out_w = x2 - x1;
+    *out_h = y2 - y1;
+    return *out_w > 0 && *out_h > 0;
+}
+
+static void collect_focusable_instance(ReactInstance *inst, int offset_x, int offset_y, bool has_clip, int clip_x,
+                                       int clip_y, int clip_width, int clip_height,
+                                       FocusableElement **out_elems);
+
 // Focusable element collection for gamepad navigation
-static void collect_focusable_recursive(ReactInstance **children, int offset_x, int offset_y,
+static void collect_focusable_recursive(ReactInstance **children, int offset_x, int offset_y, bool has_clip, int clip_x,
+                                        int clip_y, int clip_width, int clip_height,
                                         FocusableElement **out_elems)
 {
     if (!children) return;
     int count = arrlen(children);
 
     for (int i = 0; i < count; i++) {
-        ReactInstance *inst = children[i];
-        if (!inst) continue;
+        collect_focusable_instance(children[i], offset_x, offset_y, has_clip, clip_x, clip_y, clip_width, clip_height,
+                                   out_elems);
+    }
+}
 
-        if (inst->type == NT_BUTTON) {
-            ButtonProps *b = &inst->props.button;
-            FocusableElement elem = {.id = strdup(inst->id),
-                                     .x = offset_x + b->x,
-                                     .y = offset_y + b->y,
-                                     .width = b->width,
-                                     .height = b->height};
-            arrput(*out_elems, elem);
-        } else if (inst->type == NT_RECT) {
-            RectProps *r = &inst->props.rect;
-            collect_focusable_recursive(inst->children, offset_x + r->x, offset_y + r->y, out_elems);
-        } else if (inst->type == NT_SCROLL) {
-            /* The scroll container itself takes focus; children are not
-             * individually focusable for now. */
-            ScrollProps *s = &inst->props.scroll;
-            FocusableElement elem = {.id = strdup(inst->id),
-                                     .x = offset_x + s->x,
-                                     .y = offset_y + s->y,
-                                     .width = s->width,
-                                     .height = s->height};
-            arrput(*out_elems, elem);
+static void collect_focusable_instance(ReactInstance *inst, int offset_x, int offset_y, bool has_clip, int clip_x,
+                                       int clip_y, int clip_width, int clip_height,
+                                       FocusableElement **out_elems)
+{
+    if (!inst) return;
+
+    if (inst->type == NT_BUTTON) {
+        ButtonProps *b = &inst->props.button;
+        add_focusable_if_visible(inst->id, offset_x + b->x, offset_y + b->y, b->width, b->height, has_clip, clip_x,
+                                 clip_y, clip_width, clip_height, out_elems);
+    } else if (inst->type == NT_RECT) {
+        RectProps *r = &inst->props.rect;
+        collect_focusable_recursive(inst->children, offset_x + r->x, offset_y + r->y, has_clip, clip_x, clip_y,
+                                    clip_width, clip_height, out_elems);
+    } else if (inst->type == NT_SCROLL) {
+        ScrollProps *s = &inst->props.scroll;
+        int abs_x = offset_x + s->x;
+        int abs_y = offset_y + s->y;
+        add_focusable_if_visible(inst->id, abs_x, abs_y, s->width, s->height, has_clip, clip_x, clip_y, clip_width,
+                                 clip_height, out_elems);
+
+        bool child_has_clip = false;
+        int child_clip_x = 0, child_clip_y = 0, child_clip_width = 0, child_clip_height = 0;
+        if (!intersect_clip(has_clip, clip_x, clip_y, clip_width, clip_height, abs_x, abs_y, s->width, s->height,
+                            &child_has_clip, &child_clip_x, &child_clip_y, &child_clip_width, &child_clip_height)) {
+            return;
+        }
+
+        int content_x = abs_x + s->padding;
+        int content_y = abs_y + s->padding - scroll_get_offset(inst->id);
+        int flow_y = 0;
+        int child_count = arrlen(inst->children);
+        for (int child_i = 0; child_i < child_count; child_i++) {
+            ReactInstance *child = inst->children[child_i];
+            if (!child) continue;
+
+            int base_y = 0;
+            int child_offset_y = content_y;
+            if (scroll_flow_step(child, s->gap, &flow_y, &base_y)) {
+                child_offset_y = content_y + base_y;
+            }
+            collect_focusable_instance(child, content_x, child_offset_y, child_has_clip, child_clip_x, child_clip_y,
+                                       child_clip_width, child_clip_height, out_elems);
         }
     }
 }
@@ -410,7 +480,7 @@ FocusableElement *get_focusable_elements(int *count)
 
     vd_mutex_lock(snapshot_mutex);
     if (front_snapshot) {
-        collect_focusable_recursive(front_snapshot->root_children, 0, 0, &elems);
+        collect_focusable_recursive(front_snapshot->root_children, 0, 0, false, 0, 0, 0, 0, &elems);
     }
     vd_mutex_unlock(snapshot_mutex);
 
@@ -484,6 +554,26 @@ static ReactInstance *scroll_at_instance(ReactInstance *inst, int x, int y, int 
         if (hit) found = hit;
     }
     return found;
+}
+
+char *instance_scroll_for_descendant(const char *id)
+{
+    if (!id) return NULL;
+
+    char *result = NULL;
+    vd_mutex_lock(snapshot_mutex);
+    if (front_snapshot) {
+        ReactInstance *inst = find_front_instance_unlocked(front_snapshot, id);
+        while (inst) {
+            if (inst->type == NT_SCROLL && inst->id) {
+                result = strdup(inst->id);
+                break;
+            }
+            inst = inst->parent;
+        }
+    }
+    vd_mutex_unlock(snapshot_mutex);
+    return result;
 }
 
 char *instance_scroll_at(int x, int y)

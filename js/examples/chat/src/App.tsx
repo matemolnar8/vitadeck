@@ -57,22 +57,15 @@ export default function ChatDeckApp() {
     setMessages((prev) => [...prev, { id: `a-${messageTurn}-waiting`, role: "agent", text: "Waiting for Copilot..." }]);
 
     try {
-      const { reply, sessionId: nextSessionId } = await sendCopilotMessageAndWaitForReply(
-        userText,
-        sessionId,
-      );
+      const { reply, sessionId: nextSessionId } = await sendCopilotMessageAndWaitForReply(userText, sessionId);
       setSessionId(nextSessionId);
-      setMessages((prev) =>
-        prev.map((m) => (m.id === `a-${messageTurn}-waiting` ? { ...m, text: reply } : m)),
-      );
+      setMessages((prev) => prev.map((m) => (m.id === `a-${messageTurn}-waiting` ? { ...m, text: reply } : m)));
       setTurn((t) => t + 1);
       setShowSendButton(true);
     } catch (err: unknown) {
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === `a-${messageTurn}-waiting`
-            ? { ...m, text: `Genesys Cloud Copilot error:\n\n${String(err)}` }
-            : m,
+          m.id === `a-${messageTurn}-waiting` ? { ...m, text: `Genesys Cloud Copilot error:\n\n${String(err)}` } : m,
         ),
       );
     } finally {
@@ -83,7 +76,7 @@ export default function ChatDeckApp() {
   const bubbleWidth = 600;
   const bubblePadding = 16;
   const textWidth = bubbleWidth - bubblePadding * 2;
-  const fontSize = 22;
+  const fontSize = 18;
   const lineHeight = 28;
   const charsPerLine = Math.max(12, Math.floor(textWidth / (fontSize * 0.55)));
 
@@ -137,8 +130,7 @@ export default function ChatDeckApp() {
   const pickerRowHeight = Math.max(navButtonHeight, pendingBubbleHeight);
   const pendingBubbleY = (pickerRowHeight - pendingBubbleHeight) / 2;
   const navButtonY = (pickerRowHeight - navButtonHeight) / 2;
-  const pickerGroupWidth =
-    navButtonWidth + navGap + bubbleWidth + navGap + navButtonWidth;
+  const pickerGroupWidth = navButtonWidth + navGap + bubbleWidth + navGap + navButtonWidth;
   const pickerGroupLeft = contentWidth - pickerGroupWidth;
   const pickerBubbleX = pickerGroupLeft + navButtonWidth + navGap;
   const pickerRightNavX = pickerBubbleX + bubbleWidth + navGap;
@@ -152,14 +144,7 @@ export default function ChatDeckApp() {
 
   return (
     <Screen>
-      <Scroll
-        x={inset.x}
-        y={inset.y}
-        width={inset.width}
-        height={inset.height}
-        gap={scrollGap}
-        padding={scrollPadding}
-      >
+      <Scroll x={inset.x} y={inset.y} width={inset.width} height={inset.height} gap={scrollGap} padding={scrollPadding}>
         {messages.length === 0 ? (
           <Rect
             x={0}
@@ -195,7 +180,7 @@ export default function ChatDeckApp() {
                   y={navButtonY}
                   width={navButtonWidth}
                   height={navButtonHeight}
-                  label="←"
+                  label="<"
                   onPress={() => stepFollowUp(-1)}
                   color={theme.surfaceAlt}
                   textColor={theme.text}
@@ -228,7 +213,7 @@ export default function ChatDeckApp() {
                   y={navButtonY}
                   width={navButtonWidth}
                   height={navButtonHeight}
-                  label="→"
+                  label=">"
                   onPress={() => stepFollowUp(1)}
                   color={theme.surfaceAlt}
                   textColor={theme.text}

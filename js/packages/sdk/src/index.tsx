@@ -48,9 +48,8 @@ export type ScrollProps = Omit<VitaScrollProps, "key">;
  * Scrollable container with a minimal column layout: direct Rect and Button
  * children are stacked vertically (`gap` pixels apart, inside `padding`).
  * A stacked child's `y` acts as a top margin and its `x` is relative to the
- * padded content area. Content taller than the viewport can be scrolled by
- * focusing the container and using D-pad/arrow keys, the left analog stick,
- * or the mouse wheel.
+ * padded content area. Content taller than the viewport can be scrolled with
+ * the left analog stick on PSVita or the mouse wheel on desktop.
  */
 export function Scroll(props: ScrollProps) {
   return vitaHost("vita-scroll", props);
