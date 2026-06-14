@@ -68,6 +68,7 @@ export default function ChatDeckApp() {
     return (lineCount - 1) * lineHeight + (fontSize + 4);
   };
   const bubbleHeight = (lines: number) => bubblePadding * 2 + textBlockHeight(lines);
+  const bubbleRadiusPx = 12;
 
   return (
     <Screen>
@@ -85,7 +86,7 @@ export default function ChatDeckApp() {
           width={bubbleWidth}
           height={bubbleHeight(userLineCount)}
           color={theme.primary}
-          borderRadius={12}
+          borderRadius={bubbleRadiusPx}
         >
           <Text
             x={bubblePadding}
@@ -93,6 +94,7 @@ export default function ChatDeckApp() {
             width={textWidth}
             align="right"
             wrap="word"
+            font="chatMono"
             fontSize={fontSize}
             lineHeight={lineHeight}
             color={theme.navText}
@@ -113,7 +115,7 @@ export default function ChatDeckApp() {
             }}
             color={theme.accent}
             textColor={theme.navText}
-            borderRadius={0.12}
+            borderRadius={bubbleRadiusPx}
           />
         ) : null}
 
@@ -123,7 +125,7 @@ export default function ChatDeckApp() {
           width={bubbleWidth}
           height={bubbleHeight(agentLineCount)}
           color={theme.surface}
-          borderRadius={12}
+          borderRadius={bubbleRadiusPx}
         >
           <Text
             x={bubblePadding}
@@ -131,7 +133,6 @@ export default function ChatDeckApp() {
             width={textWidth}
             align="left"
             wrap="word"
-            font="chatMono"
             fontSize={fontSize}
             lineHeight={lineHeight}
             color={theme.text}
