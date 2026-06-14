@@ -8,14 +8,14 @@ Build and typecheck the JS workspace separately from the native app.
 
 - Requires Node.js 22+ (Rolldown CLI uses Node 22+ APIs).
 - Install dependencies once: `pnpm install` (run inside `js/`)
-- Build JS runtime plus the selected Deck App package: `pnpm --dir js build`
+- Build JS runtime and example Deck App packages: `pnpm --dir js build`
 - Typecheck only: `pnpm --dir js tsc`
 - Lint: `pnpm --dir js lint`; format: `pnpm --dir js format`
 
 Outputs:
 - Bundled files are written to `js/dist/`.
 - `js/dist/runtime/runtime.js` is the VitaDeck runtime bundle.
-- `js/dist/deck-app/` contains the selected Deck App Package files.
+- Each example builds to `js/examples/<name>/dist/<name>.vdapp/` (and `.vdapp.zip`).
 - During native builds, CMake copies `js/dist/runtime` to `<build>/js/`.
 
 `vitadeck` CLI (`@vitadeck/sdk`):
@@ -26,4 +26,4 @@ Outputs:
 
 Notes:
 - The CMake target `js_build` calls `pnpm build:prod` in `js/`.
-- On macOS native runs, the executable in `out/vitadeck` loads `out/js/runtime.js` and `out/deck-app/app.js`.
+- On native runs, the executable in `out/vitadeck` loads `out/js/runtime.js`. Deck Apps must be installed under `out/vitadeck-data/installed-deck-apps/` (Runtime Upload or manual staging).
