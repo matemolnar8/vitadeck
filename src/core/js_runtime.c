@@ -136,6 +136,7 @@ static void *js_thread_func(void *arg)
     }
 
 defer:
+    if (ctx) timeout_shutdown(ctx);
     if (ctx) fetch_shutdown(ctx);
     if (ctx) JS_FreeContext(ctx);
     if (rt) JS_FreeRuntime(rt);

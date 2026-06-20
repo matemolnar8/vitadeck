@@ -11,8 +11,7 @@ static struct {
     unsigned int key;
     TimeoutItem value;
 } *timeout_hm = NULL;
-static unsigned int timeout_id_counter = 0;
-static JSContext *timeout_ctx = NULL;
+static unsigned int timeout_id_counter = 1;
 
 static JSValue set_timeout_impl(JSContext *ctx, int argc, JSValueConst *argv, bool is_interval)
 {
@@ -29,7 +28,7 @@ static JSValue set_timeout_impl(JSContext *ctx, int argc, JSValueConst *argv, bo
     }
     double delay_in_seconds = delay_in_ms / 1000.0;
 
-    while (hmgeti(timeout_hm, timeout_id_counter) >= 0) {
+    while (timeout_id_counter == 0 || hmgeti(timeout_hm, timeout_id_counter) >= 0) {
         timeout_id_counter++;
     }
 
@@ -131,9 +130,18 @@ void run_timeouts(JSContext *ctx)
 
 void register_js_timeout(JSContext *ctx)
 {
-    timeout_ctx = ctx;
     js_set_global_function(ctx, "setTimeout", js_set_timeout, 2);
     js_set_global_function(ctx, "clearTimeout", js_clear_timeout, 1);
     js_set_global_function(ctx, "setInterval", js_set_interval, 2);
     js_set_global_function(ctx, "clearInterval", js_clear_timeout, 1);
+}
+
+void timeout_shutdown(JSContext *ctx)
+{
+    for (int i = 0; i < hmlen(timeout_hm); i++) {
+        JS_FreeValue(ctx, timeout_hm[i].value.func);
+    }
+    hmfree(timeout_hm);
+    timeout_hm = NULL;
+    timeout_id_counter = 1;
 }

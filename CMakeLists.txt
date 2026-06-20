@@ -167,6 +167,15 @@ endif()
 
 target_link_libraries(${PROJECT_NAME} ${VITADECK_LIBRARIES})
 
+if(NOT DEFINED ENV{VITASDK})
+  include(CTest)
+  if(BUILD_TESTING)
+    add_executable(timer_reload_harness tests/timer_reload_harness.c src/jslib/timeout.c)
+    target_link_libraries(timer_reload_harness quickjs m ${RAYLIB_LIBRARIES})
+    add_test(NAME timer_reload_harness COMMAND timer_reload_harness)
+  endif()
+endif()
+
 add_custom_target(js_build
   COMMAND pnpm build:prod
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/js
