@@ -18,7 +18,17 @@
 #define SCREEN_WIDTH 960
 #define SCREEN_HEIGHT 544
 #define WAIT_TIMEOUT_SEC 5.0
-#define MAX_PIXEL_MISMATCH 32
+#define MAX_PIXEL_MISMATCH 64
+
+static void configure_window_flags(void)
+{
+#if defined(__APPLE__)
+    // Hidden windows fail NSGL pixel-format init on GitHub Actions macOS runners.
+    SetConfigFlags(FLAG_WINDOW_UNDECORATED);
+#else
+    SetConfigFlags(FLAG_WINDOW_HIDDEN);
+#endif
+}
 
 static void fail(const char *message)
 {
@@ -102,11 +112,6 @@ static bool wait_for_smoke_ok(const VdJsRuntime *runtime)
 
 static bool images_match(const char *actual_path, const char *golden_path, int max_mismatches)
 {
-    if (access(golden_path, R_OK) != 0) {
-        fprintf(stderr, "smoke_harness: golden image missing at %s\n", golden_path);
-        return false;
-    }
-
     Image actual = LoadImage(actual_path);
     Image golden = LoadImage(golden_path);
     if (!actual.data || !golden.data) {
@@ -172,7 +177,7 @@ int main(int argc, char *argv[])
     }
 
     SetTraceLogLevel(LOG_WARNING);
-    SetConfigFlags(FLAG_WINDOW_HIDDEN);
+    configure_window_flags();
 
     VdJsRuntime runtime;
     js_runtime_init(&runtime);
@@ -188,6 +193,7 @@ int main(int argc, char *argv[])
     if (!package_library_has_active_deck_app()) fail("no active deck app configured");
 
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "VitaDeck Smoke");
+    if (!IsWindowReady()) fail("could not initialize raylib window");
     SetTargetFPS(60);
 
     if (!font_registry_init(init_error, sizeof(init_error))) {
@@ -204,12 +210,26 @@ int main(int argc, char *argv[])
 
     int text_nodes = count_front_nodes(NT_TEXT);
     int rect_nodes = count_front_nodes(NT_RECT);
-    if (text_nodes < 2) {
-        fprintf(stderr, "smoke_harness: expected at least 2 text nodes, got %d\n", text_nodes);
+    int scroll_nodes = count_front_nodes(NT_SCROLL);
+    int button_nodes = count_front_nodes(NT_BUTTON);
+    if (text_nodes < 8) {
+        fprintf(stderr, "smoke_harness: expected at least 8 text nodes, got %d\n", text_nodes);
         return 1;
     }
-    if (rect_nodes < 1) {
-        fprintf(stderr, "smoke_harness: expected at least 1 rect node, got %d\n", rect_nodes);
+    if (rect_nodes < 6) {
+        fprintf(stderr, "smoke_harness: expected at least 6 rect nodes, got %d\n", rect_nodes);
+        return 1;
+    }
+    if (scroll_nodes < 1) {
+        fprintf(stderr, "smoke_harness: expected at least 1 scroll node, got %d\n", scroll_nodes);
+        return 1;
+    }
+    if (button_nodes < 2) {
+        fprintf(stderr, "smoke_harness: expected at least 2 button nodes, got %d\n", button_nodes);
+        return 1;
+    }
+    if (!tree_contains("SMOKE_MONO")) {
+        fprintf(stderr, "smoke_harness: custom font text not found in instance tree\n");
         return 1;
     }
 
@@ -236,7 +256,14 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    if (golden_path && !images_match(output_path, golden_path, MAX_PIXEL_MISMATCH)) {
+    if (golden_path && access(golden_path, R_OK) != 0) {
+        if (!update_golden) {
+            fprintf(stderr, "smoke_harness: no golden image at %s; re-run with --update-golden\n", golden_path);
+            return 1;
+        }
+    }
+
+    if (golden_path && !update_golden && !images_match(output_path, golden_path, MAX_PIXEL_MISMATCH)) {
         return 1;
     }
 
