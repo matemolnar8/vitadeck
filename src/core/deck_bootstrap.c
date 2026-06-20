@@ -9,10 +9,14 @@
 #include "ui/instance_tree.h"
 #include "ui/render.h"
 
-static bool load_active_package_fonts(char *error, size_t error_size)
+static bool load_active_package_fonts(VdDeckBootstrap *bootstrap, char *error, size_t error_size)
 {
-    return font_registry_load_package(
-        package_library_has_active_deck_app() ? package_library_active_package_path() : "", error, error_size);
+    if (!font_registry_load_package(
+            package_library_has_active_deck_app() ? package_library_active_package_path() : "", error, error_size)) {
+        bootstrap->js_runtime.failed = true;
+        return false;
+    }
+    return true;
 }
 
 void deck_bootstrap_init(VdDeckBootstrap *bootstrap)
@@ -49,8 +53,13 @@ bool deck_bootstrap_open_window(VdDeckBootstrap *bootstrap, const char *title,
     SetTargetFPS(60);
 
     if (!font_registry_init(error, error_size)) return false;
-    if (!load_active_package_fonts(error, error_size)) bootstrap->js_runtime.failed = true;
+    load_active_package_fonts(bootstrap, error, error_size);
     return true;
+}
+
+bool deck_bootstrap_reload_active_package_fonts(VdDeckBootstrap *bootstrap, char *error, size_t error_size)
+{
+    return load_active_package_fonts(bootstrap, error, error_size);
 }
 
 bool deck_bootstrap_start_active_deck_app(VdDeckBootstrap *bootstrap, char *error, size_t error_size)

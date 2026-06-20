@@ -7,7 +7,6 @@
 #include "core/js_runtime.h"
 #include "core/package_library.h"
 #include "shell/shell.h"
-#include "ui/fonts.h"
 #include "ui/input.h"
 #include "ui/instance_tree.h"
 #include "ui/render.h"
@@ -18,16 +17,6 @@
         result = (value);                                                                                              \
         goto defer;                                                                                                    \
     } while (0)
-
-static bool reload_active_package_fonts(VdDeckBootstrap *bootstrap, char *error, size_t error_size)
-{
-    if (!font_registry_load_package(
-            package_library_has_active_deck_app() ? package_library_active_package_path() : "", error, error_size)) {
-        bootstrap->js_runtime.failed = true;
-        return false;
-    }
-    return true;
-}
 
 int main(int argc, char *argv[])
 {
@@ -70,7 +59,7 @@ int main(int argc, char *argv[])
             scroll_reset();
             if (package_library_has_active_deck_app()) {
                 char font_error[256];
-                if (!reload_active_package_fonts(&bootstrap, font_error, sizeof(font_error))) {
+                if (!deck_bootstrap_reload_active_package_fonts(&bootstrap, font_error, sizeof(font_error))) {
                     TraceLog(LOG_ERROR, "%s", font_error);
                 } else if (!deck_bootstrap_start_active_deck_app(&bootstrap, font_error, sizeof(font_error))) {
                     TraceLog(LOG_ERROR, "%s", font_error);
@@ -78,7 +67,7 @@ int main(int argc, char *argv[])
                 }
             } else {
                 char font_error[256];
-                if (!reload_active_package_fonts(&bootstrap, font_error, sizeof(font_error))) {
+                if (!deck_bootstrap_reload_active_package_fonts(&bootstrap, font_error, sizeof(font_error))) {
                     TraceLog(LOG_ERROR, "%s", font_error);
                 }
             }

@@ -23,6 +23,7 @@ void deck_bootstrap_init(VdDeckBootstrap *bootstrap);
 bool deck_bootstrap_boot_subsystems(char *error, size_t error_size);
 bool deck_bootstrap_open_window(VdDeckBootstrap *bootstrap, const char *title,
                                 const VdDeckBootstrapWindowConfig *window_config, char *error, size_t error_size);
+bool deck_bootstrap_reload_active_package_fonts(VdDeckBootstrap *bootstrap, char *error, size_t error_size);
 bool deck_bootstrap_start_active_deck_app(VdDeckBootstrap *bootstrap, char *error, size_t error_size);
 void deck_bootstrap_draw_loading_splash(void);
 void deck_bootstrap_draw_deck_canvas(const VdDeckBootstrap *bootstrap);
