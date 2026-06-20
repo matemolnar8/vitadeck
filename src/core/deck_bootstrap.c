@@ -92,8 +92,7 @@ void deck_bootstrap_draw_deck_canvas(const VdDeckBootstrap *bootstrap)
     if (!package_library_has_active_deck_app()) return;
 
     if (js_runtime_failed(&bootstrap->js_runtime)) {
-        DrawText("Deck App Runtime failed to start.", 10, 10, 24, RED);
-        DrawText("Open the Shell with F1/Start to choose another Deck App.", 10, 44, 20, RAYWHITE);
+        DrawText("Deck App runtime failed to start.", 10, 10, 24, RED);
     } else if (!js_runtime_is_ready(&bootstrap->js_runtime)) {
         DrawText("Loading JavaScript...", 10, 10, 20, WHITE);
     } else {

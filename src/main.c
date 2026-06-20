@@ -18,6 +18,12 @@
         goto defer;                                                                                                    \
     } while (0)
 
+static void draw_shell_runtime_recovery_hint(const VdDeckBootstrap *bootstrap)
+{
+    if (!js_runtime_failed(&bootstrap->js_runtime)) return;
+    DrawText("Open the Shell with F1/Start to choose another Deck App.", 10, 44, 20, RAYWHITE);
+}
+
 int main(int argc, char *argv[])
 {
     (void)argc;
@@ -83,6 +89,7 @@ int main(int argc, char *argv[])
         BeginDrawing();
         ClearBackground(BLACK);
         deck_bootstrap_draw_deck_canvas(&bootstrap);
+        draw_shell_runtime_recovery_hint(&bootstrap);
         shell_render(&shell);
         DrawFPS(VD_SCREEN_WIDTH - 100, 10);
 
