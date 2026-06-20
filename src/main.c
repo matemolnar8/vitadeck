@@ -3,13 +3,10 @@
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
 #include "core/deck_bootstrap.h"
-#include "core/event_queue.h"
 #include "core/js_runtime.h"
 #include "core/package_library.h"
 #include "shell/shell.h"
 #include "ui/input.h"
-#include "ui/instance_tree.h"
-#include "ui/render.h"
 #include "ui/scroll.h"
 
 #define return_defer(value)                                                                                            \
@@ -38,7 +35,7 @@ int main(int argc, char *argv[])
 
     if (!deck_bootstrap_boot_subsystems(init_error, sizeof(init_error))) {
         TraceLog(LOG_ERROR, "%s", init_error);
-        return 1;
+        return_defer(1);
     }
     if (!package_library_has_active_deck_app()) shell_show_home(&shell);
 

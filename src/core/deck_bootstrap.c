@@ -69,8 +69,6 @@ bool deck_bootstrap_start_active_deck_app(VdDeckBootstrap *bootstrap, char *erro
         return false;
     }
 
-    if (js_runtime_failed(&bootstrap->js_runtime)) return true;
-
     if (!js_runtime_start(&bootstrap->js_runtime)) {
         if (error && error_size > 0) snprintf(error, error_size, "Could not create JS thread.");
         return false;
