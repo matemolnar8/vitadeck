@@ -80,6 +80,5 @@ jobs:
         if: success()
         run: '"$(brew --prefix ccache)/bin/ccache" -s'
 
-      # Placeholder: replace with test runner (e.g. ctest, pnpm test) when tests exist.
       - name: Tests
-        run: echo "No tests configured yet."
+        run: ctest --test-dir out --output-on-failure
