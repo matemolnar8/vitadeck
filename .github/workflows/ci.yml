@@ -82,3 +82,11 @@ jobs:
 
       - name: Tests
         run: ctest --test-dir out --output-on-failure
+
+      - name: Upload smoke screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-screenshot
+          path: out/smoke_screenshot.png
+          if-no-files-found: ignore
