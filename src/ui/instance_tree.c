@@ -657,3 +657,68 @@ void instance_back_root_clear(void)
     arrfree(back_root_children);
     back_root_children = NULL;
 }
+
+static void collect_text_recursive(const ReactInstance *inst, char *buffer, size_t buffer_size)
+{
+    if (!inst || buffer_size == 0) return;
+
+    if (inst->type == NT_RAW_TEXT && inst->props.raw_text) {
+        size_t used = strlen(buffer);
+        if (used < buffer_size - 1) {
+            strncat(buffer, inst->props.raw_text, buffer_size - used - 1);
+        }
+    }
+
+    int count = arrlen(inst->children);
+    for (int i = 0; i < count; i++) {
+        collect_text_recursive(inst->children[i], buffer, buffer_size);
+    }
+}
+
+static int count_node_type_recursive(const ReactInstance *inst, NodeType type)
+{
+    if (!inst) return 0;
+
+    int count = inst->type == type ? 1 : 0;
+    int child_count = arrlen(inst->children);
+    for (int i = 0; i < child_count; i++) {
+        count += count_node_type_recursive(inst->children[i], type);
+    }
+    return count;
+}
+
+void instance_tree_collect_text(char *buffer, size_t buffer_size)
+{
+    if (!buffer || buffer_size == 0) return;
+    buffer[0] = '\0';
+
+    instance_tree_render_lock();
+    ReactInstance **roots = instance_get_root_children();
+    int count = arrlen(roots);
+    for (int i = 0; i < count; i++) {
+        collect_text_recursive(roots[i], buffer, buffer_size);
+    }
+    instance_tree_render_unlock();
+}
+
+bool instance_tree_contains_text(const char *needle)
+{
+    if (!needle) return false;
+
+    char text[4096];
+    instance_tree_collect_text(text, sizeof(text));
+    return strstr(text, needle) != NULL;
+}
+
+int instance_tree_count_nodes(NodeType type)
+{
+    int count = 0;
+    instance_tree_render_lock();
+    ReactInstance **roots = instance_get_root_children();
+    int root_count = arrlen(roots);
+    for (int i = 0; i < root_count; i++) {
+        count += count_node_type_recursive(roots[i], type);
+    }
+    instance_tree_render_unlock();
+    return count;
+}

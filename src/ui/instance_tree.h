@@ -122,4 +122,9 @@ void instance_back_root_insert(ReactInstance *child, ReactInstance *before);
 void instance_back_root_remove(ReactInstance *child);
 void instance_back_root_clear(void);
 
+// Read-only inspection of the front snapshot (thread-safe).
+void instance_tree_collect_text(char *buffer, size_t buffer_size);
+bool instance_tree_contains_text(const char *needle);
+int instance_tree_count_nodes(NodeType type);
+
 #endif /* INSTANCE_TREE_H */
