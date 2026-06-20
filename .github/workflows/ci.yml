@@ -81,6 +81,7 @@ jobs:
         run: '"$(brew --prefix ccache)/bin/ccache" -s'
 
       - name: Tests
+        # Visual smoke runs in the Linux `smoke` job — see docs/adr/0002-smoke-ci-linux-xvfb.md
         run: ctest --test-dir out --output-on-failure -E smoke_harness
 
   smoke:
@@ -137,6 +138,7 @@ jobs:
           cmake --build out --parallel "$(nproc)"
 
       - name: Smoke test
+        # macOS cannot initialize NSGL for raylib on GitHub runners — see docs/adr/0002-smoke-ci-linux-xvfb.md
         run: xvfb-run -a ctest --test-dir out --output-on-failure -R smoke_harness
 
       - name: Upload smoke screenshot
