@@ -197,6 +197,7 @@ if(NOT DEFINED ENV{VITASDK})
     )
     set_tests_properties(smoke_harness PROPERTIES
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+      LABELS "smoke"
     )
   endif()
 endif()

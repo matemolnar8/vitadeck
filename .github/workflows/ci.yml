@@ -81,7 +81,63 @@ jobs:
         run: '"$(brew --prefix ccache)/bin/ccache" -s'
 
       - name: Tests
-        run: ctest --test-dir out --output-on-failure
+        run: ctest --test-dir out --output-on-failure -E smoke_harness
+
+  smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: js/package.json
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          package-manager-cache: false
+          cache: pnpm
+          cache-dependency-path: js/pnpm-lock.yaml
+
+      - name: Install JS dependencies
+        run: pnpm --dir js install --frozen-lockfile
+
+      - name: Build JS (runtime + deck app)
+        run: pnpm --dir js build
+
+      - name: Install native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake pkg-config xvfb \
+            libcurl4-openssl-dev libssl-dev zlib1g-dev \
+            libgl-dev libegl-dev libx11-dev libxext-dev libxrandr-dev \
+            libxcursor-dev libxi-dev libxinerama-dev libxxf86vm-dev
+
+      - name: Install raylib
+        run: |
+          if pkg-config --exists raylib; then
+            echo "raylib already installed: $(pkg-config --modversion raylib)"
+            exit 0
+          fi
+          git clone --depth 1 --branch 5.5 https://github.com/raysan5/raylib.git /tmp/raylib
+          cmake -S /tmp/raylib -B /tmp/raylib/build -DBUILD_SHARED_LIBS=ON
+          cmake --build /tmp/raylib/build --parallel "$(nproc)"
+          sudo cmake --install /tmp/raylib/build
+          sudo ldconfig
+
+      - name: Configure and build host target
+        run: |
+          CC=gcc CXX=g++ cmake -S . -B out -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group"
+          cmake --build out --parallel "$(nproc)"
+
+      - name: Smoke test
+        run: xvfb-run -a ctest --test-dir out --output-on-failure -R smoke_harness
 
       - name: Upload smoke screenshot
         if: always()
