@@ -1,4 +1,4 @@
-#include "deck_bootstrap.h"
+#include "bootstrap.h"
 
 #include <raylib.h>
 #include <stdio.h>
@@ -9,7 +9,7 @@
 #include "ui/instance_tree.h"
 #include "ui/render.h"
 
-static bool load_active_package_fonts(VdDeckBootstrap *bootstrap, char *error, size_t error_size)
+static bool load_active_package_fonts(VdBootstrap *bootstrap, char *error, size_t error_size)
 {
     if (!font_registry_load_package(
             package_library_has_active_deck_app() ? package_library_active_package_path() : "", error, error_size)) {
@@ -19,13 +19,13 @@ static bool load_active_package_fonts(VdDeckBootstrap *bootstrap, char *error, s
     return true;
 }
 
-void deck_bootstrap_init(VdDeckBootstrap *bootstrap)
+void bootstrap_init(VdBootstrap *bootstrap)
 {
     js_runtime_init(&bootstrap->js_runtime);
     bootstrap->window_open = false;
 }
 
-bool deck_bootstrap_boot_subsystems(char *error, size_t error_size)
+bool bootstrap_boot_subsystems(char *error, size_t error_size)
 {
     if (!event_queue_init()) {
         if (error && error_size > 0) snprintf(error, error_size, "Could not initialize event queue.");
@@ -38,8 +38,8 @@ bool deck_bootstrap_boot_subsystems(char *error, size_t error_size)
     return true;
 }
 
-bool deck_bootstrap_open_window(VdDeckBootstrap *bootstrap, const char *title,
-                              const VdDeckBootstrapWindowConfig *window_config, char *error, size_t error_size)
+bool bootstrap_open_window(VdBootstrap *bootstrap, const char *title, const VdBootstrapWindowConfig *window_config,
+                           char *error, size_t error_size)
 {
     if (window_config) SetConfigFlags(window_config->raylib_config_flags);
 
@@ -57,12 +57,12 @@ bool deck_bootstrap_open_window(VdDeckBootstrap *bootstrap, const char *title,
     return true;
 }
 
-bool deck_bootstrap_reload_active_package_fonts(VdDeckBootstrap *bootstrap, char *error, size_t error_size)
+bool bootstrap_reload_active_package_fonts(VdBootstrap *bootstrap, char *error, size_t error_size)
 {
     return load_active_package_fonts(bootstrap, error, error_size);
 }
 
-bool deck_bootstrap_start_active_deck_app(VdDeckBootstrap *bootstrap, char *error, size_t error_size)
+bool bootstrap_start_active_deck_app(VdBootstrap *bootstrap, char *error, size_t error_size)
 {
     if (!package_library_has_active_deck_app()) {
         if (error && error_size > 0) snprintf(error, error_size, "No active Deck App configured.");
@@ -77,7 +77,7 @@ bool deck_bootstrap_start_active_deck_app(VdDeckBootstrap *bootstrap, char *erro
     return true;
 }
 
-void deck_bootstrap_draw_loading_splash(void)
+void bootstrap_draw_loading_splash(void)
 {
     BeginDrawing();
     ClearBackground(BLACK);
@@ -85,7 +85,7 @@ void deck_bootstrap_draw_loading_splash(void)
     EndDrawing();
 }
 
-void deck_bootstrap_draw_deck_canvas(const VdDeckBootstrap *bootstrap)
+void bootstrap_draw_deck_canvas(const VdBootstrap *bootstrap)
 {
     if (!package_library_has_active_deck_app()) return;
 
@@ -98,7 +98,7 @@ void deck_bootstrap_draw_deck_canvas(const VdDeckBootstrap *bootstrap)
     }
 }
 
-void deck_bootstrap_shutdown(VdDeckBootstrap *bootstrap)
+void bootstrap_shutdown(VdBootstrap *bootstrap)
 {
     js_runtime_stop(&bootstrap->js_runtime);
     font_registry_shutdown();

@@ -1,6 +1,6 @@
 # Run smoke integration test on Linux CI with xvfb
 
-The smoke harness drives a real **Deck App** through `deck_bootstrap`, raylib rendering, and golden screenshot comparison. GitHub Actions macOS runners cannot initialize an NSGL OpenGL context for raylib (`NSGL: Failed to find a suitable pixel format`), so the visual smoke test segfaults there even when the native build succeeds.
+The smoke harness drives a real **Deck App** through `bootstrap`, raylib rendering, and golden screenshot comparison. GitHub Actions macOS runners cannot initialize an NSGL OpenGL context for raylib (`NSGL: Failed to find a suitable pixel format`), so the visual smoke test segfaults there even when the native build succeeds.
 
 CI therefore splits host verification by platform: the macOS `build` job compiles the host target and runs `ctest -E smoke_harness` (unit harnesses only). A separate Ubuntu `smoke` job builds the host target and runs `ctest -R smoke_harness` under `xvfb-run`.
 

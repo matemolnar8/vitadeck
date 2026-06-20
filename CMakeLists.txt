@@ -101,7 +101,7 @@ set(JSLIB_SOURCES
 set(VITADECK_SOURCES
     src/main.c
     src/core/arena.c
-    src/core/deck_bootstrap.c
+    src/core/bootstrap.c
     src/core/js_runtime.c
     src/core/package_library.c
     ${JSLIB_SOURCES}
@@ -178,7 +178,7 @@ if(NOT DEFINED ENV{VITASDK})
     set(SMOKE_HARNESS_SOURCES
       tests/smoke_harness.c
       src/core/arena.c
-      src/core/deck_bootstrap.c
+      src/core/bootstrap.c
       src/core/js_runtime.c
       src/core/package_library.c
       src/core/event_queue.c

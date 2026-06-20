@@ -7,7 +7,7 @@
 
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
-#include "core/deck_bootstrap.h"
+#include "core/bootstrap.h"
 #include "core/js_runtime.h"
 #include "core/package_library.h"
 #include "platform/thread.h"
@@ -22,7 +22,7 @@ static void fail(const char *message)
     exit(1);
 }
 
-static bool wait_for_smoke_ok(const VdDeckBootstrap *bootstrap)
+static bool wait_for_smoke_ok(const VdBootstrap *bootstrap)
 {
     double deadline = GetTime() + WAIT_TIMEOUT_SEC;
     while (GetTime() < deadline) {
@@ -106,12 +106,12 @@ static bool verify_instance_tree(void)
     return true;
 }
 
-static VdDeckBootstrapWindowConfig smoke_window_config(void)
+static VdBootstrapWindowConfig smoke_window_config(void)
 {
 #if defined(__APPLE__)
-    return (VdDeckBootstrapWindowConfig){.raylib_config_flags = FLAG_WINDOW_UNDECORATED};
+    return (VdBootstrapWindowConfig){.raylib_config_flags = FLAG_WINDOW_UNDECORATED};
 #else
-    return (VdDeckBootstrapWindowConfig){.raylib_config_flags = FLAG_WINDOW_HIDDEN};
+    return (VdBootstrapWindowConfig){.raylib_config_flags = FLAG_WINDOW_HIDDEN};
 #endif
 }
 
@@ -136,23 +136,23 @@ int main(int argc, char *argv[])
 
     SetTraceLogLevel(LOG_WARNING);
 
-    VdDeckBootstrap bootstrap;
-    VdDeckBootstrapWindowConfig window_config = smoke_window_config();
-    deck_bootstrap_init(&bootstrap);
+    VdBootstrap bootstrap;
+    VdBootstrapWindowConfig window_config = smoke_window_config();
+    bootstrap_init(&bootstrap);
 
     char init_error[256];
-    if (!deck_bootstrap_boot_subsystems(init_error, sizeof(init_error))) {
+    if (!bootstrap_boot_subsystems(init_error, sizeof(init_error))) {
         fprintf(stderr, "smoke_harness: %s\n", init_error);
         return 1;
     }
     if (!package_library_has_active_deck_app()) fail("no active deck app configured");
 
-    if (!deck_bootstrap_open_window(&bootstrap, "VitaDeck Smoke", &window_config, init_error, sizeof(init_error))) {
+    if (!bootstrap_open_window(&bootstrap, "VitaDeck Smoke", &window_config, init_error, sizeof(init_error))) {
         fprintf(stderr, "smoke_harness: %s\n", init_error);
         return 1;
     }
 
-    if (!deck_bootstrap_start_active_deck_app(&bootstrap, init_error, sizeof(init_error))) {
+    if (!bootstrap_start_active_deck_app(&bootstrap, init_error, sizeof(init_error))) {
         fprintf(stderr, "smoke_harness: %s\n", init_error);
         return 1;
     }
@@ -161,11 +161,11 @@ int main(int argc, char *argv[])
 
     BeginDrawing();
     ClearBackground(BLACK);
-    deck_bootstrap_draw_deck_canvas(&bootstrap);
+    bootstrap_draw_deck_canvas(&bootstrap);
     EndDrawing();
 
     TakeScreenshot(output_path);
-    deck_bootstrap_shutdown(&bootstrap);
+    bootstrap_shutdown(&bootstrap);
 
     if (update_golden) {
         if (!golden_path) fail("--update-golden requires --golden PATH");
