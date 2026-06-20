@@ -1,4 +1,4 @@
-#include "deck_host.h"
+#include "deck_bootstrap.h"
 
 #include <raylib.h>
 #include <stdio.h>
@@ -15,13 +15,13 @@ static bool load_active_package_fonts(char *error, size_t error_size)
         package_library_has_active_deck_app() ? package_library_active_package_path() : "", error, error_size);
 }
 
-void deck_host_init(VdDeckHost *host)
+void deck_bootstrap_init(VdDeckBootstrap *bootstrap)
 {
-    js_runtime_init(&host->js_runtime);
-    host->window_open = false;
+    js_runtime_init(&bootstrap->js_runtime);
+    bootstrap->window_open = false;
 }
 
-bool deck_host_boot_subsystems(char *error, size_t error_size)
+bool deck_bootstrap_boot_subsystems(char *error, size_t error_size)
 {
     if (!event_queue_init()) {
         if (error && error_size > 0) snprintf(error, error_size, "Could not initialize event queue.");
@@ -34,8 +34,8 @@ bool deck_host_boot_subsystems(char *error, size_t error_size)
     return true;
 }
 
-bool deck_host_open_window(VdDeckHost *host, const char *title, const VdDeckHostWindowConfig *window_config,
-                           char *error, size_t error_size)
+bool deck_bootstrap_open_window(VdDeckBootstrap *bootstrap, const char *title,
+                              const VdDeckBootstrapWindowConfig *window_config, char *error, size_t error_size)
 {
     if (window_config && window_config->set_raylib_config_flags) {
         SetConfigFlags(window_config->raylib_config_flags);
@@ -47,24 +47,24 @@ bool deck_host_open_window(VdDeckHost *host, const char *title, const VdDeckHost
         return false;
     }
 
-    host->window_open = true;
+    bootstrap->window_open = true;
     SetTargetFPS(60);
 
     if (!font_registry_init(error, error_size)) return false;
-    if (!load_active_package_fonts(error, error_size)) host->js_runtime.failed = true;
+    if (!load_active_package_fonts(error, error_size)) bootstrap->js_runtime.failed = true;
     return true;
 }
 
-bool deck_host_start_active_deck_app(VdDeckHost *host, char *error, size_t error_size)
+bool deck_bootstrap_start_active_deck_app(VdDeckBootstrap *bootstrap, char *error, size_t error_size)
 {
     if (!package_library_has_active_deck_app()) {
         if (error && error_size > 0) snprintf(error, error_size, "No active Deck App configured.");
         return false;
     }
 
-    if (js_runtime_failed(&host->js_runtime)) return true;
+    if (js_runtime_failed(&bootstrap->js_runtime)) return true;
 
-    if (!js_runtime_start(&host->js_runtime)) {
+    if (!js_runtime_start(&bootstrap->js_runtime)) {
         if (error && error_size > 0) snprintf(error, error_size, "Could not create JS thread.");
         return false;
     }
@@ -72,7 +72,7 @@ bool deck_host_start_active_deck_app(VdDeckHost *host, char *error, size_t error
     return true;
 }
 
-void deck_host_draw_loading_splash(void)
+void deck_bootstrap_draw_loading_splash(void)
 {
     BeginDrawing();
     ClearBackground(BLACK);
@@ -80,33 +80,33 @@ void deck_host_draw_loading_splash(void)
     EndDrawing();
 }
 
-void deck_host_draw_deck_canvas(const VdDeckHost *host)
+void deck_bootstrap_draw_deck_canvas(const VdDeckBootstrap *bootstrap)
 {
     if (!package_library_has_active_deck_app()) return;
 
-    if (js_runtime_failed(&host->js_runtime)) {
+    if (js_runtime_failed(&bootstrap->js_runtime)) {
         DrawText("Deck App Runtime failed to start.", 10, 10, 24, RED);
         DrawText("Open the Shell with F1/Start to choose another Deck App.", 10, 44, 20, RAYWHITE);
-    } else if (!js_runtime_is_ready(&host->js_runtime)) {
+    } else if (!js_runtime_is_ready(&bootstrap->js_runtime)) {
         DrawText("Loading JavaScript...", 10, 10, 20, WHITE);
     } else {
         render_draw_list();
     }
 }
 
-void deck_host_shutdown(VdDeckHost *host)
+void deck_bootstrap_shutdown(VdDeckBootstrap *bootstrap)
 {
-    js_runtime_stop(&host->js_runtime);
+    js_runtime_stop(&bootstrap->js_runtime);
     font_registry_shutdown();
     event_queue_shutdown();
     event_queue_destroy();
-    if (host->window_open) {
+    if (bootstrap->window_open) {
         CloseWindow();
-        host->window_open = false;
+        bootstrap->window_open = false;
     }
 }
 
-void deck_host_configure_smoke_window_flags(void)
+void deck_bootstrap_configure_smoke_window_flags(void)
 {
 #if defined(__APPLE__)
     SetConfigFlags(FLAG_WINDOW_UNDECORATED);

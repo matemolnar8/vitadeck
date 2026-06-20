@@ -7,7 +7,7 @@
 
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
-#include "core/deck_host.h"
+#include "core/deck_bootstrap.h"
 #include "core/js_runtime.h"
 #include "core/package_library.h"
 #include "platform/thread.h"
@@ -22,13 +22,13 @@ static void fail(const char *message)
     exit(1);
 }
 
-static bool wait_for_smoke_ok(const VdDeckHost *host)
+static bool wait_for_smoke_ok(const VdDeckBootstrap *bootstrap)
 {
     double deadline = GetTime() + WAIT_TIMEOUT_SEC;
     while (GetTime() < deadline) {
-        if (js_runtime_failed(&host->js_runtime)) fail("JS runtime failed");
-        if (js_runtime_is_ready(&host->js_runtime) && instance_tree_contains_text("SMOKE_OK")) return true;
-        if (js_runtime_is_ready(&host->js_runtime) && instance_tree_contains_text("SMOKE_INTERVAL_FAIL")) {
+        if (js_runtime_failed(&bootstrap->js_runtime)) fail("JS runtime failed");
+        if (js_runtime_is_ready(&bootstrap->js_runtime) && instance_tree_contains_text("SMOKE_OK")) return true;
+        if (js_runtime_is_ready(&bootstrap->js_runtime) && instance_tree_contains_text("SMOKE_INTERVAL_FAIL")) {
             fail("timer interval did not tick before timeout");
         }
         vd_thread_yield();
@@ -126,37 +126,37 @@ int main(int argc, char *argv[])
     }
 
     SetTraceLogLevel(LOG_WARNING);
-    deck_host_configure_smoke_window_flags();
+    deck_bootstrap_configure_smoke_window_flags();
 
-    VdDeckHost host;
-    deck_host_init(&host);
+    VdDeckBootstrap bootstrap;
+    deck_bootstrap_init(&bootstrap);
 
     char init_error[256];
-    if (!deck_host_boot_subsystems(init_error, sizeof(init_error))) {
+    if (!deck_bootstrap_boot_subsystems(init_error, sizeof(init_error))) {
         fprintf(stderr, "smoke_harness: %s\n", init_error);
         return 1;
     }
     if (!package_library_has_active_deck_app()) fail("no active deck app configured");
 
-    if (!deck_host_open_window(&host, "VitaDeck Smoke", NULL, init_error, sizeof(init_error))) {
+    if (!deck_bootstrap_open_window(&bootstrap, "VitaDeck Smoke", NULL, init_error, sizeof(init_error))) {
         fprintf(stderr, "smoke_harness: %s\n", init_error);
         return 1;
     }
 
-    if (!deck_host_start_active_deck_app(&host, init_error, sizeof(init_error))) {
+    if (!deck_bootstrap_start_active_deck_app(&bootstrap, init_error, sizeof(init_error))) {
         fprintf(stderr, "smoke_harness: %s\n", init_error);
         return 1;
     }
-    if (!wait_for_smoke_ok(&host)) fail("timed out waiting for SMOKE_OK");
+    if (!wait_for_smoke_ok(&bootstrap)) fail("timed out waiting for SMOKE_OK");
     if (!verify_instance_tree()) return 1;
 
     BeginDrawing();
     ClearBackground(BLACK);
-    deck_host_draw_deck_canvas(&host);
+    deck_bootstrap_draw_deck_canvas(&bootstrap);
     EndDrawing();
 
     TakeScreenshot(output_path);
-    deck_host_shutdown(&host);
+    deck_bootstrap_shutdown(&bootstrap);
 
     if (update_golden) {
         if (!golden_path) fail("--update-golden requires --golden PATH");
