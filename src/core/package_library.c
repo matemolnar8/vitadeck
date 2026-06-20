@@ -432,6 +432,11 @@ int package_library_list(VdPackageInfo *items, int max_items)
 
 bool package_library_init(char *error, size_t error_size)
 {
+    const char *env_root = getenv("VITADECK_DATA_ROOT");
+    if (env_root && env_root[0] != '\0') {
+        snprintf(g_root, sizeof(g_root), "%s", env_root);
+    }
+
     join_path(g_installed_root, sizeof(g_installed_root), g_root, "installed-deck-apps");
     join_path(g_staging_root, sizeof(g_staging_root), g_root, "staging/runtime-upload");
 

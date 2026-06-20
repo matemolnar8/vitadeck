@@ -1,0 +1,168 @@
+import React, { useEffect, useState } from "react";
+import { Button, Rect, Screen, Scroll, Text, insetContent, type Color } from "@vitadeck/sdk";
+
+const BG_COLOR: Color = { r: 13, g: 27, b: 42, a: 255 };
+const SURFACE: Color = { r: 27, g: 38, b: 59, a: 255 };
+const SURFACE_ALT: Color = { r: 65, g: 90, b: 119, a: 255 };
+const OUTLINE: Color = { r: 119, g: 141, b: 169, a: 255 };
+const STATUS_COLOR: Color = { r: 224, g: 225, b: 221, a: 255 };
+const ACCENT: Color = { r: 233, g: 196, b: 106, a: 255 };
+const BUTTON_TEXT: Color = { r: 13, g: 27, b: 42, a: 255 };
+
+const SCROLL_ROWS = [
+  {
+    title: "Fill rect + wrapped text",
+    body: "Default font with word wrap exercises the SDK text layout path across multiple lines in a rounded fill rect.",
+    variant: "fill" as const,
+    font: undefined,
+    align: "left" as const,
+    border: false,
+  },
+  {
+    title: "Outline rect + bordered text",
+    body: "Center aligned copy inside an outline variant rect with bordered text styling.",
+    variant: "outline" as const,
+    font: undefined,
+    align: "center" as const,
+    border: true,
+  },
+  {
+    title: "Custom font rendering",
+    body: "SMOKE_MONO 0123456789 ABCD",
+    variant: "fill" as const,
+    font: "smokeMono" as const,
+    align: "left" as const,
+    border: false,
+  },
+  {
+    title: "Right aligned panel",
+    body: "A second custom-font block verifies manifest font loading and draw.",
+    variant: "fill" as const,
+    font: "smokeMono" as const,
+    align: "right" as const,
+    border: false,
+  },
+];
+
+export default function SmokeDeckApp() {
+  const [status, setStatus] = useState("SMOKE_READY");
+
+  useEffect(() => {
+    let intervalTicks = 0;
+    const intervalId = setInterval(() => {
+      intervalTicks += 1;
+    }, 16);
+
+    const timeoutId = setTimeout(() => {
+      clearInterval(intervalId);
+      if (intervalTicks < 1) {
+        setStatus("SMOKE_INTERVAL_FAIL");
+        return;
+      }
+      setStatus("SMOKE_OK");
+    }, 50);
+
+    return () => {
+      clearTimeout(timeoutId);
+      clearInterval(intervalId);
+    };
+  }, []);
+
+  const inset = insetContent();
+  const headerHeight = 56;
+  const footerHeight = 48;
+  const scrollY = inset.y + headerHeight + 8;
+  const scrollHeight = inset.height - headerHeight - footerHeight - 16;
+  const rowWidth = inset.width - 24;
+  const rowHeight = 112;
+
+  return (
+    <Screen color={BG_COLOR}>
+      <Rect x={inset.x} y={inset.y} width={inset.width} height={headerHeight} color={SURFACE} borderRadius={8}>
+        <Text x={16} y={14} fontSize={32} color={STATUS_COLOR}>
+          {status}
+        </Text>
+        <Text x={16} y={46} fontSize={18} color={OUTLINE}>
+          SDK / runtime / timers / render smoke
+        </Text>
+      </Rect>
+
+      <Scroll
+        x={inset.x}
+        y={scrollY}
+        width={inset.width}
+        height={scrollHeight}
+        color={SURFACE_ALT}
+        gap={12}
+        padding={12}
+      >
+        {SCROLL_ROWS.map((row, index) => (
+          <Rect
+            key={row.title}
+            x={0}
+            y={0}
+            width={rowWidth}
+            height={rowHeight}
+            variant={row.variant}
+            color={index % 2 === 0 ? SURFACE : SURFACE_ALT}
+            borderColor={OUTLINE}
+            borderRadius={6}
+          >
+            <Text x={12} y={10} fontSize={22} color={ACCENT} align="left">
+              {row.title}
+            </Text>
+            <Text
+              x={12}
+              y={42}
+              width={rowWidth - 24}
+              fontSize={18}
+              color={STATUS_COLOR}
+              align={row.align}
+              wrap="word"
+              border={row.border}
+              font={row.font}
+              lineHeight={22}
+            >
+              {row.body}
+            </Text>
+          </Rect>
+        ))}
+
+        <Button
+          x={0}
+          y={0}
+          width={220}
+          height={44}
+          label="Static button"
+          color={ACCENT}
+          textColor={BUTTON_TEXT}
+          borderRadius={8}
+        />
+        <Button
+          x={0}
+          y={0}
+          width={220}
+          height={44}
+          label="Rounded button"
+          color={SURFACE}
+          textColor={STATUS_COLOR}
+          borderRadius={20}
+        />
+      </Scroll>
+
+      <Rect
+        x={inset.x}
+        y={scrollY + scrollHeight + 8}
+        width={inset.width}
+        height={footerHeight}
+        variant="outline"
+        borderColor={OUTLINE}
+        borderRadius={6}
+      >
+        <Text x={16} y={14} fontSize={20} color={OUTLINE} font="smokeMono">
+          Scroll viewport above; clipped content verifies scrolling layout.
+        </Text>
+      </Rect>
+    </Screen>
+  );
+}

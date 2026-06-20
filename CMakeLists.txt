@@ -101,6 +101,7 @@ set(JSLIB_SOURCES
 set(VITADECK_SOURCES
     src/main.c
     src/core/arena.c
+    src/core/bootstrap.c
     src/core/js_runtime.c
     src/core/package_library.c
     ${JSLIB_SOURCES}
@@ -173,6 +174,33 @@ if(NOT DEFINED ENV{VITASDK})
     add_executable(timer_reload_harness tests/timer_reload_harness.c src/jslib/timeout.c)
     target_link_libraries(timer_reload_harness quickjs m ${RAYLIB_LIBRARIES})
     add_test(NAME timer_reload_harness COMMAND timer_reload_harness)
+
+    set(SMOKE_HARNESS_SOURCES
+      tests/smoke_harness.c
+      src/core/arena.c
+      src/core/bootstrap.c
+      src/core/js_runtime.c
+      src/core/package_library.c
+      src/core/event_queue.c
+      ${JSLIB_SOURCES}
+      src/ui/instance_tree.c
+      src/ui/fonts.c
+      src/ui/render.c
+      src/ui/input.c
+      src/ui/scroll.c
+      src/platform/thread_posix.c
+    )
+    add_executable(smoke_harness ${SMOKE_HARNESS_SOURCES})
+    target_link_libraries(smoke_harness ${VITADECK_LIBRARIES})
+    add_dependencies(smoke_harness js_copy)
+    add_test(
+      NAME smoke_harness
+      COMMAND ${CMAKE_SOURCE_DIR}/tests/run_smoke_test.sh ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(smoke_harness PROPERTIES
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+      LABELS "smoke"
+    )
   endif()
 endif()
 

@@ -1,0 +1,8 @@
+{
+  "name": "Smoke",
+  "entry": "./src/App.tsx",
+  "outDir": "./dist",
+  "fonts": {
+    "smokeMono": "./assets/fonts/DejaVuSansMono.ttf"
+  }
+}
