@@ -106,6 +106,15 @@ static bool verify_instance_tree(void)
     return true;
 }
 
+static VdDeckBootstrapWindowConfig smoke_window_config(void)
+{
+#if defined(__APPLE__)
+    return (VdDeckBootstrapWindowConfig){.raylib_config_flags = FLAG_WINDOW_UNDECORATED};
+#else
+    return (VdDeckBootstrapWindowConfig){.raylib_config_flags = FLAG_WINDOW_HIDDEN};
+#endif
+}
+
 int main(int argc, char *argv[])
 {
     const char *golden_path = NULL;
@@ -126,9 +135,9 @@ int main(int argc, char *argv[])
     }
 
     SetTraceLogLevel(LOG_WARNING);
-    deck_bootstrap_configure_smoke_window_flags();
 
     VdDeckBootstrap bootstrap;
+    VdDeckBootstrapWindowConfig window_config = smoke_window_config();
     deck_bootstrap_init(&bootstrap);
 
     char init_error[256];
@@ -138,7 +147,7 @@ int main(int argc, char *argv[])
     }
     if (!package_library_has_active_deck_app()) fail("no active deck app configured");
 
-    if (!deck_bootstrap_open_window(&bootstrap, "VitaDeck Smoke", NULL, init_error, sizeof(init_error))) {
+    if (!deck_bootstrap_open_window(&bootstrap, "VitaDeck Smoke", &window_config, init_error, sizeof(init_error))) {
         fprintf(stderr, "smoke_harness: %s\n", init_error);
         return 1;
     }

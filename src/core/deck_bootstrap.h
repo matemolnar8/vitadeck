@@ -17,7 +17,6 @@ typedef struct {
 
 typedef struct {
     unsigned int raylib_config_flags;
-    bool set_raylib_config_flags;
 } VdDeckBootstrapWindowConfig;
 
 void deck_bootstrap_init(VdDeckBootstrap *bootstrap);
@@ -28,7 +27,5 @@ bool deck_bootstrap_start_active_deck_app(VdDeckBootstrap *bootstrap, char *erro
 void deck_bootstrap_draw_loading_splash(void);
 void deck_bootstrap_draw_deck_canvas(const VdDeckBootstrap *bootstrap);
 void deck_bootstrap_shutdown(VdDeckBootstrap *bootstrap);
-
-void deck_bootstrap_configure_smoke_window_flags(void);
 
 #endif /* DECK_BOOTSTRAP_H */

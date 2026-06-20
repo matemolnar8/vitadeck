@@ -6,4 +6,4 @@ It is intentionally **not** a VitaDeck domain concept — no glossary entry in `
 
 **Considered options:** treat the module as a native "Deck App Host" layer (rejected — overstates its role and invites scope creep); inline duplication in both entry points (rejected — drift risk).
 
-**Consequences:** new shared startup behavior belongs in `deck_bootstrap.c` only when both `main.c` and the smoke harness need it identically; shell or test-only logic stays in its own file.
+**Consequences:** new shared startup behavior belongs in `deck_bootstrap.c` only when both `main.c` and the smoke harness need it identically; shell or test-only logic stays in its own file. Callers that need non-default raylib window flags pass a `VdDeckBootstrapWindowConfig` with `raylib_config_flags`; `main.c` passes `NULL` for raylib defaults.

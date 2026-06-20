@@ -37,9 +37,7 @@ bool deck_bootstrap_boot_subsystems(char *error, size_t error_size)
 bool deck_bootstrap_open_window(VdDeckBootstrap *bootstrap, const char *title,
                               const VdDeckBootstrapWindowConfig *window_config, char *error, size_t error_size)
 {
-    if (window_config && window_config->set_raylib_config_flags) {
-        SetConfigFlags(window_config->raylib_config_flags);
-    }
+    if (window_config) SetConfigFlags(window_config->raylib_config_flags);
 
     InitWindow(VD_SCREEN_WIDTH, VD_SCREEN_HEIGHT, title ? title : "VitaDeck");
     if (!IsWindowReady()) {
@@ -104,13 +102,4 @@ void deck_bootstrap_shutdown(VdDeckBootstrap *bootstrap)
         CloseWindow();
         bootstrap->window_open = false;
     }
-}
-
-void deck_bootstrap_configure_smoke_window_flags(void)
-{
-#if defined(__APPLE__)
-    SetConfigFlags(FLAG_WINDOW_UNDECORATED);
-#else
-    SetConfigFlags(FLAG_WINDOW_HIDDEN);
-#endif
 }
