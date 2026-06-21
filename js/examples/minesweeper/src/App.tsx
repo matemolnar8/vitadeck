@@ -105,6 +105,31 @@ function cloneGrid(src: Grid): Grid {
   return src.map((row) => row.map((cell) => ({ ...cell })));
 }
 
+function floodReveal(grid: Grid, startR: number, startC: number): void {
+  const rows = grid.length;
+  const cols = grid[0] ? grid[0].length : 0;
+  const queue: [number, number][] = [[startR, startC]];
+  const seen = new Set<string>([`${startR}:${startC}`]);
+  while (queue.length > 0) {
+    const item = queue.shift();
+    if (!item) break;
+    const [cr, cc] = item;
+    for (const [nr, nc] of neighbors(cr, cc, rows, cols)) {
+      if (!grid[nr] || !grid[nr][nc]) continue;
+      const ncell = grid[nr][nc];
+      if (ncell.revealed || ncell.flagged) continue;
+      ncell.revealed = true;
+      if (ncell.adjacent === 0 && !ncell.mine) {
+        const key = `${nr}:${nc}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          queue.push([nr, nc]);
+        }
+      }
+    }
+  }
+}
+
 export default function MinesweeperDeckApp() {
   const { theme } = useTheme();
   const [grid, setGrid] = useState<Grid>(() => makeEmptyGrid(gridSize.rows, gridSize.cols));
@@ -140,28 +165,7 @@ export default function MinesweeperDeckApp() {
         return;
       }
       if (cell.adjacent === 0) {
-        const rows = current.length;
-        const cols = current[0] ? current[0].length : 0;
-        const queue: [number, number][] = [[r, c]];
-        const seen = new Set<string>([`${r}:${c}`]);
-        while (queue.length) {
-          const item = queue.shift();
-          if (!item) break;
-          const [cr, cc] = item;
-          for (const [nr, nc] of neighbors(cr, cc, rows, cols)) {
-            if (!current[nr] || !current[nr][nc]) continue;
-            const ncell = current[nr][nc];
-            if (ncell.revealed || ncell.flagged) continue;
-            ncell.revealed = true;
-            if (ncell.adjacent === 0 && !ncell.mine) {
-              const key = `${nr}:${nc}`;
-              if (!seen.has(key)) {
-                seen.add(key);
-                queue.push([nr, nc]);
-              }
-            }
-          }
-        }
+        floodReveal(current, r, c);
       }
       let allSafeRevealed = true;
       outer: for (const row of current) {
@@ -284,8 +288,12 @@ export default function MinesweeperDeckApp() {
                 color={fillColor}
                 textColor={textColor}
                 label={label}
-                onPressStart={() => onCellPressStart(r, c)}
-                onPressEnd={() => onCellPressEnd(r, c)}
+                onPressStart={() => {
+                  onCellPressStart(r, c);
+                }}
+                onPressEnd={() => {
+                  onCellPressEnd(r, c);
+                }}
                 borderRadius={2}
               />
             );

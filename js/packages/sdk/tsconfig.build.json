@@ -3,7 +3,7 @@
   "compilerOptions": {
     "jsx": "react",
     "types": ["node"],
-    "lib": ["es2022"],
+    "lib": ["es2023"],
     "noEmit": false,
     "declaration": true,
     "declarationMap": true,

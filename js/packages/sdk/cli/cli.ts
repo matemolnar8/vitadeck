@@ -18,7 +18,7 @@ const PACKAGE_SCHEMA_VERSION = 1;
 const SUPPORTED_REACT_PREFIX = "18.3.";
 const RESERVED_FONT_NAMES = new Set(["default"]);
 const SUPPORTED_FONT_EXTENSIONS = new Set([".ttf", ".otf", ".fnt", ".bdf"]);
-const FONT_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,62}$/;
+const FONT_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,62}$/u;
 /** Must match `name` / copy in `cli/templates/scaffold` so the template is a valid workspace package and typechecks; replaced with the author's slug on `create`. */
 const SCAFFOLD_TEMPLATE_LABEL = "vitadeck-scaffold-template";
 const requireFromHere = createRequire(import.meta.url);
@@ -81,8 +81,8 @@ function packageNameFor(displayName: string): string {
   const slug = displayName
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replaceAll(/[^a-z0-9]+/gu, "-")
+    .replaceAll(/^-+|-+$/gu, "");
   return `${slug || "deck-app"}.vdapp`;
 }
 
@@ -102,7 +102,7 @@ async function validateReact(projectRoot: string): Promise<void> {
 }
 
 function validatePackageVersion(version: string, sourcePath: string): void {
-  if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)) {
+  if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/u.test(version)) {
     throw new Error(`${sourcePath} must define "version" as a semver string.`);
   }
 }
@@ -149,16 +149,18 @@ async function writeRuntimeUploadArchive(packageDir: string, zipOutPath: string)
   async function walk(relInsidePackage: string): Promise<void> {
     const abs = path.join(packageDir, relInsidePackage);
     const entries = await readdir(abs, { withFileTypes: true });
-    for (const ent of entries) {
-      const childRel = relInsidePackage ? `${relInsidePackage}/${ent.name}` : ent.name;
-      const zipEntryPath = `${rootName}/${childRel}`.replaceAll("\\", "/");
-      if (ent.isDirectory()) {
-        await walk(childRel);
-      } else if (ent.isFile()) {
-        const buf = await readFile(path.join(abs, ent.name));
-        filesForZip[zipEntryPath] = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
-      }
-    }
+    await Promise.all(
+      entries.map(async (ent) => {
+        const childRel = relInsidePackage ? `${relInsidePackage}/${ent.name}` : ent.name;
+        const zipEntryPath = `${rootName}/${childRel}`.replaceAll("\\", "/");
+        if (ent.isDirectory()) {
+          await walk(childRel);
+        } else if (ent.isFile()) {
+          const buf = await readFile(path.join(abs, ent.name));
+          filesForZip[zipEntryPath] = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+        }
+      }),
+    );
   }
 
   await walk("");
@@ -167,7 +169,7 @@ async function writeRuntimeUploadArchive(packageDir: string, zipOutPath: string)
 }
 
 async function writeFontTypes(generatedDir: string, fonts: Record<string, string> | undefined): Promise<void> {
-  const names = Object.keys(fonts ?? {}).sort();
+  const names = Object.keys(fonts ?? {}).toSorted();
   const declarations =
     names.length === 0 ? "" : names.map((name) => `    ${JSON.stringify(name)}: true;`).join("\n") + "\n";
   await writeFile(
@@ -194,32 +196,37 @@ async function copyFonts(
   const outFontsDir = path.join(packageDir, "fonts");
   await mkdir(outFontsDir, { recursive: true });
 
-  for (const [name, sourceRel] of entries) {
-    validateFontSourcePath(sourceRel, "vitadeck.config.json");
-    const sourceAbs = path.resolve(projectRoot, sourceRel);
-    await assertFileExists(sourceAbs, "vitadeck.config.json");
-    const packageRel = `fonts/${name}${path.extname(sourceRel).toLowerCase()}`;
-    await copyFile(sourceAbs, path.join(packageDir, packageRel));
-    manifestFonts[name] = packageRel;
-  }
+  await Promise.all(
+    entries.map(async ([name, sourceRel]) => {
+      validateFontSourcePath(sourceRel, "vitadeck.config.json");
+      const sourceAbs = path.resolve(projectRoot, sourceRel);
+      await assertFileExists(sourceAbs, "vitadeck.config.json");
+      const packageRel = `fonts/${name}${path.extname(sourceRel).toLowerCase()}`;
+      await copyFile(sourceAbs, path.join(packageDir, packageRel));
+      manifestFonts[name] = packageRel;
+    }),
+  );
 
   return manifestFonts;
 }
 
-async function copyScaffold(templateRoot: string, targetRoot: string, slug: string): Promise<void> {
-  const stack: string[] = [""];
-  while (stack.length > 0) {
-    const rel = stack.pop()!;
-    const absDir = path.join(templateRoot, rel);
-    const entries = await readdir(absDir, { withFileTypes: true });
-    for (const ent of entries) {
-      if (ent.isDirectory() && isScaffoldCopySkippedDir(ent.name)) continue;
+async function copyScaffoldDir(
+  templateRoot: string,
+  targetRoot: string,
+  slug: string,
+  rel = "",
+): Promise<void> {
+  const absDir = path.join(templateRoot, rel);
+  const entries = await readdir(absDir, { withFileTypes: true });
+  await Promise.all(
+    entries.map(async (ent) => {
+      if (ent.isDirectory() && isScaffoldCopySkippedDir(ent.name)) return;
       const childRel = rel ? path.join(rel, ent.name) : ent.name;
       const src = path.join(templateRoot, childRel);
       const dest = path.join(targetRoot, childRel);
       if (ent.isDirectory()) {
         await mkdir(dest, { recursive: true });
-        stack.push(childRel);
+        await copyScaffoldDir(templateRoot, targetRoot, slug, childRel);
       } else if (ent.isFile()) {
         await mkdir(path.dirname(dest), { recursive: true });
         const body = (await readFile(src, "utf8"))
@@ -227,8 +234,8 @@ async function copyScaffold(templateRoot: string, targetRoot: string, slug: stri
           .replaceAll(SCAFFOLD_TEMPLATE_LABEL, slug);
         await writeFile(dest, body);
       }
-    }
-  }
+    }),
+  );
 }
 
 type BuildOptions = { noZip?: boolean };
@@ -266,7 +273,7 @@ globalThis.vitadeckPackage.register(DeckApp);
     tsconfig: false,
     transform: {
       define: {
-        "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || "development"),
+        "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV ?? "development"),
       },
     },
     plugins: [
@@ -314,10 +321,10 @@ globalThis.vitadeckPackage.register(DeckApp);
 
 async function create(projectName: string): Promise<void> {
   const targetDir = path.resolve(process.cwd(), projectName);
-  const slug = packageNameFor(projectName).replace(/\.vdapp$/, "");
+  const slug = packageNameFor(projectName).replace(/\.vdapp$/u, "");
   const templateRoot = fileURLToPath(new URL("./templates/scaffold", import.meta.url));
   await mkdir(targetDir, { recursive: true });
-  await copyScaffold(templateRoot, targetDir, slug);
+  await copyScaffoldDir(templateRoot, targetDir, slug);
   console.log(`Created ${targetDir}`);
 }
 
@@ -344,8 +351,10 @@ async function main(): Promise<void> {
   throw new Error(`Unknown command: ${command}`);
 }
 
-main().catch((error: unknown) => {
+try {
+  await main();
+} catch (error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   console.error(message);
   process.exit(1);
-});
+}

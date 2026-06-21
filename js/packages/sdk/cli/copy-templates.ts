@@ -16,30 +16,32 @@ function skipTemplateDir(name: string): boolean {
 async function copyTree(rel = ""): Promise<void> {
   const srcDir = path.join(srcRoot, rel);
   const entries = await readdir(srcDir, { withFileTypes: true });
-  for (const ent of entries) {
-    if (ent.isDirectory() && skipTemplateDir(ent.name)) continue;
-    const childRel = rel ? path.join(rel, ent.name) : ent.name;
-    const src = path.join(srcRoot, childRel);
-    const dest = path.join(destRoot, childRel);
-    if (ent.isDirectory()) {
-      await mkdir(dest, { recursive: true });
-      await copyTree(childRel);
-    } else if (ent.isFile()) {
-      await mkdir(path.dirname(dest), { recursive: true });
-      const relPosix = childRel.split(path.sep).join("/");
-      const isScaffoldPkg = ent.name === "package.json" && relPosix === "scaffold/package.json";
-      if (isScaffoldPkg) {
-        const raw = await readFile(src, "utf8");
-        const pkg = JSON.parse(raw) as { dependencies?: Record<string, string> };
-        if (pkg.dependencies?.["@vitadeck/sdk"] === "workspace:*") {
-          pkg.dependencies["@vitadeck/sdk"] = `^${sdkVersion}`;
+  await Promise.all(
+    entries.map(async (ent) => {
+      if (ent.isDirectory() && skipTemplateDir(ent.name)) return;
+      const childRel = rel ? path.join(rel, ent.name) : ent.name;
+      const src = path.join(srcRoot, childRel);
+      const dest = path.join(destRoot, childRel);
+      if (ent.isDirectory()) {
+        await mkdir(dest, { recursive: true });
+        await copyTree(childRel);
+      } else if (ent.isFile()) {
+        await mkdir(path.dirname(dest), { recursive: true });
+        const relPosix = childRel.split(path.sep).join("/");
+        const isScaffoldPkg = ent.name === "package.json" && relPosix === "scaffold/package.json";
+        if (isScaffoldPkg) {
+          const raw = await readFile(src, "utf8");
+          const pkg = JSON.parse(raw) as { dependencies?: Record<string, string> };
+          if (pkg.dependencies?.["@vitadeck/sdk"] === "workspace:*") {
+            pkg.dependencies["@vitadeck/sdk"] = `^${sdkVersion}`;
+          }
+          await writeFile(dest, `${JSON.stringify(pkg, null, 2)}\n`);
+        } else {
+          await copyFile(src, dest);
         }
-        await writeFile(dest, `${JSON.stringify(pkg, null, 2)}\n`);
-      } else {
-        await copyFile(src, dest);
       }
-    }
-  }
+    }),
+  );
 }
 
 await rm(destRoot, { recursive: true, force: true });

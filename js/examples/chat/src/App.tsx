@@ -168,7 +168,7 @@ export default function ChatDeckApp() {
             </Text>
           </Rect>
         ) : (
-          messages.map(renderBubble)
+          messages.map((message) => renderBubble(message))
         )}
 
         {showSendButton && configured ? (
@@ -181,7 +181,9 @@ export default function ChatDeckApp() {
                   width={navButtonWidth}
                   height={navButtonHeight}
                   label="<"
-                  onPress={() => stepFollowUp(-1)}
+                  onPress={() => {
+                    stepFollowUp(-1);
+                  }}
                   color={theme.surfaceAlt}
                   textColor={theme.text}
                   borderRadius={bubbleRadiusPx}
@@ -214,7 +216,9 @@ export default function ChatDeckApp() {
                   width={navButtonWidth}
                   height={navButtonHeight}
                   label=">"
-                  onPress={() => stepFollowUp(1)}
+                  onPress={() => {
+                    stepFollowUp(1);
+                  }}
                   color={theme.surfaceAlt}
                   textColor={theme.text}
                   borderRadius={bubbleRadiusPx}
