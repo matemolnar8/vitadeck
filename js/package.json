@@ -20,7 +20,6 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-reconciler": "catalog:",
-    "typescript": "catalog:",
     "babel-plugin-react-compiler": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
@@ -30,7 +29,8 @@
     "react-reconciler": "catalog:",
     "rolldown": "catalog:",
     "tslib": "catalog:",
-    "tsx": "catalog:"
+    "tsx": "catalog:",
+    "typescript": "catalog:"
   },
   "engines": {
     "node": ">=22"
