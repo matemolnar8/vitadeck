@@ -1,9 +1,28 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "ignorePatterns": ["**/node_modules/**", "**/dist/**", "**/.vitadeck/**"],
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.vitadeck/**",
+    "**/rolldown.config.js",
+    "**/scripts/*.mjs"
+  ],
   "categories": {
     "correctness": "error",
-    "suspicious": "warn"
+    "suspicious": "error",
+    "pedantic": "error",
+    "perf": "error"
   },
-  "plugins": ["react", "typescript"]
+  "plugins": ["eslint", "node", "oxc", "promise", "react", "typescript", "unicorn"],
+  "options": {
+    "typeAware": true
+  },
+  "rules": {
+    "typescript/prefer-readonly-parameter-types": "off",
+    "typescript/strict-boolean-expressions": "off",
+    "typescript/no-unsafe-type-assertion": "off",
+    "react/jsx-no-constructed-context-values": "off",
+    "max-lines": "off",
+    "max-lines-per-function": "off"
+  }
 }

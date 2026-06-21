@@ -18,25 +18,26 @@ export default function TimersDeckApp() {
   const [asyncResult, setAsyncResult] = useState("");
 
   useEffect(() => {
-    timeoutPromise.then((result) => {
-      setAsyncResult(result);
-    });
+    void (async () => {
+      setAsyncResult(await timeoutPromise);
+    })();
 
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       setAsyncResult("Hello from timeout");
     }, 1000);
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   useEffect(() => {
     if (timeoutActive) {
       setTimeoutMsg("Waiting 2s...");
-      if (!timeoutIdRef.current) {
-        timeoutIdRef.current = setTimeout(() => {
-          setTimeoutMsg("Timeout fired!");
-          timeoutIdRef.current = undefined;
-          setTimeoutActive(false);
-        }, 2000);
-      }
+      timeoutIdRef.current ??= setTimeout(() => {
+        setTimeoutMsg("Timeout fired!");
+        timeoutIdRef.current = undefined;
+        setTimeoutActive(false);
+      }, 2000);
     } else if (timeoutIdRef.current) {
       clearTimeout(timeoutIdRef.current);
       timeoutIdRef.current = undefined;
@@ -46,11 +47,9 @@ export default function TimersDeckApp() {
 
   useEffect(() => {
     if (intervalRunning) {
-      if (!intervalIdRef.current) {
-        intervalIdRef.current = setInterval(() => {
-          setTicks((prev) => prev + 1);
-        }, 1000);
-      }
+      intervalIdRef.current ??= setInterval(() => {
+        setTicks((prev) => prev + 1);
+      }, 1000);
     } else if (intervalIdRef.current) {
       clearInterval(intervalIdRef.current);
       intervalIdRef.current = undefined;
@@ -80,7 +79,9 @@ export default function TimersDeckApp() {
           width={180}
           height={40}
           label="Start 2s"
-          onPress={() => setTimeoutActive(true)}
+          onPress={() => {
+            setTimeoutActive(true);
+          }}
           color={theme.success}
           textColor={theme.navText}
           borderRadius={4}
@@ -91,7 +92,9 @@ export default function TimersDeckApp() {
           width={180}
           height={40}
           label="Cancel"
-          onPress={() => setTimeoutActive(false)}
+          onPress={() => {
+            setTimeoutActive(false);
+          }}
           color={theme.danger}
           textColor={theme.navText}
           borderRadius={4}
@@ -115,7 +118,9 @@ export default function TimersDeckApp() {
           width={180}
           height={40}
           label="Start"
-          onPress={() => setIntervalRunning(true)}
+          onPress={() => {
+            setIntervalRunning(true);
+          }}
           color={theme.success}
           textColor={theme.navText}
           borderRadius={4}
@@ -126,7 +131,9 @@ export default function TimersDeckApp() {
           width={180}
           height={40}
           label="Stop"
-          onPress={() => setIntervalRunning(false)}
+          onPress={() => {
+            setIntervalRunning(false);
+          }}
           color={theme.danger}
           textColor={theme.navText}
           borderRadius={4}

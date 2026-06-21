@@ -28,7 +28,9 @@ export type CopilotMessageListing = {
 };
 
 function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve) => {
+    void setTimeout(resolve, ms);
+  });
 }
 
 function extractMarkdownText(message: CopilotMessage): string {
@@ -113,19 +115,29 @@ export async function sendCopilotMessageAndWaitForReply(
     throw new Error("Copilot response missing session id");
   }
 
-  for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
-    await delay(POLL_INTERVAL_MS);
-    const listing = await getSessionMessages(accessToken, activeSessionId);
-    const assistant = findLatestAssistantMessage(listing.entities ?? []);
-    if (!assistant) continue;
-    if (baselineAssistantId && assistant.id === baselineAssistantId) continue;
+  return pollForReply(accessToken, activeSessionId, baselineAssistantId, 0);
+}
 
-    const text = extractMarkdownText(assistant);
-    return {
-      reply: text || "(empty Copilot reply)",
-      sessionId: activeSessionId,
-    };
+async function pollForReply(
+  accessToken: string,
+  activeSessionId: string,
+  baselineAssistantId: string | undefined,
+  attempt: number,
+): Promise<CopilotReply> {
+  if (attempt >= MAX_POLL_ATTEMPTS) {
+    throw new Error("Timed out waiting for Copilot reply");
   }
 
-  throw new Error("Timed out waiting for Copilot reply");
+  await delay(POLL_INTERVAL_MS);
+  const listing = await getSessionMessages(accessToken, activeSessionId);
+  const assistant = findLatestAssistantMessage(listing.entities ?? []);
+  if (!assistant || (baselineAssistantId && assistant.id === baselineAssistantId)) {
+    return pollForReply(accessToken, activeSessionId, baselineAssistantId, attempt + 1);
+  }
+
+  const text = extractMarkdownText(assistant);
+  return {
+    reply: text || "(empty Copilot reply)",
+    sessionId: activeSessionId,
+  };
 }

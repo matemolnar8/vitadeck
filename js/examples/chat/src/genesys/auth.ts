@@ -15,7 +15,7 @@ const BASE64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz012345
 function base64EncodeAscii(value: string): string {
   const bytes: number[] = [];
   for (let i = 0; i < value.length; i++) {
-    bytes.push(value.charCodeAt(i) & 0xff);
+    bytes.push((value.codePointAt(i) ?? 0) & 0xff);
   }
   let output = "";
   for (let i = 0; i < bytes.length; i += 3) {

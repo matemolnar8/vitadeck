@@ -289,8 +289,15 @@ if(DEFINED ENV{VITASDK})
   )
 else()
   add_dependencies(${PROJECT_NAME} js_copy)
+
+  add_custom_target(stage_examples
+    COMMAND ${CMAKE_SOURCE_DIR}/scripts/stage-example-apps.sh ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}
+    COMMENT "Staging example Deck Apps to ${CMAKE_BINARY_DIR}/vitadeck-data/installed-deck-apps"
+    VERBATIM
+  )
+
   add_custom_target(run
-    DEPENDS ${PROJECT_NAME}
+    DEPENDS ${PROJECT_NAME} stage_examples
     VERBATIM
     COMMAND ${CMAKE_BINARY_DIR}/${PROJECT_NAME}
   )

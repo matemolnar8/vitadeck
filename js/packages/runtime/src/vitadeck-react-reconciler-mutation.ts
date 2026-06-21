@@ -6,7 +6,7 @@ import { registerHandlers, unregisterHandlers, updateHandlers } from "./input";
 import { instrumentHostConfig, ReconcilerMetrics } from "./reconciler-metrics";
 import { exhaustiveGuard } from "./utils";
 
-const generateRandomSegment = () => Math.random().toString(36).substring(2, 15);
+const generateRandomSegment = () => Math.random().toString(36).slice(2, 15);
 const generateInstanceId = (): string => {
   return generateRandomSegment() + generateRandomSegment() + generateRandomSegment() + generateRandomSegment();
 };
@@ -98,7 +98,7 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
     const hasFill = p.variant !== "outline" && !!p.color;
     const hasOutline = !!p.borderColor || (p.variant === "outline" && !!p.color);
     const fillColor = hasFill && p.color ? p.color : Colors.BLANK;
-    const outlineColor = p.borderColor || (hasOutline && p.color ? p.color : Colors.DARKGRAY);
+    const outlineColor = p.borderColor ?? (hasOutline && p.color ? p.color : Colors.DARKGRAY);
 
     nativeCreateRect(
       id,
@@ -116,7 +116,7 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
       outlineColor.g,
       outlineColor.b,
       outlineColor.a,
-      p.borderRadius || 0,
+      p.borderRadius ?? 0,
     );
     registerHandlers(id, extractHandlers(props));
   } else if (type === "vita-text") {
@@ -126,13 +126,13 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
     nativeCreateText(
       id,
       p.font ?? "default",
-      p.fontSize || 30,
+      p.fontSize ?? 30,
       hasColor,
       r,
       g,
       b,
       a,
-      p.border || false,
+      p.border ?? false,
       tx,
       ty,
       tw,
@@ -142,8 +142,8 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
     );
   } else if (type === "vita-button") {
     const p = props as PropsByType["vita-button"];
-    const color = p.color || Colors.DARKBLUE;
-    const textColor = p.textColor || Colors.RAYWHITE;
+    const color = p.color ?? Colors.DARKBLUE;
+    const textColor = p.textColor ?? Colors.RAYWHITE;
     nativeCreateButton(
       id,
       p.x,
@@ -156,7 +156,7 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
       color.a,
       p.label,
       20,
-      p.borderRadius || 0,
+      p.borderRadius ?? 0,
       textColor.r,
       textColor.g,
       textColor.b,
@@ -168,7 +168,7 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
     const [hasFill, r, g, b, a] = colorToArgs(p.color, Colors.BLANK);
     nativeCreateScroll(id, p.x, p.y, p.width, p.height, hasFill, r, g, b, a, p.gap ?? 0, p.padding ?? 0);
   } else {
-    exhaustiveGuard(type, `Unsupported element type: ${type}`);
+    exhaustiveGuard(type, `Unsupported element type: ${String(type)}`);
   }
 };
 
@@ -179,7 +179,7 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
     const hasFill = p.variant !== "outline" && !!p.color;
     const hasOutline = !!p.borderColor || (p.variant === "outline" && !!p.color);
     const fillColor = hasFill && p.color ? p.color : Colors.BLANK;
-    const outlineColor = p.borderColor || (hasOutline && p.color ? p.color : Colors.DARKGRAY);
+    const outlineColor = p.borderColor ?? (hasOutline && p.color ? p.color : Colors.DARKGRAY);
 
     nativeUpdateRect(
       id,
@@ -197,7 +197,7 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
       outlineColor.g,
       outlineColor.b,
       outlineColor.a,
-      p.borderRadius || 0,
+      p.borderRadius ?? 0,
     );
     updateHandlers(id, extractHandlers(props));
   } else if (type === "vita-text") {
@@ -207,13 +207,13 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
     nativeUpdateText(
       id,
       p.font ?? "default",
-      p.fontSize || 30,
+      p.fontSize ?? 30,
       hasColor,
       r,
       g,
       b,
       a,
-      p.border || false,
+      p.border ?? false,
       tx,
       ty,
       tw,
@@ -223,8 +223,8 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
     );
   } else if (type === "vita-button") {
     const p = props as PropsByType["vita-button"];
-    const color = p.color || Colors.DARKBLUE;
-    const textColor = p.textColor || Colors.RAYWHITE;
+    const color = p.color ?? Colors.DARKBLUE;
+    const textColor = p.textColor ?? Colors.RAYWHITE;
     nativeUpdateButton(
       id,
       p.x,
@@ -237,7 +237,7 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
       color.a,
       p.label,
       20,
-      p.borderRadius || 0,
+      p.borderRadius ?? 0,
       textColor.r,
       textColor.g,
       textColor.b,
@@ -249,7 +249,7 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
     const [hasFill, r, g, b, a] = colorToArgs(p.color, Colors.BLANK);
     nativeUpdateScroll(id, p.x, p.y, p.width, p.height, hasFill, r, g, b, a, p.gap ?? 0, p.padding ?? 0);
   } else {
-    exhaustiveGuard(type, `Unsupported element type: ${type}`);
+    exhaustiveGuard(type, `Unsupported element type: ${String(type)}`);
   }
 };
 
@@ -320,7 +320,7 @@ const rawHostConfig = {
         changes.props.push(key);
       }
     }
-    return changes.props.length ? { props: changes.props } : null;
+    return changes.props.length > 0 ? { props: changes.props } : null;
   },
 
   appendChild(parentInstance, child) {
@@ -390,17 +390,16 @@ const hostConfig = instrumentHostConfig(rawHostConfig, metrics, "reconciler");
 const reconciler = Reconciler(hostConfig as unknown as VitadeckHostConfig);
 
 const container: Container = {};
-let root: ReturnType<typeof reconciler.createContainer> | null = null;
+type ReconcilerRoot = object;
+let root: ReconcilerRoot | null = null;
 
 function onError(error: unknown) {
   console.error("[Reconciler] Error:", error);
 }
 
 export function render(element: ReactNode): void {
-  if (!root) {
-    root = reconciler.createContainer(container, 0, null, true, null, "vitadeck_", onError, null);
-  }
-  reconciler.updateContainer(element, root);
+  root ??= reconciler.createContainer(container, 0, null, true, null, "vitadeck_", onError, null);
+  reconciler.updateContainer(element, root as Parameters<typeof reconciler.updateContainer>[1]);
 }
 
 export function getMetrics(): ReconcilerMetrics {
