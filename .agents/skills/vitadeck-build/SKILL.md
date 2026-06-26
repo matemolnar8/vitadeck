@@ -14,7 +14,7 @@ metadata:
 - Node.js 22+ (Rolldown uses Node 22+ APIs)
 - Dependencies once: `pnpm --dir js install`
 - Produce runtime bundle and example `.vdapp` packages: `pnpm --dir js build` → writes `js/dist/runtime/runtime.js` and `js/examples/*/dist/*.vdapp`
-- Typecheck: `pnpm --dir js tsc`; watch dev: `pnpm --dir js dev`; lint/format: `pnpm --dir js lint` / `pnpm --dir js format`
+- Typecheck: `pnpm --dir js tsc`; lint/format: `pnpm --dir js lint` / `pnpm --dir js format`
 
 **Host (current machine)** — e.g. macOS:
 
@@ -52,6 +52,15 @@ docker-compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --buil
 
 ## Workflows
 
+### Canonical agent checks
+
+From the repo root, prefer the tiered verification script:
+
+- `scripts/agent-check.sh fast`: JS typecheck, JS lint, and C formatting check.
+- `scripts/agent-check.sh host`: JS build, host configure/build, and non-smoke CTest.
+- `scripts/agent-check.sh smoke`: host build plus visual smoke CTest.
+- `scripts/agent-check.sh full`: fast, host, smoke, and Vita Docker build.
+
 ### After JS, TSX, or deck-app changes
 
 1. `pnpm --dir js build` (and `pnpm --dir js tsc` when checking types).
@@ -80,4 +89,4 @@ Run **JS build**, then the host quick start, then the Vita quick start. Fix comp
 - In the container, `VITASDK` is set by the image; the project picks the Vita toolchain when that env var is present.
 - Host builds use `out/`; Vita builds use `out-vita/` on the **host** filesystem (bind-mounted from the container).
 - CMake can invoke JS via the `js_build` target; for agent workflows, treat **`pnpm --dir js build` before native builds** as the normal prerequisite so `js/dist/` is explicit and up to date.
-- The **`vitadeck`** CLI is a compiled **`js/packages/sdk/dist/cli.mjs`** (plus **`dist/templates/`**); **`pnpm --dir js install`** runs the workspace **`prepare`** script, which builds **`@vitadeck/sdk`**. See `.cursor/rules/js-runtime-build.mdc`.
+- The **`vitadeck`** CLI is a compiled **`js/packages/sdk/dist/cli.mjs`** (plus **`dist/templates/`**); **`pnpm --dir js install`** runs the workspace **`prepare`** script, which builds **`@vitadeck/sdk`**.

@@ -369,7 +369,7 @@ const char *instance_hit_test(int x, int y)
 }
 
 static bool rect_intersects_clip(int x, int y, int width, int height, bool has_clip, int clip_x, int clip_y,
-                                int clip_width, int clip_height)
+                                 int clip_width, int clip_height)
 {
     if (!has_clip) return true;
     return x < clip_x + clip_width && x + width > clip_x && y < clip_y + clip_height && y + height > clip_y;
@@ -410,13 +410,11 @@ static bool intersect_clip(bool has_a, int ax, int ay, int aw, int ah, int bx, i
 }
 
 static void collect_focusable_instance(ReactInstance *inst, int offset_x, int offset_y, bool has_clip, int clip_x,
-                                       int clip_y, int clip_width, int clip_height,
-                                       FocusableElement **out_elems);
+                                       int clip_y, int clip_width, int clip_height, FocusableElement **out_elems);
 
 // Focusable element collection for gamepad navigation
 static void collect_focusable_recursive(ReactInstance **children, int offset_x, int offset_y, bool has_clip, int clip_x,
-                                        int clip_y, int clip_width, int clip_height,
-                                        FocusableElement **out_elems)
+                                        int clip_y, int clip_width, int clip_height, FocusableElement **out_elems)
 {
     if (!children) return;
     int count = arrlen(children);
@@ -428,8 +426,7 @@ static void collect_focusable_recursive(ReactInstance **children, int offset_x, 
 }
 
 static void collect_focusable_instance(ReactInstance *inst, int offset_x, int offset_y, bool has_clip, int clip_x,
-                                       int clip_y, int clip_width, int clip_height,
-                                       FocusableElement **out_elems)
+                                       int clip_y, int clip_width, int clip_height, FocusableElement **out_elems)
 {
     if (!inst) return;
 

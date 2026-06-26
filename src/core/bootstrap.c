@@ -11,8 +11,8 @@
 
 static bool load_active_package_fonts(VdBootstrap *bootstrap, char *error, size_t error_size)
 {
-    if (!font_registry_load_package(
-            package_library_has_active_deck_app() ? package_library_active_package_path() : "", error, error_size)) {
+    if (!font_registry_load_package(package_library_has_active_deck_app() ? package_library_active_package_path() : "",
+                                    error, error_size)) {
         bootstrap->js_runtime.failed = true;
         return false;
     }
