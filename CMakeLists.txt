@@ -45,6 +45,21 @@ if(NOT DEFINED ENV{VITASDK})
   find_package(ZLIB REQUIRED)
 endif()
 
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/quickjs/quickjs.c")
+  find_package(Git QUIET)
+  if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
+    message(STATUS "QuickJS submodule is missing; initializing vendor/quickjs")
+    execute_process(
+      COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive vendor/quickjs
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      RESULT_VARIABLE QUICKJS_SUBMODULE_RESULT
+    )
+  endif()
+  if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/quickjs/quickjs.c")
+    message(FATAL_ERROR "Missing vendor/quickjs. Run `git submodule update --init --recursive vendor/quickjs` and re-run CMake.")
+  endif()
+endif()
+
 # Set up include directories
 set(VITADECK_INCLUDE_DIRS src vendor vendor/quickjs)
 list(APPEND VITADECK_INCLUDE_DIRS ${OPENSSL_INCLUDE_DIR})
