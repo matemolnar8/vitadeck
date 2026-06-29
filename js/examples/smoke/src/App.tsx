@@ -61,21 +61,22 @@ export default function SmokeDeckApp() {
   }, []);
 
   const inset = insetContent();
-  const headerHeight = 48;
+  const headerHeight = 56;
   const footerHeight = 32;
   const scrollY = inset.y + headerHeight + 6;
   const scrollHeight = inset.height - headerHeight - footerHeight - 12;
   const rowWidth = inset.width - 20;
   const rowHeight = 64;
+  const imageRowHeight = 72;
 
   return (
     <Screen color={BG_COLOR}>
       <Rect x={inset.x} y={inset.y} width={inset.width} height={headerHeight} color={SURFACE} borderRadius={8}>
-        <Image x={inset.width - 40} y={10} image="smokeLogo" height={28} />
+        <Image x={inset.width - 82} y={4} image="smokeLogo" height={48} />
         <Text x={14} y={10} fontSize={26} color={STATUS_COLOR}>
           {status}
         </Text>
-        <Text x={14} y={35} fontSize={14} color={OUTLINE}>
+        <Text x={14} y={38} fontSize={14} color={OUTLINE}>
           SDK / runtime / timers / render smoke
         </Text>
       </Rect>
@@ -125,7 +126,7 @@ export default function SmokeDeckApp() {
           x={0}
           y={0}
           width={rowWidth}
-          height={rowHeight}
+          height={imageRowHeight}
           color={SURFACE_ALT}
           borderColor={OUTLINE}
           borderRadius={6}
@@ -136,8 +137,8 @@ export default function SmokeDeckApp() {
           <Text x={10} y={26} fontSize={13} color={STATUS_COLOR}>
             width-only and stretch inside viewport
           </Text>
-          <Image x={rowWidth - 88} y={8} image="smokeLogo" width={36} />
-          <Image x={rowWidth - 46} y={36} image="smokeLogo" width={32} height={16} />
+          <Image x={rowWidth - 168} y={8} image="smokeLogo" width={88} />
+          <Image x={rowWidth - 72} y={14} image="smokeLogo" width={64} height={32} />
         </Rect>
 
         <Button
