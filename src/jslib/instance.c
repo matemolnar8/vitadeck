@@ -1,6 +1,7 @@
 // JS bindings for instance tree operations
 
 #include "jslib_internal.h"
+#include "ui/images.h"
 #include "ui/instance_tree.h"
 
 static JSValue native_create_rect(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -224,6 +225,85 @@ static JSValue native_update_scroll(JSContext *ctx, JSValueConst this_val, int a
     read_scroll_props(ctx, &inst->props.scroll, argv);
 
     JS_FreeCString(ctx, id);
+    return JS_UNDEFINED;
+}
+
+static void read_image_props(JSContext *ctx, ImageProps *image, JSValueConst *argv, const char *image_name)
+{
+    int32_t tmp;
+    JS_ToInt32(ctx, &tmp, argv[2]);
+    image->x = tmp;
+    JS_ToInt32(ctx, &tmp, argv[3]);
+    image->y = tmp;
+    JS_ToInt32(ctx, &tmp, argv[4]);
+    int req_width = tmp;
+    JS_ToInt32(ctx, &tmp, argv[5]);
+    int req_height = tmp;
+
+    int resolved_width = 0;
+    int resolved_height = 0;
+    if (image_resolve_layout(image_name, req_width, req_height, &resolved_width, &resolved_height)) {
+        image->width = resolved_width;
+        image->height = resolved_height;
+    } else {
+        image->width = req_width > 0 ? req_width : 0;
+        image->height = req_height > 0 ? req_height : 0;
+    }
+}
+
+static JSValue native_create_image(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    if (argc < 6) return JS_UNDEFINED;
+
+    const char *id = JS_ToCString(ctx, argv[0]);
+    if (!id) return JS_UNDEFINED;
+    const char *image_name = JS_ToCString(ctx, argv[1]);
+    if (!image_name) {
+        JS_FreeCString(ctx, id);
+        return JS_UNDEFINED;
+    }
+
+    ReactInstance *inst = calloc(1, sizeof(ReactInstance));
+    inst->id = strdup(id);
+    inst->type = NT_IMAGE;
+    inst->props.image.image_name = strdup(image_name);
+    read_image_props(ctx, &inst->props.image, argv, image_name);
+    inst->children = NULL;
+    inst->parent = NULL;
+
+    instance_back_put(inst);
+    JS_FreeCString(ctx, id);
+    JS_FreeCString(ctx, image_name);
+    return JS_UNDEFINED;
+}
+
+static JSValue native_update_image(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    if (argc < 6) return JS_UNDEFINED;
+
+    const char *id = JS_ToCString(ctx, argv[0]);
+    if (!id) return JS_UNDEFINED;
+    const char *image_name = JS_ToCString(ctx, argv[1]);
+    if (!image_name) {
+        JS_FreeCString(ctx, id);
+        return JS_UNDEFINED;
+    }
+
+    ReactInstance *inst = instance_back_find(id);
+    if (!inst || inst->type != NT_IMAGE) {
+        JS_FreeCString(ctx, id);
+        JS_FreeCString(ctx, image_name);
+        return JS_UNDEFINED;
+    }
+
+    if (inst->props.image.image_name) free(inst->props.image.image_name);
+    inst->props.image.image_name = strdup(image_name);
+    read_image_props(ctx, &inst->props.image, argv, image_name);
+
+    JS_FreeCString(ctx, id);
+    JS_FreeCString(ctx, image_name);
     return JS_UNDEFINED;
 }
 
@@ -586,6 +666,7 @@ void register_instance_tree(JSContext *ctx)
     js_set_global_function(ctx, "nativeCreateText", native_create_text, 15);
     js_set_global_function(ctx, "nativeCreateButton", native_create_button, 16);
     js_set_global_function(ctx, "nativeCreateScroll", native_create_scroll, 12);
+    js_set_global_function(ctx, "nativeCreateImage", native_create_image, 6);
     js_set_global_function(ctx, "nativeCreateRawText", native_create_raw_text, 2);
     js_set_global_function(ctx, "nativeAppendChild", native_append_child, 2);
     js_set_global_function(ctx, "nativeInsertBefore", native_insert_before, 3);
@@ -595,6 +676,7 @@ void register_instance_tree(JSContext *ctx)
     js_set_global_function(ctx, "nativeUpdateText", native_update_text, 15);
     js_set_global_function(ctx, "nativeUpdateButton", native_update_button, 16);
     js_set_global_function(ctx, "nativeUpdateScroll", native_update_scroll, 12);
+    js_set_global_function(ctx, "nativeUpdateImage", native_update_image, 6);
     js_set_global_function(ctx, "nativeUpdateRawText", native_update_raw_text, 2);
     js_set_global_function(ctx, "nativeClearContainer", native_clear_container, 0);
 }

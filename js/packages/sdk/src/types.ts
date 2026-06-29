@@ -4,7 +4,10 @@ export interface VitaDeckFontMap {
   default: true;
 }
 
+export interface VitaDeckImageMap {}
+
 export type FontName = Extract<keyof VitaDeckFontMap, string>;
+export type ImageName = [keyof VitaDeckImageMap] extends [never] ? string : Extract<keyof VitaDeckImageMap, string>;
 
 export type ColorName =
   | "LIGHTGRAY"

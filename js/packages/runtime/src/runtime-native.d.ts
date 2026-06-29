@@ -86,6 +86,15 @@ declare global {
     padding: number,
   ): void;
 
+  function nativeCreateImage(
+    id: string,
+    imageName: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): void;
+
   function nativeCreateRawText(id: string, text: string): void;
 
   function nativeAppendChild(parentId: string, childId: string): void;
@@ -162,6 +171,15 @@ declare global {
     fillA: number,
     gap: number,
     padding: number,
+  ): void;
+
+  function nativeUpdateImage(
+    id: string,
+    imageName: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
   ): void;
 
   function nativeUpdateRawText(id: string, text: string): void;

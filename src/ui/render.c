@@ -4,6 +4,7 @@
 #include <raylib.h>
 #include "stb_ds.h"
 #include "fonts.h"
+#include "images.h"
 #include "instance_tree.h"
 #include "input.h"
 #include "scroll.h"
@@ -322,6 +323,19 @@ static void render_button_instance(ReactInstance *inst, RenderContext ctx)
                b->text_color);
 }
 
+static void render_image_instance(ReactInstance *inst, RenderContext ctx)
+{
+    ImageProps *image = &inst->props.image;
+    Texture2D texture = image_registry_get(image->image_name);
+    if (!IsTextureValid(texture)) return;
+
+    int abs_x = ctx.x + image->x;
+    int abs_y = ctx.y + image->y;
+    Rectangle source = {0.0f, 0.0f, (float)texture.width, (float)texture.height};
+    Rectangle dest = {(float)abs_x, (float)abs_y, (float)image->width, (float)image->height};
+    DrawTexturePro(texture, source, dest, (Vector2){0.0f, 0.0f}, 0.0f, WHITE);
+}
+
 static void render_scrollbar(Rectangle viewport, int content_height, int offset)
 {
     const int track_margin = 4;
@@ -414,6 +428,9 @@ static void render_instance(ReactInstance *inst, RenderContext ctx)
         break;
     case NT_SCROLL:
         render_scroll_instance(inst, ctx);
+        break;
+    case NT_IMAGE:
+        render_image_instance(inst, ctx);
         break;
     case NT_RAW_TEXT:
         break;

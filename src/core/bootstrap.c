@@ -6,14 +6,22 @@
 #include "core/event_queue.h"
 #include "core/package_library.h"
 #include "ui/fonts.h"
+#include "ui/images.h"
 #include "ui/instance_tree.h"
 #include "ui/render.h"
 
-static bool load_active_package_fonts(VdBootstrap *bootstrap, char *error, size_t error_size)
+static bool load_active_package_assets(VdBootstrap *bootstrap, char *error, size_t error_size)
 {
-    if (!font_registry_load_package(package_library_has_active_deck_app() ? package_library_active_package_path() : "",
-                                    error, error_size)) {
+    const char *package_path =
+        package_library_has_active_deck_app() ? package_library_active_package_path() : "";
+    if (!font_registry_load_package(package_path, error, error_size)) {
         bootstrap->js_runtime.failed = true;
+        image_registry_load_package("", NULL, 0);
+        return false;
+    }
+    if (!image_registry_load_package(package_path, error, error_size)) {
+        bootstrap->js_runtime.failed = true;
+        font_registry_load_package("", error, error_size);
         return false;
     }
     return true;
@@ -53,13 +61,13 @@ bool bootstrap_open_window(VdBootstrap *bootstrap, const char *title, const VdBo
     SetTargetFPS(60);
 
     if (!font_registry_init(error, error_size)) return false;
-    load_active_package_fonts(bootstrap, error, error_size);
+    load_active_package_assets(bootstrap, error, error_size);
     return true;
 }
 
 bool bootstrap_reload_active_package_fonts(VdBootstrap *bootstrap, char *error, size_t error_size)
 {
-    return load_active_package_fonts(bootstrap, error, error_size);
+    return load_active_package_assets(bootstrap, error, error_size);
 }
 
 bool bootstrap_start_active_deck_app(VdBootstrap *bootstrap, char *error, size_t error_size)
@@ -101,6 +109,7 @@ void bootstrap_draw_deck_canvas(const VdBootstrap *bootstrap)
 void bootstrap_shutdown(VdBootstrap *bootstrap)
 {
     js_runtime_stop(&bootstrap->js_runtime);
+    image_registry_shutdown();
     font_registry_shutdown();
     event_queue_shutdown();
     event_queue_destroy();

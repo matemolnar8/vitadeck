@@ -4,5 +4,8 @@
   "outDir": "./dist",
   "fonts": {
     "smokeMono": "./assets/fonts/DejaVuSansMono.ttf"
+  },
+  "images": {
+    "smokeLogo": "./assets/images/smoke-logo.png"
   }
 }

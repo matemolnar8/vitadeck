@@ -122,6 +122,7 @@ set(VITADECK_SOURCES
     ${JSLIB_SOURCES}
     src/ui/instance_tree.c
     src/ui/fonts.c
+    src/ui/images.c
     src/ui/render.c
     src/ui/input.c
     src/ui/scroll.c
@@ -200,6 +201,7 @@ if(NOT DEFINED ENV{VITASDK})
       ${JSLIB_SOURCES}
       src/ui/instance_tree.c
       src/ui/fonts.c
+      src/ui/images.c
       src/ui/render.c
       src/ui/input.c
       src/ui/scroll.c

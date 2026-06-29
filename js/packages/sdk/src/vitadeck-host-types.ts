@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { Color, FontName } from "./types";
+import type { Color, FontName, ImageName } from "./types";
 
 type TextChild = string | number | boolean | null | undefined;
 type WithKey<T> = T & { key?: string };
@@ -63,11 +63,22 @@ export type VitaScrollProps = WithKey<{
   children?: ReactNode | ReactNode[];
 }>;
 
+export type VitaImageProps = WithKey<{
+  x: number;
+  y: number;
+  image: ImageName;
+}> & (
+  | { width: number; height: number }
+  | { width: number; height?: never }
+  | { height: number; width?: never }
+);
+
 export type VitaHostPropsByType = {
   "vita-text": VitaTextProps;
   "vita-rect": VitaRectProps;
   "vita-button": VitaButtonProps;
   "vita-scroll": VitaScrollProps;
+  "vita-image": VitaImageProps;
 };
 
 export type VitaHostType = keyof VitaHostPropsByType;

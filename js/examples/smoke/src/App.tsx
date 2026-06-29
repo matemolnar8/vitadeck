@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Button, Rect, Screen, Scroll, Text, insetContent, type Color } from "@vitadeck/sdk";
+import { Button, Image, Rect, Screen, Scroll, Text, insetContent, type Color } from "@vitadeck/sdk";
 
 const BG_COLOR: Color = { r: 13, g: 27, b: 42, a: 255 };
 const SURFACE: Color = { r: 27, g: 38, b: 59, a: 255 };
@@ -34,14 +34,6 @@ const SCROLL_ROWS = [
     align: "left" as const,
     border: false,
   },
-  {
-    title: "Right aligned panel",
-    body: "A second custom-font block verifies manifest font loading and draw.",
-    variant: "fill" as const,
-    font: "smokeMono" as const,
-    align: "right" as const,
-    border: false,
-  },
 ];
 
 export default function SmokeDeckApp() {
@@ -69,20 +61,22 @@ export default function SmokeDeckApp() {
   }, []);
 
   const inset = insetContent();
-  const headerHeight = 48;
+  const headerHeight = 56;
   const footerHeight = 32;
   const scrollY = inset.y + headerHeight + 6;
   const scrollHeight = inset.height - headerHeight - footerHeight - 12;
   const rowWidth = inset.width - 20;
   const rowHeight = 64;
+  const imageRowHeight = 72;
 
   return (
     <Screen color={BG_COLOR}>
       <Rect x={inset.x} y={inset.y} width={inset.width} height={headerHeight} color={SURFACE} borderRadius={8}>
+        <Image x={inset.width - 82} y={4} image="smokeLogo" height={48} />
         <Text x={14} y={10} fontSize={26} color={STATUS_COLOR}>
           {status}
         </Text>
-        <Text x={14} y={35} fontSize={14} color={OUTLINE}>
+        <Text x={14} y={38} fontSize={14} color={OUTLINE}>
           SDK / runtime / timers / render smoke
         </Text>
       </Rect>
@@ -127,6 +121,25 @@ export default function SmokeDeckApp() {
             </Text>
           </Rect>
         ))}
+
+        <Rect
+          x={0}
+          y={0}
+          width={rowWidth}
+          height={imageRowHeight}
+          color={SURFACE_ALT}
+          borderColor={OUTLINE}
+          borderRadius={6}
+        >
+          <Text x={10} y={6} fontSize={16} color={ACCENT} align="left">
+            Image sizing
+          </Text>
+          <Text x={10} y={26} fontSize={13} color={STATUS_COLOR}>
+            width-only and stretch inside viewport
+          </Text>
+          <Image x={rowWidth - 168} y={8} image="smokeLogo" width={88} />
+          <Image x={rowWidth - 72} y={14} image="smokeLogo" width={64} height={32} />
+        </Rect>
 
         <Button
           x={0}

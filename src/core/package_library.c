@@ -18,6 +18,7 @@
 
 #define VD_FONT_NAME_MAX 64
 #define VD_PACKAGE_FONT_MAX 32
+#define VD_PACKAGE_IMAGE_MAX 32
 
 static char g_root[VD_PATH_MAX] = VD_DATA_ROOT;
 static char g_installed_root[VD_PATH_MAX];
@@ -198,6 +199,17 @@ static bool safe_font_name(const char *name)
     return true;
 }
 
+static bool safe_image_name(const char *name)
+{
+    if (!name || name[0] == '\0') return false;
+    size_t len = strlen(name);
+    if (len >= VD_FONT_NAME_MAX || !isalpha((unsigned char)name[0])) return false;
+    for (const char *p = name; *p; p++) {
+        if (!isalnum((unsigned char)*p) && *p != '_' && *p != '-') return false;
+    }
+    return true;
+}
+
 static bool safe_relative_path(const char *path)
 {
     return path && path[0] != '\0' && path[0] != '/' && !strstr(path, "\\") && !strstr(path, "..");
@@ -213,6 +225,21 @@ static bool supported_font_path(const char *path)
     for (size_t i = 0; i <= len; i++)
         ext[i] = (char)tolower((unsigned char)dot[i]);
     return strcmp(ext, ".ttf") == 0 || strcmp(ext, ".otf") == 0 || strcmp(ext, ".fnt") == 0 || strcmp(ext, ".bdf") == 0;
+}
+
+static bool supported_image_path(const char *path)
+{
+    const char *dot = strrchr(path, '.');
+    if (!dot) return false;
+    char ext[8];
+    size_t len = strlen(dot);
+    if (len >= sizeof(ext)) return false;
+    for (size_t i = 0; i <= len; i++)
+        ext[i] = (char)tolower((unsigned char)dot[i]);
+    return strcmp(ext, ".png") == 0 || strcmp(ext, ".jpg") == 0 || strcmp(ext, ".jpeg") == 0 ||
+           strcmp(ext, ".bmp") == 0 || strcmp(ext, ".tga") == 0 || strcmp(ext, ".gif") == 0 ||
+           strcmp(ext, ".psd") == 0 || strcmp(ext, ".hdr") == 0 || strcmp(ext, ".pic") == 0 ||
+           strcmp(ext, ".qoi") == 0;
 }
 
 static const char *skip_ws(const char *p)
@@ -293,6 +320,60 @@ static bool validate_manifest_fonts(const char *manifest, const char *package_pa
     return false;
 }
 
+static bool validate_manifest_images(const char *manifest, const char *package_path, char *error, size_t error_size)
+{
+    const char *p = strstr(manifest, "\"images\"");
+    if (!p) return true;
+    p = strchr(p + strlen("\"images\""), ':');
+    if (!p) return false;
+    p = skip_ws(p + 1);
+    if (*p != '{') return false;
+    p++;
+    p = skip_ws(p);
+    if (*p == '}') return true;
+
+    int count = 0;
+    while (*p) {
+        if (count >= VD_PACKAGE_IMAGE_MAX) {
+            set_error(error, error_size, "Deck App Package declares too many images.");
+            return false;
+        }
+
+        char name[VD_FONT_NAME_MAX];
+        char rel_path[VD_PATH_MAX];
+        if (!json_parse_string(&p, name, sizeof(name)) || !safe_image_name(name)) {
+            set_error(error, error_size, "Deck App Package declares an invalid image name.");
+            return false;
+        }
+        p = skip_ws(p);
+        if (*p != ':') return false;
+        p++;
+        if (!json_parse_string(&p, rel_path, sizeof(rel_path)) || !safe_relative_path(rel_path) ||
+            !supported_image_path(rel_path)) {
+            set_error(error, error_size, "Deck App Package declares an invalid image path.");
+            return false;
+        }
+
+        char image_path[VD_PATH_MAX];
+        join_path(image_path, sizeof(image_path), package_path, rel_path);
+        if (!path_exists(image_path)) {
+            set_error(error, error_size, "Deck App Package Image is missing.");
+            return false;
+        }
+
+        count++;
+        p = skip_ws(p);
+        if (*p == ',') {
+            p++;
+            continue;
+        }
+        if (*p == '}') return true;
+        return false;
+    }
+
+    return false;
+}
+
 static bool safe_package_name(const char *package_name)
 {
     return package_name && package_name[0] != '\0' && has_suffix(package_name, ".vdapp") &&
@@ -346,6 +427,12 @@ bool package_library_validate_package(const char *package_path, const char *pack
         free(manifest);
         if (!error || error_size == 0 || error[0] == '\0')
             set_error(error, error_size, "Deck App Package Manifest fonts are invalid.");
+        return false;
+    }
+    if (!validate_manifest_images(manifest, package_path, error, error_size)) {
+        free(manifest);
+        if (!error || error_size == 0 || error[0] == '\0')
+            set_error(error, error_size, "Deck App Package Manifest images are invalid.");
         return false;
     }
     free(manifest);
