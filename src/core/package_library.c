@@ -199,6 +199,17 @@ static bool safe_font_name(const char *name)
     return true;
 }
 
+static bool safe_image_name(const char *name)
+{
+    if (!name || name[0] == '\0') return false;
+    size_t len = strlen(name);
+    if (len >= VD_FONT_NAME_MAX || !isalpha((unsigned char)name[0])) return false;
+    for (const char *p = name; *p; p++) {
+        if (!isalnum((unsigned char)*p) && *p != '_' && *p != '-') return false;
+    }
+    return true;
+}
+
 static bool safe_relative_path(const char *path)
 {
     return path && path[0] != '\0' && path[0] != '/' && !strstr(path, "\\") && !strstr(path, "..");
@@ -330,7 +341,7 @@ static bool validate_manifest_images(const char *manifest, const char *package_p
 
         char name[VD_FONT_NAME_MAX];
         char rel_path[VD_PATH_MAX];
-        if (!json_parse_string(&p, name, sizeof(name)) || !safe_font_name(name)) {
+        if (!json_parse_string(&p, name, sizeof(name)) || !safe_image_name(name)) {
             set_error(error, error_size, "Deck App Package declares an invalid image name.");
             return false;
         }
