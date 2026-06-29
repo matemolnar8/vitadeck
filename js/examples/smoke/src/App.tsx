@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Button, Rect, Screen, Scroll, Text, insetContent, type Color } from "@vitadeck/sdk";
+import { Button, Image, Rect, Screen, Scroll, Text, insetContent, type Color } from "@vitadeck/sdk";
 
 const BG_COLOR: Color = { r: 13, g: 27, b: 42, a: 255 };
 const SURFACE: Color = { r: 27, g: 38, b: 59, a: 255 };
@@ -79,6 +79,7 @@ export default function SmokeDeckApp() {
   return (
     <Screen color={BG_COLOR}>
       <Rect x={inset.x} y={inset.y} width={inset.width} height={headerHeight} color={SURFACE} borderRadius={8}>
+        <Image x={inset.width - 56} y={8} image="smokeLogo" height={40} />
         <Text x={16} y={14} fontSize={32} color={STATUS_COLOR}>
           {status}
         </Text>
@@ -148,6 +149,8 @@ export default function SmokeDeckApp() {
           textColor={STATUS_COLOR}
           borderRadius={20}
         />
+        <Image x={0} y={0} image="smokeLogo" width={80} />
+        <Image x={0} y={0} image="smokeLogo" width={64} height={32} />
       </Scroll>
 
       <Rect

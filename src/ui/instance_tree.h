@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <raylib.h>
 
-typedef enum { NT_RECT = 1, NT_TEXT = 2, NT_BUTTON = 3, NT_RAW_TEXT = 4, NT_SCROLL = 5 } NodeType;
+typedef enum { NT_RECT = 1, NT_TEXT = 2, NT_BUTTON = 3, NT_RAW_TEXT = 4, NT_SCROLL = 5, NT_IMAGE = 6 } NodeType;
 
 typedef struct {
     int x, y, width, height;
@@ -48,6 +48,11 @@ typedef struct {
     int padding;
 } ScrollProps;
 
+typedef struct {
+    char *image_name;
+    int x, y, width, height;
+} ImageProps;
+
 typedef struct ReactInstance ReactInstance;
 
 struct ReactInstance {
@@ -58,13 +63,14 @@ struct ReactInstance {
         TextProps text;
         ButtonProps button;
         ScrollProps scroll;
+        ImageProps image;
         char *raw_text;
     } props;
     ReactInstance **children;
     ReactInstance *parent;
 };
 
-// Minimal column layout for scroll containers. Rect and button children
+// Minimal column layout for scroll containers. Rect, button, and image children
 // participate in the flow: each is placed at the current flow position
 // (its own y acts as a top margin) and advances the flow by margin +
 // height + gap. Returns false for children that are not part of the flow.

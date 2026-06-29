@@ -167,6 +167,9 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
     const p = props as PropsByType["vita-scroll"];
     const [hasFill, r, g, b, a] = colorToArgs(p.color, Colors.BLANK);
     nativeCreateScroll(id, p.x, p.y, p.width, p.height, hasFill, r, g, b, a, p.gap ?? 0, p.padding ?? 0);
+  } else if (type === "vita-image") {
+    const p = props as PropsByType["vita-image"];
+    nativeCreateImage(id, p.image, p.x, p.y, p.width ?? 0, p.height ?? 0);
   } else {
     exhaustiveGuard(type, `Unsupported element type: ${String(type)}`);
   }
@@ -248,6 +251,9 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
     const p = props as PropsByType["vita-scroll"];
     const [hasFill, r, g, b, a] = colorToArgs(p.color, Colors.BLANK);
     nativeUpdateScroll(id, p.x, p.y, p.width, p.height, hasFill, r, g, b, a, p.gap ?? 0, p.padding ?? 0);
+  } else if (type === "vita-image") {
+    const p = props as PropsByType["vita-image"];
+    nativeUpdateImage(id, p.image, p.x, p.y, p.width ?? 0, p.height ?? 0);
   } else {
     exhaustiveGuard(type, `Unsupported element type: ${String(type)}`);
   }

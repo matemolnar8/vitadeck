@@ -43,6 +43,9 @@ void instance_back_free(ReactInstance *inst)
     if (inst->type == NT_RAW_TEXT && inst->props.raw_text) {
         free(inst->props.raw_text);
     }
+    if (inst->type == NT_IMAGE && inst->props.image.image_name) {
+        free(inst->props.image.image_name);
+    }
     arrfree(inst->children);
     free(inst);
 }
@@ -66,6 +69,9 @@ static void free_instance_tree(ReactInstance *inst)
     }
     if (inst->type == NT_RAW_TEXT && inst->props.raw_text) {
         free(inst->props.raw_text);
+    }
+    if (inst->type == NT_IMAGE && inst->props.image.image_name) {
+        free(inst->props.image.image_name);
     }
     arrfree(inst->children);
     free(inst);
@@ -129,6 +135,11 @@ static ReactInstance *copy_instance(Arena *arena, ReactInstance *src)
     case NT_SCROLL:
         dst->props.scroll = src->props.scroll;
         break;
+    case NT_IMAGE:
+        dst->props.image = src->props.image;
+        dst->props.image.image_name =
+            src->props.image.image_name ? arena_strdup(arena, src->props.image.image_name) : NULL;
+        break;
     }
 
     return dst;
@@ -147,6 +158,10 @@ bool scroll_flow_step(const ReactInstance *child, int gap, int *flow_y, int *bas
     case NT_BUTTON:
         margin_top = child->props.button.y;
         height = child->props.button.height;
+        break;
+    case NT_IMAGE:
+        margin_top = child->props.image.y;
+        height = child->props.image.height;
         break;
     default:
         return false;

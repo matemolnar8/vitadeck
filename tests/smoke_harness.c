@@ -83,6 +83,7 @@ static bool verify_instance_tree(void)
     int rect_nodes = instance_tree_count_nodes(NT_RECT);
     int scroll_nodes = instance_tree_count_nodes(NT_SCROLL);
     int button_nodes = instance_tree_count_nodes(NT_BUTTON);
+    int image_nodes = instance_tree_count_nodes(NT_IMAGE);
     if (text_nodes < 8) {
         fprintf(stderr, "smoke_harness: expected at least 8 text nodes, got %d\n", text_nodes);
         return false;
@@ -97,6 +98,10 @@ static bool verify_instance_tree(void)
     }
     if (button_nodes < 2) {
         fprintf(stderr, "smoke_harness: expected at least 2 button nodes, got %d\n", button_nodes);
+        return false;
+    }
+    if (image_nodes < 1) {
+        fprintf(stderr, "smoke_harness: expected at least 1 image node, got %d\n", image_nodes);
         return false;
     }
     if (!instance_tree_contains_text("SMOKE_MONO")) {

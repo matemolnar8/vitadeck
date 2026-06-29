@@ -2,7 +2,7 @@ import React, { type ReactNode } from "react";
 import { vitaHost } from "./host-elements";
 import { useTheme, type Theme, type ThemeContextValue, type ThemeName } from "./theme";
 import type { Color, ColorsMap } from "./types";
-import type { VitaRectProps, VitaScrollProps, VitaTextProps } from "./vitadeck-host-types";
+import type { VitaImageProps, VitaRectProps, VitaScrollProps, VitaTextProps } from "./vitadeck-host-types";
 
 export const VITA_SCREEN = { width: 960, height: 544 } as const;
 export const VITA_INSET = 20;
@@ -45,14 +45,24 @@ export function Text(props: TextProps) {
 export type ScrollProps = Omit<VitaScrollProps, "key">;
 
 /**
- * Scrollable container with a minimal column layout: direct Rect and Button
- * children are stacked vertically (`gap` pixels apart, inside `padding`).
+ * Scrollable container with a minimal column layout: direct Rect, Button, and
+ * Image children are stacked vertically (`gap` pixels apart, inside `padding`).
  * A stacked child's `y` acts as a top margin and its `x` is relative to the
  * padded content area. Content taller than the viewport can be scrolled with
  * the left analog stick on PSVita or the mouse wheel on desktop.
  */
 export function Scroll(props: ScrollProps) {
   return vitaHost("vita-scroll", props);
+}
+
+export type ImageProps = VitaImageProps;
+
+/**
+ * Draws a declared **Deck App Image**. Provide exactly one of `width` or
+ * `height` to preserve aspect ratio, or both to stretch.
+ */
+export function Image(props: ImageProps) {
+  return vitaHost("vita-image", props);
 }
 
 export type ButtonProps = {
@@ -77,4 +87,4 @@ export function Button({ onPress, onPressStart, onPressEnd, ...props }: ButtonPr
 const runtimeColors = (globalThis as unknown as { Colors: ColorsMap }).Colors;
 export { runtimeColors as Colors, useTheme };
 export type { Theme, ThemeContextValue, ThemeName };
-export type { Color, ColorName, ColorsMap, FontName, VitaDeckFontMap } from "./types";
+export type { Color, ColorName, ColorsMap, FontName, ImageName, VitaDeckFontMap, VitaDeckImageMap } from "./types";

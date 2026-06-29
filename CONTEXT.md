@@ -52,6 +52,10 @@ _Avoid_: User entry, source entry, main runtime
 A named font file included in a **Deck App Package** and declared by the **Deck App Package Manifest** for author code to reference.
 _Avoid_: Raw font path, system font, hardcoded font
 
+**Deck App Image**:
+A named image file included in a **Deck App Package** and declared by the **Deck App Package Manifest** for author code to reference.
+_Avoid_: Raw image path, texture path, sprite sheet path
+
 **Runtime Default Font**:
 The VitaDeck-provided sans-serif font used for text when a **Deck App** does not request a **Deck App Font** or explicitly requests the reserved default font name.
 _Avoid_: Built-in Raylib font, implicit app font, serif default
@@ -212,6 +216,10 @@ _Avoid_: Surface, viewport, canvas
 The MVP **VitaDeck Runtime API** component for user interaction.
 _Avoid_: Pressable rect, clickable shape
 
+**Image**:
+A visual-only **VitaDeck Runtime API** component for drawing a **Deck App Image**.
+_Avoid_: Texture, sprite, bitmap widget
+
 **Press**:
 The VitaDeck input gesture used by public **Button** callbacks.
 _Avoid_: Click, mouse down, mouse up, hover
@@ -243,6 +251,12 @@ _Avoid_: Click, mouse down, mouse up, hover
 - A **Deck App Package** is invalid when a declared **Deck App Font** is missing or uses an unsupported font file format.
 - VitaDeck loads declared **Deck App Fonts** when a **Deck App Package** starts, before rendering the **Deck App**.
 - A loaded **Deck App Font** may render at any requested **Font Size**; packages do not declare a fixed list of font sizes.
+- A **Deck App Image** is stored inside a **Deck App Package** and declared by the **Deck App Package Manifest**.
+- **Deck Apps** reference **Deck App Images** by declared name rather than by filesystem path.
+- The **VitaDeck SDK** copies declared **Deck App Images** into the built **Deck App Package Directory**.
+- A **Deck App Package** is invalid when a declared **Deck App Image** is missing or uses an unsupported image file format.
+- VitaDeck loads declared **Deck App Images** when a **Deck App Package** starts, before rendering the **Deck App**.
+- **Image** is a visual-only component; **Button** remains the only public interactable UI component in the MVP.
 - Deck App authors export a **Deck App Component**; they do not call VitaDeck registration APIs directly.
 - A **Deck App Source Entry** may use normal TypeScript and ES module syntax; the **VitaDeck SDK** compiles it into the **Deck App Package Entry**.
 - **Runtime Upload** transports a **Deck App Package Directory** as a **Runtime Upload Archive** without changing the package contents.
