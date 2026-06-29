@@ -69,20 +69,20 @@ export default function SmokeDeckApp() {
   }, []);
 
   const inset = insetContent();
-  const headerHeight = 56;
-  const footerHeight = 48;
-  const scrollY = inset.y + headerHeight + 8;
-  const scrollHeight = inset.height - headerHeight - footerHeight - 16;
-  const rowWidth = inset.width - 24;
-  const rowHeight = 112;
+  const headerHeight = 48;
+  const footerHeight = 32;
+  const scrollY = inset.y + headerHeight + 6;
+  const scrollHeight = inset.height - headerHeight - footerHeight - 12;
+  const rowWidth = inset.width - 20;
+  const rowHeight = 64;
 
   return (
     <Screen color={BG_COLOR}>
       <Rect x={inset.x} y={inset.y} width={inset.width} height={headerHeight} color={SURFACE} borderRadius={8}>
-        <Text x={16} y={14} fontSize={32} color={STATUS_COLOR}>
+        <Text x={14} y={10} fontSize={26} color={STATUS_COLOR}>
           {status}
         </Text>
-        <Text x={16} y={46} fontSize={18} color={OUTLINE}>
+        <Text x={14} y={35} fontSize={14} color={OUTLINE}>
           SDK / runtime / timers / render smoke
         </Text>
       </Rect>
@@ -93,8 +93,8 @@ export default function SmokeDeckApp() {
         width={inset.width}
         height={scrollHeight}
         color={SURFACE_ALT}
-        gap={12}
-        padding={12}
+        gap={8}
+        padding={10}
       >
         {SCROLL_ROWS.map((row, index) => (
           <Rect
@@ -108,20 +108,20 @@ export default function SmokeDeckApp() {
             borderColor={OUTLINE}
             borderRadius={6}
           >
-            <Text x={12} y={10} fontSize={22} color={ACCENT} align="left">
+            <Text x={10} y={6} fontSize={16} color={ACCENT} align="left">
               {row.title}
             </Text>
             <Text
-              x={12}
-              y={42}
-              width={rowWidth - 24}
-              fontSize={18}
+              x={10}
+              y={26}
+              width={rowWidth - 20}
+              fontSize={13}
               color={STATUS_COLOR}
               align={row.align}
               wrap="word"
               border={row.border}
               font={row.font}
-              lineHeight={22}
+              lineHeight={15}
             >
               {row.body}
             </Text>
@@ -132,7 +132,7 @@ export default function SmokeDeckApp() {
           x={0}
           y={0}
           width={220}
-          height={44}
+          height={36}
           label="Static button"
           color={ACCENT}
           textColor={BUTTON_TEXT}
@@ -142,7 +142,7 @@ export default function SmokeDeckApp() {
           x={0}
           y={0}
           width={220}
-          height={44}
+          height={36}
           label="Rounded button"
           color={SURFACE}
           textColor={STATUS_COLOR}
@@ -152,15 +152,15 @@ export default function SmokeDeckApp() {
 
       <Rect
         x={inset.x}
-        y={scrollY + scrollHeight + 8}
+        y={scrollY + scrollHeight + 6}
         width={inset.width}
         height={footerHeight}
         variant="outline"
         borderColor={OUTLINE}
         borderRadius={6}
       >
-        <Text x={16} y={14} fontSize={20} color={OUTLINE} font="smokeMono">
-          Scroll viewport above; clipped content verifies scrolling layout.
+        <Text x={14} y={9} fontSize={14} color={OUTLINE} font="smokeMono">
+          All smoke UI elements fit inside this screenshot viewport.
         </Text>
       </Rect>
     </Screen>
