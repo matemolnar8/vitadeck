@@ -76,7 +76,7 @@ export default function SmokeDeckApp() {
         <Text x={14} y={10} fontSize={26} color={STATUS_COLOR}>
           {status}
         </Text>
-        <Text x={14} y={38} fontSize={14} color={OUTLINE}>
+        <Text x={14} y={20} fontSize={14} color={OUTLINE}>
           SDK / runtime / timers / render smoke
         </Text>
       </Rect>
