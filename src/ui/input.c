@@ -6,16 +6,18 @@
 #include "scroll.h"
 #include "core/event_queue.h"
 
-// Scroll speeds in pixels per frame (60 FPS target)
-#define SCROLL_ANALOG_SPEED 14.0f
+// Scroll speeds tuned at 60 FPS reference; continuous motion scales with delta time.
+#define SCROLL_REF_FPS 60.0f
+#define SCROLL_MAX_DT 0.1f
+#define SCROLL_ANALOG_SPEED_PX_PER_S (14.0f * SCROLL_REF_FPS)
 #define SCROLL_WHEEL_STEP 40.0f
 #define SCROLL_ANALOG_DEADZONE 0.25f
 
-// Touch scroll: drag threshold, momentum decay, and velocity smoothing
+// Touch scroll: drag threshold (screen px), momentum decay, velocity smoothing
 #define SCROLL_TOUCH_THRESHOLD 10.0f
-#define SCROLL_TOUCH_FRICTION 0.92f
-#define SCROLL_TOUCH_MIN_VELOCITY 0.5f
-#define SCROLL_TOUCH_MAX_VELOCITY 48.0f
+#define SCROLL_TOUCH_FRICTION_60 0.92f
+#define SCROLL_TOUCH_MIN_VELOCITY_PX_PER_S (0.5f * SCROLL_REF_FPS)
+#define SCROLL_TOUCH_MAX_VELOCITY_PX_PER_S (48.0f * SCROLL_REF_FPS)
 #define SCROLL_TOUCH_VELOCITY_BLEND 0.35f
 
 // Mouse state
@@ -40,6 +42,19 @@ static bool touch_scroll_viewport = false;
 static bool touch_gesture_scrolling = false;
 static bool touch_pending_press = false;
 static float touch_velocity_y = 0.0f;
+
+static float input_frame_dt(void)
+{
+    float dt = GetFrameTime();
+    if (dt <= 0.0f) dt = 1.0f / SCROLL_REF_FPS;
+    if (dt > SCROLL_MAX_DT) dt = SCROLL_MAX_DT;
+    return dt;
+}
+
+static float scroll_friction_for_dt(float dt)
+{
+    return powf(SCROLL_TOUCH_FRICTION_60, dt * SCROLL_REF_FPS);
+}
 
 // Gamepad focus state
 static char *focused_id = NULL;
@@ -101,7 +116,9 @@ static void touch_apply_momentum(void)
 {
     if (!touch_momentum_scroll_id) return;
 
-    if (fabsf(touch_velocity_y) < SCROLL_TOUCH_MIN_VELOCITY) {
+    const float dt = input_frame_dt();
+
+    if (fabsf(touch_velocity_y) < SCROLL_TOUCH_MIN_VELOCITY_PX_PER_S) {
         touch_stop_momentum();
         return;
     }
@@ -121,7 +138,7 @@ static void touch_apply_momentum(void)
     if (max_scroll < 0) max_scroll = 0;
 
     int offset = scroll_get_offset(touch_momentum_scroll_id);
-    int next = offset + (int)roundf(touch_velocity_y);
+    int next = offset + (int)roundf(touch_velocity_y * dt);
     if (next <= 0) {
         next = 0;
         touch_velocity_y = 0.0f;
@@ -131,9 +148,9 @@ static void touch_apply_momentum(void)
     }
 
     scroll_set_offset(touch_momentum_scroll_id, next);
-    touch_velocity_y *= SCROLL_TOUCH_FRICTION;
+    touch_velocity_y *= scroll_friction_for_dt(dt);
 
-    if (fabsf(touch_velocity_y) < SCROLL_TOUCH_MIN_VELOCITY) {
+    if (fabsf(touch_velocity_y) < SCROLL_TOUCH_MIN_VELOCITY_PX_PER_S) {
         touch_stop_momentum();
     }
 }
@@ -339,21 +356,22 @@ void poll_touch_input(void)
         if (touch_gesture_scrolling) {
             const int delta_y = y - touch_prev_y;
             if (delta_y != 0) {
-                const float frame_velocity = -(float)delta_y;
-                scroll_apply_delta(touch_scroll_id, (int)frame_velocity);
+                const float dt = input_frame_dt();
+                scroll_apply_delta(touch_scroll_id, -delta_y);
+                const float instant_velocity = -(float)delta_y / dt;
                 touch_velocity_y = touch_velocity_y * (1.0f - SCROLL_TOUCH_VELOCITY_BLEND) +
-                                   frame_velocity * SCROLL_TOUCH_VELOCITY_BLEND;
+                                   instant_velocity * SCROLL_TOUCH_VELOCITY_BLEND;
             }
         }
     }
 
     if (just_released) {
         if (touch_gesture_scrolling && touch_scroll_id) {
-            if (fabsf(touch_velocity_y) >= SCROLL_TOUCH_MIN_VELOCITY) {
-                if (touch_velocity_y > SCROLL_TOUCH_MAX_VELOCITY)
-                    touch_velocity_y = SCROLL_TOUCH_MAX_VELOCITY;
-                else if (touch_velocity_y < -SCROLL_TOUCH_MAX_VELOCITY)
-                    touch_velocity_y = -SCROLL_TOUCH_MAX_VELOCITY;
+            if (fabsf(touch_velocity_y) >= SCROLL_TOUCH_MIN_VELOCITY_PX_PER_S) {
+                if (touch_velocity_y > SCROLL_TOUCH_MAX_VELOCITY_PX_PER_S)
+                    touch_velocity_y = SCROLL_TOUCH_MAX_VELOCITY_PX_PER_S;
+                else if (touch_velocity_y < -SCROLL_TOUCH_MAX_VELOCITY_PX_PER_S)
+                    touch_velocity_y = -SCROLL_TOUCH_MAX_VELOCITY_PX_PER_S;
 
                 if (touch_momentum_scroll_id) free(touch_momentum_scroll_id);
                 touch_momentum_scroll_id = strdup(touch_scroll_id);
@@ -532,19 +550,10 @@ void poll_gamepad_input(void)
     int viewport_h = 0, content_h = 0;
     char *scroll_id = focused_id ? instance_scroll_for_descendant(focused_id) : NULL;
     if (scroll_id && instance_scroll_metrics(scroll_id, &viewport_h, &content_h)) {
-        int max_scroll = content_h - viewport_h;
-        if (max_scroll < 0) max_scroll = 0;
-        int offset = scroll_get_offset(scroll_id);
-        if (offset > max_scroll) offset = max_scroll;
-
-        int delta = 0;
-        if (fabsf(stick_y) > SCROLL_ANALOG_DEADZONE) delta += (int)(stick_y * SCROLL_ANALOG_SPEED);
-
-        if (delta != 0) {
-            int next = offset + delta;
-            if (next < 0) next = 0;
-            if (next > max_scroll) next = max_scroll;
-            scroll_set_offset(scroll_id, next);
+        const float dt = input_frame_dt();
+        if (fabsf(stick_y) > SCROLL_ANALOG_DEADZONE) {
+            const float delta = stick_y * SCROLL_ANALOG_SPEED_PX_PER_S * dt;
+            scroll_apply_delta(scroll_id, (int)roundf(delta));
         }
     }
     if (scroll_id) free(scroll_id);
