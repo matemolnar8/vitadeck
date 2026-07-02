@@ -11,6 +11,13 @@
 #define SCROLL_WHEEL_STEP 40.0f
 #define SCROLL_ANALOG_DEADZONE 0.25f
 
+// Touch scroll: drag threshold, momentum decay, and velocity smoothing
+#define SCROLL_TOUCH_THRESHOLD 10.0f
+#define SCROLL_TOUCH_FRICTION 0.92f
+#define SCROLL_TOUCH_MIN_VELOCITY 0.5f
+#define SCROLL_TOUCH_MAX_VELOCITY 48.0f
+#define SCROLL_TOUCH_VELOCITY_BLEND 0.35f
+
 // Mouse state
 static bool prev_is_mouse_down = false;
 static int prev_mouse_x = -1;
@@ -22,6 +29,17 @@ static char *mouse_down_id = NULL;
 static bool prev_touch_down = false;
 static char *touch_hovered_id = NULL;
 static char *touch_down_id = NULL;
+
+// Touch scroll gesture state
+static char *touch_scroll_id = NULL;
+static char *touch_momentum_scroll_id = NULL;
+static int touch_start_x = 0;
+static int touch_start_y = 0;
+static int touch_prev_y = 0;
+static bool touch_scroll_viewport = false;
+static bool touch_gesture_scrolling = false;
+static bool touch_pending_press = false;
+static float touch_velocity_y = 0.0f;
 
 // Gamepad focus state
 static char *focused_id = NULL;
@@ -38,6 +56,86 @@ static void push_input_event(const char *id, const char *event)
     strncpy(evt.event_name, event, sizeof(evt.event_name) - 1);
     evt.event_name[sizeof(evt.event_name) - 1] = '\0';
     event_queue_push(&evt);
+}
+
+static int scroll_clamp_offset(const char *scroll_id, int offset)
+{
+    int viewport_h = 0, content_h = 0;
+    if (!instance_scroll_metrics(scroll_id, &viewport_h, &content_h)) return offset;
+    int max_scroll = content_h - viewport_h;
+    if (max_scroll < 0) max_scroll = 0;
+    if (offset < 0) offset = 0;
+    if (offset > max_scroll) offset = max_scroll;
+    return offset;
+}
+
+static void scroll_apply_delta(const char *scroll_id, int delta)
+{
+    if (!scroll_id || delta == 0) return;
+    int next = scroll_clamp_offset(scroll_id, scroll_get_offset(scroll_id) + delta);
+    scroll_set_offset(scroll_id, next);
+}
+
+static void touch_stop_momentum(void)
+{
+    touch_velocity_y = 0.0f;
+    if (touch_momentum_scroll_id) {
+        free(touch_momentum_scroll_id);
+        touch_momentum_scroll_id = NULL;
+    }
+}
+
+static void touch_reset_gesture(void)
+{
+    if (touch_scroll_id) {
+        free(touch_scroll_id);
+        touch_scroll_id = NULL;
+    }
+    touch_scroll_viewport = false;
+    touch_gesture_scrolling = false;
+    touch_pending_press = false;
+    touch_velocity_y = 0.0f;
+}
+
+static void touch_apply_momentum(void)
+{
+    if (!touch_momentum_scroll_id) return;
+
+    if (fabsf(touch_velocity_y) < SCROLL_TOUCH_MIN_VELOCITY) {
+        touch_stop_momentum();
+        return;
+    }
+
+    if (!instance_exists(touch_momentum_scroll_id)) {
+        touch_stop_momentum();
+        return;
+    }
+
+    int viewport_h = 0, content_h = 0;
+    if (!instance_scroll_metrics(touch_momentum_scroll_id, &viewport_h, &content_h)) {
+        touch_stop_momentum();
+        return;
+    }
+
+    int max_scroll = content_h - viewport_h;
+    if (max_scroll < 0) max_scroll = 0;
+
+    int offset = scroll_get_offset(touch_momentum_scroll_id);
+    int next = offset + (int)roundf(touch_velocity_y);
+    if (next <= 0) {
+        next = 0;
+        touch_velocity_y = 0.0f;
+    } else if (next >= max_scroll) {
+        next = max_scroll;
+        touch_velocity_y = 0.0f;
+    }
+
+    scroll_set_offset(touch_momentum_scroll_id, next);
+    touch_velocity_y *= SCROLL_TOUCH_FRICTION;
+
+    if (fabsf(touch_velocity_y) < SCROLL_TOUCH_MIN_VELOCITY) {
+        touch_stop_momentum();
+    }
 }
 
 void input_clear_focus(void)
@@ -133,15 +231,7 @@ void poll_mouse_input(void)
     if (wheel != 0.0f) {
         char *scroll_id = instance_scroll_at(x, y);
         if (scroll_id) {
-            int viewport_h = 0, content_h = 0;
-            if (instance_scroll_metrics(scroll_id, &viewport_h, &content_h)) {
-                int max_scroll = content_h - viewport_h;
-                if (max_scroll < 0) max_scroll = 0;
-                int next = scroll_get_offset(scroll_id) - (int)(wheel * SCROLL_WHEEL_STEP);
-                if (next < 0) next = 0;
-                if (next > max_scroll) next = max_scroll;
-                scroll_set_offset(scroll_id, next);
-            }
+            scroll_apply_delta(scroll_id, -(int)(wheel * SCROLL_WHEEL_STEP));
             free(scroll_id);
         }
     }
@@ -153,6 +243,10 @@ void poll_touch_input(void)
 {
     const int count = GetTouchPointCount();
     const bool is_down = count > 0;
+
+    if (!is_down) {
+        touch_apply_momentum();
+    }
 
     int x = 0;
     int y = 0;
@@ -169,8 +263,8 @@ void poll_touch_input(void)
         touch_hovered_id = NULL;
     }
 
-    // Hover enter/leave while finger is down
-    if (is_down) {
+    // Hover enter/leave while finger is down (suppressed during active scroll drag)
+    if (is_down && !touch_gesture_scrolling) {
         bool hover_changed = false;
         if ((touch_hovered_id == NULL && top_id != NULL) ||
             (touch_hovered_id != NULL && (top_id == NULL || strcmp(touch_hovered_id, top_id) != 0))) {
@@ -193,8 +287,23 @@ void poll_touch_input(void)
     const bool just_pressed = is_down && !prev_touch_down;
     const bool just_released = !is_down && prev_touch_down;
 
-    // Touch down -> mousedown
     if (just_pressed) {
+        touch_stop_momentum();
+        touch_reset_gesture();
+        touch_start_x = x;
+        touch_start_y = y;
+        touch_prev_y = y;
+
+        char *scroll_at = instance_scroll_at(x, y);
+        if (scroll_at) {
+            touch_scroll_viewport = true;
+            touch_scroll_id = scroll_at;
+            touch_pending_press = top_id != NULL;
+        } else {
+            touch_scroll_viewport = false;
+            touch_pending_press = false;
+        }
+
         input_clear_focus();
         if (top_id) {
             if (touch_down_id) {
@@ -202,13 +311,60 @@ void poll_touch_input(void)
                 touch_down_id = NULL;
             }
             touch_down_id = strdup(top_id);
-            push_input_event(touch_down_id, "mousedown");
+            if (!touch_scroll_viewport) {
+                push_input_event(touch_down_id, "mousedown");
+            }
         }
     }
 
-    // Touch up -> mouseup (+ click if released over same target)
+    if (is_down && prev_touch_down && touch_scroll_viewport && touch_scroll_id) {
+        const float drag_y = (float)(y - touch_start_y);
+
+        if (!touch_gesture_scrolling && fabsf(drag_y) >= SCROLL_TOUCH_THRESHOLD) {
+            touch_gesture_scrolling = true;
+            touch_pending_press = false;
+
+            if (touch_down_id) {
+                free(touch_down_id);
+                touch_down_id = NULL;
+            }
+
+            if (touch_hovered_id) {
+                push_input_event(touch_hovered_id, "mouseleave");
+                free(touch_hovered_id);
+                touch_hovered_id = NULL;
+            }
+        }
+
+        if (touch_gesture_scrolling) {
+            const int delta_y = y - touch_prev_y;
+            if (delta_y != 0) {
+                const float frame_velocity = -(float)delta_y;
+                scroll_apply_delta(touch_scroll_id, (int)frame_velocity);
+                touch_velocity_y = touch_velocity_y * (1.0f - SCROLL_TOUCH_VELOCITY_BLEND) +
+                                   frame_velocity * SCROLL_TOUCH_VELOCITY_BLEND;
+            }
+        }
+    }
+
     if (just_released) {
-        if (touch_down_id) {
+        if (touch_gesture_scrolling && touch_scroll_id) {
+            if (fabsf(touch_velocity_y) >= SCROLL_TOUCH_MIN_VELOCITY) {
+                if (touch_velocity_y > SCROLL_TOUCH_MAX_VELOCITY)
+                    touch_velocity_y = SCROLL_TOUCH_MAX_VELOCITY;
+                else if (touch_velocity_y < -SCROLL_TOUCH_MAX_VELOCITY)
+                    touch_velocity_y = -SCROLL_TOUCH_MAX_VELOCITY;
+
+                if (touch_momentum_scroll_id) free(touch_momentum_scroll_id);
+                touch_momentum_scroll_id = strdup(touch_scroll_id);
+            } else {
+                touch_stop_momentum();
+            }
+        } else if (touch_down_id) {
+            if (touch_pending_press) {
+                push_input_event(touch_down_id, "mousedown");
+            }
+
             push_input_event(touch_down_id, "mouseup");
 
             if (touch_hovered_id && strcmp(touch_down_id, touch_hovered_id) == 0) {
@@ -228,6 +384,12 @@ void poll_touch_input(void)
             free(touch_hovered_id);
             touch_hovered_id = NULL;
         }
+
+        touch_reset_gesture();
+    }
+
+    if (is_down) {
+        touch_prev_y = y;
     }
 
     prev_touch_down = is_down;
