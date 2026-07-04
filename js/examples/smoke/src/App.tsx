@@ -1,13 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Button, Image, Rect, Screen, Scroll, Text, insetContent, type Color } from "@vitadeck/sdk";
-
-const BG_COLOR: Color = { r: 13, g: 27, b: 42, a: 255 };
-const SURFACE: Color = { r: 27, g: 38, b: 59, a: 255 };
-const SURFACE_ALT: Color = { r: 65, g: 90, b: 119, a: 255 };
-const OUTLINE: Color = { r: 119, g: 141, b: 169, a: 255 };
-const STATUS_COLOR: Color = { r: 224, g: 225, b: 221, a: 255 };
-const ACCENT: Color = { r: 233, g: 196, b: 106, a: 255 };
-const BUTTON_TEXT: Color = { r: 13, g: 27, b: 42, a: 255 };
+import { Button, Image, Rect, Screen, Scroll, Text, insetContent, useTheme } from "@vitadeck/sdk";
 
 const SCROLL_ROWS = [
   {
@@ -37,6 +29,7 @@ const SCROLL_ROWS = [
 ];
 
 export default function SmokeDeckApp() {
+  const { theme, themeName } = useTheme();
   const [status, setStatus] = useState("SMOKE_READY");
 
   useEffect(() => {
@@ -70,14 +63,14 @@ export default function SmokeDeckApp() {
   const imageRowHeight = 72;
 
   return (
-    <Screen color={BG_COLOR}>
-      <Rect x={inset.x} y={inset.y} width={inset.width} height={headerHeight} color={SURFACE} borderRadius={8}>
+    <Screen>
+      <Rect x={inset.x} y={inset.y} width={inset.width} height={headerHeight} color={theme.surface} borderRadius={8}>
         <Image x={inset.width - 82} y={4} image="smokeLogo" height={48} />
-        <Text x={14} y={10} fontSize={26} color={STATUS_COLOR}>
+        <Text x={14} y={10} fontSize={26} color={theme.text}>
           {status}
         </Text>
-        <Text x={14} y={20} fontSize={14} color={OUTLINE}>
-          SDK / runtime / timers / render smoke
+        <Text x={14} y={20} fontSize={14} color={theme.outline}>
+          SDK / runtime / theme: {themeName}
         </Text>
       </Rect>
 
@@ -86,7 +79,7 @@ export default function SmokeDeckApp() {
         y={scrollY}
         width={inset.width}
         height={scrollHeight}
-        color={SURFACE_ALT}
+        color={theme.surfaceAlt}
         gap={8}
         padding={10}
       >
@@ -98,11 +91,11 @@ export default function SmokeDeckApp() {
             width={rowWidth}
             height={rowHeight}
             variant={row.variant}
-            color={index % 2 === 0 ? SURFACE : SURFACE_ALT}
-            borderColor={OUTLINE}
+            color={index % 2 === 0 ? theme.surface : theme.surfaceAlt}
+            borderColor={theme.outline}
             borderRadius={6}
           >
-            <Text x={10} y={6} fontSize={16} color={ACCENT} align="left">
+            <Text x={10} y={6} fontSize={16} color={theme.accent} align="left">
               {row.title}
             </Text>
             <Text
@@ -110,7 +103,7 @@ export default function SmokeDeckApp() {
               y={26}
               width={rowWidth - 20}
               fontSize={13}
-              color={STATUS_COLOR}
+              color={theme.text}
               align={row.align}
               wrap="word"
               border={row.border}
@@ -127,14 +120,14 @@ export default function SmokeDeckApp() {
           y={0}
           width={rowWidth}
           height={imageRowHeight}
-          color={SURFACE_ALT}
-          borderColor={OUTLINE}
+          color={theme.surfaceAlt}
+          borderColor={theme.outline}
           borderRadius={6}
         >
-          <Text x={10} y={6} fontSize={16} color={ACCENT} align="left">
+          <Text x={10} y={6} fontSize={16} color={theme.accent} align="left">
             Image sizing
           </Text>
-          <Text x={10} y={26} fontSize={13} color={STATUS_COLOR}>
+          <Text x={10} y={26} fontSize={13} color={theme.text}>
             width-only and stretch inside viewport
           </Text>
           <Image x={rowWidth - 168} y={8} image="smokeLogo" width={88} />
@@ -147,8 +140,8 @@ export default function SmokeDeckApp() {
           width={220}
           height={36}
           label="Static button"
-          color={ACCENT}
-          textColor={BUTTON_TEXT}
+          color={theme.accent}
+          textColor={theme.buttonText}
           borderRadius={8}
         />
         <Button
@@ -157,8 +150,8 @@ export default function SmokeDeckApp() {
           width={220}
           height={36}
           label="Rounded button"
-          color={SURFACE}
-          textColor={STATUS_COLOR}
+          color={theme.buttonBackground}
+          textColor={theme.buttonText}
           borderRadius={20}
         />
       </Scroll>
@@ -169,10 +162,10 @@ export default function SmokeDeckApp() {
         width={inset.width}
         height={footerHeight}
         variant="outline"
-        borderColor={OUTLINE}
+        borderColor={theme.outline}
         borderRadius={6}
       >
-        <Text x={14} y={9} fontSize={14} color={OUTLINE} font="smokeMono">
+        <Text x={14} y={9} fontSize={14} color={theme.outline} font="smokeMono">
           All smoke UI elements fit inside this screenshot viewport.
         </Text>
       </Rect>

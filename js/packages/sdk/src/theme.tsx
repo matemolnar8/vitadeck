@@ -12,6 +12,10 @@ function hex(value: string): Color {
 }
 
 const palette = {
+  oledBlack: hex("#000000"),
+  oledSurface: hex("#080b0e"),
+  oledSurfaceAlt: hex("#11171d"),
+  oledOutline: hex("#2b3740"),
   brand10: hex("#f7fbfd"),
   brand20: hex("#ebf5f9"),
   brand30: hex("#d0e7f1"),
@@ -61,15 +65,15 @@ export type ThemeName = "dark" | "light";
 const THEMES: Record<ThemeName, Theme> = {
   dark: {
     name: "dark",
-    background: palette.gray100,
-    navBackground: palette.gray90,
+    background: palette.oledBlack,
+    navBackground: palette.oledSurface,
     navText: palette.gray10,
-    surface: palette.gray90,
-    surfaceAlt: palette.gray80,
-    primary: palette.brand80,
+    surface: palette.oledSurface,
+    surfaceAlt: palette.oledSurfaceAlt,
+    primary: palette.brand90,
     text: palette.gray10,
-    outline: palette.gray70,
-    buttonBackground: palette.brand80,
+    outline: palette.oledOutline,
+    buttonBackground: palette.brand90,
     buttonText: palette.gray10,
     accent: palette.accent,
     success: palette.success,
