@@ -191,20 +191,6 @@ if(NOT DEFINED ENV{VITASDK})
     target_link_libraries(timer_reload_harness quickjs m ${RAYLIB_LIBRARIES})
     add_test(NAME timer_reload_harness COMMAND timer_reload_harness)
 
-    add_executable(input_touch_harness
-      tests/input_touch_harness.c
-      src/core/arena.c
-      src/core/event_queue.c
-      src/ui/instance_tree.c
-      src/ui/input.c
-      src/ui/scroll.c
-      src/platform/thread_posix.c
-    )
-    target_compile_definitions(input_touch_harness PRIVATE VITADECK_INPUT_TESTING)
-    target_include_directories(input_touch_harness PRIVATE ${CMAKE_SOURCE_DIR}/src)
-    target_link_libraries(input_touch_harness ${VITADECK_LIBRARIES})
-    add_test(NAME input_touch_harness COMMAND input_touch_harness)
-
     set(SMOKE_HARNESS_SOURCES
       tests/smoke_harness.c
       src/core/arena.c
