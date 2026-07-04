@@ -19,6 +19,7 @@
 #define SCROLL_TOUCH_MIN_VELOCITY_PX_PER_S (0.5f * SCROLL_REF_FPS)
 #define SCROLL_TOUCH_MAX_VELOCITY_PX_PER_S (48.0f * SCROLL_REF_FPS)
 #define SCROLL_TOUCH_VELOCITY_BLEND 0.35f
+#define SCROLL_TOUCH_STATIONARY_RESET_S 0.08f
 
 // Mouse state
 static bool prev_is_mouse_down = false;
@@ -42,6 +43,7 @@ static bool touch_scroll_viewport = false;
 static bool touch_gesture_scrolling = false;
 static bool touch_pending_press = false;
 static float touch_velocity_y = 0.0f;
+static float touch_stationary_s = 0.0f;
 
 static float input_frame_dt(void)
 {
@@ -109,6 +111,7 @@ static void touch_reset_gesture(void)
     touch_scroll_viewport = false;
     touch_gesture_scrolling = false;
     touch_pending_press = false;
+    touch_stationary_s = 0.0f;
 }
 
 static void touch_apply_momentum(void)
@@ -373,12 +376,20 @@ void poll_touch_input(void)
 
         if (touch_gesture_scrolling) {
             const int delta_y = y - touch_prev_y;
+            const float dt = input_frame_dt();
             if (delta_y != 0) {
-                const float dt = input_frame_dt();
                 scroll_apply_delta(touch_scroll_id, -delta_y);
                 const float instant_velocity = -(float)delta_y / dt;
                 touch_velocity_y = touch_velocity_y * (1.0f - SCROLL_TOUCH_VELOCITY_BLEND) +
                                    instant_velocity * SCROLL_TOUCH_VELOCITY_BLEND;
+                touch_stationary_s = 0.0f;
+            } else {
+                touch_stationary_s += dt;
+                touch_velocity_y *= scroll_friction_for_dt(dt);
+                if (touch_stationary_s >= SCROLL_TOUCH_STATIONARY_RESET_S ||
+                    fabsf(touch_velocity_y) < SCROLL_TOUCH_MIN_VELOCITY_PX_PER_S) {
+                    touch_velocity_y = 0.0f;
+                }
             }
         }
     }
