@@ -10,6 +10,7 @@ void poll_gamepad_input(void);
 void input_clear_focus(void);
 
 bool input_is_hovered(const char *id);
+bool input_is_focused(const char *id);
 bool input_is_pressed(const char *id);
 
 #endif /* INPUT_H */

@@ -238,8 +238,7 @@ static bool supported_image_path(const char *path)
         ext[i] = (char)tolower((unsigned char)dot[i]);
     return strcmp(ext, ".png") == 0 || strcmp(ext, ".jpg") == 0 || strcmp(ext, ".jpeg") == 0 ||
            strcmp(ext, ".bmp") == 0 || strcmp(ext, ".tga") == 0 || strcmp(ext, ".gif") == 0 ||
-           strcmp(ext, ".psd") == 0 || strcmp(ext, ".hdr") == 0 || strcmp(ext, ".pic") == 0 ||
-           strcmp(ext, ".qoi") == 0;
+           strcmp(ext, ".psd") == 0 || strcmp(ext, ".hdr") == 0 || strcmp(ext, ".pic") == 0 || strcmp(ext, ".qoi") == 0;
 }
 
 static const char *skip_ws(const char *p)
