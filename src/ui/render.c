@@ -407,7 +407,7 @@ static void render_scroll_instance(ReactInstance *inst, RenderContext ctx)
         render_scrollbar(viewport, content_height, offset);
     }
 
-    if (input_is_hovered(inst->id)) {
+    if (input_is_focused(inst->id)) {
         DrawRectangleLinesEx(viewport, 2.0f, (Color){255, 255, 255, 200});
     }
 }

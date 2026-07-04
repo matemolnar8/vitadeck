@@ -109,7 +109,6 @@ static void touch_reset_gesture(void)
     touch_scroll_viewport = false;
     touch_gesture_scrolling = false;
     touch_pending_press = false;
-    touch_velocity_y = 0.0f;
 }
 
 static void touch_apply_momentum(void)
@@ -153,6 +152,25 @@ static void touch_apply_momentum(void)
     if (fabsf(touch_velocity_y) < SCROLL_TOUCH_MIN_VELOCITY_PX_PER_S) {
         touch_stop_momentum();
     }
+}
+
+static bool touch_finish_scroll_gesture(void)
+{
+    if (!touch_gesture_scrolling || !touch_scroll_id) return false;
+
+    if (fabsf(touch_velocity_y) >= SCROLL_TOUCH_MIN_VELOCITY_PX_PER_S) {
+        if (touch_velocity_y > SCROLL_TOUCH_MAX_VELOCITY_PX_PER_S)
+            touch_velocity_y = SCROLL_TOUCH_MAX_VELOCITY_PX_PER_S;
+        else if (touch_velocity_y < -SCROLL_TOUCH_MAX_VELOCITY_PX_PER_S)
+            touch_velocity_y = -SCROLL_TOUCH_MAX_VELOCITY_PX_PER_S;
+
+        if (touch_momentum_scroll_id) free(touch_momentum_scroll_id);
+        touch_momentum_scroll_id = strdup(touch_scroll_id);
+    } else {
+        touch_stop_momentum();
+    }
+
+    return true;
 }
 
 void input_clear_focus(void)
@@ -366,18 +384,7 @@ void poll_touch_input(void)
     }
 
     if (just_released) {
-        if (touch_gesture_scrolling && touch_scroll_id) {
-            if (fabsf(touch_velocity_y) >= SCROLL_TOUCH_MIN_VELOCITY_PX_PER_S) {
-                if (touch_velocity_y > SCROLL_TOUCH_MAX_VELOCITY_PX_PER_S)
-                    touch_velocity_y = SCROLL_TOUCH_MAX_VELOCITY_PX_PER_S;
-                else if (touch_velocity_y < -SCROLL_TOUCH_MAX_VELOCITY_PX_PER_S)
-                    touch_velocity_y = -SCROLL_TOUCH_MAX_VELOCITY_PX_PER_S;
-
-                if (touch_momentum_scroll_id) free(touch_momentum_scroll_id);
-                touch_momentum_scroll_id = strdup(touch_scroll_id);
-            } else {
-                touch_stop_momentum();
-            }
+        if (touch_finish_scroll_gesture()) {
         } else if (touch_down_id) {
             if (touch_pending_press) {
                 push_input_event(touch_down_id, "mousedown");
@@ -602,6 +609,12 @@ bool input_is_hovered(const char *id)
     return false;
 }
 
+bool input_is_focused(const char *id)
+{
+    if (!id) return false;
+    return focused_id && strcmp(focused_id, id) == 0;
+}
+
 bool input_is_pressed(const char *id)
 {
     if (!id) return false;
@@ -610,3 +623,72 @@ bool input_is_pressed(const char *id)
     if (gamepad_down_id && strcmp(gamepad_down_id, id) == 0) return true;
     return false;
 }
+
+#ifdef VITADECK_INPUT_TESTING
+static void replace_id(char **slot, const char *id)
+{
+    if (*slot) {
+        free(*slot);
+        *slot = NULL;
+    }
+    if (id) *slot = strdup(id);
+}
+
+void input_test_reset_state(void)
+{
+    replace_id(&hovered_id, NULL);
+    replace_id(&mouse_down_id, NULL);
+    replace_id(&touch_hovered_id, NULL);
+    replace_id(&touch_down_id, NULL);
+    replace_id(&focused_id, NULL);
+    replace_id(&gamepad_down_id, NULL);
+    touch_stop_momentum();
+    touch_reset_gesture();
+    prev_is_mouse_down = false;
+    prev_mouse_x = -1;
+    prev_mouse_y = -1;
+    prev_touch_down = false;
+    prev_confirm_down = false;
+    touch_start_x = 0;
+    touch_start_y = 0;
+    touch_prev_y = 0;
+}
+
+void input_test_set_touch_hovered(const char *id)
+{
+    replace_id(&touch_hovered_id, id);
+}
+
+void input_test_set_focused(const char *id)
+{
+    replace_id(&focused_id, id);
+}
+
+void input_test_begin_touch_scroll_release(const char *id, float velocity_y)
+{
+    touch_reset_gesture();
+    replace_id(&touch_scroll_id, id);
+    touch_scroll_viewport = id != NULL;
+    touch_gesture_scrolling = id != NULL;
+    touch_pending_press = false;
+    touch_velocity_y = velocity_y;
+}
+
+void input_test_release_touch_scroll(void)
+{
+    (void)touch_finish_scroll_gesture();
+    touch_reset_gesture();
+}
+
+bool input_test_momentum_active(const char *id)
+{
+    if (!touch_momentum_scroll_id) return false;
+    if (!id) return true;
+    return strcmp(touch_momentum_scroll_id, id) == 0;
+}
+
+float input_test_momentum_velocity(void)
+{
+    return touch_velocity_y;
+}
+#endif
