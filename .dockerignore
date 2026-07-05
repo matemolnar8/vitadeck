@@ -1,3 +1,4 @@
+.git
 .DS_Store
 
 out
@@ -12,5 +13,5 @@ js/packages/sdk/dist
 js/examples/*/dist
 js/examples/*/.vitadeck
 js/examples/chat/src/genesys/genesys.local.ts
-node_modules/
-**/node_modules/
+node_modules
+**/node_modules

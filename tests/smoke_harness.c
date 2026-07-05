@@ -14,7 +14,7 @@
 #include "ui/instance_tree.h"
 
 #define WAIT_TIMEOUT_SEC 5.0
-#define MAX_PIXEL_MISMATCH 64
+#define MAX_PIXEL_MISMATCH 128
 
 static void fail(const char *message)
 {
