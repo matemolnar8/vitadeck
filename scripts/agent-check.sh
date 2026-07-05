@@ -10,7 +10,7 @@ usage: scripts/agent-check.sh [fast|host|smoke|full]
 
 fast   JS typecheck, JS lint, and C formatting check
 host   JS build, host configure/build, and non-smoke CTest
-smoke  host build plus visual smoke CTest
+smoke  Dockerized Linux visual smoke CTest
 full   fast, host, smoke, and Vita Docker build
 EOF
 }
@@ -61,12 +61,11 @@ run_host() {
 }
 
 run_smoke_tests() {
-    step "Run smoke CTest"
-    ctest --test-dir out --output-on-failure -R smoke_harness
+    step "Run Dockerized Linux smoke CTest"
+    scripts/smoke-docker.sh test
 }
 
 run_smoke() {
-    run_host
     run_smoke_tests
 }
 

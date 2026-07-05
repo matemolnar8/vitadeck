@@ -1,3 +1,47 @@
+# Linux smoke test image used by local golden updates and GitHub Actions.
+FROM ubuntu:24.04 AS smoke
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        bash \
+        build-essential \
+        ca-certificates \
+        cmake \
+        curl \
+        git \
+        libcurl4-openssl-dev \
+        libegl-dev \
+        libgl-dev \
+        libssl-dev \
+        libxcursor-dev \
+        libxext-dev \
+        libxi-dev \
+        libxinerama-dev \
+        libxrandr-dev \
+        libxxf86vm-dev \
+        pkg-config \
+        xvfb \
+        zlib1g-dev \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && corepack enable \
+    && corepack prepare pnpm@10.28.2 --activate \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+RUN git clone --depth 1 --branch 5.5 https://github.com/raysan5/raylib.git /tmp/raylib \
+    && cmake -S /tmp/raylib -B /tmp/raylib/build -DBUILD_SHARED_LIBS=ON -DBUILD_EXAMPLES=OFF \
+    && cmake --build /tmp/raylib/build --parallel "$(nproc)" \
+    && cmake --install /tmp/raylib/build \
+    && ldconfig \
+    && rm -rf /tmp/raylib
+
+WORKDIR /build/git
+
+CMD ["bash"]
+
 # Upstream ships VITASDK; recent prebuilt toolchains need glibc >= 2.36 while the
 # image base is still Ubuntu 22.04. Final stage is Ubuntu 24.04 so arm-vita-eabi-gcc runs.
 FROM --platform=linux/amd64 gnuton/vitasdk-docker AS vitasdk-base
