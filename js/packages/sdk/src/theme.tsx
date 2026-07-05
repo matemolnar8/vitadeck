@@ -15,7 +15,7 @@ const palette = {
   oledBlack: hex("#000000"),
   oledSurface: hex("#080b0e"),
   oledSurfaceAlt: hex("#11171d"),
-  oledOutline: hex("#2b3740"),
+  oledOutline: hex("#6f8490"),
   brand10: hex("#f7fbfd"),
   brand20: hex("#ebf5f9"),
   brand30: hex("#d0e7f1"),
