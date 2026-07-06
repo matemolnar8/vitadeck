@@ -1,9 +1,9 @@
+import { access, copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import babel from "@rollup/plugin-babel";
 import { zipSync } from "fflate";
-import { access, copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { createRequire } from "node:module";
-import { fileURLToPath } from "node:url";
 import { rolldown } from "rolldown";
 
 type DeckAppConfig = {
@@ -32,6 +32,10 @@ const SUPPORTED_IMAGE_EXTENSIONS = new Set([
   ".qoi",
 ]);
 const FONT_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,62}$/u;
+const NATIVE_DISPLAY_NAME_MAX_BYTES = 127;
+const NATIVE_PACKAGE_NAME_MAX_BYTES = 127;
+const NATIVE_PACKAGE_VERSION_MAX_BYTES = 63;
+const NATIVE_PACKAGE_ASSET_MAX = 32;
 /** Must match `name` / copy in `cli/templates/scaffold` so the template is a valid workspace package and typechecks; replaced with the author's slug on `create`. */
 const SCAFFOLD_TEMPLATE_LABEL = "vitadeck-scaffold-template";
 const requireFromHere = createRequire(import.meta.url);
@@ -62,6 +66,7 @@ function requireString(value: unknown, field: string, sourcePath: string): strin
 function readFonts(value: unknown, sourcePath: string): Record<string, string> | undefined {
   if (value === undefined) return undefined;
   const raw = requireObject(value, `${sourcePath} "fonts"`);
+  validateAssetCount(raw, "fonts", sourcePath);
   const fonts: Record<string, string> = {};
   for (const [name, fontPath] of Object.entries(raw)) {
     if (!FONT_NAME_PATTERN.test(name)) {
@@ -78,6 +83,7 @@ function readFonts(value: unknown, sourcePath: string): Record<string, string> |
 function readImages(value: unknown, sourcePath: string): Record<string, string> | undefined {
   if (value === undefined) return undefined;
   const raw = requireObject(value, `${sourcePath} "images"`);
+  validateAssetCount(raw, "images", sourcePath);
   const images: Record<string, string> = {};
   for (const [name, imagePath] of Object.entries(raw)) {
     if (!FONT_NAME_PATTERN.test(name)) {
@@ -110,7 +116,9 @@ function packageNameFor(displayName: string): string {
     .toLowerCase()
     .replaceAll(/[^a-z0-9]+/gu, "-")
     .replaceAll(/^-+|-+$/gu, "");
-  return `${slug || "deck-app"}.vdapp`;
+  const packageName = `${slug || "deck-app"}.vdapp`;
+  validatePackageName(packageName);
+  return packageName;
 }
 
 function toImportPath(fromFile: string, toFile: string): string {
@@ -132,26 +140,68 @@ function validatePackageVersion(version: string, sourcePath: string): void {
   if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/u.test(version)) {
     throw new Error(`${sourcePath} must define "version" as a semver string.`);
   }
-}
-
-function validateFontSourcePath(fontPath: string, sourcePath: string): void {
-  if (path.isAbsolute(fontPath)) {
-    throw new Error(`${sourcePath} font path "${fontPath}" must be relative to the Deck App project.`);
-  }
-  const extension = path.extname(fontPath).toLowerCase();
-  if (!SUPPORTED_FONT_EXTENSIONS.has(extension)) {
-    throw new Error(`${sourcePath} font path "${fontPath}" must use a supported font extension.`);
+  if (utf8ByteLength(version) > NATIVE_PACKAGE_VERSION_MAX_BYTES) {
+    throw new Error(
+      `${sourcePath} "version" must be at most ${NATIVE_PACKAGE_VERSION_MAX_BYTES} bytes for VitaDeck packages.`,
+    );
   }
 }
 
-function validateImageSourcePath(imagePath: string, sourcePath: string): void {
-  if (path.isAbsolute(imagePath)) {
-    throw new Error(`${sourcePath} image path "${imagePath}" must be relative to the Deck App project.`);
+function validateDisplayName(displayName: string, sourcePath: string): void {
+  if (utf8ByteLength(displayName) > NATIVE_DISPLAY_NAME_MAX_BYTES) {
+    throw new Error(
+      `${sourcePath} "name" must be at most ${NATIVE_DISPLAY_NAME_MAX_BYTES} bytes for VitaDeck packages.`,
+    );
   }
-  const extension = path.extname(imagePath).toLowerCase();
-  if (!SUPPORTED_IMAGE_EXTENSIONS.has(extension)) {
-    throw new Error(`${sourcePath} image path "${imagePath}" must use a supported image extension.`);
+}
+
+function validatePackageName(packageName: string): void {
+  if (
+    packageName === "" ||
+    !packageName.endsWith(".vdapp") ||
+    packageName.includes("/") ||
+    packageName.includes("\\") ||
+    packageName.includes("..")
+  ) {
+    throw new Error(`Generated Deck App Package Name "${packageName}" is not native-safe.`);
   }
+  if (utf8ByteLength(packageName) > NATIVE_PACKAGE_NAME_MAX_BYTES) {
+    throw new Error(
+      `Generated Deck App Package Name "${packageName}" must be at most ${NATIVE_PACKAGE_NAME_MAX_BYTES} bytes.`,
+    );
+  }
+}
+
+function validateAssetCount(raw: Record<string, unknown>, label: "fonts" | "images", sourcePath: string): void {
+  const count = Object.keys(raw).length;
+  if (count > NATIVE_PACKAGE_ASSET_MAX) {
+    throw new Error(`${sourcePath} declares ${count} ${label}; VitaDeck packages support at most 32.`);
+  }
+}
+
+function utf8ByteLength(value: string): number {
+  return Buffer.byteLength(value, "utf8");
+}
+
+function resolveAssetSourcePath(
+  projectRoot: string,
+  assetPath: string,
+  sourcePath: string,
+  assetLabel: "font" | "image",
+  supportedExtensions: Set<string>,
+): string {
+  if (path.isAbsolute(assetPath) || path.win32.isAbsolute(assetPath)) {
+    throw new Error(`${sourcePath} ${assetLabel} path "${assetPath}" must be relative to the Deck App project.`);
+  }
+  const normalizedRel = path.posix.normalize(assetPath.replaceAll("\\", "/"));
+  if (normalizedRel === ".." || normalizedRel.startsWith("../")) {
+    throw new Error(`${sourcePath} ${assetLabel} path "${assetPath}" must stay inside the Deck App project.`);
+  }
+  const extension = path.extname(assetPath).toLowerCase();
+  if (!supportedExtensions.has(extension)) {
+    throw new Error(`${sourcePath} ${assetLabel} path "${assetPath}" must use a supported ${assetLabel} extension.`);
+  }
+  return path.resolve(projectRoot, assetPath);
 }
 
 async function assertFileExists(filePath: string, sourcePath: string, assetLabel = "font"): Promise<void> {
@@ -251,8 +301,13 @@ async function copyImages(
 
   await Promise.all(
     entries.map(async ([name, sourceRel]) => {
-      validateImageSourcePath(sourceRel, "vitadeck.config.json");
-      const sourceAbs = path.resolve(projectRoot, sourceRel);
+      const sourceAbs = resolveAssetSourcePath(
+        projectRoot,
+        sourceRel,
+        "vitadeck.config.json",
+        "image",
+        SUPPORTED_IMAGE_EXTENSIONS,
+      );
       await assertFileExists(sourceAbs, "vitadeck.config.json", "image");
       const packageRel = `images/${name}${path.extname(sourceRel).toLowerCase()}`;
       await copyFile(sourceAbs, path.join(packageDir, packageRel));
@@ -277,8 +332,13 @@ async function copyFonts(
 
   await Promise.all(
     entries.map(async ([name, sourceRel]) => {
-      validateFontSourcePath(sourceRel, "vitadeck.config.json");
-      const sourceAbs = path.resolve(projectRoot, sourceRel);
+      const sourceAbs = resolveAssetSourcePath(
+        projectRoot,
+        sourceRel,
+        "vitadeck.config.json",
+        "font",
+        SUPPORTED_FONT_EXTENSIONS,
+      );
       await assertFileExists(sourceAbs, "vitadeck.config.json");
       const packageRel = `fonts/${name}${path.extname(sourceRel).toLowerCase()}`;
       await copyFile(sourceAbs, path.join(packageDir, packageRel));
@@ -289,12 +349,7 @@ async function copyFonts(
   return manifestFonts;
 }
 
-async function copyScaffoldDir(
-  templateRoot: string,
-  targetRoot: string,
-  slug: string,
-  rel = "",
-): Promise<void> {
+async function copyScaffoldDir(templateRoot: string, targetRoot: string, slug: string, rel = ""): Promise<void> {
   const absDir = path.join(templateRoot, rel);
   const entries = await readdir(absDir, { withFileTypes: true });
   await Promise.all(
@@ -321,6 +376,7 @@ type BuildOptions = { noZip?: boolean };
 
 async function build(projectRoot = process.cwd(), options: BuildOptions = {}): Promise<void> {
   const config = await readConfig(projectRoot);
+  validateDisplayName(config.name, "vitadeck.config.json");
   await validateReact(projectRoot);
   const version = await readPackageVersion(projectRoot, config);
 
@@ -388,10 +444,7 @@ globalThis.vitadeckPackage.register(DeckApp);
     ...(manifestFonts ? { fonts: manifestFonts } : {}),
     ...(manifestImages ? { images: manifestImages } : {}),
   };
-  await writeFile(
-    path.join(packageDir, "manifest.json"),
-    JSON.stringify(manifest, null, 2) + "\n",
-  );
+  await writeFile(path.join(packageDir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
   await rm(generatedEntry, { force: true });
 
   console.log(`Built ${path.relative(projectRoot, packageDir)}`);
