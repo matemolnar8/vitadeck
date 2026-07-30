@@ -21,5 +21,7 @@
   },
   "oxc.typeAware": true,
   "oxc.path.oxlint": "./js/node_modules/oxlint/bin/oxlint",
-  "oxc.path.oxfmt": "./js/node_modules/oxfmt/bin/oxfmt"
+  "oxc.path.oxfmt": "./js/node_modules/oxfmt/bin/oxfmt",
+  "js/ts.experimental.useTsgo": true,
+  "js/ts.tsdk.path": "./js/node_modules/typescript"
 }
