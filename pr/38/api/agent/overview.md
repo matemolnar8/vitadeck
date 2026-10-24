@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 1f305ea273a1133774b6a1eda851a5ad99278ad3` and `git rev-parse --verify e03f214f037ea36a7095a5c1e5722284ee6df983` in this repository.
+   Run `git rev-parse --verify 1f305ea273a1133774b6a1eda851a5ad99278ad3` and `git rev-parse --verify 282d57c499f34473e74cbd281d12ce11fe79eadc` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,16 @@ Origin: https://github.com/matemolnar8/vitadeck.git
 
 base (merge-base)  1f305ea273a1133774b6a1eda851a5ad99278ad3
 
-head               e03f214f037ea36a7095a5c1e5722284ee6df983
+head               282d57c499f34473e74cbd281d12ce11fe79eadc
 
-Named refs at pin: 1f305ea273a1133774b6a1eda851a5ad99278ad3 ... e03f214
+Named refs at pin: 1f305ea273a1133774b6a1eda851a5ad99278ad3 ... 282d57c
 
 Read the diff:
 
-git diff --find-renames 1f305ea273a1133774b6a1eda851a5ad99278ad3 e03f214f037ea36a7095a5c1e5722284ee6df983
+git diff --find-renames 1f305ea273a1133774b6a1eda851a5ad99278ad3 282d57c499f34473e74cbd281d12ce11fe79eadc
 
 Commits:
+- 282d57c Build vitaShaRK from source and pin vitaGL in the Vita image
 - e03f214 Prune gh-pages reviews on PR close and daily
 - b07fc28 Make the pages skill self-contained
 - 318fcb8 Address Codex review: staging target and separate pnpm commands
@@ -50,6 +51,7 @@ Sources:
 - pr-comment cursor on PR #38
   https://github.com/matemolnar8/vitadeck/pull/38
 - commit Address Codex review: staging target and separate pnpm commands
+- commit Build vitaShaRK from source and pin vitaGL in the Vita image
 
 The title:
 
@@ -61,12 +63,12 @@ The Matt Pocock skill suite is [no longer in use](source:s1), and AGENTS.md only
 
 The what (medium):
 
-AGENTS.md becomes a VitaDeck-specific runbook, the third-party skill suite and its setup docs leave the repo, the five kept skills get corrected, comprehende and a repo-owned pages skill with its publish script join the PR workflow, and the JS workspace gets an oxfmt pass.
+AGENTS.md becomes a VitaDeck-specific runbook, the third-party skill suite and its setup docs leave the repo, the five kept skills get corrected, comprehende and a repo-owned pages skill with its publish script and prune workflow join the PR workflow, the JS workspace gets an oxfmt pass, and the Vita Docker image is repaired.
 
 Look for:
 - The [PR description](source:s1) says `skills-lock.json` is removed. At head it is modified: it lists only `comprehende` from `matemolnar8/comprehende`; `pages` is no longer tracked by the `skills` CLI.
-- The [PR description](source:s1) was updated after the first review round but still predates the last commit. It does not mention `.github/workflows/pages-reviews.yml`.
-- The [Vita VPK check failed](source:s4) on this branch. The same job fails on `main` at 1f305ea: the Dockerfile clones vitaGL master, which calls `shark_set_shader_association_path`, missing from the vitaShaRK in the pinned vitasdk image. Nothing in this diff touches the Dockerfile.
+- The [PR description](source:s1) does not say that the Dockerfile change is unrelated feature-wise to the AGENTS.md rewrite; it is here because the PR's own CI was red.
+- The [Vita VPK check failed](source:s4) on this branch and on `main` at 1f305ea for the vitaGL/vitaShaRK mismatch; the Vita image fix part addresses it. Confirm the `vpk` job is green at head before merging.
 - Manual step: the hosted review URL returns 404 until GitHub Pages is enabled on the repo (Settings, Pages, Deploy from a branch, `gh-pages`, `/`).
 
 ## Review concerns
@@ -133,3 +135,9 @@ Depends on:
 - 07 oxfmt line wrapping (`oxfmt`)
 
 [groups/mechanical.md](groups/mechanical.md)
+
+### 09 Vita image: build vitaShaRK from source, pin vitaGL (`vita-image`)
+
+The Dockerfile clones vitaShaRK at df24065 and runs `make install` into `$VITASDK` before vitaGL, and vitaGL moves from `--depth=1` master to a checkout of 76f43e6.
+
+[groups/vita-image.md](groups/vita-image.md)
