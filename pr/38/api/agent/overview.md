@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 1f305ea273a1133774b6a1eda851a5ad99278ad3` and `git rev-parse --verify b07fc28178e9c6bb9066fc5f1a5d3511f22b8670` in this repository.
+   Run `git rev-parse --verify 1f305ea273a1133774b6a1eda851a5ad99278ad3` and `git rev-parse --verify e03f214f037ea36a7095a5c1e5722284ee6df983` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,16 @@ Origin: https://github.com/matemolnar8/vitadeck.git
 
 base (merge-base)  1f305ea273a1133774b6a1eda851a5ad99278ad3
 
-head               b07fc28178e9c6bb9066fc5f1a5d3511f22b8670
+head               e03f214f037ea36a7095a5c1e5722284ee6df983
 
-Named refs at pin: 1f305ea273a1133774b6a1eda851a5ad99278ad3 ... b07fc28
+Named refs at pin: 1f305ea273a1133774b6a1eda851a5ad99278ad3 ... e03f214
 
 Read the diff:
 
-git diff --find-renames 1f305ea273a1133774b6a1eda851a5ad99278ad3 b07fc28178e9c6bb9066fc5f1a5d3511f22b8670
+git diff --find-renames 1f305ea273a1133774b6a1eda851a5ad99278ad3 e03f214f037ea36a7095a5c1e5722284ee6df983
 
 Commits:
+- e03f214 Prune gh-pages reviews on PR close and daily
 - b07fc28 Make the pages skill self-contained
 - 318fcb8 Address Codex review: staging target and separate pnpm commands
 - cf4f997 Add comprehende and pages skills to the PR workflow
@@ -64,7 +65,7 @@ AGENTS.md becomes a VitaDeck-specific runbook, the third-party skill suite and i
 
 Look for:
 - The [PR description](source:s1) says `skills-lock.json` is removed. At head it is modified: it lists only `comprehende` from `matemolnar8/comprehende`; `pages` is no longer tracked by the `skills` CLI.
-- The [PR description](source:s1) was updated after the first review round but still predates the last commit. It does not say that the pages skill now ships its own publish script.
+- The [PR description](source:s1) was updated after the first review round but still predates the last commit. It does not mention `.github/workflows/pages-reviews.yml`.
 - The [Vita VPK check failed](source:s4) on this branch. The same job fails on `main` at 1f305ea: the Dockerfile clones vitaGL master, which calls `shark_set_shader_association_path`, missing from the vitaShaRK in the pinned vitasdk image. Nothing in this diff touches the Dockerfile.
 - Manual step: the hosted review URL returns 404 until GitHub Pages is enabled on the repo (Settings, Pages, Deploy from a branch, `gh-pages`, `/`).
 
@@ -114,7 +115,7 @@ Depends on:
 
 ### 06 Install comprehende, add a self-contained pages skill, wire both into the PR workflow (`comprehende-skills`)
 
-`.agents/skills/comprehende/` is the upstream skill copied verbatim by `npx skills add` and recorded in `skills-lock.json`; `.agents/skills/pages/` is a repo-owned skill whose `scripts/pages-review.ts` publishes a folder onto this repo's `gh-pages` branch, and AGENTS.md's Pull requests section calls both.
+`.agents/skills/comprehende/` is the upstream skill copied verbatim by `npx skills add` and recorded in `skills-lock.json`; `.agents/skills/pages/` is a repo-owned skill whose `scripts/pages-review.ts` publishes a folder onto this repo's `gh-pages` branch, `.github/workflows/pages-reviews.yml` runs its `prune` on PR close and daily, and AGENTS.md's Pull requests section calls the two skills.
 
 [groups/comprehende-skills.md](groups/comprehende-skills.md)
 

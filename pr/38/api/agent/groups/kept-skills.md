@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 1f305ea273a1133774b6a1eda851a5ad99278ad3` and `git rev-parse --verify b07fc28178e9c6bb9066fc5f1a5d3511f22b8670` in this repository.
+   Run `git rev-parse --verify 1f305ea273a1133774b6a1eda851a5ad99278ad3` and `git rev-parse --verify e03f214f037ea36a7095a5c1e5722284ee6df983` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 1f305ea273a1133774b6a1eda851a5ad99278ad3 b07fc28178e9c6bb9066fc5f1a5d3511f22b8670 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 1f305ea273a1133774b6a1eda851a5ad99278ad3 e03f214f037ea36a7095a5c1e5722284ee6df983 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,13 +25,13 @@ Origin: https://github.com/matemolnar8/vitadeck.git
 
 base (merge-base)  1f305ea273a1133774b6a1eda851a5ad99278ad3
 
-head               b07fc28178e9c6bb9066fc5f1a5d3511f22b8670
+head               e03f214f037ea36a7095a5c1e5722284ee6df983
 
-Named refs at pin: 1f305ea273a1133774b6a1eda851a5ad99278ad3 ... b07fc28
+Named refs at pin: 1f305ea273a1133774b6a1eda851a5ad99278ad3 ... e03f214
 
 Read the diff:
 
-git diff --find-renames 1f305ea273a1133774b6a1eda851a5ad99278ad3 b07fc28178e9c6bb9066fc5f1a5d3511f22b8670
+git diff --find-renames 1f305ea273a1133774b6a1eda851a5ad99278ad3 e03f214f037ea36a7095a5c1e5722284ee6df983
 
 Review concern 02 of 08: Corrections to the five kept skills (`kept-skills`)
 
