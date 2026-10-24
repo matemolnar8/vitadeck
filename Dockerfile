@@ -69,9 +69,18 @@ RUN apt-get update \
 
 COPY --from=vitasdk-base /usr/local/vitasdk /usr/local/vitasdk
 
+# vitaShaRK: vitaGL's GLSL path calls shark_set_shader_association_path, which the
+# vdpm copy inside the base image predates. Pinned alongside vitaGL so both move together.
+WORKDIR /build
+RUN git clone https://github.com/Rinnegatamante/vitaShaRK.git \
+    && git -C vitaShaRK checkout df24065e65098b2d1ac533760109ad4367573f28
+WORKDIR /build/vitaShaRK
+RUN make -j"$(nproc)" install
+
 # vitaGL
 WORKDIR /build
-RUN git clone --depth=1 https://github.com/Rinnegatamante/vitaGL.git
+RUN git clone https://github.com/Rinnegatamante/vitaGL.git \
+    && git -C vitaGL checkout 76f43e6fbe1513cee44118da7ff2c16728c4fed2
 WORKDIR /build/vitaGL
 RUN HAVE_GLSL_SUPPORT=1 make -j"$(nproc)" install
 
