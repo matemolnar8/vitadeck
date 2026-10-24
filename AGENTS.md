@@ -16,7 +16,7 @@ When this file speaks:
 
 ## How it works
 
-`pnpm --dir js build` compiles the SDK, the example Deck Apps (`js/examples/*/dist/*.vdapp`), and the runtime bundle (`js/dist/runtime/runtime.js`). CMake copies the runtime and stages the examples into `<build>/vitadeck-data/installed-deck-apps`. At startup `src/core/bootstrap.c` inits raylib, fonts, and the QuickJS runtime, loads the **Active Deck App** from the **Installed Deck App Library**, and the reconciler in `js/packages/runtime` mutates the native instance tree that `src/ui/render.c` paints each frame. `Start`/F1 toggles the **VitaDeck Shell**, which also hosts **Runtime Upload** (HTTP listener on 8787) for installing `.vdapp.zip` archives over LAN.
+`pnpm --dir js build` compiles the SDK, the example Deck Apps (`js/examples/*/dist/*.vdapp`), and the runtime bundle (`js/dist/runtime/runtime.js`). CMake copies the runtime into the build tree on every build; the `stage_examples` target (also run by `run`) copies the examples into `<build>/vitadeck-data/installed-deck-apps`, a plain `cmake --build out` does not. At startup `src/core/bootstrap.c` inits raylib, fonts, and the QuickJS runtime, loads the **Active Deck App** from the **Installed Deck App Library**, and the reconciler in `js/packages/runtime` mutates the native instance tree that `src/ui/render.c` paints each frame. `Start`/F1 toggles the **VitaDeck Shell**, which also hosts **Runtime Upload** (HTTP listener on 8787) for installing `.vdapp.zip` archives over LAN.
 
 ## Where code lives
 
@@ -65,7 +65,7 @@ Use `scripts/agent-check.sh` from the repo root; pick the smallest tier that pro
 - `smoke` - Dockerized Linux visual smoke. Run when rendering, theme, fonts, or Deck App output change.
 - `full` - all of the above plus the Vita Docker build. Run before a PR that touches native code.
 
-Individual commands: `pnpm --dir js tsc | lint | format:check | build`, `./scripts/clang-format.sh check|format`, `cmake -S . -B out && cmake --build out`, Vita: `docker-compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"`.
+Individual commands: `pnpm --dir js tsc`, `pnpm --dir js lint`, `pnpm --dir js format:check`, `pnpm --dir js build`, `./scripts/clang-format.sh check` (or `format` to apply), `cmake -S . -B out && cmake --build out`, Vita: `docker-compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"`.
 
 - C under `src/` follows `.clang-format`; run `cmake -S . -B out` so `out/compile_commands.json` exists for clangd.
 - Write React for the React Compiler: pure renders, Rules of Hooks, accurate effect deps, no manual `useMemo`/`useCallback`/`memo`.
