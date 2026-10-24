@@ -67,11 +67,8 @@ export type VitaImageProps = WithKey<{
   x: number;
   y: number;
   image: ImageName;
-}> & (
-  | { width: number; height: number }
-  | { width: number; height?: never }
-  | { height: number; width?: never }
-);
+}> &
+  ({ width: number; height: number } | { width: number; height?: never } | { height: number; width?: never });
 
 export type VitaHostPropsByType = {
   "vita-text": VitaTextProps;

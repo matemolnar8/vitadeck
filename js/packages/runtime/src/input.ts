@@ -33,10 +33,7 @@ export function unregisterHandlers(id: string): void {
 }
 
 // Called from native when an input event occurs
-export function onInputEventFromNative(
-  id: string,
-  type: NativeInputEventType,
-): void {
+export function onInputEventFromNative(id: string, type: NativeInputEventType): void {
   const handlers = handlersById.get(id);
   if (!handlers) return;
 

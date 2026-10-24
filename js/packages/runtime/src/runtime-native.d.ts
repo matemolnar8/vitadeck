@@ -1,7 +1,7 @@
+import type * as VitaDeckSdk from "@vitadeck/sdk";
+import type { ColorsMap } from "@vitadeck/sdk/types";
 import * as React from "react";
 import type * as ReactCompilerRuntime from "react-compiler-runtime";
-import type { ColorsMap } from "@vitadeck/sdk/types";
-import type * as VitaDeckSdk from "@vitadeck/sdk";
 
 declare global {
   function getTime(): number;
@@ -86,14 +86,7 @@ declare global {
     padding: number,
   ): void;
 
-  function nativeCreateImage(
-    id: string,
-    imageName: string,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-  ): void;
+  function nativeCreateImage(id: string, imageName: string, x: number, y: number, width: number, height: number): void;
 
   function nativeCreateRawText(id: string, text: string): void;
 
@@ -173,14 +166,7 @@ declare global {
     padding: number,
   ): void;
 
-  function nativeUpdateImage(
-    id: string,
-    imageName: string,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-  ): void;
+  function nativeUpdateImage(id: string, imageName: string, x: number, y: number, width: number, height: number): void;
 
   function nativeUpdateRawText(id: string, text: string): void;
 

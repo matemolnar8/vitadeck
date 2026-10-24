@@ -82,14 +82,7 @@ const textWrapToNative = (wrap: PropsByType["vita-text"]["wrap"]): number => {
 };
 
 const textLayoutArgs = (p: PropsByType["vita-text"]) =>
-  [
-    p.x ?? 8,
-    p.y ?? 8,
-    p.width ?? 0,
-    p.lineHeight ?? 0,
-    textAlignToNative(p.align),
-    textWrapToNative(p.wrap),
-  ] as const;
+  [p.x ?? 8, p.y ?? 8, p.width ?? 0, p.lineHeight ?? 0, textAlignToNative(p.align), textWrapToNative(p.wrap)] as const;
 
 // Create native instance based on type
 const createNativeInstance = (id: string, type: Type, props: Props): void => {

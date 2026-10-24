@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Button, Rect, Screen, Text, insetContent, useTheme } from "@vitadeck/sdk";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 
 type Cell = {
   id: string;
