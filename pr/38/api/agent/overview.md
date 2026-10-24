@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 1f305ea273a1133774b6a1eda851a5ad99278ad3` and `git rev-parse --verify 318fcb8ebeeae91f24b52e267baedc1a50415461` in this repository.
+   Run `git rev-parse --verify 1f305ea273a1133774b6a1eda851a5ad99278ad3` and `git rev-parse --verify b07fc28178e9c6bb9066fc5f1a5d3511f22b8670` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,16 @@ Origin: https://github.com/matemolnar8/vitadeck.git
 
 base (merge-base)  1f305ea273a1133774b6a1eda851a5ad99278ad3
 
-head               318fcb8ebeeae91f24b52e267baedc1a50415461
+head               b07fc28178e9c6bb9066fc5f1a5d3511f22b8670
 
-Named refs at pin: 1f305ea273a1133774b6a1eda851a5ad99278ad3 ... 318fcb8ebeeae91f24b52e267baedc1a50415461
+Named refs at pin: 1f305ea273a1133774b6a1eda851a5ad99278ad3 ... b07fc28
 
 Read the diff:
 
-git diff --find-renames 1f305ea273a1133774b6a1eda851a5ad99278ad3 318fcb8ebeeae91f24b52e267baedc1a50415461
+git diff --find-renames 1f305ea273a1133774b6a1eda851a5ad99278ad3 b07fc28178e9c6bb9066fc5f1a5d3511f22b8670
 
 Commits:
+- b07fc28 Make the pages skill self-contained
 - 318fcb8 Address Codex review: staging target and separate pnpm commands
 - cf4f997 Add comprehende and pages skills to the PR workflow
 - c7e17ff Rewrite AGENTS.md and keep only VitaDeck skills
@@ -59,11 +60,11 @@ The Matt Pocock skill suite is [no longer in use](source:s1), and AGENTS.md only
 
 The what (medium):
 
-AGENTS.md becomes a VitaDeck-specific runbook, the third-party skill suite and its setup docs leave the repo, the five kept skills get corrected, comprehende and pages join the PR workflow, and the JS workspace gets an oxfmt pass.
+AGENTS.md becomes a VitaDeck-specific runbook, the third-party skill suite and its setup docs leave the repo, the five kept skills get corrected, comprehende and a repo-owned pages skill with its publish script join the PR workflow, and the JS workspace gets an oxfmt pass.
 
 Look for:
-- The [PR description](source:s1) says `skills-lock.json` is removed. At head it is modified: it lists `comprehende` and `pages` from `matemolnar8/comprehende`, nothing else.
-- The [PR description](source:s1) predates the last two commits. It does not mention the comprehende and pages skills, the new review step in the Pull requests section of AGENTS.md, or the [Codex fixes](source:s5).
+- The [PR description](source:s1) says `skills-lock.json` is removed. At head it is modified: it lists only `comprehende` from `matemolnar8/comprehende`; `pages` is no longer tracked by the `skills` CLI.
+- The [PR description](source:s1) was updated after the first review round but still predates the last commit. It does not say that the pages skill now ships its own publish script.
 - The [Vita VPK check failed](source:s4) on this branch. The same job fails on `main` at 1f305ea: the Dockerfile clones vitaGL master, which calls `shark_set_shader_association_path`, missing from the vitaShaRK in the pinned vitasdk image. Nothing in this diff touches the Dockerfile.
 - Manual step: the hosted review URL returns 404 until GitHub Pages is enabled on the repo (Settings, Pages, Deploy from a branch, `gh-pages`, `/`).
 
@@ -111,9 +112,9 @@ Depends on:
 
 [groups/mirrors-2.md](groups/mirrors-2.md)
 
-### 06 Install comprehende and pages, wire them into the PR workflow (`comprehende-skills`)
+### 06 Install comprehende, add a self-contained pages skill, wire both into the PR workflow (`comprehende-skills`)
 
-`.agents/skills/comprehende/` is the upstream skill copied verbatim by `npx skills add`, `.agents/skills/pages/SKILL.md` is the upstream pages skill edited to publish from a comprehende checkout with `--repo` pointing here, and `skills-lock.json` records both; AGENTS.md's Pull requests section calls them.
+`.agents/skills/comprehende/` is the upstream skill copied verbatim by `npx skills add` and recorded in `skills-lock.json`; `.agents/skills/pages/` is a repo-owned skill whose `scripts/pages-review.ts` publishes a folder onto this repo's `gh-pages` branch, and AGENTS.md's Pull requests section calls both.
 
 [groups/comprehende-skills.md](groups/comprehende-skills.md)
 
