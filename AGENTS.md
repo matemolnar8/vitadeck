@@ -29,7 +29,7 @@ When this file speaks:
 - `js/examples/` - example Deck Apps; `smoke` is the CI smoke fixture
 - `tests/` - CTest harnesses (`smoke_harness.c`, `package_manifest_harness.c`, `timer_reload_harness.c`) and golden screenshots
 - `vendor/quickjs` - git submodule; `docker-compose.yml` + `Dockerfile` - Vitasdk and Linux smoke images
-- `.agents/skills/` - repo skills (`vitadeck-build`, `vitadeck-smoke`, `vitadeck-manual-testing`, `vitadeck-vdapp-upload`, `vitadeck-deck-app-init`) plus `comprehende` and `pages` installed from `matemolnar8/comprehende` via the `skills` CLI (`skills-lock.json`). `.claude/skills` symlinks here. Published via `npx skills add matemolnar8/vitadeck`.
+- `.agents/skills/` - repo skills (`vitadeck-build`, `vitadeck-smoke`, `vitadeck-manual-testing`, `vitadeck-vdapp-upload`, `vitadeck-deck-app-init`) plus `comprehende` installed from `matemolnar8/comprehende` via the `skills` CLI (`skills-lock.json`) and `pages`, a repo-owned skill with its own publish script. `.claude/skills` symlinks here. Published via `npx skills add matemolnar8/vitadeck`.
 
 ## Setup
 
