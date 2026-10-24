@@ -66,17 +66,11 @@ export async function sendCopilotMessage(
   return readJsonResponse<CopilotSendResponse>(res);
 }
 
-export async function getSessionMessages(
-  accessToken: string,
-  sessionId: string,
-): Promise<CopilotMessageListing> {
-  const res = await fetch(
-    `${apiBaseUrl()}/api/v2/apps/agentic/copilots/sessions/${sessionId}/messages?pageSize=25`,
-    {
-      method: "GET",
-      headers: genesysApiHeaders(accessToken),
-    },
-  );
+export async function getSessionMessages(accessToken: string, sessionId: string): Promise<CopilotMessageListing> {
+  const res = await fetch(`${apiBaseUrl()}/api/v2/apps/agentic/copilots/sessions/${sessionId}/messages?pageSize=25`, {
+    method: "GET",
+    headers: genesysApiHeaders(accessToken),
+  });
   return readJsonResponse<CopilotMessageListing>(res);
 }
 
@@ -97,10 +91,7 @@ export type CopilotReply = {
   sessionId: string;
 };
 
-export async function sendCopilotMessageAndWaitForReply(
-  content: string,
-  sessionId?: string,
-): Promise<CopilotReply> {
+export async function sendCopilotMessageAndWaitForReply(content: string, sessionId?: string): Promise<CopilotReply> {
   const accessToken = await getAccessToken();
 
   let baselineAssistantId: string | undefined;

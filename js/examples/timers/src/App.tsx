@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
 import { Button, Rect, Screen, Text, insetContent, useTheme } from "@vitadeck/sdk";
+import React, { useEffect, useRef, useState } from "react";
 
 const timeoutPromise = new Promise<string>((resolve) => {
   setTimeout(() => {
@@ -101,14 +101,7 @@ export default function TimersDeckApp() {
         />
       </Rect>
 
-      <Rect
-        x={insetX}
-        y={insetY + rowH + stackGap}
-        width={cw}
-        height={rowH}
-        color={theme.surfaceAlt}
-        borderRadius={6}
-      >
+      <Rect x={insetX} y={insetY + rowH + stackGap} width={cw} height={rowH} color={theme.surfaceAlt} borderRadius={6}>
         <Text fontSize={24} color={theme.text}>
           setInterval demo: ticks = {ticks}
         </Text>

@@ -11,12 +11,11 @@ metadata:
 
 1. Build JavaScript and native first:
    - `pnpm --dir js build`
-   - `CC=gcc CXX=g++ cmake -S . -B out -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group" && cmake --build out`
-2. Stage a Deck App for local runs when `out/vitadeck-data` is missing or stale:
-   - `mkdir -p out/vitadeck-data/installed-deck-apps`
-   - `rm -rf out/vitadeck-data/installed-deck-apps/chat.vdapp`
-   - `cp -R js/examples/chat/dist/chat.vdapp out/vitadeck-data/installed-deck-apps/chat.vdapp`
-   - `printf 'chat.vdapp\n' > out/vitadeck-data/active-package.txt`
+   - macOS: `cmake -S . -B out && cmake --build out`
+   - Linux/GCC: `CC=gcc CXX=g++ cmake -S . -B out -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group" && cmake --build out`
+2. Stage Deck Apps for local runs when `out/vitadeck-data` is missing or stale:
+   - `cmake --build out --target stage_examples` copies every built example into `out/vitadeck-data/installed-deck-apps/`.
+   - Pick the one to run: `printf 'chat.vdapp\n' > out/vitadeck-data/active-package.txt`. Without this file the Shell opens with no Active Deck App.
 3. Run from `out/`, not the repo root:
    - `./vitadeck`
    - Prefer a task-specific tmux session, e.g. `vitadeck-ui-demo`.
@@ -42,7 +41,7 @@ Checklist:
 - Set `out/vitadeck-data/active-package.txt` to that package name.
 - Restart `out/vitadeck` after changing staged package contents.
 - Inspect the tmux log for startup evidence such as loaded package fonts:
-  - `tmux -f /exec-daemon/tmux.portal.conf capture-pane -p -t vitadeck-ui-demo:0.0 -S -120`
+  - `tmux capture-pane -p -t vitadeck-ui-demo:0.0 -S -120`
 
 ## Runtime Upload testing
 
@@ -71,5 +70,5 @@ Only use this when testing upload behavior:
 - Running from the repo root makes `vitadeck` miss `js/runtime.js`; always run from `out/`.
 - `pnpm --dir js build` rebuilds example `.vdapp` packages; it does not automatically update `out/vitadeck-data`.
 - A visible old UI usually means the installed package was not replaced or the app was not restarted.
-- The upload URL shown on-device can omit the port; use `localhost:8787` for local curl tests unless the task specifically needs LAN behavior.
+- The listener falls forward to 8788-8796 when 8787 is busy; read the port from the URL on the Shell Upload Screen before curling.
 - Do not keep failed walkthrough recordings as artifacts.

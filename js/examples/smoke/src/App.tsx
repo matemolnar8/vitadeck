@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
 import { Button, Image, Rect, Screen, Scroll, Text, insetContent, useTheme } from "@vitadeck/sdk";
+import React, { useEffect, useState } from "react";
 
 const SCROLL_ROWS = [
   {

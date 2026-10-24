@@ -1,5 +1,5 @@
-import babel from "@rollup/plugin-babel";
 import path from "node:path";
+import babel from "@rollup/plugin-babel";
 import { defineConfig } from "rolldown";
 
 const isProd = process.env.NODE_ENV === "production";

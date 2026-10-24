@@ -55,7 +55,7 @@ The `<slug>` is derived from the project `name` in `vitadeck.config.json` (e.g. 
 | `src/vitadeck-env.d.ts` | TypeScript env for Deck App globals                                    |
 | `tsconfig.json`         | Extends `@vitadeck/sdk/tsconfig`                                       |
 
-Optional `vitadeck.config.json` fields: `version` (overrides `package.json` semver in the built manifest), `fonts` (named font files copied into the package).
+Optional `vitadeck.config.json` fields: `version` (overrides `package.json` semver in the built manifest), `fonts` and `images` (named asset files copied into the package and typed under `.vitadeck/`).
 
 ## After scaffolding
 
@@ -73,7 +73,6 @@ Optional `vitadeck.config.json` fields: `version` (overrides `package.json` semv
 ## Troubleshooting
 
 - **`Usage: vitadeck create <project-name>`** — pass a project folder name: `npx @vitadeck/sdk create my-app`
-- **Target directory already exists** — pick a new name or remove the existing folder
 - **React version error** — ensure `react` is `18.3.x` in `package.json`, then reinstall
 - **Wrong context** — inside the VitaDeck monorepo, examples live under `js/examples/` and use workspace linking; this skill is for external projects only
 
