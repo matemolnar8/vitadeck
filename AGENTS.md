@@ -29,7 +29,7 @@ When this file speaks:
 - `js/examples/` - example Deck Apps; `smoke` is the CI smoke fixture
 - `tests/` - CTest harnesses (`smoke_harness.c`, `package_manifest_harness.c`, `timer_reload_harness.c`) and golden screenshots
 - `vendor/quickjs` - git submodule; `docker-compose.yml` + `Dockerfile` - Vitasdk and Linux smoke images
-- `.agents/skills/` - repo skills (`vitadeck-build`, `vitadeck-smoke`, `vitadeck-manual-testing`, `vitadeck-vdapp-upload`, `vitadeck-deck-app-init`). `.claude/skills` symlinks here. Published via `npx skills add matemolnar8/vitadeck`.
+- `.agents/skills/` - repo skills (`vitadeck-build`, `vitadeck-smoke`, `vitadeck-manual-testing`, `vitadeck-vdapp-upload`, `vitadeck-deck-app-init`) plus `comprehende` and `pages` installed from `matemolnar8/comprehende` via the `skills` CLI (`skills-lock.json`). `.claude/skills` symlinks here. Published via `npx skills add matemolnar8/vitadeck`.
 
 ## Setup
 
@@ -76,6 +76,7 @@ Individual commands: `pnpm --dir js tsc | lint | format:check | build`, `./scrip
 - Open a PR only when asked, or when requested feature work is ready under an approved plan.
 - Conventional titles, plain language: `fix(shell): upload screen shows bind failure`.
 - Body: the problem in a sentence or two, then how you fixed it, then which agent-check tier passed. End with the model and harness that did the work.
+- Review the diff with the `comprehende` skill (base is the merge-base with `main`, head is the branch tip), `export` it, then host the export with the `pages` skill using `--pr <number>`. Put the printed URL in the PR body. When the PR gets new commits, refresh the review and publish again to the same URL.
 - UI changes need before/after screenshots or an updated golden. Upload evidence to GitHub; do not commit PR-only images.
 - One request is one PR.
 
