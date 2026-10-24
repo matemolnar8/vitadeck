@@ -18,4 +18,4 @@ A 404 at the URL means Pages is off. Enable once in the GitHub repo: Settings, P
 
 ## Remove
 
-`node --experimental-strip-types .agents/skills/pages/scripts/pages-review.ts prune --pr <n>` removes one site; `prune --ttl-days 30` removes every site older than 30 days.
+`node --experimental-strip-types .agents/skills/pages/scripts/pages-review.ts prune --pr <n>` removes one site; `prune --ttl-days 30` removes every site older than 30 days. `.github/workflows/pages-reviews.yml` runs both: on pull request close and daily.
