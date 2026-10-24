@@ -1,83 +1,98 @@
-## Agent runbook
+# VitaDeck
 
-This is the shared instruction source for Codex, Cursor, and other repo-aware
-agents. Prefer these commands over tool-specific rule files.
+VitaDeck runs React-authored **Deck Apps** on a PlayStation Vita. A C host (raylib + QuickJS) renders an instance tree that a custom React reconciler drives; the same host builds for macOS/Linux for development. `@vitadeck/sdk` on npm is how Deck App authors build and package apps.
 
-### Setup
+Prefer simple systems and small diffs. Fight scope creep; honor the dev's intent minimally. Leave the repo buildable after every change.
 
-- Use Node.js 22+ and pnpm from the `js/` workspace.
-- Initialize submodules if `vendor/quickjs/quickjs.c` is missing:
-  `git submodule update --init --recursive`.
-- Install JavaScript dependencies once with `pnpm --dir js install`.
-- Host native builds need CMake, raylib 5.5, curl, OpenSSL, and zlib. On macOS,
-  install raylib with `brew install raylib`; on Linux, install raylib and the
-  OpenGL/X11 development packages used by CI.
-- Vita builds use Docker Compose. Start Docker Desktop before running the full
-  check or any VPK task.
+## Glossary
 
-### Verification
+Read [CONTEXT.md](./CONTEXT.md) before naming anything user-facing or Shell-facing. It is the ubiquitous language (Deck App, Deck App Package, VitaDeck Shell, Runtime Upload, System Input, ...) and lists the words to avoid. `docs/adr/` holds the decisions behind the native layout; read the ones that touch your area and flag it loudly if your change contradicts one.
 
-Use `scripts/agent-check.sh` from the repo root.
+When this file speaks:
 
-- `scripts/agent-check.sh fast`: JS typecheck, JS lint, and C formatting check.
-- `scripts/agent-check.sh host`: JS build, host CMake configure/build, and
-  non-smoke CTest.
-- `scripts/agent-check.sh smoke`: host build plus the visual smoke CTest.
-- `scripts/agent-check.sh full`: fast, host, smoke, and Vita Docker build. If
-  Docker is not running, this must fail with a clear Docker-daemon diagnostic.
+- `you` is the agent reading this file and changing VitaDeck.
+- `author` is a developer building a Deck App with the SDK, outside this repo.
+- `host` is the desktop build of the native app; `Vita` is the device build.
 
-Useful individual commands:
+## How it works
 
-- JS build: `pnpm --dir js build`
-- JS typecheck: `pnpm --dir js tsc`
-- JS lint: `pnpm --dir js lint`
-- JS format check: `pnpm --dir js format:check`
-- C format check: `./scripts/clang-format.sh check`
-- Host build: `cmake -S . -B out && cmake --build out`
-- Host run: `cd out && ./vitadeck`
-- Vita build:
-  `docker-compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"`
+`pnpm --dir js build` compiles the SDK, the example Deck Apps (`js/examples/*/dist/*.vdapp`), and the runtime bundle (`js/dist/runtime/runtime.js`). CMake copies the runtime and stages the examples into `<build>/vitadeck-data/installed-deck-apps`. At startup `src/core/bootstrap.c` inits raylib, fonts, and the QuickJS runtime, loads the **Active Deck App** from the **Installed Deck App Library**, and the reconciler in `js/packages/runtime` mutates the native instance tree that `src/ui/render.c` paints each frame. `Start`/F1 toggles the **VitaDeck Shell**, which also hosts **Runtime Upload** (HTTP listener on 8787) for installing `.vdapp.zip` archives over LAN.
 
-On Linux/GCC, configure the host target with:
+## Where code lives
 
-```sh
-CC=gcc CXX=g++ cmake -S . -B out -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group"
-```
+- `src/core/` - bootstrap, QuickJS runtime, event queue, package library and manifest parsing (vendored `jimp.h`, see ADR 0003)
+- `src/jslib/` - native functions exposed to JS: instances, timers, fetch, log, colors
+- `src/ui/` - instance tree, rendering, fonts, images, input, scroll
+- `src/shell/` - VitaDeck Shell; `src/upload/` - Runtime Upload listener; `src/platform/` - threads (POSIX vs Vita)
+- `js/packages/sdk/` - `@vitadeck/sdk`: author-facing components, theme, types, and the `vitadeck` CLI (`cli/`, scaffold under `cli/templates/`)
+- `js/packages/runtime/` - the React reconciler bundle the host embeds
+- `js/examples/` - example Deck Apps; `smoke` is the CI smoke fixture
+- `tests/` - CTest harnesses (`smoke_harness.c`, `package_manifest_harness.c`, `timer_reload_harness.c`) and golden screenshots
+- `vendor/quickjs` - git submodule; `docker-compose.yml` + `Dockerfile` - Vitasdk and Linux smoke images
+- `.agents/skills/` - repo skills (`vitadeck-build`, `vitadeck-smoke`, `vitadeck-manual-testing`, `vitadeck-vdapp-upload`, `vitadeck-deck-app-init`). `.claude/skills` symlinks here. Published via `npx skills add matemolnar8/vitadeck`.
 
-### JavaScript and React
+## Setup
 
-- Build the JS workspace before native builds after JS, TS, TSX, SDK CLI, or
-  Deck App changes. Native CMake copies `js/dist/runtime` into the build tree.
-- `@vitadeck/sdk` builds the `vitadeck` CLI at
-  `js/packages/sdk/dist/cli.mjs`; after changing `js/packages/sdk/cli/`,
-  `js/packages/sdk/cli/templates/`, or the CLI rolldown config, run the SDK
-  build or the full JS build.
-- Write idiomatic React for the React Compiler. Keep renders pure, follow the
-  Rules of Hooks, do not mutate props/state/context, keep effect dependencies
-  accurate, and avoid manual `useMemo`/`useCallback`/`memo` unless integrating
-  with non-compiled code that needs referential equality.
+- Node.js 22+ and pnpm. `pnpm --dir js install` once.
+- `git submodule update --init --recursive` if `vendor/quickjs/quickjs.c` is missing.
+- Host build needs CMake, raylib 5.5, curl, OpenSSL, zlib (`brew install raylib` on macOS; raylib + OpenGL/X11 dev packages on Linux). On Linux/GCC configure with `CC=gcc CXX=g++ cmake -S . -B out -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group"`.
+- Vita build and Linux smoke run in Docker. Start Docker Desktop first.
 
-### Native code style
+## Footguns
 
-- C sources under `src/` use `.clang-format`.
-- Check formatting with `./scripts/clang-format.sh check`.
-- Apply formatting with `./scripts/clang-format.sh format`.
-- Run `cmake -S . -B out` so `out/compile_commands.json` exists for clangd.
+1. **Stale `js/dist`.** Native CMake copies `js/dist/runtime` into the build tree. After any change under `js/`, run `pnpm --dir js build` before rebuilding or running the host, or you will debug yesterday's JS.
+2. **Two-language package format.** The Deck App Package Manifest is validated natively in `src/core/package_manifest.c` and produced by the SDK CLI. A change to one without the other ships packages the host rejects, or accepts packages the SDK never emits. Update both and the `package_manifest` CTest harness.
+3. **Platform goldens.** `tests/fixtures/smoke_golden.Linux.png` is the only canonical golden (ADR 0002). Refresh it only with `scripts/smoke-docker.sh update-golden`, never from a macOS run. Do not re-enable `smoke_harness` in the macOS ctest step.
+4. **Secrets in examples.** `js/examples/chat/src/genesys/genesys.local.ts` is gitignored and holds real credentials. Never commit it, never paste its contents, and never "fix" imports by renaming it.
+5. **Running from the wrong cwd.** The host resolves `vitadeck-data/` relative to the working directory (or `VITADECK_DATA_ROOT`). Run `./vitadeck` from `out/`, not the repo root.
 
-### Issue tracker
+## Hit every surface
 
-GitHub Issues on `matemolnar8/vitadeck` are the triage surface. Use the `gh`
-CLI for issue operations; external PRs are not a triage surface. See
-`docs/agents/issue-tracker.md`.
+The common defect is a change that works on the host and breaks the Vita, or works in one example and breaks the SDK contract.
 
-### Triage labels
+- **Targets.** Host (macOS/Linux) and Vita share `src/`. Anything touching threads, filesystem, networking, or GL belongs behind `src/platform/` or needs a Vita Docker build to prove it.
+- **Author contract.** `@vitadeck/sdk` is published. A change to its exports, types, CLI flags, scaffold template, or manifest shape is a breaking change for authors. Bump the Deck App Package Schema Version when the manifest shape changes.
+- **Inputs.** Vita buttons and host keyboard mappings (F1 Start, Enter confirm, Backspace back) must stay in sync in `src/ui/input.c` and in `CONTEXT.md`.
+- **Reverse states.** Upload needs cancel, install needs removal, Shell open needs Shell close. Check the failure paint, not just success.
+- **Docs.** If a change makes `CONTEXT.md`, an ADR, the SDK README, or a skill inaccurate, fix it in place. Do not append a second account.
 
-Canonical triage roles map 1:1 to GitHub label strings (`needs-triage`,
-`needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See
-`docs/agents/triage-labels.md`.
+## Verifying
 
-### Domain docs
+Use `scripts/agent-check.sh` from the repo root; pick the smallest tier that proves the change:
 
-This is a single-context repo. Read root `CONTEXT.md` and relevant ADRs in
-`docs/adr/` before naming domain concepts or changing behavior. See
-`docs/agents/domain.md`.
+- `fast` - JS typecheck, JS lint, C format check. Run after every change.
+- `host` - JS build, host build, non-smoke CTest. Run for any `src/` or runtime change.
+- `smoke` - Dockerized Linux visual smoke. Run when rendering, theme, fonts, or Deck App output change.
+- `full` - all of the above plus the Vita Docker build. Run before a PR that touches native code.
+
+Individual commands: `pnpm --dir js tsc | lint | format:check | build`, `./scripts/clang-format.sh check|format`, `cmake -S . -B out && cmake --build out`, Vita: `docker-compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"`.
+
+- C under `src/` follows `.clang-format`; run `cmake -S . -B out` so `out/compile_commands.json` exists for clangd.
+- Write React for the React Compiler: pure renders, Rules of Hooks, accurate effect deps, no manual `useMemo`/`useCallback`/`memo`.
+- For a UI change, do one pass in the real host window (load the `vitadeck-manual-testing` skill). Ask before testing on Vita hardware; it is Máté's device.
+
+## Pull requests
+
+- Open a PR only when asked, or when requested feature work is ready under an approved plan.
+- Conventional titles, plain language: `fix(shell): upload screen shows bind failure`.
+- Body: the problem in a sentence or two, then how you fixed it, then which agent-check tier passed. End with the model and harness that did the work.
+- UI changes need before/after screenshots or an updated golden. Upload evidence to GitHub; do not commit PR-only images.
+- One request is one PR.
+
+## Documentation
+
+Most code changes do not need a docs change. Agents can read the code.
+
+- `README.md` and `js/packages/sdk/README.md` are for authors. Change them when a CLI command, install step, or author-visible behavior changes.
+- `CONTEXT.md` is the glossary. Add a term only when a new user-facing concept appears; keep the "Avoid" lines current.
+- `docs/adr/` is for decisions and their reasons. One file per decision, rewrite when it changes, never append a second account.
+- Do not enumerate fields, narrate control flow, or keep file catalogs. Link to source instead.
+
+## Plans and work artifacts
+
+- Do not commit plans, research notes, or scratch files. Keep them outside the worktree.
+- GitHub Issues on `matemolnar8/vitadeck` are the tracker; use `gh`. A merged PR is the implementation record.
+
+## Notes from Máté
+
+I want simple C and simple TypeScript solving a real problem: React on a PS Vita. The host is a thin, honest rendering of the instance tree, and the SDK is the only public surface. Keep platform quirks behind `src/platform/`, keep the manifest contract explicit, and prefer deleting machinery over adding it.

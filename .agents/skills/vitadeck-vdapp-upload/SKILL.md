@@ -7,14 +7,14 @@ description: Uploads a Deck App Runtime Upload Archive (.vdapp.zip) to a Vita ru
 
 ## Prerequisite
 
-VitaDeck must be running on the Vita with **Runtime Upload** active (Shell → **Upload** → confirm). The listener serves `POST /upload` on port **8787** (falls forward if busy).
+VitaDeck must be running on the Vita with **Runtime Upload** active (Shell → **Upload** → confirm). The listener serves `POST /upload` on port **8787** (falls forward through 8796 if busy; the Shell Upload Screen shows the bound port, pass it with `--port`).
 
 ## Quick start
 
 From any directory, upload a built archive:
 
 ```sh
-/path/to/vitadeck/.cursor/skills/vitadeck-vdapp-upload/scripts/upload-vdapp.sh /path/to/myapp.vdapp.zip
+/path/to/vitadeck/.agents/skills/vitadeck-vdapp-upload/scripts/upload-vdapp.sh /path/to/myapp.vdapp.zip
 ```
 
 Success looks like: `{"ok":true,"packageName":"myapp.vdapp","version":"0.1.0"}`
