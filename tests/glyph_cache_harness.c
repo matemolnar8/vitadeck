@@ -263,9 +263,11 @@ static void test_emoji(const VdGlyphFont *full)
 
     glyph_cache_set_emoji_loader(NULL);
     glyph_cache_reset();
-    FILE *asset = fopen(VD_SOURCE_DIR "/assets/emoji/1f3ae.png", "rb");
-    expect(asset != NULL, "Twemoji images ship under assets/emoji, named without U+FE0F");
+#ifdef VD_TWEMOJI_DOWNLOADED
+    FILE *asset = fopen(VD_SOURCE_DIR "/assets/emoji/1f3f3-200d-1f308.png", "rb");
+    expect(asset != NULL, "the Twemoji download names images without U+FE0F");
     if (asset) fclose(asset);
+#endif
 }
 
 static void test_pages(const VdGlyphFont *full)
