@@ -70,6 +70,12 @@ jobs:
           cache-from: type=gha,scope=vitadeck-vitasdk-v3
           cache-to: type=gha,mode=max,scope=vitadeck-vitasdk-v3
 
+      - name: Cache Twemoji
+        uses: actions/cache@v5
+        with:
+          path: assets/emoji
+          key: twemoji-${{ hashFiles('cmake/twemoji.cmake') }}
+
       - name: Build Vita target in Vitasdk container
         env:
           VITADECK_VERSION: ${{ inputs.version }}

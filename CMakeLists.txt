@@ -8,6 +8,8 @@ endif()
 
 project(vitadeck)
 
+include(cmake/twemoji.cmake)
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(VITADECK_WERROR "Treat compiler warnings as errors (CI only; newer compilers add warnings)" OFF)
@@ -315,6 +317,9 @@ if(NOT DEFINED ENV{VITASDK})
 
     add_executable(glyph_cache_harness tests/glyph_cache_harness.c src/ui/glyph_cache.c src/core/util.c)
     target_compile_definitions(glyph_cache_harness PRIVATE VD_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    if(VITADECK_TWEMOJI_FOUND)
+      target_compile_definitions(glyph_cache_harness PRIVATE VD_TWEMOJI_DOWNLOADED)
+    endif()
     target_link_libraries(glyph_cache_harness m)
     add_test(NAME glyph_cache_harness COMMAND glyph_cache_harness)
 
@@ -445,6 +450,7 @@ if(DEFINED ENV{VITASDK})
       FILE js/dist/runtime/runtime.js js/runtime.js
       FILE assets/fonts/DejaVuSans.ttf assets/fonts/DejaVuSans.ttf
       FILE assets/fonts/DejaVuSans-LICENSE.txt assets/fonts/DejaVuSans-LICENSE.txt
+      FILE assets/emoji assets/emoji
   )
 
   if(PSVITAIP)

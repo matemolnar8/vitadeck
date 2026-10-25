@@ -5,12 +5,17 @@
 #include <stdint.h>
 
 // Glyphs rasterise on first use at the exact pixel size into RGBA8 atlas pages: white, with coverage in alpha.
+// Colour emoji share the pages, resampled to a Font Size square.
 // When every page is full, the least recently used one is cleared; one used this frame is never cleared.
 #define VD_GLYPH_ATLAS_PAGE_SIZE 1024
 #define VD_GLYPH_ATLAS_PAGE_BYTES (VD_GLYPH_ATLAS_PAGE_SIZE * VD_GLYPH_ATLAS_PAGE_SIZE * 4)
 #define VD_GLYPH_ATLAS_PAGE_MAX 4
 
 #define VD_UTF8_REPLACEMENT 0xfffd
+#define VD_EMOJI_FALLBACK VD_UTF8_REPLACEMENT
+
+// The longest Twemoji sequence, a couple kissing with skin tones, has 9 codepoints once U+FE0F is left out.
+#define VD_EMOJI_SEQUENCE_MAX 10
 
 typedef struct VdGlyphFont VdGlyphFont;
 
@@ -28,7 +33,17 @@ typedef struct {
     // From the pen position on the baseline to the bitmap's top-left corner.
     int offset_x, offset_y;
     float advance;
+    // Drawn untinted: a colour emoji.
+    bool color;
 } VdGlyph;
+
+typedef struct {
+    uint32_t codepoints[VD_EMOJI_SEQUENCE_MAX];
+    int length;
+} VdEmojiSequence;
+
+// The RGBA8 image for a codepoint sequence, U+FE0F left out, in memory from malloc; NULL when there is none.
+typedef unsigned char *(*VdEmojiLoader)(const VdEmojiSequence *sequence, int *width, int *height);
 
 typedef struct {
     int pages;
@@ -45,6 +60,11 @@ VdGlyphFontMetrics glyph_font_metrics(const VdGlyphFont *font, int size);
 // Codepoints a font lacks come from the fallback; ones neither has draw the requested font's missing-glyph box.
 void glyph_cache_set_fallback(const VdGlyphFont *font);
 VdGlyph glyph_cache_get(const VdGlyphFont *font, int size, uint32_t codepoint);
+void glyph_cache_set_emoji_loader(VdEmojiLoader loader);
+// The emoji for the longest prefix of sequence that has an image, as a Font Size square on the font's line, so a ZWJ
+// sequence without its own image draws as its first emoji. With no image, as when assets/emoji is missing, the first
+// codepoint's glyph from the font or the fallback, else VD_EMOJI_FALLBACK's. Missing images are not loaded again.
+VdGlyph glyph_cache_get_emoji(const VdGlyphFont *font, int size, const VdEmojiSequence *sequence);
 void glyph_cache_begin_frame(void);
 // Drops every glyph and page.
 void glyph_cache_reset(void);
@@ -55,5 +75,9 @@ VdGlyphCacheStats glyph_cache_stats(void);
 // Decodes the codepoint at text, which must not be at its terminator, and sets length to the bytes it used.
 // Malformed UTF-8 decodes one byte at a time as VD_UTF8_REPLACEMENT.
 uint32_t vd_utf8_next(const char *text, int *length);
+// The bytes of the emoji cluster at text, with its codepoints in sequence, or 0 when text does not start one. A
+// cluster starts at a codepoint from U+1F000 up or one followed by U+FE0F or a keycap mark, and takes skin tones,
+// tags, a second regional indicator and ZWJ-joined codepoints.
+int vd_emoji_cluster(const char *text, VdEmojiSequence *sequence);
 
 #endif /* GLYPH_CACHE_H */

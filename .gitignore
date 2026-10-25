@@ -15,3 +15,8 @@ js/examples/*/.vitadeck
 js/examples/chat/src/genesys/genesys.local.ts
 node_modules/
 **/node_modules/
+
+# Twemoji images, downloaded by cmake/twemoji.cmake
+/assets/emoji/*
+!/assets/emoji/LICENSE.txt
+!/assets/emoji/README.md

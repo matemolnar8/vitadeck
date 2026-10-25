@@ -1,6 +1,7 @@
 #include "fonts.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "core/util.h"
 #include "text.h"
@@ -9,6 +10,7 @@
 #define VD_FONT_NAME_MAX 64
 #define VD_FONT_MAX 32
 #define VD_DEFAULT_FONT_PATH "assets/fonts/DejaVuSans.ttf"
+#define VD_EMOJI_DIR "assets/emoji"
 
 _Static_assert(VD_FONT_MAX >= VD_PACKAGE_FONT_MAX, "font registry must hold every manifest font");
 
@@ -65,11 +67,40 @@ static bool load_font_file(const char *path, VdFont *out, char *error, size_t er
     return true;
 }
 
+// Twemoji names an image by its lowercase hex codepoints joined by '-', like 1f468-200d-1f469.png.
+static unsigned char *load_emoji_image(const VdEmojiSequence *sequence, int *width, int *height)
+{
+    char path[VD_PATH_MAX];
+    size_t used = (size_t)snprintf(path, sizeof(path), "%s/", VD_EMOJI_DIR);
+    for (int i = 0; i < sequence->length && used < sizeof(path); i++) {
+        used += (size_t)snprintf(path + used, sizeof(path) - used, i == 0 ? "%x" : "-%x",
+                                 (unsigned)sequence->codepoints[i]);
+    }
+    if (used < sizeof(path)) used += (size_t)snprintf(path + used, sizeof(path) - used, ".png");
+    if (used >= sizeof(path)) return NULL;
+
+    size_t length = 0;
+    char *data = vd_read_file(path, &length);
+    if (!data) return NULL;
+    Image image = LoadImageFromMemory(".png", (const unsigned char *)data, (int)length);
+    free(data);
+    if (!IsImageValid(image)) return NULL;
+    ImageFormat(&image, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+    size_t bytes = (size_t)image.width * (size_t)image.height * 4;
+    unsigned char *pixels = malloc(bytes);
+    if (pixels) memcpy(pixels, image.data, bytes);
+    *width = image.width;
+    *height = image.height;
+    UnloadImage(image);
+    return pixels;
+}
+
 bool font_registry_init(char *error, size_t error_size)
 {
     if (g_default_loaded) return true;
     if (!load_font_file(VD_DEFAULT_FONT_PATH, &g_default_font, error, error_size)) return false;
     glyph_cache_set_fallback(g_default_font.outline);
+    glyph_cache_set_emoji_loader(load_emoji_image);
     g_default_loaded = true;
     return true;
 }

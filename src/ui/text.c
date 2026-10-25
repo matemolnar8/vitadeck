@@ -41,9 +41,40 @@ void text_upload_pages(void)
     }
 }
 
-float text_codepoint_width(const VdFont *font, uint32_t codepoint, int font_size)
+// Controls, zero width joiners and variation selectors.
+static bool draws_nothing(uint32_t codepoint)
 {
-    if (codepoint < 0x20) return 0.0f;
+    return codepoint < 0x20 || codepoint == 0x200d || (codepoint >= 0xfe00 && codepoint <= 0xfe0f);
+}
+
+typedef struct {
+    int length;
+    bool emoji;
+    VdGlyph glyph;
+    uint32_t codepoint;
+} Cluster;
+
+// An emoji, or one codepoint.
+static Cluster next_cluster(const VdFont *font, const char *text, int font_size)
+{
+    Cluster cluster = {0};
+    VdEmojiSequence sequence;
+    if (font->outline) {
+        int length = vd_emoji_cluster(text, &sequence);
+        if (length > 0) {
+            cluster.length = length;
+            cluster.emoji = true;
+            cluster.glyph = glyph_cache_get_emoji(font->outline, font_size, &sequence);
+            return cluster;
+        }
+    }
+    cluster.codepoint = vd_utf8_next(text, &cluster.length);
+    return cluster;
+}
+
+static float codepoint_width(const VdFont *font, uint32_t codepoint, int font_size)
+{
+    if (draws_nothing(codepoint)) return 0.0f;
     if (font->outline) return glyph_cache_get(font->outline, font_size, codepoint).advance + TEXT_SPACING;
 
     const Font *bitmap = &font->bitmap;
@@ -55,6 +86,14 @@ float text_codepoint_width(const VdFont *font, uint32_t codepoint, int font_size
     return advance * scale + TEXT_SPACING;
 }
 
+float text_cluster_width(const VdFont *font, const char *text, int font_size, int *length)
+{
+    Cluster cluster = next_cluster(font, text, font_size);
+    *length = cluster.length;
+    if (cluster.emoji) return cluster.glyph.advance + TEXT_SPACING;
+    return codepoint_width(font, cluster.codepoint, font_size);
+}
+
 float text_measure(const VdFont *font, const char *text, int font_size)
 {
     if (!font->outline) return MeasureTextEx(font->bitmap, text, (float)font_size, TEXT_SPACING).x;
@@ -62,7 +101,7 @@ float text_measure(const VdFont *font, const char *text, int font_size)
     float width = 0.0f;
     for (const char *p = text; *p != '\0';) {
         int length = 0;
-        width += text_codepoint_width(font, vd_utf8_next(p, &length), font_size);
+        width += text_cluster_width(font, p, font_size, &length);
         p += length;
     }
     return width > 0.0f ? width - TEXT_SPACING : 0.0f;
@@ -86,16 +125,16 @@ void text_draw(const VdFont *font, const char *text, Vector2 position, int font_
     float baseline = roundf(position.y + glyph_font_metrics(font->outline, font_size).ascent);
     float pen = position.x;
     for (const char *p = text; *p != '\0';) {
-        int length = 0;
-        uint32_t codepoint = vd_utf8_next(p, &length);
-        p += length;
-        if (codepoint < 0x20) continue;
+        Cluster cluster = next_cluster(font, p, font_size);
+        p += cluster.length;
+        if (!cluster.emoji && draws_nothing(cluster.codepoint)) continue;
 
-        VdGlyph glyph = glyph_cache_get(font->outline, font_size, codepoint);
+        VdGlyph glyph = cluster.emoji ? cluster.glyph : glyph_cache_get(font->outline, font_size, cluster.codepoint);
         if (glyph.page >= 0 && IsTextureValid(g_page_textures[glyph.page])) {
             Rectangle source = {(float)glyph.x, (float)glyph.y, (float)glyph.width, (float)glyph.height};
             Vector2 at = {roundf(pen) + (float)glyph.offset_x, baseline + (float)glyph.offset_y};
-            DrawTextureRec(g_page_textures[glyph.page], source, at, color);
+            Color tint = glyph.color ? (Color){255, 255, 255, color.a} : color;
+            DrawTextureRec(g_page_textures[glyph.page], source, at, tint);
         }
         pen += glyph.advance + TEXT_SPACING;
     }

@@ -121,14 +121,14 @@ static void text_layout_wrap_word(const char *paragraph, const VdFont *font, int
                 current_len = 0;
             }
 
-            // Chunks hold whole codepoints, and at least one even when it alone is too wide.
+            // Chunks hold whole clusters, and at least one even when it alone is too wide.
             int chunk_start = 0;
             while (chunk_start < word_len) {
                 int length = 0;
-                vd_utf8_next(word + chunk_start, &length);
+                text_cluster_width(font, word + chunk_start, font_size, &length);
                 int chunk_end = chunk_start + length;
                 while (chunk_end < word_len) {
-                    vd_utf8_next(word + chunk_end, &length);
+                    text_cluster_width(font, word + chunk_end, font_size, &length);
                     char probe[TEXT_LAYOUT_MAX_LINE_CHARS] = {0};
                     memcpy(probe, word + chunk_start, (size_t)(chunk_end + length - chunk_start));
                     if (measure_text_width(font, probe, font_size) > max_width) break;
@@ -349,7 +349,7 @@ static void render_button_instance(ReactInstance *inst, RenderContext ctx)
               button_font_size(b), b->text_color);
 }
 
-// The longest run of whole codepoints from the start of text, or with keep_end from its end, that fits max_width
+// The longest run of whole clusters from the start of text, or with keep_end from its end, that fits max_width
 // and out_size. Copies it into out and returns its width.
 static float fit_text(const VdFont *font, const char *text, int font_size, float max_width, bool keep_end, char *out,
                       size_t out_size)
@@ -358,22 +358,23 @@ static float fit_text(const VdFont *font, const char *text, int font_size, float
     size_t start = 0, end = 0;
     float width = 0.0f;
     if (keep_end) {
-        start = len;
+        // Clusters only parse forwards, so drop them from the start until the rest fits.
         end = len;
-        while (start > 0) {
-            size_t prev = start - 1;
-            while (prev > 0 && ((unsigned char)text[prev] & 0xc0) == 0x80)
-                prev--;
+        for (size_t at = 0; at < len;) {
             int size = 0;
-            float w = text_codepoint_width(font, vd_utf8_next(text + prev, &size), font_size);
-            if (width + w > max_width || end - prev >= out_size) break;
-            width += w;
-            start = prev;
+            width += text_cluster_width(font, text + at, font_size, &size);
+            at += (size_t)size;
         }
+        while (start < len && (width > max_width || len - start >= out_size)) {
+            int size = 0;
+            width -= text_cluster_width(font, text + start, font_size, &size);
+            start += (size_t)size;
+        }
+        if (start == len) width = 0.0f;
     } else {
         while (end < len) {
             int size = 0;
-            float w = text_codepoint_width(font, vd_utf8_next(text + end, &size), font_size);
+            float w = text_cluster_width(font, text + end, font_size, &size);
             if (width + w > max_width || end + (size_t)size >= out_size) break;
             width += w;
             end += (size_t)size;
