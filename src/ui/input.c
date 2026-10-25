@@ -3,6 +3,7 @@
 #include <math.h>
 #include <raylib.h>
 #include "instance_tree.h"
+#include "focus_nav.h"
 #include "scroll.h"
 #include "core/event_queue.h"
 
@@ -432,8 +433,6 @@ void poll_touch_input(void)
     prev_touch_down = is_down;
 }
 
-typedef enum { NAV_UP, NAV_DOWN, NAV_LEFT, NAV_RIGHT } NavDirection;
-
 static void set_focus(const char *new_id)
 {
     if (focused_id) {
@@ -448,87 +447,12 @@ static void set_focus(const char *new_id)
     }
 }
 
-static const char *find_nearest_focusable(NavDirection dir)
+static char *find_nearest_focusable(NavDirection dir)
 {
     int elem_count = 0;
     FocusableElement *elems = get_focusable_elements(&elem_count);
-    if (!elems || elem_count == 0) return NULL;
-
-    int cur_cx = 0, cur_cy = 0;
-    bool has_current = false;
-
-    // Find current focused element center
-    if (focused_id) {
-        for (int i = 0; i < elem_count; i++) {
-            if (strcmp(elems[i].id, focused_id) == 0) {
-                cur_cx = elems[i].x + elems[i].width / 2;
-                cur_cy = elems[i].y + elems[i].height / 2;
-                has_current = true;
-                break;
-            }
-        }
-    }
-
-    // If no current focus, pick first element
-    if (!has_current) {
-        const char *first_id = elems[0].id;
-        char *result = strdup(first_id);
-        free_focusable_elements(elems, elem_count);
-        return result;
-    }
-
-    const char *best_id = NULL;
-    float best_score = 1e9f;
-
-    for (int i = 0; i < elem_count; i++) {
-        if (focused_id && strcmp(elems[i].id, focused_id) == 0) continue;
-
-        int cx = elems[i].x + elems[i].width / 2;
-        int cy = elems[i].y + elems[i].height / 2;
-        int dx = cx - cur_cx;
-        int dy = cy - cur_cy;
-
-        // Check if element is in the correct direction
-        bool valid = false;
-        switch (dir) {
-        case NAV_UP:
-            valid = dy < 0;
-            break;
-        case NAV_DOWN:
-            valid = dy > 0;
-            break;
-        case NAV_LEFT:
-            valid = dx < 0;
-            break;
-        case NAV_RIGHT:
-            valid = dx > 0;
-            break;
-        }
-        if (!valid) continue;
-
-        // Calculate weighted distance (favor elements more aligned with direction)
-        float primary = 0, secondary = 0;
-        switch (dir) {
-        case NAV_UP:
-        case NAV_DOWN:
-            primary = fabsf((float)dy);
-            secondary = fabsf((float)dx);
-            break;
-        case NAV_LEFT:
-        case NAV_RIGHT:
-            primary = fabsf((float)dx);
-            secondary = fabsf((float)dy);
-            break;
-        }
-        float score = primary + secondary * 2.0f;
-
-        if (score < best_score) {
-            best_score = score;
-            best_id = elems[i].id;
-        }
-    }
-
-    char *result = best_id ? strdup(best_id) : NULL;
+    int pick = focus_nav_pick(elems, elem_count, focused_id, dir);
+    char *result = pick >= 0 ? strdup(elems[pick].id) : NULL;
     free_focusable_elements(elems, elem_count);
     return result;
 }
@@ -580,10 +504,10 @@ void poll_gamepad_input(void)
     // Navigation
     if (up || down || left || right) {
         NavDirection dir = up ? NAV_UP : down ? NAV_DOWN : left ? NAV_LEFT : NAV_RIGHT;
-        const char *next_id = find_nearest_focusable(dir);
+        char *next_id = find_nearest_focusable(dir);
         if (next_id) {
             set_focus(next_id);
-            free((void *)next_id);
+            free(next_id);
         }
     }
 
