@@ -72,6 +72,11 @@ export default function SmokeDeckApp() {
         <Text x={14} y={20} fontSize={14} color={theme.outline}>
           SDK / runtime / theme: dark
         </Text>
+        <Rect x={260} y={12} width={420} height={32} color={theme.surface}>
+          <Text x={0} y={0} fontSize={24} color={theme.text}>
+            Árvíztűrő tükörfúrógép 🎮
+          </Text>
+        </Rect>
       </Rect>
 
       <Scroll

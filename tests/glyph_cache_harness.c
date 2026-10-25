@@ -128,6 +128,21 @@ static void test_fallback(const VdGlyphFont *full, const VdGlyphFont *ascii)
     expect(self.width > 0, "the fallback font's own missing glyph still draws a box");
 }
 
+static void test_hungarian(const VdGlyphFont *full)
+{
+    glyph_cache_reset();
+    glyph_cache_set_fallback(NULL);
+    VdGlyph notdef = glyph_cache_get(full, 22, 0x65e5);
+    const uint32_t letters[] = {0xc1, 0xe1, 0xc9, 0xe9, 0xcd, 0xed, 0xd3, 0xf3, 0xd6, 0xf6,
+                                0x150, 0x151, 0xda, 0xfa, 0xdc, 0xfc, 0x170, 0x171};
+    for (size_t i = 0; i < sizeof(letters) / sizeof(letters[0]); i++) {
+        VdGlyph glyph = glyph_cache_get(full, 22, letters[i]);
+        if (glyph.width > 0 && !same_shape(glyph, notdef)) continue;
+        fprintf(stderr, "glyph_cache_harness: U+%04X\n", (unsigned)letters[i]);
+        expect(false, "every Hungarian letter, ő and ű included, is a real glyph in the Runtime Default Font");
+    }
+}
+
 static void test_pages(const VdGlyphFont *full)
 {
     glyph_cache_reset();
@@ -179,6 +194,7 @@ int main(void)
     if (full && ascii) {
         test_hits_and_sizes(full);
         test_fallback(full, ascii);
+        test_hungarian(full);
         test_pages(full);
     }
 
