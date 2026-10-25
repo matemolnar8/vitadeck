@@ -66,12 +66,13 @@ const colorToArgs = (color: Color | undefined, defaultColor: Color): [boolean, n
   return [false, defaultColor.r, defaultColor.g, defaultColor.b, defaultColor.a];
 };
 
-// Extract event handlers from props
-const extractHandlers = (props: Props) => ({
-  onPress: (props as { onPress?: () => void }).onPress,
-  onPressStart: (props as { onPressStart?: () => void }).onPressStart,
-  onPressEnd: (props as { onPressEnd?: () => void }).onPressEnd,
-});
+const handlerKeys = ["onPress", "onPressStart", "onPressEnd", "onFocus", "onBlur"] as const;
+type HandlerKey = (typeof handlerKeys)[number];
+
+const extractHandlers = (props: Props) => {
+  const { onPress, onPressStart, onPressEnd, onFocus, onBlur } = props as Pick<PropsByType["vita-button"], HandlerKey>;
+  return { onPress, onPressStart, onPressEnd, onFocus, onBlur };
+};
 
 const textAlignToNative = (align: PropsByType["vita-text"]["align"]): number => {
   if (align === "center") return 1;
@@ -156,6 +157,7 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
       textColor.g,
       textColor.b,
       textColor.a,
+      ...colorToArgs(p.focusColor, Colors.BLANK),
     );
     registerHandlers(id, extractHandlers(props));
   } else if (type === "vita-scroll") {
@@ -170,7 +172,7 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
   }
 };
 
-const handlerKeys = new Set(["onPress", "onPressStart", "onPressEnd"]);
+const handlerKeySet: ReadonlySet<string> = new Set(handlerKeys);
 
 const isColor = (value: unknown): value is Color =>
   typeof value === "object" && value !== null && "r" in value && "g" in value && "b" in value && "a" in value;
@@ -189,8 +191,9 @@ const diffProps = (oldProps: Props, newProps: Props): UpdatePayload | null => {
   let handlers = false;
   const compare = (key: string) => {
     // Children are reconciled as their own instances and never reach the native update.
-    if (key === "children") return;
-    if (handlerKeys.has(key)) {
+    // autoFocus only matters on mount, through commitMount.
+    if (key === "children" || key === "autoFocus") return;
+    if (handlerKeySet.has(key)) {
       handlers ||= prev[key] !== next[key];
     } else {
       native ||= !samePropValue(prev[key], next[key]);
@@ -270,6 +273,7 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
       textColor.g,
       textColor.b,
       textColor.a,
+      ...colorToArgs(p.focusColor, Colors.BLANK),
     );
   } else if (type === "vita-scroll") {
     const p = props as PropsByType["vita-scroll"];
@@ -334,9 +338,10 @@ const rawHostConfig = {
     nativeAppendChild(parentInstance.id, child.id);
   },
 
-  finalizeInitialChildren(_instance, type) {
+  // Returning true schedules commitMount, which applies autoFocus once the Button is committed.
+  finalizeInitialChildren(_instance, type, props: Props) {
     logReconcilerFunction("finalizeInitialChildren", type);
-    return true;
+    return type === "vita-button" && (props as PropsByType["vita-button"]).autoFocus === true;
   },
 
   prepareUpdate(_instance, type, oldProps, newProps, _rootContainerInstance, _hostContext) {
@@ -396,8 +401,9 @@ const rawHostConfig = {
     nativeClearContainer();
   },
 
-  commitMount(_instance, type) {
+  commitMount(instance, type) {
     logReconcilerFunction("commitMount", type);
+    nativeRequestFocus(instance.id);
   },
 
   detachDeletedInstance(instance) {

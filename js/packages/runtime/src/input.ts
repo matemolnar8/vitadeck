@@ -1,55 +1,58 @@
+import { dispatchPadButton, type PadButton, type PadButtonPhase } from "@vitadeck/sdk/internal";
+
 type EventHandlers = {
   onPress?: () => void;
   onPressStart?: () => void;
   onPressEnd?: () => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
 };
 
-type NativeInputEventType = "mouseenter" | "mouseleave" | "mousedown" | "mouseup" | "click";
+type NativeInputEventType = "focus" | "blur" | "pressstart" | "pressend" | "press";
 
-// Map of instance IDs to their event handlers
 const handlersById = new Map<string, EventHandlers>();
 
-// Register event handlers for an instance
+const hasHandlers = (handlers: EventHandlers) => Object.values(handlers).some((handler) => handler !== undefined);
+
 export function registerHandlers(id: string, handlers: EventHandlers): void {
-  // Only store if there are any handlers
-  if (handlers.onPress || handlers.onPressStart || handlers.onPressEnd) {
-    handlersById.set(id, handlers);
-  }
+  if (hasHandlers(handlers)) handlersById.set(id, handlers);
 }
 
-// Update event handlers for an instance
 export function updateHandlers(id: string, handlers: EventHandlers): void {
-  if (handlers.onPress || handlers.onPressStart || handlers.onPressEnd) {
+  if (hasHandlers(handlers)) {
     handlersById.set(id, handlers);
   } else {
-    // No handlers, remove from map
     handlersById.delete(id);
   }
 }
 
-// Unregister handlers when instance is destroyed
 export function unregisterHandlers(id: string): void {
   handlersById.delete(id);
 }
 
-// Called from native when an input event occurs
 export function onInputEventFromNative(id: string, type: NativeInputEventType): void {
   const handlers = handlersById.get(id);
   if (!handlers) return;
 
   switch (type) {
-    case "mouseenter":
+    case "focus":
+      handlers.onFocus?.();
       break;
-    case "mouseleave":
+    case "blur":
+      handlers.onBlur?.();
       break;
-    case "mousedown":
+    case "pressstart":
       handlers.onPressStart?.();
       break;
-    case "mouseup":
+    case "pressend":
       handlers.onPressEnd?.();
       break;
-    case "click":
+    case "press":
       handlers.onPress?.();
       break;
   }
+}
+
+export function onPadButtonFromNative(button: PadButton, phase: PadButtonPhase): void {
+  dispatchPadButton(button, phase);
 }
