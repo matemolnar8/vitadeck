@@ -2,3 +2,6 @@
 leak:libLLVM
 # Mesa/GLX driver init inside raylib's window creation; no VitaDeck code runs below this frame.
 leak:glfwCreateWindow
+
+# Mesa/llvmpipe allocations under raylib's GL draw path (seen in CI on main after #94; no VitaDeck frame in the stack).
+leak:rlDrawRenderBatch
