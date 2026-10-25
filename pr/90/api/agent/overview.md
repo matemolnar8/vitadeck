@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 8944d5cdb7fc7fc450617cca3781bb2cf1808471` and `git rev-parse --verify 18aa4bde59163aa7744bf6b90f621270956d3ba5` in this repository.
+   Run `git rev-parse --verify 8944d5cdb7fc7fc450617cca3781bb2cf1808471` and `git rev-parse --verify b6e820df59a1e9576e5d45a9543fa6689edfb6d6` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,16 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  8944d5cdb7fc7fc450617cca3781bb2cf1808471
 
-head               18aa4bde59163aa7744bf6b90f621270956d3ba5
+head               b6e820df59a1e9576e5d45a9543fa6689edfb6d6
 
-Named refs at pin: origin/feat/stack-layout ... feat/glyph-cache
+Named refs at pin: origin/feat/stack-layout ... origin/feat/glyph-cache
 
 Read the diff:
 
-git diff --find-renames 8944d5cdb7fc7fc450617cca3781bb2cf1808471 18aa4bde59163aa7744bf6b90f621270956d3ba5
+git diff --find-renames 8944d5cdb7fc7fc450617cca3781bb2cf1808471 b6e820df59a1e9576e5d45a9543fa6689edfb6d6
 
 Commits:
+- b6e820d test(smoke): Hungarian and emoji line in the golden
 - 18aa4bd test(smoke): refresh Linux golden for glyph cache text
 - 9ac5782 docs: font fallback in the glossary and SDK README
 - e2cb9ee test(ui): glyph cache harness
@@ -45,6 +46,8 @@ Sources:
 - ticket #50 Revised proposal: dynamic glyph cache over stb_truetype, fallback fonts, Twemoji; shipped in three PRs. Slice 1 is the cache, call sites and Button props.
   https://github.com/matemolnar8/vitadeck/issues/50
 - commit feat(ui): draw text through the glyph cache with Runtime Default Font fallback
+- pr-comment matemolnar8 on PR #90
+  https://github.com/matemolnar8/vitadeck/pull/90
 
 The title:
 
@@ -65,7 +68,7 @@ Look for:
 - The [proposal](source:s1) treats DejaVu Sans as a fallback after the requested font. DejaVu Sans is already the Runtime Default Font, so the chain has two fonts and no second copy is vendored.
 - The [proposal](source:s1) feeds `.fnt`/`.bdf` fonts into the cache. Here they keep raylib's `DrawTextEx` path and get no fallback.
 - No kerning: pairs would cost a GPOS lookup per glyph pair on every per-frame measurement. Text keeps raylib's 1 px tracking, so line widths match the old layout.
-- The [proposal's](source:s1) smoke string `Újra 日本語 👍🏽` is not added; the smoke fixture is unchanged and the harness covers the fallback.
+- The [proposal's](source:s1) smoke string `Újra 日本語 👍🏽` is not added. Per [Máté's review](source:s3) the smoke header draws Hungarian text with ő and ű plus 🎮, which is a `.notdef` box until slice 3; CJK waits for slice 2.
 
 ## Review concerns
 
@@ -77,7 +80,7 @@ Look for:
 
 ### 02 Glyph cache core (`cache`)
 
-`glyph_cache_get` looks up `(font, size, codepoint)` in an stb_ds map and on a miss rasterises from the font or the fallback into a shelf-packed RGBA8 page, which `glyph_cache_harness` checks headlessly.
+`glyph_cache_get` looks up `(font, size, codepoint)` in an stb_ds map and on a miss rasterises from the font or the fallback into a shelf-packed RGBA8 page, which `glyph_cache_harness` checks headlessly, including that every Hungarian letter is a real DejaVu Sans glyph.
 
 Depends on:
 - 01 stb_truetype v1.26 (`vendor`)
