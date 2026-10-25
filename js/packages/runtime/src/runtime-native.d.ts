@@ -175,6 +175,7 @@ declare global {
   function nativeReadTextFile(path: string): string;
   function nativeEvalFile(path: string): void;
   function nativeGetActiveDeckAppPath(): string;
+  function nativeReportDeckAppError(message: string, stack: string): void;
 
   function nativeFetch(
     url: string,

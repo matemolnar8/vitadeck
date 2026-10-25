@@ -111,6 +111,7 @@ set(JSLIB_SOURCES
     src/jslib/timeout.c
     src/jslib/log.c
     src/jslib/fetch.c
+    src/jslib/error.c
 )
 
 set(VITADECK_SOURCES
@@ -188,7 +189,7 @@ target_link_libraries(${PROJECT_NAME} ${VITADECK_LIBRARIES})
 if(NOT DEFINED ENV{VITASDK})
   include(CTest)
   if(BUILD_TESTING)
-    add_executable(timer_reload_harness tests/timer_reload_harness.c src/jslib/timeout.c)
+    add_executable(timer_reload_harness tests/timer_reload_harness.c src/jslib/timeout.c src/jslib/error.c)
     target_link_libraries(timer_reload_harness quickjs m ${RAYLIB_LIBRARIES})
     add_test(NAME timer_reload_harness COMMAND timer_reload_harness)
 

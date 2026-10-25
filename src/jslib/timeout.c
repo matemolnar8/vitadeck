@@ -108,11 +108,7 @@ void run_timeouts(JSContext *ctx)
         JS_FreeValue(ctx, func);
 
         if (JS_IsException(result)) {
-            JSValue exc = JS_GetException(ctx);
-            const char *str = JS_ToCString(ctx, exc);
-            TraceLog(LOG_ERROR, "[run_timeouts] %u ID: %u Error: %s", tick_count, id, str ? str : "unknown");
-            JS_FreeCString(ctx, str);
-            JS_FreeValue(ctx, exc);
+            js_report_exception(ctx, "timer");
         } else {
             TraceLog(LOG_DEBUG, "[run_timeouts] %u ID: %u executed", tick_count, id);
         }
