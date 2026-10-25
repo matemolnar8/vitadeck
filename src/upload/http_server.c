@@ -6,10 +6,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include "arena.h"
 #include "upload/archive.h"
+#include "upload/http_parse.h"
 
 #ifdef __vita__
 #include <psp2/net/netctl.h>
@@ -155,33 +157,12 @@ static void detect_lan_ip(char *out, size_t out_size)
 #endif
 }
 
-static const char *header_value(const char *headers, const char *name)
+static bool content_type_is(const char *headers, const char *media_type)
 {
-    size_t name_len = strlen(name);
-    const char *p = headers;
-    while ((p = strstr(p, name))) {
-        if ((p == headers || p[-1] == '\n') && p[name_len] == ':') {
-            p += name_len + 1;
-            while (*p == ' ' || *p == '\t')
-                p++;
-            return p;
-        }
-        p += name_len;
-    }
-    return NULL;
-}
-
-static long parse_content_length(const char *headers)
-{
-    const char *value = header_value(headers, "Content-Length");
-    if (!value) return -1;
-    return strtol(value, NULL, 10);
-}
-
-static bool content_type_has(const char *headers, const char *needle)
-{
-    const char *value = header_value(headers, "Content-Type");
-    return value && strstr(value, needle);
+    char value[256];
+    if (!upload_header_value(headers, "Content-Type", value, sizeof(value))) return false;
+    size_t len = strcspn(value, "; \t");
+    return len == strlen(media_type) && strncasecmp(value, media_type, len) == 0;
 }
 
 static bool write_bytes(const char *path, const unsigned char *data, size_t size)
@@ -195,14 +176,14 @@ static bool write_bytes(const char *path, const unsigned char *data, size_t size
 
 static bool extract_boundary(const char *headers, char *boundary, size_t boundary_size)
 {
-    const char *ct = header_value(headers, "Content-Type");
-    if (!ct) return false;
+    char ct[256];
+    if (!upload_header_value(headers, "Content-Type", ct, sizeof(ct))) return false;
     const char *p = strstr(ct, "boundary=");
     if (!p) return false;
     p += strlen("boundary=");
     if (*p == '"') p++;
     size_t len = 0;
-    while (*p && *p != '"' && *p != '\r' && *p != '\n' && *p != ';' && len + 1 < boundary_size) {
+    while (*p && *p != '"' && *p != ';' && len + 1 < boundary_size) {
         boundary[len++] = *p++;
     }
     boundary[len] = '\0';
@@ -241,7 +222,7 @@ static bool multipart_archive_to_file(const char *headers, unsigned char *body, 
 static bool request_body_to_file(const char *headers, unsigned char *body, size_t body_len, const char *out_path,
                                  int *status, const char **code, const char **message)
 {
-    if (content_type_has(headers, "application/zip")) {
+    if (content_type_is(headers, "application/zip")) {
         if (!write_bytes(out_path, body, body_len)) {
             *status = 400;
             *code = "write_failed";
@@ -251,7 +232,7 @@ static bool request_body_to_file(const char *headers, unsigned char *body, size_
         return true;
     }
 
-    if (content_type_has(headers, "multipart/form-data")) {
+    if (content_type_is(headers, "multipart/form-data")) {
         if (!multipart_archive_to_file(headers, body, body_len, out_path)) {
             *status = 400;
             *code = "malformed_multipart";
@@ -293,7 +274,7 @@ static bool read_request(Arena *arena, int fd, char **out_headers, unsigned char
     memcpy(headers, buffer, header_len);
     headers[header_len] = '\0';
 
-    long content_length = parse_content_length(headers);
+    long content_length = upload_content_length(headers);
     if (content_length < 0 || content_length > VD_UPLOAD_MAX_BYTES) {
         *error_status = content_length > VD_UPLOAD_MAX_BYTES ? 413 : 400;
         return false;

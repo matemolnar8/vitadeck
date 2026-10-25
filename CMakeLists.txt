@@ -130,6 +130,7 @@ set(VITADECK_SOURCES
     src/core/event_queue.c
     src/shell/shell.c
     src/upload/archive.c
+    src/upload/http_parse.c
     src/upload/http_server.c
     ${PLATFORM_SOURCES}
 )
