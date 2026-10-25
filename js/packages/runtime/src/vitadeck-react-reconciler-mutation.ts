@@ -98,8 +98,8 @@ const textInputArgs = (p: PropsByType["vita-text-input"]) => {
   const color = p.color ?? Colors.RAYWHITE;
   const textColor = p.textColor ?? Colors.BLACK;
   return [
-    p.x,
-    p.y,
+    p.x ?? 0,
+    p.y ?? 0,
     p.width,
     p.height,
     color.r,
@@ -120,6 +120,31 @@ const textInputArgs = (p: PropsByType["vita-text-input"]) => {
   ] as const;
 };
 
+const stackAlignToNative = (align: PropsByType["vita-stack"]["align"]): number => {
+  if (align === "center") return 1;
+  if (align === "end") return 2;
+  return 0;
+};
+
+const stackArgs = (p: PropsByType["vita-stack"]) => {
+  const [hasFill, r, g, b, a] = colorToArgs(p.color, Colors.BLANK);
+  return [
+    p.x ?? 0,
+    p.y ?? 0,
+    p.width ?? 0,
+    p.height ?? 0,
+    hasFill,
+    r,
+    g,
+    b,
+    a,
+    p.gap ?? 0,
+    p.padding ?? 0,
+    p.direction === "row" ? 1 : 0,
+    stackAlignToNative(p.align),
+  ] as const;
+};
+
 // Create native instance based on type
 const createNativeInstance = (id: string, type: Type, props: Props): void => {
   if (type === "vita-rect") {
@@ -131,8 +156,8 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
 
     nativeCreateRect(
       id,
-      p.x,
-      p.y,
+      p.x ?? 0,
+      p.y ?? 0,
       p.width,
       p.height,
       hasFill,
@@ -175,8 +200,8 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
     const textColor = p.textColor ?? Colors.RAYWHITE;
     nativeCreateButton(
       id,
-      p.x,
-      p.y,
+      p.x ?? 0,
+      p.y ?? 0,
       p.width,
       p.height,
       color.r,
@@ -200,9 +225,11 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
     const p = props as PropsByType["vita-scroll"];
     const [hasFill, r, g, b, a] = colorToArgs(p.color, Colors.BLANK);
     nativeCreateScroll(id, p.x, p.y, p.width, p.height, hasFill, r, g, b, a, p.gap ?? 0, p.padding ?? 0);
+  } else if (type === "vita-stack") {
+    nativeCreateStack(id, ...stackArgs(props as PropsByType["vita-stack"]));
   } else if (type === "vita-image") {
     const p = props as PropsByType["vita-image"];
-    nativeCreateImage(id, p.image, p.x, p.y, p.width ?? 0, p.height ?? 0);
+    nativeCreateImage(id, p.image, p.x ?? 0, p.y ?? 0, p.width ?? 0, p.height ?? 0);
   } else {
     exhaustiveGuard(type, `Unsupported element type: ${String(type)}`);
   }
@@ -251,8 +278,8 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
 
     nativeUpdateRect(
       id,
-      p.x,
-      p.y,
+      p.x ?? 0,
+      p.y ?? 0,
       p.width,
       p.height,
       hasFill,
@@ -294,8 +321,8 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
     const textColor = p.textColor ?? Colors.RAYWHITE;
     nativeUpdateButton(
       id,
-      p.x,
-      p.y,
+      p.x ?? 0,
+      p.y ?? 0,
       p.width,
       p.height,
       color.r,
@@ -317,9 +344,11 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
     const p = props as PropsByType["vita-scroll"];
     const [hasFill, r, g, b, a] = colorToArgs(p.color, Colors.BLANK);
     nativeUpdateScroll(id, p.x, p.y, p.width, p.height, hasFill, r, g, b, a, p.gap ?? 0, p.padding ?? 0);
+  } else if (type === "vita-stack") {
+    nativeUpdateStack(id, ...stackArgs(props as PropsByType["vita-stack"]));
   } else if (type === "vita-image") {
     const p = props as PropsByType["vita-image"];
-    nativeUpdateImage(id, p.image, p.x, p.y, p.width ?? 0, p.height ?? 0);
+    nativeUpdateImage(id, p.image, p.x ?? 0, p.y ?? 0, p.width ?? 0, p.height ?? 0);
   } else {
     exhaustiveGuard(type, `Unsupported element type: ${String(type)}`);
   }
