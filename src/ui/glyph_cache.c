@@ -1,5 +1,6 @@
 #include "glyph_cache.h"
 
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include "core/util.h"
@@ -11,6 +12,10 @@
 #include "stb_truetype.h"
 
 #define GLYPH_PADDING 1
+
+#define ZWJ 0x200d
+#define VS16 0xfe0f
+#define KEYCAP 0x20e3
 
 struct VdGlyphFont {
     char *data;
@@ -28,6 +33,19 @@ typedef struct {
     VdGlyph value;
 } GlyphEntry;
 
+// Emoji sit at the font's ascent, so the key holds the font.
+typedef struct {
+    const VdGlyphFont *font;
+    int size;
+    VdEmojiSequence sequence;
+} EmojiKey;
+
+// A glyph that is not color marks a sequence with no image.
+typedef struct {
+    EmojiKey key;
+    VdGlyph value;
+} EmojiEntry;
+
 // Shelf packing: glyphs fill a row left to right, and a row is as tall as its tallest glyph.
 typedef struct {
     unsigned char *pixels;
@@ -37,6 +55,8 @@ typedef struct {
 } AtlasPage;
 
 static GlyphEntry *g_glyphs = NULL;
+static EmojiEntry *g_emoji = NULL;
+static VdEmojiLoader g_emoji_loader = NULL;
 static AtlasPage g_pages[VD_GLYPH_ATLAS_PAGE_MAX];
 static int g_page_count = 0;
 static int g_current_page = -1;
@@ -127,6 +147,11 @@ static void clear_page(int index)
         GlyphKey key = g_glyphs[i].key;
         hmdel(g_glyphs, key);
     }
+    for (ptrdiff_t i = hmlen(g_emoji) - 1; i >= 0; i--) {
+        if (g_emoji[i].value.page != index) continue;
+        EmojiKey key = g_emoji[i].key;
+        hmdel(g_emoji, key);
+    }
 }
 
 // The page that now holds a width x height rect at (x, y), or -1 when no page can take it this frame.
@@ -187,7 +212,7 @@ static bool rasterise(const VdGlyphFont *font, int glyph_index, int size, VdGlyp
 
     g_pages[page].dirty = true;
     g_pages[page].last_used = g_frame;
-    *out = (VdGlyph){page, x, y, width, height, x0, y0, out->advance};
+    *out = (VdGlyph){page, x, y, width, height, x0, y0, out->advance, false};
     return true;
 }
 
@@ -224,6 +249,101 @@ VdGlyph glyph_cache_get(const VdGlyphFont *font, int size, uint32_t codepoint)
     return glyph;
 }
 
+void glyph_cache_set_emoji_loader(VdEmojiLoader loader)
+{
+    g_emoji_loader = loader;
+}
+
+// Area-averages the image into a size x size square, weighting colour by alpha so edges do not darken.
+static bool rasterise_emoji(const VdGlyphFont *font, int size, const unsigned char *image, int image_width,
+                            int image_height, VdGlyph *out)
+{
+    float ascent = glyph_font_metrics(font, size).ascent;
+    *out = (VdGlyph){.page = -1, .offset_y = -(int)roundf(ascent), .advance = (float)size, .color = true};
+    int x = 0, y = 0;
+    int page = atlas_allocate(size, size, &x, &y);
+    if (page < 0) return false;
+
+    unsigned char *pixels = g_pages[page].pixels;
+    for (int row = 0; row < size; row++) {
+        int y0 = row * image_height / size;
+        int y1 = (row + 1) * image_height / size;
+        if (y1 <= y0) y1 = y0 + 1;
+        for (int col = 0; col < size; col++) {
+            int x0 = col * image_width / size;
+            int x1 = (col + 1) * image_width / size;
+            if (x1 <= x0) x1 = x0 + 1;
+            unsigned long r = 0, g = 0, b = 0, a = 0;
+            for (int sy = y0; sy < y1; sy++) {
+                for (int sx = x0; sx < x1; sx++) {
+                    const unsigned char *source = image + ((size_t)sy * (size_t)image_width + (size_t)sx) * 4;
+                    r += (unsigned long)source[0] * source[3];
+                    g += (unsigned long)source[1] * source[3];
+                    b += (unsigned long)source[2] * source[3];
+                    a += source[3];
+                }
+            }
+            unsigned char *pixel = pixels + ((size_t)(y + row) * VD_GLYPH_ATLAS_PAGE_SIZE + (size_t)(x + col)) * 4;
+            unsigned long count = (unsigned long)(x1 - x0) * (unsigned long)(y1 - y0);
+            pixel[0] = a ? (unsigned char)(r / a) : 0;
+            pixel[1] = a ? (unsigned char)(g / a) : 0;
+            pixel[2] = a ? (unsigned char)(b / a) : 0;
+            pixel[3] = (unsigned char)(a / count);
+        }
+    }
+
+    g_pages[page].dirty = true;
+    g_pages[page].last_used = g_frame;
+    out->page = page;
+    out->x = x;
+    out->y = y;
+    out->width = out->height = size;
+    return true;
+}
+
+bool glyph_cache_get_emoji(const VdGlyphFont *font, int size, const VdEmojiSequence *sequence, VdGlyph *glyph)
+{
+    for (int length = sequence->length; length > 0; length--) {
+        if (sequence->codepoints[length - 1] == ZWJ) continue;
+        EmojiKey key;
+        memset(&key, 0, sizeof(key));
+        key.font = font;
+        key.size = size;
+        key.sequence.length = length;
+        memcpy(key.sequence.codepoints, sequence->codepoints, (size_t)length * sizeof(uint32_t));
+
+        ptrdiff_t found = hmgeti(g_emoji, key);
+        if (found >= 0) {
+            if (!g_emoji[found].value.color) continue;
+            *glyph = g_emoji[found].value;
+            if (glyph->page >= 0) g_pages[glyph->page].last_used = g_frame;
+            return true;
+        }
+
+        int width = 0, height = 0;
+        unsigned char *image = g_emoji_loader ? g_emoji_loader(&key.sequence, &width, &height) : NULL;
+        if (!image || width <= 0 || height <= 0) {
+            free(image);
+            hmput(g_emoji, key, ((VdGlyph){.page = -1}));
+            continue;
+        }
+        bool placed = true;
+        if (size > VD_GLYPH_ATLAS_PAGE_SIZE) {
+            // It keeps its advance and draws nothing, rather than loading again every frame.
+            *glyph = (VdGlyph){.page = -1, .advance = (float)size, .color = true};
+        } else {
+            placed = rasterise_emoji(font, size, image, width, height, glyph);
+        }
+        free(image);
+        if (placed) {
+            hmput(g_emoji, key, *glyph);
+            g_rasterised++;
+        }
+        return true;
+    }
+    return false;
+}
+
 void glyph_cache_begin_frame(void)
 {
     g_frame++;
@@ -238,6 +358,7 @@ void glyph_cache_reset(void)
     g_page_count = 0;
     g_current_page = -1;
     hmfree(g_glyphs);
+    hmfree(g_emoji);
     g_rasterised = 0;
 }
 
@@ -287,4 +408,55 @@ uint32_t vd_utf8_next(const char *text, int *length)
     }
     *length = count;
     return codepoint;
+}
+
+static bool is_regional_indicator(uint32_t codepoint)
+{
+    return codepoint >= 0x1f1e6 && codepoint <= 0x1f1ff;
+}
+
+static bool joins_emoji(uint32_t codepoint)
+{
+    bool skin_tone = codepoint >= 0x1f3fb && codepoint <= 0x1f3ff;
+    bool tag = codepoint >= 0xe0020 && codepoint <= 0xe007f;
+    return skin_tone || tag || codepoint == KEYCAP;
+}
+
+static void append(VdEmojiSequence *sequence, uint32_t codepoint)
+{
+    sequence->codepoints[sequence->length++] = codepoint;
+}
+
+int vd_emoji_cluster(const char *text, VdEmojiSequence *sequence)
+{
+    int bytes = 0;
+    uint32_t first = vd_utf8_next(text, &bytes);
+    int next_length = 0;
+    uint32_t next = text[bytes] != '\0' ? vd_utf8_next(text + bytes, &next_length) : 0;
+    if (first < 0x1f000 && next != VS16 && next != KEYCAP) return 0;
+
+    memset(sequence, 0, sizeof(*sequence));
+    append(sequence, first);
+    while (text[bytes] != '\0') {
+        int length = 0;
+        uint32_t codepoint = vd_utf8_next(text + bytes, &length);
+        if (codepoint == VS16) {
+            bytes += length;
+            continue;
+        }
+        if (codepoint == ZWJ) {
+            if (text[bytes + length] == '\0' || sequence->length + 2 > VD_EMOJI_SEQUENCE_MAX) break;
+            int joined_length = 0;
+            uint32_t joined = vd_utf8_next(text + bytes + length, &joined_length);
+            append(sequence, ZWJ);
+            append(sequence, joined);
+            bytes += length + joined_length;
+            continue;
+        }
+        bool flag = sequence->length == 1 && is_regional_indicator(first) && is_regional_indicator(codepoint);
+        if ((!flag && !joins_emoji(codepoint)) || sequence->length == VD_EMOJI_SEQUENCE_MAX) break;
+        append(sequence, codepoint);
+        bytes += length;
+    }
+    return bytes;
 }
