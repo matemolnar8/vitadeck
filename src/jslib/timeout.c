@@ -79,7 +79,7 @@ static JSValue js_clear_timeout(JSContext *ctx, JSValueConst this_val, int argc,
     return JS_UNDEFINED;
 }
 
-void run_timeouts(JSContext *ctx)
+bool run_timeouts(JSContext *ctx)
 {
     static unsigned int tick_count = 0;
 
@@ -128,7 +128,19 @@ void run_timeouts(JSContext *ctx)
         }
     }
 
+    bool ran = arrlen(expired_ids) > 0;
     arrfree(expired_ids);
+    return ran;
+}
+
+double timeouts_next_due(void)
+{
+    double next = -1.0;
+    for (int i = 0; i < hmlen(timeout_hm); i++) {
+        double at = timeout_hm[i].value.next_scheduled_at;
+        if (next < 0.0 || at < next) next = at;
+    }
+    return next;
 }
 
 void register_js_timeout(JSContext *ctx)

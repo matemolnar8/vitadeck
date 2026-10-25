@@ -22,6 +22,7 @@ typedef struct {
 // Back buffer: JS thread writes here (single-threaded access)
 static InstanceEntry *back_registry = NULL;
 static ReactInstance **back_root_children = NULL;
+static bool back_dirty = false;
 
 // Front snapshot: UI thread reads from here
 static InstanceSnapshot *front_snapshot = NULL;
@@ -207,8 +208,16 @@ void instance_tree_init(void)
     }
 }
 
-void instance_tree_swap(void)
+void instance_back_mark_dirty(void)
 {
+    back_dirty = true;
+}
+
+bool instance_tree_swap(void)
+{
+    if (!back_dirty) return false;
+    back_dirty = false;
+
     // Create new snapshot from back buffer (outside lock)
     InstanceSnapshot *new_snap = calloc(1, sizeof(InstanceSnapshot));
     new_snap->registry = NULL;
@@ -231,6 +240,7 @@ void instance_tree_swap(void)
 
     // Free old snapshot (outside lock, safe because UI no longer references it)
     free_snapshot(old_snap);
+    return true;
 }
 
 void instance_tree_clear(void)
@@ -243,6 +253,7 @@ void instance_tree_clear(void)
     back_root_children = NULL;
     shfree(back_registry);
     back_registry = NULL;
+    back_dirty = false;
 
     InstanceSnapshot *old_snap = NULL;
     vd_mutex_lock(snapshot_mutex);

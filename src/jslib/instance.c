@@ -7,6 +7,7 @@
 static JSValue native_create_rect(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
+    instance_back_mark_dirty();
     if (argc < 16) return JS_UNDEFINED;
 
     const char *id = JS_ToCString(ctx, argv[0]);
@@ -74,6 +75,7 @@ static void read_text_layout_props(JSContext *ctx, TextProps *text, JSValueConst
 static JSValue native_create_text(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
+    instance_back_mark_dirty();
     if (argc < 15) return JS_UNDEFINED;
 
     const char *id = JS_ToCString(ctx, argv[0]);
@@ -111,6 +113,7 @@ static JSValue native_create_text(JSContext *ctx, JSValueConst this_val, int arg
 static JSValue native_create_button(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
+    instance_back_mark_dirty();
     if (argc < 16) return JS_UNDEFINED;
 
     const char *id = JS_ToCString(ctx, argv[0]);
@@ -191,6 +194,7 @@ static void read_scroll_props(JSContext *ctx, ScrollProps *scroll, JSValueConst 
 static JSValue native_create_scroll(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
+    instance_back_mark_dirty();
     if (argc < 12) return JS_UNDEFINED;
 
     const char *id = JS_ToCString(ctx, argv[0]);
@@ -211,6 +215,7 @@ static JSValue native_create_scroll(JSContext *ctx, JSValueConst this_val, int a
 static JSValue native_update_scroll(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
+    instance_back_mark_dirty();
     if (argc < 12) return JS_UNDEFINED;
 
     const char *id = JS_ToCString(ctx, argv[0]);
@@ -254,6 +259,7 @@ static void read_image_props(JSContext *ctx, ImageProps *image, JSValueConst *ar
 static JSValue native_create_image(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
+    instance_back_mark_dirty();
     if (argc < 6) return JS_UNDEFINED;
 
     const char *id = JS_ToCString(ctx, argv[0]);
@@ -281,6 +287,7 @@ static JSValue native_create_image(JSContext *ctx, JSValueConst this_val, int ar
 static JSValue native_update_image(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
+    instance_back_mark_dirty();
     if (argc < 6) return JS_UNDEFINED;
 
     const char *id = JS_ToCString(ctx, argv[0]);
@@ -310,6 +317,7 @@ static JSValue native_update_image(JSContext *ctx, JSValueConst this_val, int ar
 static JSValue native_create_raw_text(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
+    instance_back_mark_dirty();
     if (argc < 2) return JS_UNDEFINED;
 
     const char *id = JS_ToCString(ctx, argv[0]);
@@ -332,6 +340,7 @@ static JSValue native_create_raw_text(JSContext *ctx, JSValueConst this_val, int
 static JSValue native_append_child(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
+    instance_back_mark_dirty();
     if (argc < 2) return JS_UNDEFINED;
 
     const char *parent_id = JS_ToCString(ctx, argv[0]);
@@ -367,6 +376,7 @@ static JSValue native_append_child(JSContext *ctx, JSValueConst this_val, int ar
 static JSValue native_insert_before(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
+    instance_back_mark_dirty();
     if (argc < 3) return JS_UNDEFINED;
 
     const char *parent_id = JS_ToCString(ctx, argv[0]);
@@ -421,6 +431,7 @@ static JSValue native_insert_before(JSContext *ctx, JSValueConst this_val, int a
 static JSValue native_remove_child(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
+    instance_back_mark_dirty();
     if (argc < 2) return JS_UNDEFINED;
 
     const char *parent_id = JS_ToCString(ctx, argv[0]);
@@ -467,6 +478,7 @@ static JSValue native_remove_child(JSContext *ctx, JSValueConst this_val, int ar
 static JSValue native_destroy_instance(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
+    instance_back_mark_dirty();
     if (argc < 1) return JS_UNDEFINED;
 
     const char *id = JS_ToCString(ctx, argv[0]);
@@ -488,6 +500,7 @@ static JSValue native_destroy_instance(JSContext *ctx, JSValueConst this_val, in
 static JSValue native_update_rect(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
+    instance_back_mark_dirty();
     if (argc < 16) return JS_UNDEFINED;
 
     const char *id = JS_ToCString(ctx, argv[0]);
@@ -537,6 +550,7 @@ static JSValue native_update_rect(JSContext *ctx, JSValueConst this_val, int arg
 static JSValue native_update_text(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
+    instance_back_mark_dirty();
     if (argc < 15) return JS_UNDEFINED;
 
     const char *id = JS_ToCString(ctx, argv[0]);
@@ -576,6 +590,7 @@ static JSValue native_update_text(JSContext *ctx, JSValueConst this_val, int arg
 static JSValue native_update_button(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
+    instance_back_mark_dirty();
     if (argc < 16) return JS_UNDEFINED;
 
     const char *id = JS_ToCString(ctx, argv[0]);
@@ -630,6 +645,7 @@ static JSValue native_update_button(JSContext *ctx, JSValueConst this_val, int a
 static JSValue native_update_raw_text(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
+    instance_back_mark_dirty();
     if (argc < 2) return JS_UNDEFINED;
 
     const char *id = JS_ToCString(ctx, argv[0]);
@@ -656,6 +672,7 @@ static JSValue native_clear_container(JSContext *ctx, JSValueConst this_val, int
     (void)this_val;
     (void)argc;
     (void)argv;
+    instance_back_mark_dirty();
     instance_back_root_clear();
     return JS_UNDEFINED;
 }

@@ -1,5 +1,6 @@
 #include "js_runtime.h"
 
+#include <math.h>
 #include <raylib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,6 +11,9 @@
 #include "platform/thread.h"
 #include "ui/input.h"
 #include "ui/instance_tree.h"
+
+// Longest idle wait between JS thread polls; bounds input latency well under a 60 FPS frame.
+#define JS_IDLE_SLEEP_MAX_MS 4
 
 static int run_function(JSContext *ctx, const char *func_name)
 {
@@ -40,6 +44,16 @@ static void drain_microtasks(JSRuntime *rt)
     while ((err = JS_ExecutePendingJob(rt, &pctx)) != 0) {
         if (err < 0) js_report_exception(pctx, "microtask");
     }
+}
+
+// Sleeps until the next timer is due, capped so queued input is still picked up promptly.
+static int idle_sleep_ms(void)
+{
+    double next_due = timeouts_next_due();
+    if (next_due < 0.0) return JS_IDLE_SLEEP_MAX_MS;
+    double until_due_ms = ceil((next_due - GetTime()) * 1000.0);
+    if (until_due_ms <= 0.0) return 0;
+    return until_due_ms < JS_IDLE_SLEEP_MAX_MS ? (int)until_due_ms : JS_IDLE_SLEEP_MAX_MS;
 }
 
 static void *js_thread_func(void *arg)
@@ -91,12 +105,17 @@ static void *js_thread_func(void *arg)
     runtime->ready = true;
 
     while (!runtime->stop_requested && !runtime->failed && !event_queue_is_shutdown()) {
-        process_input_events(ctx);
-        run_timeouts(ctx);
-        run_fetch(ctx);
+        bool busy = process_input_events(ctx);
+        busy |= run_timeouts(ctx);
+        busy |= run_fetch(ctx);
         drain_microtasks(rt);
-        instance_tree_swap();
-        vd_thread_yield();
+        busy |= instance_tree_swap();
+        int sleep_ms = busy ? 0 : idle_sleep_ms();
+        if (sleep_ms > 0) {
+            vd_sleep_ms(sleep_ms);
+        } else {
+            vd_thread_yield();
+        }
     }
 
 defer:

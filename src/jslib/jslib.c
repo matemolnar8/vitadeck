@@ -85,14 +85,17 @@ static void call_input_event_from_native(JSContext *ctx, const char *id, const c
     JS_FreeValue(ctx, global);
 }
 
-void process_input_events(JSContext *ctx)
+bool process_input_events(JSContext *ctx)
 {
+    bool ran = false;
     InputEvent evt;
     while (event_queue_pop(&evt)) {
         if (evt.type == EVT_INPUT) {
             call_input_event_from_native(ctx, evt.id, evt.event_name);
+            ran = true;
         }
     }
+    return ran;
 }
 
 void register_js_lib(JSContext *ctx)

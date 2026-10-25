@@ -94,8 +94,9 @@ char *instance_scroll_at(int x, int y);
 // Initialize the instance tree (call once at startup before any threads)
 void instance_tree_init(void);
 
-// Swap back buffer to front buffer (call from JS thread after mutations)
-void instance_tree_swap(void);
+// Publish the back buffer as the front snapshot if a mutation marked it dirty since the last swap.
+// Call from the JS thread. Returns whether it swapped.
+bool instance_tree_swap(void);
 void instance_tree_clear(void);
 
 // Render lock/unlock - UI thread must hold lock during entire render
@@ -119,6 +120,7 @@ FocusableElement *get_focusable_elements(int *count);
 void free_focusable_elements(FocusableElement *elems, int count);
 
 // Back-buffer operations (called from JS thread only)
+void instance_back_mark_dirty(void);
 ReactInstance *instance_back_find(const char *id);
 void instance_back_put(ReactInstance *inst);
 void instance_back_del(const char *id);
