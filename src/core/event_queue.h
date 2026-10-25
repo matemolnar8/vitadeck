@@ -3,8 +3,10 @@
 
 #include <stdbool.h>
 
-typedef enum { EVT_INPUT } EventType;
+typedef enum { EVT_INPUT, EVT_PAD_BUTTON } EventType;
 
+// EVT_INPUT: id is the instance, event_name is focus, blur, pressstart, pressend or press.
+// EVT_PAD_BUTTON: id is the Pad Button name, event_name is pressstart or pressend.
 typedef struct {
     EventType type;
     char id[64];

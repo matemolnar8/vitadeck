@@ -291,6 +291,20 @@ if(NOT DEFINED ENV{VITASDK})
     target_link_libraries(scroll_math_harness m pthread)
     add_test(NAME scroll_math_harness COMMAND scroll_math_harness)
 
+    # Links raylib only because input.c also holds the raylib polls; the harness drives input_apply_*.
+    add_executable(input_harness
+      tests/input_harness.c
+      src/ui/input.c
+      src/ui/instance_tree.c
+      src/ui/focus_nav.c
+      src/ui/scroll.c
+      src/core/arena.c
+      src/core/event_queue.c
+      ${PLATFORM_SOURCES}
+    )
+    target_link_libraries(input_harness m pthread ${RAYLIB_LIBRARIES})
+    add_test(NAME input_harness COMMAND input_harness)
+
     # Includes src/upload/http_server.c itself, to reach the static request handler.
     add_executable(upload_single_flight_harness
       tests/upload_single_flight_harness.c

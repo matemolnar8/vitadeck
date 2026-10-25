@@ -88,6 +88,22 @@ npx @vitadeck/sdk dev http://192.168.1.50:8787/
 
 Activate the Deck App once in the Shell. After that, each upload replaces the Active Deck App and restarts it with fresh state (a restart, not hot reload). Build errors are printed and watching continues; Ctrl-C stops. "Nothing is listening" means Upload is not open in the Shell or the address is wrong.
 
+## Focus and pad buttons
+
+One `Button` at a time has focus: the D-pad moves it and Cross presses it. Touch presses a `Button` directly.
+
+```tsx
+import { Button, usePadButton } from "@vitadeck/sdk";
+
+usePadButton("circle", { onPressStart: () => setScreen("menu") });
+
+<Button label="Play" autoFocus focusColor={theme.accent} onFocus={() => setHint("Start a game")} … />;
+```
+
+- `onFocus` / `onBlur` fire when the `Button` gains or loses focus. `focusColor` fills it while focused (default: `color` lightened). `autoFocus` focuses it on mount; the last one mounted wins.
+- `usePadButton(button, { onPressStart, onPressEnd })` listens to `"circle"`, `"triangle"`, `"square"`, `"l"` or `"r"` while the component is mounted. Start and Select belong to VitaDeck.
+- On the desktop build, arrow keys and Enter are the D-pad and Cross; Backspace, T, S, L and R are Circle, Triangle, Square, L and R; hovering a `Button` with the mouse focuses it. The full table is under [Host mappings](https://github.com/matemolnar8/vitadeck/blob/main/CONTEXT.md#host-mappings).
+
 ## Links
 
 - **Repository:** [https://github.com/matemolnar8/vitadeck](https://github.com/matemolnar8/vitadeck) (monorepo; this package is under `js/packages/sdk`.)
