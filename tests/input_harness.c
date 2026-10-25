@@ -363,7 +363,7 @@ static void test_text_input_limits(void)
     mouse(10, 10, false);
     type("\t\x7f");
     expect_editing("", "control characters are not typed");
-    type("\xf0\x9f\x98\x80a");
+    type("\xf0\x9f\x98\x80" "a");
     expect_editing("\xf0\x9f\x98\x80", "an emoji counts as two code units, like a JS string");
     keys("", true, false, false);
     type("ab");
