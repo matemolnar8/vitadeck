@@ -42,7 +42,9 @@ npx @vitadeck/sdk create <project-name>
 - `version` (optional): semver written to the package manifest. Defaults to `version` in `package.json`.
 - `fonts` / `images` (optional): name → file path, relative to the project and inside it. Names start with a letter and use letters, digits, `_` or `-` (max 63 characters); `default` is reserved for fonts. Up to 32 of each. Fonts: `.ttf`, `.otf`, `.fnt`, `.bdf`. Images: `.png`, `.jpg`, `.jpeg`, `.bmp`, `.tga`, `.gif`, `.psd`, `.hdr`, `.pic`, `.qoi`. The build copies them into the package and fails if a file is missing.
 
-Reference assets by name, never by path: `<Text font="title" …>`, `<Image image="logo" …>`.
+Reference assets by name, never by path: `<Text font="title" …>`, `<Button font="title" fontSize={24} …>`, `<Image image="logo" …>`.
+
+Text, Button and TextInput take any `fontSize` in pixels, and text is UTF-8. Without `font` they use the runtime's DejaVu Sans. Characters a `.ttf` or `.otf` font lacks render in DejaVu Sans; a character neither has renders as a box. `.fnt` and `.bdf` fonts have no fallback.
 
 ### TypeScript
 
@@ -119,7 +121,7 @@ const [name, setName] = useState("");
 <TextInput x={20} y={80} width={400} height={56} value={name} onChange={setName} placeholder="Your name" />;
 ```
 
-`maxLength` (default 256, at most 2048) counts like `string.length`. It takes focus like a `Button`, with `focusColor` as its outline (default: `textColor`). Text is UTF-8; characters outside the runtime font render as boxes.
+`maxLength` (default 256, at most 2048) counts like `string.length`. It takes focus like a `Button`, with `focusColor` as its outline (default: `textColor`).
 
 ## Links
 
