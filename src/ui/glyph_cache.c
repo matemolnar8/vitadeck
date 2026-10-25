@@ -63,6 +63,8 @@ static int g_current_page = -1;
 static unsigned g_frame = 1;
 static int g_rasterised = 0;
 static const VdGlyphFont *g_fallback = NULL;
+static VdGlyphFontLoader g_fallback_loader = NULL;
+static const VdGlyphFont *g_last_fallback = NULL;
 
 static uint32_t read_u32(const unsigned char *bytes)
 {
@@ -103,6 +105,7 @@ void glyph_font_free(VdGlyphFont *font)
 {
     if (!font) return;
     if (g_fallback == font) g_fallback = NULL;
+    if (g_last_fallback == font) g_last_fallback = NULL;
     free(font->data);
     free(font);
 }
@@ -118,6 +121,29 @@ VdGlyphFontMetrics glyph_font_metrics(const VdGlyphFont *font, int size)
 void glyph_cache_set_fallback(const VdGlyphFont *font)
 {
     g_fallback = font;
+}
+
+void glyph_cache_set_fallback_loader(VdGlyphFontLoader loader)
+{
+    g_fallback_loader = loader;
+    g_last_fallback = NULL;
+}
+
+static const VdGlyphFont *last_fallback(void)
+{
+    if (g_fallback_loader) {
+        g_last_fallback = g_fallback_loader();
+        g_fallback_loader = NULL;
+    }
+    return g_last_fallback;
+}
+
+// The font's glyph index for codepoint, setting source to the font when it has one; 0 when it has none.
+static int find_glyph(const VdGlyphFont *font, uint32_t codepoint, const VdGlyphFont **source)
+{
+    int index = font ? stbtt_FindGlyphIndex(&font->info, (int)codepoint) : 0;
+    if (index != 0) *source = font;
+    return index;
 }
 
 static bool page_place(AtlasPage *page, int width, int height, int *x, int *y)
@@ -232,14 +258,9 @@ VdGlyph glyph_cache_get(const VdGlyphFont *font, int size, uint32_t codepoint)
     }
 
     const VdGlyphFont *source = font;
-    int glyph_index = stbtt_FindGlyphIndex(&font->info, (int)codepoint);
-    if (glyph_index == 0 && g_fallback && g_fallback != font) {
-        int fallback_index = stbtt_FindGlyphIndex(&g_fallback->info, (int)codepoint);
-        if (fallback_index != 0) {
-            source = g_fallback;
-            glyph_index = fallback_index;
-        }
-    }
+    int glyph_index = find_glyph(font, codepoint, &source);
+    if (glyph_index == 0) glyph_index = find_glyph(g_fallback, codepoint, &source);
+    if (glyph_index == 0) glyph_index = find_glyph(last_fallback(), codepoint, &source);
 
     VdGlyph glyph;
     if (rasterise(source, glyph_index, size, &glyph)) {
@@ -344,10 +365,12 @@ static bool find_emoji(const VdGlyphFont *font, int size, const VdEmojiSequence 
     return false;
 }
 
+// Asks the same fonts, in the same order, as glyph_cache_get.
 static bool has_glyph(const VdGlyphFont *font, uint32_t codepoint)
 {
-    if (stbtt_FindGlyphIndex(&font->info, (int)codepoint) != 0) return true;
-    return g_fallback && stbtt_FindGlyphIndex(&g_fallback->info, (int)codepoint) != 0;
+    const VdGlyphFont *source = NULL;
+    return find_glyph(font, codepoint, &source) != 0 || find_glyph(g_fallback, codepoint, &source) != 0 ||
+           find_glyph(last_fallback(), codepoint, &source) != 0;
 }
 
 VdGlyph glyph_cache_get_emoji(const VdGlyphFont *font, int size, const VdEmojiSequence *sequence)

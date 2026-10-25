@@ -68,7 +68,7 @@ bool bootstrap_open_window(VdBootstrap *bootstrap, const char *title, const VdBo
     bootstrap->window_open = true;
     SetTargetFPS(60);
 
-    if (!font_registry_init(error, error_size)) return false;
+    font_registry_init();
     load_active_package_assets(bootstrap, error, error_size);
     return true;
 }

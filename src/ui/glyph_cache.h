@@ -42,6 +42,9 @@ typedef struct {
     int length;
 } VdEmojiSequence;
 
+// The font to fall back to last, opened on demand; NULL when it cannot be opened.
+typedef VdGlyphFont *(*VdGlyphFontLoader)(void);
+
 // The RGBA8 image for a codepoint sequence, U+FE0F left out, in memory from malloc; NULL when there is none.
 typedef unsigned char *(*VdEmojiLoader)(const VdEmojiSequence *sequence, int *width, int *height);
 
@@ -57,13 +60,16 @@ VdGlyphFont *glyph_font_load(const char *path);
 void glyph_font_free(VdGlyphFont *font);
 VdGlyphFontMetrics glyph_font_metrics(const VdGlyphFont *font, int size);
 
-// Codepoints a font lacks come from the fallback; ones neither has draw the requested font's missing-glyph box.
+// Codepoints a font lacks come from the fallback, then from the loader's font; ones none has draw the requested font's
+// missing-glyph box.
 void glyph_cache_set_fallback(const VdGlyphFont *font);
+// Called once, on the first codepoint neither the requested font nor the fallback has. The caller owns the font.
+void glyph_cache_set_fallback_loader(VdGlyphFontLoader loader);
 VdGlyph glyph_cache_get(const VdGlyphFont *font, int size, uint32_t codepoint);
 void glyph_cache_set_emoji_loader(VdEmojiLoader loader);
 // The emoji for the longest prefix of sequence that has an image, as a Font Size square on the font's line, so a ZWJ
 // sequence without its own image draws as its first emoji. With no image, as when assets/emoji is missing, the first
-// codepoint's glyph from the font or the fallback, else VD_EMOJI_FALLBACK's. Missing images are not loaded again.
+// codepoint's glyph from the font or a fallback, else VD_EMOJI_FALLBACK's. Missing images are not loaded again.
 VdGlyph glyph_cache_get_emoji(const VdGlyphFont *font, int size, const VdEmojiSequence *sequence);
 void glyph_cache_begin_frame(void);
 // Drops every glyph and page.

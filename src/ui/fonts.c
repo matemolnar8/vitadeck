@@ -10,6 +10,7 @@
 #define VD_FONT_NAME_MAX 64
 #define VD_FONT_MAX 32
 #define VD_DEFAULT_FONT_PATH "assets/fonts/DejaVuSans.ttf"
+#define VD_FALLBACK_FONT_PATH "assets/fonts/DroidSansFallbackFull.ttf"
 #define VD_EMOJI_DIR "assets/emoji"
 
 _Static_assert(VD_FONT_MAX >= VD_PACKAGE_FONT_MAX, "font registry must hold every manifest font");
@@ -21,6 +22,7 @@ typedef struct {
 
 static VdFont g_default_font = {0};
 static bool g_default_loaded = false;
+static VdGlyphFont *g_fallback_font = NULL;
 static VdLoadedFont g_package_fonts[VD_FONT_MAX];
 static int g_package_font_count = 0;
 
@@ -95,14 +97,32 @@ static unsigned char *load_emoji_image(const VdEmojiSequence *sequence, int *wid
     return pixels;
 }
 
-bool font_registry_init(char *error, size_t error_size)
+// The Runtime Fallback Font is 4 MB, so it loads on the first character the other fonts lack, not at startup.
+static VdGlyphFont *load_fallback_font(void)
 {
-    if (g_default_loaded) return true;
-    if (!load_font_file(VD_DEFAULT_FONT_PATH, &g_default_font, error, error_size)) return false;
+    g_fallback_font = glyph_font_load(VD_FALLBACK_FONT_PATH);
+    if (g_fallback_font) {
+        TraceLog(LOG_DEBUG, "FONT: Runtime Fallback Font loaded from %s", VD_FALLBACK_FONT_PATH);
+    } else {
+        TraceLog(LOG_WARNING, "FONT: Could not load the Runtime Fallback Font from %s", VD_FALLBACK_FONT_PATH);
+    }
+    return g_fallback_font;
+}
+
+// A build that could not download the Runtime Default Font draws it with raylib's built-in font.
+void font_registry_init(void)
+{
+    if (g_default_loaded) return;
+    g_default_font.outline = glyph_font_load(VD_DEFAULT_FONT_PATH);
+    if (!g_default_font.outline) {
+        TraceLog(LOG_WARNING, "FONT: Could not load the Runtime Default Font from %s; using raylib's built-in font",
+                 VD_DEFAULT_FONT_PATH);
+        g_default_font.bitmap = GetFontDefault();
+    }
     glyph_cache_set_fallback(g_default_font.outline);
+    glyph_cache_set_fallback_loader(load_fallback_font);
     glyph_cache_set_emoji_loader(load_emoji_image);
     g_default_loaded = true;
-    return true;
 }
 
 bool font_registry_load_package(const char *package_path, const VdPackageManifest *manifest, char *error,
@@ -136,6 +156,8 @@ void font_registry_shutdown(void)
         unload_font(&g_default_font);
         g_default_loaded = false;
     }
+    glyph_font_free(g_fallback_font);
+    g_fallback_font = NULL;
 }
 
 const VdFont *font_registry_get(const char *name)

@@ -20,7 +20,7 @@ typedef struct {
     Font bitmap;
 } VdFont;
 
-bool font_registry_init(char *error, size_t error_size);
+void font_registry_init(void);
 // Replaces the loaded package assets with the manifest's; a NULL manifest only unloads them.
 bool font_registry_load_package(const char *package_path, const VdPackageManifest *manifest, char *error,
                                 size_t error_size);

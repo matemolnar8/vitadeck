@@ -75,11 +75,14 @@ jobs:
       - name: Install host native dependencies
         run: brew install raylib pkgconf cmake ccache
 
-      - name: Cache Twemoji
+      - name: Cache downloaded assets
         uses: actions/cache@v5
         with:
-          path: assets/emoji
-          key: twemoji-${{ hashFiles('cmake/twemoji.cmake') }}
+          path: |
+            assets/.downloads
+            assets/emoji
+            assets/fonts
+          key: assets-${{ hashFiles('cmake/fetch_asset.cmake', 'cmake/twemoji.cmake', 'cmake/fonts.cmake') }}
 
       - name: Configure and build host target
         run: |
@@ -126,11 +129,14 @@ jobs:
           cache-from: type=gha,scope=smoke
           cache-to: type=gha,mode=max,scope=smoke
 
-      - name: Cache Twemoji
+      - name: Cache downloaded assets
         uses: actions/cache@v5
         with:
-          path: assets/emoji
-          key: twemoji-${{ hashFiles('cmake/twemoji.cmake') }}
+          path: |
+            assets/.downloads
+            assets/emoji
+            assets/fonts
+          key: assets-${{ hashFiles('cmake/fetch_asset.cmake', 'cmake/twemoji.cmake', 'cmake/fonts.cmake') }}
 
       - name: Smoke test
         # macOS cannot initialize NSGL for raylib on GitHub runners — see docs/adr/0002-smoke-ci-linux-xvfb.md

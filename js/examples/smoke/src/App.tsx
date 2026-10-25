@@ -77,6 +77,11 @@ export default function SmokeDeckApp() {
             Árvíztűrő tükörfúrógép 🎮
           </Text>
         </Rect>
+        <Rect x={590} y={12} width={240} height={32} color={theme.surface}>
+          <Text x={0} y={0} fontSize={24} color={theme.text}>
+            日本語 かな 中文
+          </Text>
+        </Rect>
       </Rect>
 
       <Scroll
