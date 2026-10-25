@@ -46,7 +46,7 @@
 <body>
 <header>
   <h1>VitaDeck review queue</h1>
-  <p id="sub">Batch 1 (2026-10-25): all 10 merged (plus hotfix #73). Batch 2 merged. Batch 3: #80, #81, #82, #83 awaiting your decision; #49, #51 in progress; #48 stacked on #83 in progress; #50 awaiting your answers on the issue. New PRs appear here as they open. Approve means Claude squash-merges; Request changes sends your note to a fix agent.</p>
+  <p id="sub">Batch 1 (2026-10-25): all 10 merged (plus hotfix #73). Batch 2 merged. Batch 3: #80, #81, #82, #83, #84 awaiting your decision; #51 in progress; #48 stacked on #83 in progress; #50 awaiting your answers on the issue. New PRs appear here as they open. Approve means Claude squash-merges; Request changes sends your note to a fix agent.</p>
 </header>
 <main id="list"></main>
 <footer>
@@ -73,6 +73,7 @@ const PRS = [
   {n:81, t:"fix(runtime): report unhandled rejections, stop stb_ds seed race, log dropped events", fixes:"#69, #78", diff:"+82 −21", base:"main", ci:"see PR checks", note:"Batch 3. Unhandled promise rejections go to the Deck App Failure Screen; stb_ds seeded once before threads start; event queue logs when it drops."},
   {n:82, t:"ci(release): tag-triggered VPK release and npm trusted publishing", fixes:"#52", diff:"+165 −63", base:"main", ci:"see PR checks", note:"Batch 3. Push a bare semver tag to release. Before the first tagged release you must enable Trusted Publishing on npmjs.com for @vitadeck/sdk (owner matemolnar8, repo vitadeck, workflow release.yml). PSVITAIP moved out of CMake into an env var."},
   {n:83, t:"feat(input): focus events, pad buttons, host keyboard and mouse parity", fixes:"#46", diff:"see PR", base:"main", ci:"see PR checks", note:"Batch 3. Button gets autoFocus/focusColor/onFocus/onBlur; usePadButton for circle/triangle/square/l/r; host keys Backspace/T/S/L/R; mouse hover and press move focus. Two changes from the proposal: autoFocus via a commitMount-time nativeRequestFocus, and a mouse press focuses the pressed Button. New SDK exports: minor version bump."},
+  {n:84, t:"feat(sdk): per-package storage API for Deck Apps", fixes:"#49", diff:"see PR", base:"main", ci:"see PR checks", note:"Batch 3. storage.getItem/setItem/removeItem, 1 MiB cap, atomic JSON file per package under vitadeck-data, deleted on package removal. The three raw file natives are gone; the runtime loads the entry via a path-less nativeEvalActiveDeckAppEntry. Minesweeper keeps a win count. SDK export: minor bump."},
 ];
 const HOOK = "https://relay.t3.codes/v1/hooks/42fc44312fd4d5ff/scheduled-task%3Acommand%3Amcp%3A1b32e1ca-ff48-4bf5-b05a-502dcff0cbe1%3Aschedule-task%3Avitadeck-review-webhook-1/tdotXduMyeg1WvbI3hOgTmP2jAnrLA5K7-1c3z7KvO4";
 const KEY = "vitadeck-review-queue-v1";
