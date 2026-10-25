@@ -8,6 +8,7 @@ endif()
 
 project(vitadeck)
 
+include(cmake/fetch_asset.cmake)
 include(cmake/twemoji.cmake)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -317,7 +318,7 @@ if(NOT DEFINED ENV{VITASDK})
 
     add_executable(glyph_cache_harness tests/glyph_cache_harness.c src/ui/glyph_cache.c src/core/util.c)
     target_compile_definitions(glyph_cache_harness PRIVATE VD_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
-    if(VITADECK_TWEMOJI_FOUND)
+    if(Twemoji_FOUND)
       target_compile_definitions(glyph_cache_harness PRIVATE VD_TWEMOJI_DOWNLOADED)
     endif()
     target_link_libraries(glyph_cache_harness m)
