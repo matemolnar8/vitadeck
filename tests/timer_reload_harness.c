@@ -22,6 +22,36 @@ static void eval_or_die(JSContext *ctx, const char *source)
     JS_FreeValue(ctx, result);
 }
 
+static int expect_ticks(const char *name, const char *source, int runs, int32_t expected_ticks)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    if (!rt || !ctx) return 2;
+    register_js_timeout(ctx);
+    eval_or_die(ctx, source);
+
+    for (int i = 0; i < runs; i++) {
+        run_timeouts(ctx);
+    }
+
+    JSValue global = JS_GetGlobalObject(ctx);
+    JSValue ticks_value = JS_GetPropertyStr(ctx, global, "ticks");
+    int32_t ticks = 0;
+    JS_ToInt32(ctx, &ticks, ticks_value);
+    JS_FreeValue(ctx, ticks_value);
+    JS_FreeValue(ctx, global);
+
+    timeout_shutdown(ctx);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+
+    if (ticks != expected_ticks) {
+        fprintf(stderr, "%s: expected %d ticks, got %d\n", name, expected_ticks, ticks);
+        return 1;
+    }
+    return 0;
+}
+
 int main(void)
 {
     SetTraceLogLevel(LOG_WARNING);
@@ -72,5 +102,34 @@ int main(void)
     timeout_shutdown(ctx2);
     JS_FreeContext(ctx2);
     JS_FreeRuntime(rt2);
-    return 0;
+
+    int failed = 0;
+    failed |= expect_ticks("self-clearing interval",
+                           "globalThis.ticks = 0;"
+                           "globalThis.id = setInterval(() => { globalThis.ticks += 1; clearInterval(globalThis.id); }, 0);",
+                           3, 1);
+    failed |= expect_ticks("self-clearing timeout",
+                           "globalThis.ticks = 0;"
+                           "globalThis.id = setTimeout(() => { globalThis.ticks += 1; clearTimeout(globalThis.id); }, 0);",
+                           2, 1);
+    failed |= expect_ticks("timeout clearing a sibling due the same tick",
+                           "globalThis.ticks = 0;"
+                           "setTimeout(() => { clearTimeout(globalThis.other); }, 0);"
+                           "globalThis.other = setTimeout(() => { globalThis.ticks += 1; }, 0);",
+                           2, 0);
+    failed |= expect_ticks("self-clearing timeout scheduling a replacement",
+                           "globalThis.ticks = 0;"
+                           "globalThis.id = setTimeout(() => {"
+                           "  clearTimeout(globalThis.id);"
+                           "  setTimeout(() => { globalThis.ticks += 1; }, 0);"
+                           "}, 0);",
+                           2, 1);
+    failed |= expect_ticks("interval scheduling timers each tick",
+                           "globalThis.ticks = 0;"
+                           "globalThis.id = setInterval(() => {"
+                           "  for (let i = 0; i < 64; i++) setTimeout(() => {}, 0);"
+                           "  if (++globalThis.ticks === 3) clearInterval(globalThis.id);"
+                           "}, 0);",
+                           5, 3);
+    return failed;
 }
