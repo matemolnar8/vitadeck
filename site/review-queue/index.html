@@ -46,7 +46,7 @@
 <body>
 <header>
   <h1>VitaDeck review queue</h1>
-  <p id="sub">Batch 1 (2026-10-25): all 10 merged (plus hotfix #73). Batch 2: #74, #75, #76, #77 merged. Debt wave complete. Feature proposals are on issues #46-#52; new PRs will appear here. New PRs appear here as they open. Approve means Claude squash-merges; Request changes sends your note to a fix agent.</p>
+  <p id="sub">Batch 1 (2026-10-25): all 10 merged (plus hotfix #73). Batch 2 merged. Batch 3: #80, #81, #82 awaiting your decision; #46, #49 in progress; #50 design spike running. New PRs appear here as they open. Approve means Claude squash-merges; Request changes sends your note to a fix agent.</p>
 </header>
 <main id="list"></main>
 <footer>
@@ -69,6 +69,9 @@ const PRS = [
   {n:75, t:"perf: swap the instance tree only when dirty, cache the package list, drop per-frame allocations", fixes:"#54", diff:"+379 −129", base:"main", ci:"merged", note:"Batch 2. JS thread idle CPU 94.8% -> 2.6% on the host. Dirty flag + idle sleep, package list cache with new harness, no per-frame id strdup (your note), prepareUpdate returns null when nothing changed."},
   {n:76, t:"build: warnings, sanitizer option, QuickJS and fetch limits", fixes:"#53", diff:"+258 −32", base:"perf/dirty-flag-and-caches (stacked on #75)", ci:"merged", note:"Batch 2. -Wall -Wextra on host and Vita, -Werror in CI only, VITADECK_SANITIZE option run in the Linux CI job, QuickJS stack = thread stack − 64 KiB, JS memory 64 MiB, fetch body cap 4 MiB. Recursive Deck App now hits the Failure Screen instead of segfaulting. Merge after #75."},
   {n:77, t:"test: harnesses for event queue, snapshot swap, hit testing, scroll math, upload single-flight", fixes:"#58", diff:"+1042 −98", base:"build/warnings-sanitizers-js-limits (stacked on #76)", ci:"merged", note:"Batch 2. Five new CTest harnesses, 12/12 pass plain and sanitized. The swap harness catches the #39 use-after-free if reintroduced. Also fixes the jimp.h path in AGENTS.md and docker compose fallback in agent-check. Question in the PR body: the event queue silently drops the newest event when full; intended? Merge after #76."},
+  {n:80, t:"fix(upload): ignore SIGPIPE and drain rejected request bodies", fixes:"#64, #79", diff:"+121 −2", base:"main", ci:"see PR checks", note:"Batch 3. SIGPIPE handling behind src/platform; 409/413 replies now drain the body so clients get the JSON error."},
+  {n:81, t:"fix(runtime): report unhandled rejections, stop stb_ds seed race, log dropped events", fixes:"#69, #78", diff:"+82 −21", base:"main", ci:"see PR checks", note:"Batch 3. Unhandled promise rejections go to the Deck App Failure Screen; stb_ds seeded once before threads start; event queue logs when it drops."},
+  {n:82, t:"ci(release): tag-triggered VPK release and npm trusted publishing", fixes:"#52", diff:"+165 −63", base:"main", ci:"see PR checks", note:"Batch 3. Push a bare semver tag to release. Before the first tagged release you must enable Trusted Publishing on npmjs.com for @vitadeck/sdk (owner matemolnar8, repo vitadeck, workflow release.yml). PSVITAIP moved out of CMake into an env var."},
 ];
 const HOOK = "https://relay.t3.codes/v1/hooks/42fc44312fd4d5ff/scheduled-task%3Acommand%3Amcp%3A1b32e1ca-ff48-4bf5-b05a-502dcff0cbe1%3Aschedule-task%3Avitadeck-review-webhook-1/tdotXduMyeg1WvbI3hOgTmP2jAnrLA5K7-1c3z7KvO4";
 const KEY = "vitadeck-review-queue-v1";
