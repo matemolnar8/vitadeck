@@ -1,11 +1,9 @@
 #include "core/package_manifest.h"
+#include "core/util.h"
 
-#include <dirent.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <unistd.h>
 
 static int failures = 0;
@@ -16,69 +14,11 @@ static void failf(const char *case_name, const char *message)
     failures++;
 }
 
-static void join_path(char *out, size_t out_size, const char *a, const char *b)
-{
-    snprintf(out, out_size, "%s/%s", a, b);
-}
-
-static bool mkdir_p(const char *path)
-{
-    char tmp[VD_PATH_MAX];
-    snprintf(tmp, sizeof(tmp), "%s", path);
-    size_t len = strlen(tmp);
-    if (len == 0) return false;
-    if (tmp[len - 1] == '/') tmp[len - 1] = '\0';
-
-    for (char *p = tmp + 1; *p; p++) {
-        if (*p != '/') continue;
-        *p = '\0';
-        if (mkdir(tmp, 0777) != 0 && errno != EEXIST) return false;
-        *p = '/';
-    }
-    return mkdir(tmp, 0777) == 0 || errno == EEXIST;
-}
-
-static bool write_text_file(const char *path, const char *contents)
-{
-    FILE *f = fopen(path, "wb");
-    if (!f) return false;
-    bool ok = fwrite(contents, 1, strlen(contents), f) == strlen(contents);
-    fclose(f);
-    return ok;
-}
-
 static bool write_package_file(const char *package_path, const char *rel_path, const char *contents)
 {
     char path[VD_PATH_MAX];
-    join_path(path, sizeof(path), package_path, rel_path);
-    char parent[VD_PATH_MAX];
-    snprintf(parent, sizeof(parent), "%s", path);
-    char *slash = strrchr(parent, '/');
-    if (slash) {
-        *slash = '\0';
-        if (!mkdir_p(parent)) return false;
-    }
-    return write_text_file(path, contents);
-}
-
-static bool remove_tree(const char *path)
-{
-    DIR *dir = opendir(path);
-    if (!dir) return unlink(path) == 0 || errno == ENOENT;
-
-    struct dirent *entry;
-    bool ok = true;
-    while ((entry = readdir(dir))) {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
-        char child[VD_PATH_MAX];
-        join_path(child, sizeof(child), path, entry->d_name);
-        if (!remove_tree(child)) {
-            ok = false;
-            break;
-        }
-    }
-    closedir(dir);
-    return ok && (rmdir(path) == 0 || errno == ENOENT);
+    return vd_join_path(path, sizeof(path), package_path, rel_path) && vd_mkdir_parent(path) &&
+           vd_write_text_file(path, contents);
 }
 
 static bool make_package_root(char *root, size_t root_size, char *package_path, size_t package_path_size)
@@ -87,8 +27,8 @@ static bool make_package_root(char *root, size_t root_size, char *package_path, 
     char *created = mkdtemp(template_path);
     if (!created) return false;
     snprintf(root, root_size, "%s", created);
-    join_path(package_path, package_path_size, root, "sample.vdapp");
-    return mkdir_p(package_path);
+    vd_join_path(package_path, package_path_size, root, "sample.vdapp");
+    return vd_mkdir_p(package_path);
 }
 
 static void write_minimal_valid_package(const char *package_path)
@@ -127,7 +67,7 @@ static void expect_success_minimal(void)
         if (manifest.image_count != 0) failf(case_name, "unexpected images");
     }
 
-    remove_tree(root);
+    vd_remove_tree(root);
 }
 
 static void expect_success_assets(void)
@@ -167,7 +107,7 @@ static void expect_success_assets(void)
         }
     }
 
-    remove_tree(root);
+    vd_remove_tree(root);
 }
 
 static void expect_failure(const char *case_name, const char *manifest, bool write_entry, const char *expected_error)
@@ -192,7 +132,7 @@ static void expect_failure(const char *case_name, const char *manifest, bool wri
         failf(case_name, message);
     }
 
-    remove_tree(root);
+    vd_remove_tree(root);
 }
 
 static void expect_missing_file_failure(const char *case_name, const char *manifest, const char *expected_error)
