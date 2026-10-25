@@ -59,22 +59,7 @@ static void free_instance_tree(ReactInstance *inst)
     for (int i = 0; i < count; i++) {
         free_instance_tree(inst->children[i]);
     }
-
-    if (inst->id) free(inst->id);
-    if (inst->type == NT_TEXT && inst->props.text.font_name) {
-        free(inst->props.text.font_name);
-    }
-    if (inst->type == NT_BUTTON && inst->props.button.label) {
-        free(inst->props.button.label);
-    }
-    if (inst->type == NT_RAW_TEXT && inst->props.raw_text) {
-        free(inst->props.raw_text);
-    }
-    if (inst->type == NT_IMAGE && inst->props.image.image_name) {
-        free(inst->props.image.image_name);
-    }
-    arrfree(inst->children);
-    free(inst);
+    instance_back_free(inst);
 }
 
 // Free stb_ds child arrays in a front-snapshot tree (instance data lives in the arena).

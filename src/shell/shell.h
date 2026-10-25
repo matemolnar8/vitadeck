@@ -18,7 +18,6 @@ typedef struct {
     char remove_confirm_package[VD_PACKAGE_NAME_MAX];
     char remove_confirm_label[VD_SHELL_REMOVE_LABEL_MAX];
     char message[256];
-    char bind_error[256];
     VdUploadServer upload_server;
 } VdShell;
 

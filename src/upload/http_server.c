@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include "arena.h"
+#include "core/util.h"
 #include "upload/archive.h"
 #include "upload/http_parse.h"
 
@@ -62,12 +63,6 @@ static void reap_finished_handlers(VdUploadServer *server)
         vd_thread_join(finished[i]);
         vd_thread_destroy(finished[i]);
     }
-}
-
-static void set_error(char *error, size_t error_size, const char *message)
-{
-    if (!error || error_size == 0) return;
-    snprintf(error, error_size, "%s", message);
 }
 
 static void set_last_message(VdUploadServer *server, const char *message)
@@ -534,7 +529,7 @@ bool upload_server_start(VdUploadServer *server, char *error, size_t error_size)
                 close(fd);
                 server->listen_fd = -1;
                 server->running = false;
-                set_error(error, error_size, "Could not start Runtime Upload Listener thread.");
+                vd_set_error(error, error_size, "Could not start Runtime Upload Listener thread.");
                 return false;
             }
             return true;
@@ -542,7 +537,7 @@ bool upload_server_start(VdUploadServer *server, char *error, size_t error_size)
         close(fd);
     }
 
-    set_error(error, error_size, "Could not bind Runtime Upload Listener on ports 8787-8796.");
+    vd_set_error(error, error_size, "Could not bind Runtime Upload Listener on ports 8787-8796.");
     return false;
 }
 

@@ -121,6 +121,7 @@ set(VITADECK_SOURCES
     src/core/js_runtime.c
     src/core/package_manifest.c
     src/core/package_library.c
+    src/core/util.c
     ${JSLIB_SOURCES}
     src/ui/instance_tree.c
     src/ui/fonts.c
@@ -194,7 +195,7 @@ if(NOT DEFINED ENV{VITASDK})
     target_link_libraries(timer_reload_harness quickjs m ${RAYLIB_LIBRARIES})
     add_test(NAME timer_reload_harness COMMAND timer_reload_harness)
 
-    add_executable(package_manifest_harness tests/package_manifest_harness.c src/core/package_manifest.c)
+    add_executable(package_manifest_harness tests/package_manifest_harness.c src/core/package_manifest.c src/core/util.c)
     add_test(NAME package_manifest_harness COMMAND package_manifest_harness)
 
     add_executable(upload_parsing_harness
@@ -204,6 +205,7 @@ if(NOT DEFINED ENV{VITASDK})
       src/core/arena.c
       src/core/package_library.c
       src/core/package_manifest.c
+      src/core/util.c
       ${PLATFORM_SOURCES}
     )
     target_link_libraries(upload_parsing_harness ZLIB::ZLIB)
@@ -216,6 +218,7 @@ if(NOT DEFINED ENV{VITASDK})
       src/core/js_runtime.c
       src/core/package_manifest.c
       src/core/package_library.c
+      src/core/util.c
       src/core/event_queue.c
       ${JSLIB_SOURCES}
       src/ui/instance_tree.c
