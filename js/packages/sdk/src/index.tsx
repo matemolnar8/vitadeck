@@ -7,6 +7,7 @@ import type {
   VitaImageProps,
   VitaRectProps,
   VitaScrollProps,
+  VitaStackProps,
   VitaTextInputProps,
   VitaTextProps,
 } from "./vitadeck-host-types";
@@ -49,15 +50,23 @@ export function Text(props: TextProps) {
   return vitaHost("vita-text", props);
 }
 
+export type StackProps = Omit<VitaStackProps, "key">;
+
+/**
+ * Lays out its Rect, Button, TextInput, Image and Stack children one after another along `direction`, `gap` pixels
+ * apart inside `padding`, and places each across the other axis by `align`. A child's own `x`/`y` is a margin before
+ * it along the flow and an offset across it. Text and Scroll children are not laid out; they keep their own `x`/`y`
+ * inside the padding. Without `width` or `height`, the Stack fits its content.
+ */
+export function Stack(props: StackProps) {
+  return vitaHost("vita-stack", props);
+}
+
 export type ScrollProps = Omit<VitaScrollProps, "key">;
 
 /**
- * Scrollable container with a minimal column layout: direct Rect, Button, and
- * Image children are stacked vertically (`gap` pixels apart, inside `padding`).
- * A stacked child's `y` acts as a top margin and its `x` is relative to the
- * padded content area. Content taller than the viewport can be scrolled with
- * touch drag on PSVita, the left analog stick on PSVita, or the mouse wheel on
- * desktop.
+ * A column `Stack` with a fixed viewport whose content scrolls: touch drag or the left analog stick on PSVita, the
+ * mouse wheel on desktop.
  */
 export function Scroll(props: ScrollProps) {
   return vitaHost("vita-scroll", props);
