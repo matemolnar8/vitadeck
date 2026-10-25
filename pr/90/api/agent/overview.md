@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 8944d5cdb7fc7fc450617cca3781bb2cf1808471` and `git rev-parse --verify b6e820df59a1e9576e5d45a9543fa6689edfb6d6` in this repository.
+   Run `git rev-parse --verify a67144241bd9ac86b8052502902eddcfb74cbd88` and `git rev-parse --verify b3e88a9a19239e8f491616bfc853578a055ce6f4` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -22,17 +22,18 @@ When no question follows this paste, explain this change.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  8944d5cdb7fc7fc450617cca3781bb2cf1808471
+base (merge-base)  a67144241bd9ac86b8052502902eddcfb74cbd88
 
-head               b6e820df59a1e9576e5d45a9543fa6689edfb6d6
+head               b3e88a9a19239e8f491616bfc853578a055ce6f4
 
-Named refs at pin: origin/feat/stack-layout ... origin/feat/glyph-cache
+Named refs at pin: a67144241bd9ac86b8052502902eddcfb74cbd88 ... HEAD
 
 Read the diff:
 
-git diff --find-renames 8944d5cdb7fc7fc450617cca3781bb2cf1808471 b6e820df59a1e9576e5d45a9543fa6689edfb6d6
+git diff --find-renames a67144241bd9ac86b8052502902eddcfb74cbd88 b3e88a9a19239e8f491616bfc853578a055ce6f4
 
 Commits:
+- b3e88a9 Merge origin/main into feat/glyph-cache
 - b6e820d test(smoke): Hungarian and emoji line in the golden
 - 18aa4bd test(smoke): refresh Linux golden for glyph cache text
 - 9ac5782 docs: font fallback in the glossary and SDK README
@@ -41,6 +42,25 @@ Commits:
 - 0a148f8 feat(ui): draw text through the glyph cache with Runtime Default Font fallback
 - ebb6617 feat(ui): on-demand glyph cache over stb_truetype
 - 7a47238 chore(vendor): stb_truetype v1.26, the copy raylib 5.5 compiles
+- 8944d5c test(layout): column, row, gap, padding, align, nesting and Scroll parity
+- 5f9c796 docs: Stack glossary entry and SDK Layout section
+- 49e9d7e feat(examples): lay out the timers rows and buttons with Stack
+- 6d12275 feat(runtime): create and update Stack instances; default x/y to 0
+- d4ab5a9 feat(sdk): Stack component; x/y optional on Rect, Button, TextInput and Image
+- f427852 feat(ui): layout pass per swap, Stack instance, Scroll laid out as a column Stack
+- 2d98508 test(input): split the emoji literal so its hex escape ends
+- ac74646 docs: Text Input glossary entry, host mappings and SDK README section
+- f20e514 feat(examples): write your own message in the chat compose row
+- dccbcb4 test(input): text input editing, ending and limits; text event ownership
+- a11774f feat(sdk): TextInput component
+- 7bc88db feat(runtime): create text inputs and deliver confirmed values to onChange
+- b0150c5 feat(ui): vita-text-input instance, editing session and rendering
+- 12859cc feat(platform): text input editing via Vita IME dialog and host keyboard
+- b31c0d6 docs: Focus, Pad Button and the host mapping table
+- de0d962 feat(examples): minesweeper uses focus color, autoFocus and pad buttons
+- 6ca8d96 feat(runtime): dispatch focus, blur and pad buttons; autoFocus on commit
+- 62534f5 feat(sdk): Button focus props and usePadButton
+- 95723a6 feat(input): native focus events, pad buttons and hover focus
 
 Sources:
 - ticket #50 Revised proposal: dynamic glyph cache over stb_truetype, fallback fonts, Twemoji; shipped in three PRs. Slice 1 is the cache, call sites and Button props.

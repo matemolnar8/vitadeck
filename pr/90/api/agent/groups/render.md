@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 8944d5cdb7fc7fc450617cca3781bb2cf1808471` and `git rev-parse --verify b6e820df59a1e9576e5d45a9543fa6689edfb6d6` in this repository.
+   Run `git rev-parse --verify a67144241bd9ac86b8052502902eddcfb74cbd88` and `git rev-parse --verify b3e88a9a19239e8f491616bfc853578a055ce6f4` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 8944d5cdb7fc7fc450617cca3781bb2cf1808471 b6e820df59a1e9576e5d45a9543fa6689edfb6d6 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames a67144241bd9ac86b8052502902eddcfb74cbd88 b3e88a9a19239e8f491616bfc853578a055ce6f4 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -23,15 +23,15 @@ When no question follows this paste, explain this review concern.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  8944d5cdb7fc7fc450617cca3781bb2cf1808471
+base (merge-base)  a67144241bd9ac86b8052502902eddcfb74cbd88
 
-head               b6e820df59a1e9576e5d45a9543fa6689edfb6d6
+head               b3e88a9a19239e8f491616bfc853578a055ce6f4
 
-Named refs at pin: origin/feat/stack-layout ... origin/feat/glyph-cache
+Named refs at pin: a67144241bd9ac86b8052502902eddcfb74cbd88 ... HEAD
 
 Read the diff:
 
-git diff --find-renames 8944d5cdb7fc7fc450617cca3781bb2cf1808471 b6e820df59a1e9576e5d45a9543fa6689edfb6d6
+git diff --find-renames a67144241bd9ac86b8052502902eddcfb74cbd88 b3e88a9a19239e8f491616bfc853578a055ce6f4
 
 Review concern 03 of 05: Text drawing through the cache (`render`)
 
@@ -59,7 +59,7 @@ Hunk refs for this concern:
 - src/ui/fonts.h
 - src/ui/fonts.c
 - src/ui/render.c
-- CMakeLists.txt@151+151
-- CMakeLists.txt@326+333
+- CMakeLists.txt@166+166
+- CMakeLists.txt@357+364
 - tests/fixtures/smoke_golden.Linux.png
 - js/examples/smoke/src/App.tsx
