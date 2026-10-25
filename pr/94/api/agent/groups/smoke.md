@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify e6f928144dc6343cb90c4b20f7c6ecbb247fab82` and `git rev-parse --verify a9a7092e92ef4a0a4c7e7b17a0cf563ef2d379d3` in this repository.
+   Run `git rev-parse --verify d105b810b495e10a8d957673abeadf9b8055c125` and `git rev-parse --verify 499076450739a23bece60dc7cdcd09d4828225c8` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames e6f928144dc6343cb90c4b20f7c6ecbb247fab82 a9a7092e92ef4a0a4c7e7b17a0cf563ef2d379d3 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames d105b810b495e10a8d957673abeadf9b8055c125 499076450739a23bece60dc7cdcd09d4828225c8 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -23,17 +23,17 @@ When no question follows this paste, explain this review concern.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  e6f928144dc6343cb90c4b20f7c6ecbb247fab82
+base (merge-base)  d105b810b495e10a8d957673abeadf9b8055c125
 
-head               a9a7092e92ef4a0a4c7e7b17a0cf563ef2d379d3
+head               499076450739a23bece60dc7cdcd09d4828225c8
 
-Named refs at pin: origin/feat/color-emoji ... feat/cjk-fallback
+Named refs at pin: d105b810b495e10a8d957673abeadf9b8055c125 ... 499076450739a23bece60dc7cdcd09d4828225c8
 
 Read the diff:
 
-git diff --find-renames e6f928144dc6343cb90c4b20f7c6ecbb247fab82 a9a7092e92ef4a0a4c7e7b17a0cf563ef2d379d3
+git diff --find-renames d105b810b495e10a8d957673abeadf9b8055c125 499076450739a23bece60dc7cdcd09d4828225c8
 
-Review concern 03 of 04: Smoke golden draws CJK (`smoke`)
+Review concern 05 of 06: Smoke golden draws CJK (`smoke`)
 
 The why:
 
@@ -44,7 +44,7 @@ The what:
 The smoke header gets a `日本語 かな 中文` line beside the Hungarian text, and the Linux golden is refreshed to match.
 
 Depends on:
-- 02 Font registry owns and ships the Runtime Fallback Font (`registry`)
+- 03 Font registry owns the Runtime Fallback Font (`registry`)
 
 Hunk refs for this concern:
 - js/examples/smoke/src/App.tsx
