@@ -124,10 +124,6 @@ _Avoid_: Mouse click, Deck App **Press**, confirming a **Text Input** edit
 The desktop host keyboard keys that map to the **Pad Buttons** while a **Deck App** runs and no **Text Input** edit does: Circle Backspace, Triangle T, Square S, L L, R R (see Host mappings).
 _Avoid_: Keybinding, hotkey, shortcut
 
-**Host Pad Button Mapping**:
-The desktop host keyboard keys that map to the **Pad Buttons** while a **Deck App** runs: Circle Backspace, Triangle T, Square S, L L, R R (see Host mappings).
-_Avoid_: Keybinding, hotkey, shortcut
-
 **Host Shell Back Mapping**:
 The desktop host keyboard key that maps to Circle back in **Shell Face Input** while the **VitaDeck Shell** is open (Backspace).
 _Avoid_: Browser back, undo typing in **Deck Apps**, delete file shortcuts
@@ -379,25 +375,6 @@ _Avoid_: localStorage, save file, cache, settings
 - Each **Deck App Package Name** has its own **Deck App Storage**, limited to 1 MiB; a **Deck App** cannot read another's.
 - **Runtime Upload Replacement** keeps the package's **Deck App Storage**; **Installed Deck App Removal** deletes it.
 - **Deck App Storage** is the only filesystem a **Deck App** reaches; no **VitaDeck Runtime API** call takes a file path.
-
-## Host mappings
-
-Every Vita input has a desktop host equivalent, and a connected gamepad works alongside the keyboard. `src/ui/input.c` implements the **Deck App** column and `src/shell/shell.c` the Shell column; change them together with this table.
-
-| Vita | Desktop host | In a **Deck App** | In the **VitaDeck Shell** |
-| --- | --- | --- | --- |
-| D-pad | Arrow keys | Moves **Focus** | Moves between rows and actions |
-| Cross | Enter | Presses the **Button** with **Focus** | Confirm |
-| Circle | Backspace | **Pad Button** `circle` | Back |
-| Triangle | T | **Pad Button** `triangle` | |
-| Square | S | **Pad Button** `square` | |
-| L | L | **Pad Button** `l` | |
-| R | R | **Pad Button** `r` | |
-| Start | F1 | **Start Input**: opens the Shell | **Start Input**: hides the Shell |
-| Select | none | Reserved **System Input** | Reserved **System Input** |
-| Touch press | Mouse press | Presses the **Button** under it; touch clears **Focus**, the mouse focuses that **Button** | |
-| | Mouse hover | Moves **Focus** to the hovered **Button** | |
-| Touch drag, left stick | Mouse wheel | Scrolls a `Scroll`: drag and wheel the one under the pointer, the stick the one holding **Focus** | |
 
 ## Host mappings
 
