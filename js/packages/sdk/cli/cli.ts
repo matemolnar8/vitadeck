@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import babel from "@rollup/plugin-babel";
 import { zipSync } from "fflate";
 import { rolldown } from "rolldown";
+import type { DeckAppPackageManifest } from "../src/package-manifest";
 
 type DeckAppConfig = {
   name: string;
@@ -443,7 +444,7 @@ globalThis.vitadeckPackage.register(DeckApp);
     entry: "app.js",
     ...(manifestFonts ? { fonts: manifestFonts } : {}),
     ...(manifestImages ? { images: manifestImages } : {}),
-  };
+  } satisfies DeckAppPackageManifest;
   await writeFile(path.join(packageDir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
   await rm(generatedEntry, { force: true });
 
