@@ -45,8 +45,9 @@ void instance_back_free(ReactInstance *inst)
     if (inst->type == NT_TEXT && inst->props.text.font_name) {
         free(inst->props.text.font_name);
     }
-    if (inst->type == NT_BUTTON && inst->props.button.label) {
+    if (inst->type == NT_BUTTON) {
         free(inst->props.button.label);
+        free(inst->props.button.font_name);
     }
     if (inst->type == NT_TEXT_INPUT) {
         free(inst->props.text_input.font_name);
@@ -126,6 +127,8 @@ static ReactInstance *copy_instance(Arena *arena, ReactInstance *src)
     case NT_BUTTON:
         dst->props.button = src->props.button;
         dst->props.button.label = src->props.button.label ? arena_strdup(arena, src->props.button.label) : NULL;
+        dst->props.button.font_name =
+            src->props.button.font_name ? arena_strdup(arena, src->props.button.font_name) : NULL;
         break;
     case NT_TEXT_INPUT: {
         const TextInputProps *t = &src->props.text_input;

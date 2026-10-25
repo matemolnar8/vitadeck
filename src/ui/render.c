@@ -345,7 +345,7 @@ static void render_button_instance(ReactInstance *inst, RenderContext ctx)
     }
 
     const int padding = 8;
-    text_draw(font_registry_get(NULL), b->label, (Vector2){abs_x + padding, abs_y + padding},
+    text_draw(font_registry_get(b->font_name), b->label, (Vector2){abs_x + padding, abs_y + padding},
               button_font_size(b), b->text_color);
 }
 
@@ -547,7 +547,7 @@ static void cache_glyphs(ReactInstance *inst)
     }
     case NT_BUTTON: {
         const ButtonProps *b = &inst->props.button;
-        if (b->label) text_measure(font_registry_get(NULL), b->label, button_font_size(b));
+        if (b->label) text_measure(font_registry_get(b->font_name), b->label, button_font_size(b));
         break;
     }
     case NT_TEXT_INPUT: {

@@ -49,6 +49,7 @@ typedef struct {
     Color color;
     Color text_color;
     char *label;
+    char *font_name;
     int font_size;
     float border_radius;
     bool has_focus_color;

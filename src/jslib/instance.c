@@ -122,73 +122,6 @@ static JSValue native_create_text(JSContext *ctx, JSValueConst this_val, int arg
     return JS_UNDEFINED;
 }
 
-// Everything but the label, which create and update own differently.
-static void read_button_props(JSContext *ctx, ButtonProps *button, JSValueConst *argv)
-{
-    int32_t tmp;
-    JS_ToInt32(ctx, &tmp, argv[1]);
-    button->x = tmp;
-    JS_ToInt32(ctx, &tmp, argv[2]);
-    button->y = tmp;
-    JS_ToInt32(ctx, &tmp, argv[3]);
-    button->width = tmp;
-    JS_ToInt32(ctx, &tmp, argv[4]);
-    button->height = tmp;
-
-    int32_t r, g, b, a;
-    JS_ToInt32(ctx, &r, argv[5]);
-    JS_ToInt32(ctx, &g, argv[6]);
-    JS_ToInt32(ctx, &b, argv[7]);
-    JS_ToInt32(ctx, &a, argv[8]);
-    button->color = (Color){r, g, b, a};
-
-    JS_ToInt32(ctx, &tmp, argv[10]);
-    button->font_size = tmp;
-
-    double border_radius;
-    JS_ToFloat64(ctx, &border_radius, argv[11]);
-    button->border_radius = (float)border_radius;
-
-    JS_ToInt32(ctx, &r, argv[12]);
-    JS_ToInt32(ctx, &g, argv[13]);
-    JS_ToInt32(ctx, &b, argv[14]);
-    JS_ToInt32(ctx, &a, argv[15]);
-    button->text_color = (Color){r, g, b, a};
-
-    button->has_focus_color = JS_ToBool(ctx, argv[16]);
-    JS_ToInt32(ctx, &r, argv[17]);
-    JS_ToInt32(ctx, &g, argv[18]);
-    JS_ToInt32(ctx, &b, argv[19]);
-    JS_ToInt32(ctx, &a, argv[20]);
-    button->focus_color = (Color){r, g, b, a};
-}
-
-static JSValue native_create_button(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
-{
-    (void)this_val;
-    instance_back_mark_dirty();
-    if (argc < 21) return JS_UNDEFINED;
-
-    const char *id = to_new_instance_id(ctx, argv[0]);
-    if (!id) return JS_UNDEFINED;
-
-    ReactInstance *inst = calloc(1, sizeof(ReactInstance));
-    inst->id = strdup(id);
-    inst->type = NT_BUTTON;
-    read_button_props(ctx, &inst->props.button, argv);
-
-    const char *label = JS_ToCString(ctx, argv[9]);
-    inst->props.button.label = strdup(label ? label : "");
-    JS_FreeCString(ctx, label);
-
-    inst->children = NULL;
-    inst->parent = NULL;
-
-    instance_back_put(inst);
-    JS_FreeCString(ctx, id);
-    return JS_UNDEFINED;
-}
-
 static Color read_color(JSContext *ctx, JSValueConst *argv)
 {
     int32_t r, g, b, a;
@@ -205,6 +138,68 @@ static void replace_string(JSContext *ctx, char **slot, JSValueConst value, cons
     free(*slot);
     *slot = strdup(str ? str : fallback);
     JS_FreeCString(ctx, str);
+}
+
+#define BUTTON_ARGC 22
+
+// Create and update share every argument; the strings replace any the instance already owns.
+static void read_button_props(JSContext *ctx, ButtonProps *button, JSValueConst *argv)
+{
+    int32_t tmp;
+    JS_ToInt32(ctx, &tmp, argv[1]);
+    button->x = tmp;
+    JS_ToInt32(ctx, &tmp, argv[2]);
+    button->y = tmp;
+    JS_ToInt32(ctx, &tmp, argv[3]);
+    button->width = tmp;
+    JS_ToInt32(ctx, &tmp, argv[4]);
+    button->height = tmp;
+    button->color = read_color(ctx, argv + 5);
+    replace_string(ctx, &button->label, argv[9], "");
+    replace_string(ctx, &button->font_name, argv[10], "default");
+    JS_ToInt32(ctx, &tmp, argv[11]);
+    button->font_size = tmp;
+    double border_radius;
+    JS_ToFloat64(ctx, &border_radius, argv[12]);
+    button->border_radius = (float)border_radius;
+    button->text_color = read_color(ctx, argv + 13);
+    button->has_focus_color = JS_ToBool(ctx, argv[17]);
+    button->focus_color = read_color(ctx, argv + 18);
+}
+
+static JSValue native_create_button(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    instance_back_mark_dirty();
+    if (argc < BUTTON_ARGC) return JS_UNDEFINED;
+
+    const char *id = to_new_instance_id(ctx, argv[0]);
+    if (!id) return JS_UNDEFINED;
+
+    ReactInstance *inst = calloc(1, sizeof(ReactInstance));
+    inst->id = strdup(id);
+    inst->type = NT_BUTTON;
+    read_button_props(ctx, &inst->props.button, argv);
+
+    instance_back_put(inst);
+    JS_FreeCString(ctx, id);
+    return JS_UNDEFINED;
+}
+
+static JSValue native_update_button(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    instance_back_mark_dirty();
+    if (argc < BUTTON_ARGC) return JS_UNDEFINED;
+
+    const char *id = JS_ToCString(ctx, argv[0]);
+    if (!id) return JS_UNDEFINED;
+
+    ReactInstance *inst = instance_back_find(id);
+    if (inst && inst->type == NT_BUTTON) read_button_props(ctx, &inst->props.button, argv);
+
+    JS_FreeCString(ctx, id);
+    return JS_UNDEFINED;
 }
 
 #define TEXT_INPUT_ARGC 24
@@ -715,32 +710,6 @@ static JSValue native_update_text(JSContext *ctx, JSValueConst this_val, int arg
     return JS_UNDEFINED;
 }
 
-static JSValue native_update_button(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
-{
-    (void)this_val;
-    instance_back_mark_dirty();
-    if (argc < 21) return JS_UNDEFINED;
-
-    const char *id = JS_ToCString(ctx, argv[0]);
-    if (!id) return JS_UNDEFINED;
-
-    ReactInstance *inst = instance_back_find(id);
-    if (!inst || inst->type != NT_BUTTON) {
-        JS_FreeCString(ctx, id);
-        return JS_UNDEFINED;
-    }
-
-    read_button_props(ctx, &inst->props.button, argv);
-
-    if (inst->props.button.label) free(inst->props.button.label);
-    const char *label = JS_ToCString(ctx, argv[9]);
-    inst->props.button.label = strdup(label ? label : "");
-    JS_FreeCString(ctx, label);
-
-    JS_FreeCString(ctx, id);
-    return JS_UNDEFINED;
-}
-
 static JSValue native_request_focus(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
@@ -794,7 +763,7 @@ void register_instance_tree(JSContext *ctx)
 {
     js_set_global_function(ctx, "nativeCreateRect", native_create_rect, 16);
     js_set_global_function(ctx, "nativeCreateText", native_create_text, 15);
-    js_set_global_function(ctx, "nativeCreateButton", native_create_button, 21);
+    js_set_global_function(ctx, "nativeCreateButton", native_create_button, BUTTON_ARGC);
     js_set_global_function(ctx, "nativeCreateTextInput", native_create_text_input, TEXT_INPUT_ARGC);
     js_set_global_function(ctx, "nativeCreateScroll", native_create_scroll, SCROLL_ARGC);
     js_set_global_function(ctx, "nativeCreateStack", native_create_stack, STACK_ARGC);
@@ -806,7 +775,7 @@ void register_instance_tree(JSContext *ctx)
     js_set_global_function(ctx, "nativeDestroyInstance", native_destroy_instance, 1);
     js_set_global_function(ctx, "nativeUpdateRect", native_update_rect, 16);
     js_set_global_function(ctx, "nativeUpdateText", native_update_text, 15);
-    js_set_global_function(ctx, "nativeUpdateButton", native_update_button, 21);
+    js_set_global_function(ctx, "nativeUpdateButton", native_update_button, BUTTON_ARGC);
     js_set_global_function(ctx, "nativeUpdateTextInput", native_update_text_input, TEXT_INPUT_ARGC);
     js_set_global_function(ctx, "nativeUpdateScroll", native_update_scroll, SCROLL_ARGC);
     js_set_global_function(ctx, "nativeUpdateStack", native_update_stack, STACK_ARGC);
