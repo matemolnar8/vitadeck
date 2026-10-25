@@ -21,6 +21,44 @@ pnpm and Bun work the same (`pnpm add`, `bun add`).
 npx @vitadeck/sdk create <project-name>
 ```
 
+## Project configuration
+
+`vitadeck.config.json` at the project root:
+
+```json
+{
+  "name": "My Deck App",
+  "entry": "./src/App.tsx",
+  "outDir": "./dist",
+  "version": "1.2.0",
+  "fonts": { "title": "./assets/Title.ttf" },
+  "images": { "logo": "./assets/logo.png" }
+}
+```
+
+- `name` (required): display name shown in the VitaDeck Shell. The package folder name is a slug of it (`My Deck App` → `my-deck-app.vdapp`).
+- `entry` (required): the source file whose default export is your root component.
+- `outDir` (required): parent folder for the built `.vdapp` folder and `.vdapp.zip`.
+- `version` (optional): semver written to the package manifest. Defaults to `version` in `package.json`.
+- `fonts` / `images` (optional): name → file path, relative to the project and inside it. Names start with a letter and use letters, digits, `_` or `-` (max 63 characters); `default` is reserved for fonts. Up to 32 of each. Fonts: `.ttf`, `.otf`, `.fnt`, `.bdf`. Images: `.png`, `.jpg`, `.jpeg`, `.bmp`, `.tga`, `.gif`, `.psd`, `.hdr`, `.pic`, `.qoi`. The build copies them into the package and fails if a file is missing.
+
+Reference assets by name, never by path: `<Text font="title" …>`, `<Image image="logo" …>`.
+
+### TypeScript
+
+Extend the SDK preset and include the generated types:
+
+```json
+{
+  "extends": "@vitadeck/sdk/tsconfig",
+  "include": ["src", ".vitadeck/**/*.d.ts"]
+}
+```
+
+Add `/// <reference types="@vitadeck/sdk/deck-app-env" />` in a `.d.ts` file (the scaffold uses `src/vitadeck-env.d.ts`) to type the globals VitaDeck provides: timers, `getTime`, `fetch`, and `console`.
+
+Each build writes `.vitadeck/font-names.d.ts` and `.vitadeck/image-names.d.ts`, which add your declared names to `VitaDeckFontMap` and `VitaDeckImageMap`. After that, `font` and `image` props only accept declared names. Before the first build, `font` only accepts `"default"` and `image` accepts any string, so build once after adding assets. The folder is regenerated on every build; you can gitignore it.
+
 ## Build
 
 From the root of a Deck App (with `vitadeck.config.json`):
