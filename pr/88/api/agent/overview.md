@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 2d9850830f3b8f421e81f7d6750564e89db51ccc` and `git rev-parse --verify 8944d5cdb7fc7fc450617cca3781bb2cf1808471` in this repository.
+   Run `git rev-parse --verify 8c25053b52e85f60efa5027dffa62bae617dbee1` and `git rev-parse --verify 0f7b8aa7abe6171068e8a6195e17d7545a857733` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -22,23 +22,37 @@ When no question follows this paste, explain this change.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  2d9850830f3b8f421e81f7d6750564e89db51ccc
+base (merge-base)  8c25053b52e85f60efa5027dffa62bae617dbee1
 
-head               8944d5cdb7fc7fc450617cca3781bb2cf1808471
+head               0f7b8aa7abe6171068e8a6195e17d7545a857733
 
-Named refs at pin: origin/feat/text-input ... feat/stack-layout
+Named refs at pin: 8c25053b52e85f60efa5027dffa62bae617dbee1 ... 0f7b8aa7abe6171068e8a6195e17d7545a857733
 
 Read the diff:
 
-git diff --find-renames 2d9850830f3b8f421e81f7d6750564e89db51ccc 8944d5cdb7fc7fc450617cca3781bb2cf1808471
+git diff --find-renames 8c25053b52e85f60efa5027dffa62bae617dbee1 0f7b8aa7abe6171068e8a6195e17d7545a857733
 
 Commits:
+- 0f7b8aa Merge origin/main into feat/stack-layout
 - 8944d5c test(layout): column, row, gap, padding, align, nesting and Scroll parity
 - 5f9c796 docs: Stack glossary entry and SDK Layout section
 - 49e9d7e feat(examples): lay out the timers rows and buttons with Stack
 - 6d12275 feat(runtime): create and update Stack instances; default x/y to 0
 - d4ab5a9 feat(sdk): Stack component; x/y optional on Rect, Button, TextInput and Image
 - f427852 feat(ui): layout pass per swap, Stack instance, Scroll laid out as a column Stack
+- 2d98508 test(input): split the emoji literal so its hex escape ends
+- ac74646 docs: Text Input glossary entry, host mappings and SDK README section
+- f20e514 feat(examples): write your own message in the chat compose row
+- dccbcb4 test(input): text input editing, ending and limits; text event ownership
+- a11774f feat(sdk): TextInput component
+- 7bc88db feat(runtime): create text inputs and deliver confirmed values to onChange
+- b0150c5 feat(ui): vita-text-input instance, editing session and rendering
+- 12859cc feat(platform): text input editing via Vita IME dialog and host keyboard
+- b31c0d6 docs: Focus, Pad Button and the host mapping table
+- de0d962 feat(examples): minesweeper uses focus color, autoFocus and pad buttons
+- 6ca8d96 feat(runtime): dispatch focus, blur and pad buttons; autoFocus on commit
+- 62534f5 feat(sdk): Button focus props and usePadButton
+- 95723a6 feat(input): native focus events, pad buttons and hover focus
 
 Sources:
 - ticket #47 Approved design: Stack with direction, gap, padding, align, fit-content sizing; child x/y are margin and offset; Scroll becomes a scrolling column Stack; one layout pass per swap.
