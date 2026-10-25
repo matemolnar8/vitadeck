@@ -7,6 +7,7 @@
 #include "core/package_library.h"
 
 #define VD_PACKAGE_ENTRY_MAX 64
+#define VD_PACKAGE_ENTRY "app.js"
 #define VD_PACKAGE_ASSET_NAME_MAX 64
 #define VD_PACKAGE_FONT_MAX 32
 #define VD_PACKAGE_IMAGE_MAX 32

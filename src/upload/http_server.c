@@ -8,9 +8,11 @@
 #include <string.h>
 #include <strings.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include "arena.h"
 #include "core/util.h"
+#include "platform/socket.h"
 #include "upload/archive.h"
 #include "upload/http_parse.h"
 
@@ -23,6 +25,7 @@
 #define VD_UPLOAD_DEFAULT_PORT 8787
 #define VD_UPLOAD_PORT_TRIES 10
 #define VD_UPLOAD_HEADER_MAX 32768
+#define VD_UPLOAD_DRAIN_TIMEOUT_SEC 2
 
 typedef struct {
     VdUploadServer *server;
@@ -72,6 +75,17 @@ static void set_last_message(VdUploadServer *server, const char *message)
     vd_mutex_unlock(server->mutex);
 }
 
+static bool send_all(int fd, const char *data, size_t size)
+{
+    while (size > 0) {
+        ssize_t n = send(fd, data, size, VD_MSG_NOSIGNAL);
+        if (n <= 0) return false;
+        data += n;
+        size -= (size_t)n;
+    }
+    return true;
+}
+
 static void send_response(int fd, int status, const char *status_text, const char *content_type, const char *body)
 {
     char header[512];
@@ -83,8 +97,22 @@ static void send_response(int fd, int status, const char *status_text, const cha
                               "Connection: close\r\n"
                               "\r\n",
                               status, status_text, content_type, body_len);
-    send(fd, header, (size_t)header_len, 0);
-    send(fd, body, (size_t)body_len, 0);
+    if (send_all(fd, header, (size_t)header_len)) send_all(fd, body, (size_t)body_len);
+}
+
+// Lingering close after an early rejection: a client still sending its body would otherwise get a connection reset
+// instead of the reply. Reads at most one maximum-size request, giving up after a quiet timeout.
+static void drain_rejected_request(int fd)
+{
+    shutdown(fd, SHUT_WR);
+    struct timeval timeout = {.tv_sec = VD_UPLOAD_DRAIN_TIMEOUT_SEC};
+    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    char buffer[4096];
+    for (size_t drained = 0; drained < VD_UPLOAD_MAX_BYTES + VD_UPLOAD_HEADER_MAX;) {
+        ssize_t n = recv(fd, buffer, sizeof(buffer), 0);
+        if (n <= 0) return;
+        drained += (size_t)n;
+    }
 }
 
 static void drain_request_headers(int fd)
@@ -329,6 +357,7 @@ static void handle_upload(HandlerArg *arg, const char *headers)
 
     if (!take_ingest_lock(server)) {
         send_json_error(arg->fd, 409, "upload_in_progress", "Another Runtime Upload is already in progress.");
+        drain_rejected_request(arg->fd);
         goto done;
     }
     locked = true;
@@ -340,6 +369,7 @@ static void handle_upload(HandlerArg *arg, const char *headers)
     if (!read_request(&arena, arg->fd, &request_headers, &body, &body_len, &read_error)) {
         send_json_error(arg->fd, read_error, read_error == 413 ? "upload_too_large" : "malformed_request",
                         read_error == 413 ? "Uploaded archive exceeds 16MB." : "Could not read upload request.");
+        if (read_error == 413) drain_rejected_request(arg->fd);
         goto done;
     }
 

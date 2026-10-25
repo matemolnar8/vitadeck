@@ -5,6 +5,8 @@ services:
     volumes:
       - ./:/build/git
     working_dir: /build/git
+    environment:
+      - PSVITAIP
     stdin_open: true
     tty: true
     restart: "no"
