@@ -11,6 +11,7 @@ project(vitadeck)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(VITADECK_WERROR "Treat compiler warnings as errors (CI only; newer compilers add warnings)" OFF)
+set(VITADECK_SANITIZE "" CACHE STRING "Host-only -fsanitize= list, e.g. address,undefined")
 
 add_compile_options(-Wall -Wextra)
 if(VITADECK_WERROR)
@@ -21,12 +22,20 @@ if(DEFINED ENV{VITASDK})
   message(STATUS "VITA is ON")
   include("${VITASDK}/share/vita.cmake" REQUIRED)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+  if(VITADECK_SANITIZE)
+    message(FATAL_ERROR "VITADECK_SANITIZE is host-only")
+  endif()
 else()
   message(STATUS "VITA is OFF")
   if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Og -g")
   else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+  endif()
+  if(VITADECK_SANITIZE)
+    message(STATUS "Sanitizers: ${VITADECK_SANITIZE}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=${VITADECK_SANITIZE} -fno-sanitize-recover=all -fno-omit-frame-pointer -g")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=${VITADECK_SANITIZE}")
   endif()
 endif()
 
@@ -98,6 +107,10 @@ set(QUICKJS_SOURCES
 )
 add_library(quickjs STATIC ${QUICKJS_SOURCES})
 target_compile_options(quickjs PRIVATE -w)
+if(VITADECK_SANITIZE)
+  # QuickJS relies on signed-shift and similar UB upstream; ASan still covers it.
+  target_compile_options(quickjs PRIVATE -fno-sanitize=undefined)
+endif()
 target_compile_definitions(quickjs PRIVATE
     CONFIG_VERSION="2024-01-13"
     $<$<NOT:$<BOOL:$ENV{VITASDK}>>:_GNU_SOURCE>
@@ -258,6 +271,11 @@ if(NOT DEFINED ENV{VITASDK})
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       LABELS "smoke"
     )
+    if(VITADECK_SANITIZE)
+      set_tests_properties(smoke_harness PROPERTIES
+        ENVIRONMENT "LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/tests/lsan.supp"
+      )
+    endif()
   endif()
 endif()
 

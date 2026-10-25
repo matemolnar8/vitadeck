@@ -10,6 +10,7 @@ usage: scripts/agent-check.sh [fast|host|smoke|full]
 
 fast   JS typecheck, CLI tests, JS lint, JS and C formatting checks
 host   JS build, host configure/build, and non-smoke CTest
+       (VITADECK_SANITIZE=address,undefined builds the host with sanitizers)
 smoke  Dockerized Linux visual smoke CTest
 full   fast, host, smoke, and Vita Docker build
 EOF
@@ -28,10 +29,11 @@ configure_host() {
     step "Configure host target"
     case "$(uname -s)" in
         Linux)
-            CC=${CC:-gcc} CXX=${CXX:-g++} cmake -S . -B out -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group"
+            CC=${CC:-gcc} CXX=${CXX:-g++} cmake -S . -B out -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group" \
+                -DVITADECK_SANITIZE="${VITADECK_SANITIZE:-}"
             ;;
         *)
-            cmake -S . -B out
+            cmake -S . -B out -DVITADECK_SANITIZE="${VITADECK_SANITIZE:-}"
             ;;
     esac
 }

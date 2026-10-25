@@ -1,0 +1,2 @@
+# Mesa llvmpipe (Docker smoke under Xvfb) keeps JIT allocations alive past exit.
+leak:libLLVM
