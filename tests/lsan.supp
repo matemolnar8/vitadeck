@@ -1,2 +1,4 @@
 # Mesa llvmpipe (Docker smoke under Xvfb) keeps JIT allocations alive past exit.
 leak:libLLVM
+# Mesa/GLX driver init inside raylib's window creation; no VitaDeck code runs below this frame.
+leak:glfwCreateWindow
