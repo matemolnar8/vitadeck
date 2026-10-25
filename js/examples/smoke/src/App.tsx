@@ -29,7 +29,7 @@ const SCROLL_ROWS = [
 ];
 
 export default function SmokeDeckApp() {
-  const { theme, themeName } = useTheme();
+  const { theme } = useTheme();
   const [status, setStatus] = useState("SMOKE_READY");
 
   useEffect(() => {
@@ -70,7 +70,7 @@ export default function SmokeDeckApp() {
           {status}
         </Text>
         <Text x={14} y={20} fontSize={14} color={theme.outline}>
-          SDK / runtime / theme: {themeName}
+          SDK / runtime / theme: dark
         </Text>
       </Rect>
 

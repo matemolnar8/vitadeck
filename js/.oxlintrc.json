@@ -1,12 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "ignorePatterns": [
-    "**/node_modules/**",
-    "**/dist/**",
-    "**/.vitadeck/**",
-    "**/rolldown.config.js",
-    "**/scripts/*.mjs"
-  ],
+  "ignorePatterns": ["**/node_modules/**", "**/dist/**", "**/.vitadeck/**", "**/rolldown*.config.*"],
   "categories": {
     "correctness": "error",
     "suspicious": "error",
@@ -24,5 +18,15 @@
     "react/jsx-no-constructed-context-values": "off",
     "max-lines": "off",
     "max-lines-per-function": "off"
-  }
+  },
+  "overrides": [
+    {
+      "files": ["**/scripts/*.mjs"],
+      "rules": {
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-member-access": "off"
+      }
+    }
+  ]
 }
