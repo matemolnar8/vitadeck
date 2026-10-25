@@ -134,12 +134,14 @@ set(JSLIB_SOURCES
     src/jslib/log.c
     src/jslib/fetch.c
     src/jslib/error.c
+    src/jslib/storage.c
 )
 
 set(VITADECK_SOURCES
     src/main.c
     src/core/arena.c
     src/core/bootstrap.c
+    src/core/deck_app_storage.c
     src/core/js_runtime.c
     src/core/package_manifest.c
     src/core/package_library.c
@@ -223,6 +225,7 @@ if(NOT DEFINED ENV{VITASDK})
 
     add_executable(package_library_harness
       tests/package_library_harness.c
+      src/core/deck_app_storage.c
       src/core/package_library.c
       src/core/package_manifest.c
       src/core/util.c
@@ -235,6 +238,7 @@ if(NOT DEFINED ENV{VITASDK})
       src/upload/archive.c
       src/upload/http_parse.c
       src/core/arena.c
+      src/core/deck_app_storage.c
       src/core/package_library.c
       src/core/package_manifest.c
       src/core/util.c
@@ -284,6 +288,7 @@ if(NOT DEFINED ENV{VITASDK})
       src/upload/archive.c
       src/upload/http_parse.c
       src/core/arena.c
+      src/core/deck_app_storage.c
       src/core/package_library.c
       src/core/package_manifest.c
       src/core/util.c
@@ -298,6 +303,7 @@ if(NOT DEFINED ENV{VITASDK})
       src/core/bootstrap.c
       src/core/js_runtime.c
       src/core/package_manifest.c
+      src/core/deck_app_storage.c
       src/core/package_library.c
       src/core/util.c
       src/core/event_queue.c

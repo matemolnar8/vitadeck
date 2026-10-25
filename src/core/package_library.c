@@ -1,5 +1,6 @@
 #include "package_library.h"
 
+#include "core/deck_app_storage.h"
 #include "core/package_manifest.h"
 #include "core/util.h"
 #include "platform/thread.h"
@@ -199,6 +200,10 @@ bool package_library_init(char *error, size_t error_size)
     return true;
 }
 
+const char *package_library_data_root(void)
+{
+    return g_root;
+}
 const char *package_library_staging_root(void)
 {
     return g_staging_root;
@@ -253,7 +258,11 @@ bool package_library_remove(const char *package_name, char *error, size_t error_
         failure = "Cannot remove the Active Deck App.";
     } else {
         g_list_valid = false;
-        if (!vd_remove_tree(path)) failure = "Could not remove Deck App Package.";
+        if (!vd_remove_tree(path)) {
+            failure = "Could not remove Deck App Package.";
+        } else if (!deck_app_storage_remove(g_root, package_name)) {
+            failure = "Could not remove Deck App Storage.";
+        }
     }
     vd_mutex_unlock(g_mutex);
 
