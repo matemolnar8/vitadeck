@@ -8,7 +8,7 @@ usage() {
     cat <<'EOF'
 usage: scripts/agent-check.sh [fast|host|smoke|full]
 
-fast   JS typecheck, JS lint, and C formatting check
+fast   JS typecheck, CLI tests, JS lint, JS and C formatting checks
 host   JS build, host configure/build, and non-smoke CTest
 smoke  Dockerized Linux visual smoke CTest
 full   fast, host, smoke, and Vita Docker build
@@ -40,8 +40,14 @@ run_fast() {
     step "Typecheck JS"
     pnpm --dir js tsc
 
+    step "Test SDK CLI"
+    pnpm --dir js test:cli
+
     step "Lint JS"
     pnpm --dir js lint
+
+    step "Check JS formatting"
+    pnpm --dir js format:check
 
     step "Check C formatting"
     ./scripts/clang-format.sh check

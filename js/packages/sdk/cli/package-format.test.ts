@@ -98,11 +98,10 @@ async function makeDeckAppProject(overrides: Partial<TestDeckAppConfig> = {}): P
   return projectRoot;
 }
 
-async function runBuild(projectRoot: string): Promise<BuildResult> {
+async function runBuild(projectRoot: string, extraArgs: string[] = []): Promise<BuildResult> {
   try {
-    const { stdout, stderr } = await execFileText(tsxBin, [cliPath, "build", "--no-zip"], {
+    const { stdout, stderr } = await execFileText(tsxBin, [cliPath, "build", "--no-zip", ...extraArgs], {
       cwd: projectRoot,
-      env: { ...process.env, NODE_ENV: "test" },
       maxBuffer: 1024 * 1024,
       timeout: 30_000,
     });
@@ -141,6 +140,32 @@ void test("build writes native-compatible manifest asset paths", async (t) => {
     images: { logo: "images/logo.jpeg" },
   });
 });
+
+for (const { args, mode } of [
+  { args: [], mode: "production" },
+  { args: ["--dev"], mode: "development" },
+]) {
+  void test(`build ${args.join(" ") || "(default)"} bundles NODE_ENV=${mode}`, async (t) => {
+    const projectRoot = await makeDeckAppProject();
+    t.after(async () => {
+      await rm(projectRoot, { recursive: true, force: true });
+    });
+    await writeProjectFile(
+      projectRoot,
+      "src/App.tsx",
+      `export default function App() {
+  return process.env.NODE_ENV;
+}
+`,
+    );
+
+    const result = await runBuild(projectRoot, args);
+    assert.equal(result.ok, true, buildOutput(result));
+    const appJs = await readFile(path.join(projectRoot, "dist/sample-deck.vdapp/app.js"), "utf8");
+    assert.match(appJs, new RegExp(`"${mode}"`, "u"));
+    assert.doesNotMatch(appJs, /process\.env\.NODE_ENV/u);
+  });
+}
 
 void test("build rejects display names that exceed native manifest storage", async (t) => {
   const projectRoot = await makeDeckAppProject({ name: "A".repeat(128) });

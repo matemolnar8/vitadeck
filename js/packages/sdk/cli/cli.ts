@@ -372,7 +372,7 @@ async function copyScaffoldDir(templateRoot: string, targetRoot: string, slug: s
   );
 }
 
-type BuildOptions = { noZip?: boolean };
+type BuildOptions = { noZip?: boolean; dev?: boolean };
 
 async function build(projectRoot = process.cwd(), options: BuildOptions = {}): Promise<void> {
   const config = await readConfig(projectRoot);
@@ -409,7 +409,7 @@ globalThis.vitadeckPackage.register(DeckApp);
     tsconfig: false,
     transform: {
       define: {
-        "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV ?? "development"),
+        "process.env.NODE_ENV": JSON.stringify(options.dev ? "development" : "production"),
       },
     },
     plugins: [
@@ -467,15 +467,15 @@ async function main(): Promise<void> {
   const rawArgs = process.argv.slice(2);
   const flags = new Set(rawArgs.filter((a) => a.startsWith("--")));
   const positional = rawArgs.filter((a) => !a.startsWith("--"));
-  const unknownFlags = [...flags].filter((f) => f !== "--no-zip");
+  const knownFlags = new Set(["--no-zip", "--dev"]);
+  const unknownFlags = [...flags].filter((f) => !knownFlags.has(f));
   if (unknownFlags.length > 0) {
     throw new Error(`Unknown flag(s): ${unknownFlags.join(", ")}`);
   }
-  const noZip = flags.has("--no-zip");
   const [command, arg] = positional;
 
   if (command === undefined || command === "build") {
-    await build(process.cwd(), { noZip });
+    await build(process.cwd(), { noZip: flags.has("--no-zip"), dev: flags.has("--dev") });
     return;
   }
   if (command === "create") {

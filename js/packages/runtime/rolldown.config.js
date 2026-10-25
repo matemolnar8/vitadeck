@@ -2,7 +2,7 @@ import path from "node:path";
 import babel from "@rollup/plugin-babel";
 import { defineConfig } from "rolldown";
 
-const isProd = process.env.NODE_ENV === "production";
+const isProd = process.env.NODE_ENV !== "development";
 
 export default defineConfig({
   input: "./src/main.tsx",
@@ -23,7 +23,7 @@ export default defineConfig({
   tsconfig: false,
   transform: {
     define: {
-      "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || "development"),
+      "process.env.NODE_ENV": JSON.stringify(isProd ? "production" : "development"),
     },
   },
   plugins: [

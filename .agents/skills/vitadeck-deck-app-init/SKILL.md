@@ -62,7 +62,8 @@ Optional `vitadeck.config.json` fields: `version` (overrides `package.json` semv
 1. **Typecheck:** `npx tsc` or `npm run tsc`
 2. **Iterate:** edit `src/App.tsx`, rebuild with `npx @vitadeck/sdk build`
 3. **Skip zip:** `npx @vitadeck/sdk build --no-zip` when only the `.vdapp` folder is needed
-4. **Deploy to Vita:** upload `dist/*.vdapp.zip` via Runtime Upload — see [vitadeck-vdapp-upload](../vitadeck-vdapp-upload/SKILL.md)
+4. **Dev build:** `npx @vitadeck/sdk build --dev` bundles with `NODE_ENV=development` (default is production)
+5. **Deploy to Vita:** upload `dist/*.vdapp.zip` via Runtime Upload — see [vitadeck-vdapp-upload](../vitadeck-vdapp-upload/SKILL.md)
 
 ## Requirements and constraints
 
