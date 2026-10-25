@@ -46,7 +46,7 @@
 <body>
 <header>
   <h1>VitaDeck review queue</h1>
-  <p id="sub">Batch 1 (2026-10-25): 9 of 10 merged, #67 rebasing. New PRs appear here as they open. Approve means Claude squash-merges; Request changes sends your note to a fix agent.</p>
+  <p id="sub">Batch 1 (2026-10-25): all 10 merged (plus hotfix #73). New PRs appear here as they open. Approve means Claude squash-merges; Request changes sends your note to a fix agent.</p>
 </header>
 <main id="list"></main>
 <footer>
@@ -60,7 +60,7 @@ const PRS = [
   {n:63, t:"chore(ci): run CLI tests, lint and format check; production builds by default", fixes:"#57", diff:"+62 −22", base:"main", ci:"merged", note:"Author-visible: build is production by default, new --dev flag, NODE_ENV no longer read."},
   {n:65, t:"fix(core): guard package library state with a mutex", fixes:"#42", diff:"+96 −45", base:"main", ci:"merged"},
   {n:66, t:"fix(runtime): show a failure screen when a Deck App throws after boot", fixes:"#44", diff:"+167 −63", base:"main", ci:"merged", note:"Adds the Deck App Failure Screen term to CONTEXT.md. Screenshots in the PR body."},
-  {n:67, t:"refactor(js): single source for native globals and a typed host config", fixes:"#56", diff:"+114 −71", base:"main", ci:"rebasing onto main (conflict with #66), merge pending", note:"One-line ci.yml conflict with #63; merge #63 first."},
+  {n:67, t:"refactor(js): single source for native globals and a typed host config", fixes:"#56", diff:"+114 −71", base:"main", ci:"merged", note:"One-line ci.yml conflict with #63; merge #63 first."},
   {n:71, t:"chore: fix stale glossary, document SDK config, prune dead theme and files", fixes:"#59", diff:"+203 −930", base:"main", ci:"merged", note:"SDK type change: removes ThemeName, Theme.name, light theme."},
   {n:70, t:"docs(adr): host control sliced delivery and topology", fixes:"refs #45", diff:"+61 −0", base:"main", ci:"merged", note:"Five confirmations for you on issue #45."},
   {n:62, t:"fix(upload): reap finished handler threads so the listener keeps accepting", fixes:"#41", diff:"+65 −27", base:"main", ci:"merged"},
