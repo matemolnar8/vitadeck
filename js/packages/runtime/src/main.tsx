@@ -1,19 +1,11 @@
 import * as vitadeckSdk from "@vitadeck/sdk";
-import { ThemeProvider } from "@vitadeck/sdk/internal";
+import { ThemeProvider, type DeckAppPackageManifest } from "@vitadeck/sdk/internal";
 import React, { StrictMode, type ComponentType } from "react";
 import * as reactCompilerRuntime from "react-compiler-runtime";
 import { installFetch } from "./fetch";
 import { onInputEventFromNative } from "./input";
 import type { MetricSummary } from "./reconciler-metrics";
 import { getMetrics, render, resetMetrics } from "./vitadeck-react-reconciler-mutation";
-
-type DeckAppPackageManifest = {
-  schemaVersion: number;
-  name: string;
-  version: string;
-  entry: string;
-  fonts?: Record<string, string>;
-};
 
 let deckAppComponent: ComponentType | null = null;
 let packageLoaded = false;
