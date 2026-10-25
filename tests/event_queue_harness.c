@@ -1,6 +1,7 @@
 #include "core/event_queue.h"
 #include "platform/thread.h"
 
+#include <raylib.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -60,7 +61,7 @@ static void test_fifo_and_wraparound(void)
     expect(event_queue_pop(&out) && memcmp(&out, &long_evt, sizeof(out)) == 0, "event round-trips byte for byte");
 }
 
-// The queue silently drops the newest event when full; push has no return value to report it.
+// The queue drops the newest event when full and only logs it; push has no return value to report it.
 static void test_full_queue_drops_newest(void)
 {
     for (int i = 0; i < CAPACITY + 44; i++)
@@ -165,6 +166,7 @@ static void test_concurrent_producer(void)
 
 int main(void)
 {
+    SetTraceLogLevel(LOG_NONE);
     if (!event_queue_init()) {
         fprintf(stderr, "event_queue_harness: could not create the queue mutex\n");
         return 1;

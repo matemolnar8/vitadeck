@@ -1,5 +1,6 @@
 // Runs runtime.js stand-ins on the real JS thread and checks that hitting the QuickJS stack and memory
-// limits or the fetch body cap reaches the Deck App Failure Screen instead of crashing.
+// limits or the fetch body cap reaches the Deck App Failure Screen instead of crashing, and that only
+// promise rejections still unhandled after the microtask queue drains do.
 #include <raylib.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -108,6 +109,16 @@ int main(void)
                                "out of memory");
     failures += expect_fetch("fetch at limit", "at-limit.txt", "resolved 4194304");
     failures += expect_fetch("fetch over limit", "over-limit.txt", "rejected: fetch response body exceeds the 4 MiB limit");
+    failures += expect_failure("unhandled rejection", DECK_APP_PRELUDE "Promise.reject(new Error('boom'));\n", "boom");
+    failures += expect_failure("unhandled rejection in timer",
+                               DECK_APP_PRELUDE "setTimeout(() => { Promise.reject(new Error('late boom')); }, 0);\n",
+                               "late boom");
+    // nativeReportDeckAppError only shows if nothing failed first, since the first failure is kept.
+    failures += expect_failure("rejection handled later",
+                               DECK_APP_PRELUDE "const p = Promise.reject(new Error('boom'));"
+                                                "Promise.resolve().then(() => p.catch(() => {}));"
+                                                "setTimeout(() => nativeReportDeckAppError('still running'), 0);\n",
+                               "still running");
 
     event_queue_destroy();
     unlink("at-limit.txt");

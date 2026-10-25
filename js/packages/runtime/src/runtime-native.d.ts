@@ -231,9 +231,10 @@ declare global {
 
   function nativeClearContainer(): void;
 
-  function nativeReadTextFile(path: string): string;
-  function nativeEvalFile(path: string): void;
-  function nativeGetActiveDeckAppPath(): string;
+  function nativeEvalActiveDeckAppEntry(): void;
+  // Called by `storage` in @vitadeck/sdk.
+  function nativeReadDeckAppStorage(): string;
+  function nativeWriteDeckAppStorage(json: string): void;
   function nativeReportDeckAppError(message: string, stack: string): void;
 
   function nativeFetch(

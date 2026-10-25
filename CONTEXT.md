@@ -124,6 +124,10 @@ _Avoid_: Mouse click, Deck App **Press**, confirming a **Text Input** edit
 The desktop host keyboard keys that map to the **Pad Buttons** while a **Deck App** runs and no **Text Input** edit does: Circle Backspace, Triangle T, Square S, L L, R R (see Host mappings).
 _Avoid_: Keybinding, hotkey, shortcut
 
+**Host Pad Button Mapping**:
+The desktop host keyboard keys that map to the **Pad Buttons** while a **Deck App** runs: Circle Backspace, Triangle T, Square S, L L, R R (see Host mappings).
+_Avoid_: Keybinding, hotkey, shortcut
+
 **Host Shell Back Mapping**:
 The desktop host keyboard key that maps to Circle back in **Shell Face Input** while the **VitaDeck Shell** is open (Backspace).
 _Avoid_: Browser back, undo typing in **Deck Apps**, delete file shortcuts
@@ -173,7 +177,7 @@ Restarting the Deck App JavaScript runtime with a fresh context after **Runtime 
 _Avoid_: Hot reload, refresh, soft reload
 
 **Deck App Failure Screen**:
-The VitaDeck-painted screen that replaces the **Active Deck App** after it throws an uncaught error (during boot, render, effects, input handlers, or timers), showing the error message, the first lines of its stack, and that **Start Input** opens the **VitaDeck Shell**. A **Deck App Runtime Restart** clears it.
+The VitaDeck-painted screen that replaces the **Active Deck App** after it throws an uncaught error (during boot, render, effects, input handlers, or timers), showing the error message, the first lines of its stack, and that **Start Input** opens the **VitaDeck Shell**. A **Deck App Runtime Restart** clears it. A promise rejection that still has no handler once pending promise callbacks have run counts as an uncaught error, so a `fetch` chain without a `catch` fails the Deck App instead of failing silently.
 _Avoid_: Crash screen, red box, blank screen
 
 **Runtime Upload Archive**:
@@ -255,6 +259,10 @@ _Avoid_: Host Control Companion, desktop app, daemon, host build
 **Host Control Link**:
 The step where the **Host Companion**, given the address shown in the **VitaDeck Shell**, tells VitaDeck where to send **Host Control** commands. VitaDeck keeps that address until a newer link replaces it or the user forgets it. It exchanges addresses, not credentials.
 _Avoid_: Pairing, Upload Pairing, session, typing the computer's address on the Vita
+
+**Deck App Storage**:
+The string key-value store a **Deck App** keeps across **Deck App Runtime Restarts** and VitaDeck restarts, through `storage` in the **VitaDeck Runtime API**.
+_Avoid_: localStorage, save file, cache, settings
 
 ## Relationships
 
@@ -368,6 +376,28 @@ _Avoid_: Pairing, Upload Pairing, session, typing the computer's address on the 
 - **Host Control Link** starts from the **VitaDeck Shell** and does not use the **Runtime Upload Listener**.
 - **Host Control** results use the same `ok` / `code` / `message` JSON shape as **Runtime Upload POST**.
 - **Host Control Link** is not **Upload Pairing**; initial **Host Control** trusts the local network like initial **Runtime Upload**.
+- Each **Deck App Package Name** has its own **Deck App Storage**, limited to 1 MiB; a **Deck App** cannot read another's.
+- **Runtime Upload Replacement** keeps the package's **Deck App Storage**; **Installed Deck App Removal** deletes it.
+- **Deck App Storage** is the only filesystem a **Deck App** reaches; no **VitaDeck Runtime API** call takes a file path.
+
+## Host mappings
+
+Every Vita input has a desktop host equivalent, and a connected gamepad works alongside the keyboard. `src/ui/input.c` implements the **Deck App** column and `src/shell/shell.c` the Shell column; change them together with this table.
+
+| Vita | Desktop host | In a **Deck App** | In the **VitaDeck Shell** |
+| --- | --- | --- | --- |
+| D-pad | Arrow keys | Moves **Focus** | Moves between rows and actions |
+| Cross | Enter | Presses the **Button** with **Focus** | Confirm |
+| Circle | Backspace | **Pad Button** `circle` | Back |
+| Triangle | T | **Pad Button** `triangle` | |
+| Square | S | **Pad Button** `square` | |
+| L | L | **Pad Button** `l` | |
+| R | R | **Pad Button** `r` | |
+| Start | F1 | **Start Input**: opens the Shell | **Start Input**: hides the Shell |
+| Select | none | Reserved **System Input** | Reserved **System Input** |
+| Touch press | Mouse press | Presses the **Button** under it; touch clears **Focus**, the mouse focuses that **Button** | |
+| | Mouse hover | Moves **Focus** to the hovered **Button** | |
+| Touch drag, left stick | Mouse wheel | Scrolls a `Scroll`: drag and wheel the one under the pointer, the stick the one holding **Focus** | |
 
 ## Host mappings
 
