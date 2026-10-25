@@ -21,6 +21,8 @@ pnpm and Bun work the same (`pnpm add`, `bun add`).
 npx @vitadeck/sdk create <project-name>
 ```
 
+`create` refuses a directory that already has files in it; pass `--force` to scaffold into it anyway. `npx @vitadeck/sdk --help` lists every command and flag.
+
 ## Project configuration
 
 `vitadeck.config.json` at the project root:
@@ -68,6 +70,23 @@ npx @vitadeck/sdk build
 ```
 
 `npx @vitadeck/sdk` with no subcommand runs **build**. Use `npx @vitadeck/sdk build --no-zip` to skip the `.zip` archive. Builds bundle your app with `NODE_ENV=production`; pass `--dev` (`npx @vitadeck/sdk build --dev`) for a development build.
+
+## Develop on a Vita
+
+Open the VitaDeck Shell on the Vita (or the desktop host), confirm **Upload**, and copy the Runtime Upload URL it shows. Then, from the Deck App root:
+
+```bash
+npx @vitadeck/sdk dev http://192.168.1.50:8787/
+```
+
+`dev` builds like `build --dev`, uploads the `.vdapp.zip`, then rebuilds and uploads again every time you save. The scheme and port are optional (`192.168.1.50` means `http://192.168.1.50:8787/`). Each upload prints one line:
+
+```text
+[14:02:11] installed my-deck-app.vdapp 1.2.0
+[14:02:40] 422 invalid_package: manifest.json is missing "entry"
+```
+
+Activate the Deck App once in the Shell. After that, each upload replaces the Active Deck App and restarts it with fresh state (a restart, not hot reload). Build errors are printed and watching continues; Ctrl-C stops. "Nothing is listening" means Upload is not open in the Shell or the address is wrong.
 
 ## Links
 
