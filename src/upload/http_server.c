@@ -24,19 +24,42 @@
 typedef struct {
     VdUploadServer *server;
     int fd;
+    int slot;
 } HandlerArg;
 
-static void remove_client_fd(VdUploadServer *server, int fd)
+static void remove_client_fd_locked(VdUploadServer *server, int fd)
 {
-    if (fd < 0) return;
-    vd_mutex_lock(server->mutex);
     for (int i = 0; i < server->open_client_count; i++) {
         if (server->open_client_fds[i] == fd) {
             server->open_client_fds[i] = server->open_client_fds[--server->open_client_count];
             break;
         }
     }
+}
+
+static void remove_client_fd(VdUploadServer *server, int fd)
+{
+    vd_mutex_lock(server->mutex);
+    remove_client_fd_locked(server, fd);
     vd_mutex_unlock(server->mutex);
+}
+
+static void reap_finished_handlers(VdUploadServer *server)
+{
+    vd_thread *finished[VD_UPLOAD_MAX_OPEN_CLIENTS];
+    int finished_count = 0;
+    vd_mutex_lock(server->mutex);
+    for (int i = 0; i < VD_UPLOAD_MAX_OPEN_CLIENTS; i++) {
+        if (server->handlers[i].thread && server->handlers[i].done) {
+            finished[finished_count++] = server->handlers[i].thread;
+            server->handlers[i] = (VdUploadHandler){0};
+        }
+    }
+    vd_mutex_unlock(server->mutex);
+    for (int i = 0; i < finished_count; i++) {
+        vd_thread_join(finished[i]);
+        vd_thread_destroy(finished[i]);
+    }
 }
 
 static void set_error(char *error, size_t error_size, const char *message)
@@ -420,7 +443,10 @@ static void *handler_thread(void *raw)
     }
 
 done:
-    remove_client_fd(arg->server, arg->fd);
+    vd_mutex_lock(arg->server->mutex);
+    remove_client_fd_locked(arg->server, arg->fd);
+    arg->server->handlers[arg->slot].done = true;
+    vd_mutex_unlock(arg->server->mutex);
     close(arg->fd);
     free(arg);
     return NULL;
@@ -438,6 +464,8 @@ static void *server_thread(void *raw)
             continue;
         }
 
+        reap_finished_handlers(server);
+
         HandlerArg *arg = calloc(1, sizeof(*arg));
         if (!arg) {
             close(fd);
@@ -445,9 +473,16 @@ static void *server_thread(void *raw)
         }
         arg->server = server;
         arg->fd = fd;
+        arg->slot = -1;
 
         vd_mutex_lock(server->mutex);
-        if (server->open_client_count >= VD_UPLOAD_MAX_OPEN_CLIENTS) {
+        for (int i = 0; i < VD_UPLOAD_MAX_OPEN_CLIENTS; i++) {
+            if (!server->handlers[i].thread) {
+                arg->slot = i;
+                break;
+            }
+        }
+        if (arg->slot < 0 || server->open_client_count >= VD_UPLOAD_MAX_OPEN_CLIENTS) {
             vd_mutex_unlock(server->mutex);
             close(fd);
             free(arg);
@@ -456,6 +491,7 @@ static void *server_thread(void *raw)
         server->open_client_fds[server->open_client_count++] = fd;
         vd_mutex_unlock(server->mutex);
 
+        int slot = arg->slot;
         vd_thread *handler = vd_thread_create(handler_thread, arg);
         if (!handler) {
             remove_client_fd(server, fd);
@@ -465,16 +501,8 @@ static void *server_thread(void *raw)
         }
 
         vd_mutex_lock(server->mutex);
-        if (server->handler_count < VD_UPLOAD_MAX_OPEN_CLIENTS) {
-            server->handlers[server->handler_count++] = handler;
-            vd_mutex_unlock(server->mutex);
-        } else {
-            vd_mutex_unlock(server->mutex);
-            remove_client_fd(server, fd);
-            shutdown(fd, SHUT_RDWR);
-            vd_thread_join(handler);
-            vd_thread_destroy(handler);
-        }
+        server->handlers[slot].thread = handler;
+        vd_mutex_unlock(server->mutex);
     }
     return NULL;
 }
@@ -556,12 +584,12 @@ void upload_server_stop(VdUploadServer *server)
         if (pending_fds[i] >= 0) (void)shutdown(pending_fds[i], SHUT_RDWR);
     }
 
-    for (int i = 0; i < server->handler_count; i++) {
-        vd_thread_join(server->handlers[i]);
-        vd_thread_destroy(server->handlers[i]);
-        server->handlers[i] = NULL;
+    for (int i = 0; i < VD_UPLOAD_MAX_OPEN_CLIENTS; i++) {
+        if (!server->handlers[i].thread) continue;
+        vd_thread_join(server->handlers[i].thread);
+        vd_thread_destroy(server->handlers[i].thread);
+        server->handlers[i] = (VdUploadHandler){0};
     }
-    server->handler_count = 0;
 }
 
 bool upload_server_is_running(VdUploadServer *server)
@@ -588,9 +616,14 @@ bool upload_server_take_success(VdUploadServer *server, bool *restart_active, Vd
     return success;
 }
 
-void upload_server_last_message(VdUploadServer *server, char *out, size_t out_size)
+bool upload_server_take_message(VdUploadServer *server, char *out, size_t out_size)
 {
     vd_mutex_lock(server->mutex);
-    snprintf(out, out_size, "%s", server->last_message);
+    bool has_message = server->last_message[0] != '\0';
+    if (has_message) {
+        snprintf(out, out_size, "%s", server->last_message);
+        server->last_message[0] = '\0';
+    }
     vd_mutex_unlock(server->mutex);
+    return has_message;
 }

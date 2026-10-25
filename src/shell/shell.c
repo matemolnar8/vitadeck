@@ -246,8 +246,9 @@ bool shell_is_visible(const VdShell *shell)
 void shell_update(VdShell *shell, bool *request_runtime_restart)
 {
     char message[256];
-    upload_server_last_message(&shell->upload_server, message, sizeof(message));
-    if (message[0] != '\0') snprintf(shell->message, sizeof(shell->message), "%s", message);
+    if (upload_server_take_message(&shell->upload_server, message, sizeof(message))) {
+        snprintf(shell->message, sizeof(shell->message), "%s", message);
+    }
 
     bool restart_active = false;
     VdPackageInfo info;
