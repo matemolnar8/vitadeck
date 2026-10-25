@@ -34,20 +34,33 @@ export type VitaRectProps = WithKey<{
   children?: ReactNode | ReactNode[];
 }>;
 
-export type VitaButtonProps = WithKey<{
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  color?: Color;
-  textColor?: Color;
-  /** Corner radius in pixels (CSS `border-radius` semantics). */
-  borderRadius?: number;
-  label: string;
-  onPress?: () => void;
-  onPressStart?: () => void;
-  onPressEnd?: () => void;
-}>;
+export type FocusProps = {
+  /** Called when this control takes **Focus** (D-pad navigation, autoFocus, or mouse hover on the desktop host). */
+  onFocus?: () => void;
+  /** Called when this control loses **Focus**. */
+  onBlur?: () => void;
+  /** Fill while focused. Defaults to `color` lightened by 40%. */
+  focusColor?: Color;
+  /** Take **Focus** on mount; when several mount together, the last one wins. */
+  autoFocus?: boolean;
+};
+
+export type VitaButtonProps = WithKey<
+  FocusProps & {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    color?: Color;
+    textColor?: Color;
+    /** Corner radius in pixels (CSS `border-radius` semantics). */
+    borderRadius?: number;
+    label: string;
+    onPress?: () => void;
+    onPressStart?: () => void;
+    onPressEnd?: () => void;
+  }
+>;
 
 export type VitaScrollProps = WithKey<{
   x: number;
