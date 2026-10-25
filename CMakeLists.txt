@@ -244,7 +244,7 @@ if(NOT DEFINED ENV{VITASDK})
     add_test(NAME upload_parsing_harness COMMAND upload_parsing_harness)
 
     add_executable(event_queue_harness tests/event_queue_harness.c src/core/event_queue.c ${PLATFORM_SOURCES})
-    target_link_libraries(event_queue_harness pthread)
+    target_link_libraries(event_queue_harness pthread ${RAYLIB_LIBRARIES})
     add_test(NAME event_queue_harness COMMAND event_queue_harness)
 
     add_executable(snapshot_swap_harness

@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "quickjs.h"
+#include "stb_ds.h"
 #include "core/event_queue.h"
 #include "core/util.h"
 #include "jslib/jslib.h"
@@ -43,13 +44,46 @@ static int run_function(JSContext *ctx, const char *func_name)
     return ret;
 }
 
-static void drain_microtasks(JSRuntime *rt)
+// QuickJS reports a rejection with no handler (is_handled false), then again with is_handled true if a
+// handler attaches later, so rejections are held until the microtask queue drains.
+static void track_rejection(JSContext *ctx, JSValueConst promise, JSValueConst reason, JS_BOOL is_handled, void *opaque)
+{
+    (void)reason;
+    JSValue **pending = opaque;
+    if (!is_handled) {
+        arrput(*pending, JS_DupValue(ctx, promise));
+        return;
+    }
+    for (ptrdiff_t i = 0; i < arrlen(*pending); i++) {
+        if (JS_VALUE_GET_PTR((*pending)[i]) == JS_VALUE_GET_PTR(promise)) {
+            JS_FreeValue(ctx, (*pending)[i]);
+            arrdelswap(*pending, i);
+            return;
+        }
+    }
+}
+
+static void clear_rejections(JSContext *ctx, JSValue **pending, bool report)
+{
+    for (ptrdiff_t i = 0; i < arrlen(*pending); i++) {
+        if (report) {
+            JSValue reason = JS_PromiseResult(ctx, (*pending)[i]);
+            js_report_rejection(ctx, reason);
+            JS_FreeValue(ctx, reason);
+        }
+        JS_FreeValue(ctx, (*pending)[i]);
+    }
+    arrfree(*pending);
+}
+
+static void drain_microtasks(JSContext *ctx, JSValue **pending_rejections)
 {
     JSContext *pctx;
     int err;
-    while ((err = JS_ExecutePendingJob(rt, &pctx)) != 0) {
+    while ((err = JS_ExecutePendingJob(JS_GetRuntime(ctx), &pctx)) != 0) {
         if (err < 0) js_report_exception(pctx, "microtask");
     }
+    clear_rejections(ctx, pending_rejections, true);
 }
 
 // Sleeps until the next timer is due, capped so queued input is still picked up promptly.
@@ -67,6 +101,7 @@ static void *js_thread_func(void *arg)
     VdJsRuntime *runtime = arg;
     JSRuntime *rt = NULL;
     JSContext *ctx = NULL;
+    JSValue *pending_rejections = NULL;
     void *result = NULL;
 
     rt = JS_NewRuntime();
@@ -77,6 +112,7 @@ static void *js_thread_func(void *arg)
     }
     JS_SetMemoryLimit(rt, JS_MEMORY_LIMIT);
     JS_SetMaxStackSize(rt, VD_THREAD_STACK_SIZE - JS_STACK_HEADROOM);
+    JS_SetHostPromiseRejectionTracker(rt, track_rejection, &pending_rejections);
 
     ctx = JS_NewContext(rt);
     if (!ctx) {
@@ -108,7 +144,7 @@ static void *js_thread_func(void *arg)
 
     if (run_function(ctx, "updateContainer") != 0) goto defer;
 
-    drain_microtasks(rt);
+    drain_microtasks(ctx, &pending_rejections);
     instance_tree_swap();
     runtime->ready = true;
 
@@ -116,7 +152,7 @@ static void *js_thread_func(void *arg)
         bool busy = process_input_events(ctx);
         busy |= run_timeouts(ctx);
         busy |= run_fetch(ctx);
-        drain_microtasks(rt);
+        drain_microtasks(ctx, &pending_rejections);
         busy |= instance_tree_swap();
         int sleep_ms = busy ? 0 : idle_sleep_ms();
         if (sleep_ms > 0) {
@@ -127,6 +163,7 @@ static void *js_thread_func(void *arg)
     }
 
 defer:
+    if (ctx) clear_rejections(ctx, &pending_rejections, false);
     if (ctx) timeout_shutdown(ctx);
     if (ctx) fetch_shutdown(ctx);
     if (ctx) JS_FreeContext(ctx);
