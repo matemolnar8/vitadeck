@@ -42,6 +42,15 @@ jobs:
       - name: Typecheck JS
         run: pnpm --dir js tsc
 
+      - name: Test SDK CLI
+        run: pnpm --dir js test:cli
+
+      - name: Lint JS
+        run: pnpm --dir js lint
+
+      - name: Check JS formatting
+        run: pnpm --dir js format:check
+
       - name: Cache ccache
         uses: actions/cache@v5
         with:

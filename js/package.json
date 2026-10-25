@@ -8,8 +8,9 @@
     "build": "pnpm --filter @vitadeck/sdk build && pnpm --filter \"./examples/*\" build && pnpm --filter @vitadeck/runtime build",
     "build:prod": "NODE_ENV=production pnpm build",
     "tsc": "pnpm --filter @vitadeck/sdk tsc && pnpm --filter @vitadeck/runtime tsc && pnpm --filter \"./examples/*\" tsc",
-    "lint": "oxlint",
-    "lint:fix": "oxlint --fix",
+    "test:cli": "pnpm --filter @vitadeck/sdk test:cli",
+    "lint": "node examples/chat/scripts/ensure-genesys-local.mjs && oxlint",
+    "lint:fix": "node examples/chat/scripts/ensure-genesys-local.mjs && oxlint --fix",
     "format": "oxfmt",
     "format:check": "oxfmt --check"
   },
