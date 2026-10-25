@@ -61,8 +61,8 @@ jobs:
           platforms: linux/amd64
           load: true
           tags: vitadeck-vitasdk:ci
-          cache-from: type=gha,scope=vitadeck-vitasdk-v2
-          cache-to: type=gha,mode=max,scope=vitadeck-vitasdk-v2
+          cache-from: type=gha,scope=vitadeck-vitasdk-v3
+          cache-to: type=gha,mode=max,scope=vitadeck-vitasdk-v3
 
       - name: Build Vita target in Vitasdk container
         run: |
