@@ -196,6 +196,17 @@ if(NOT DEFINED ENV{VITASDK})
     add_executable(package_manifest_harness tests/package_manifest_harness.c src/core/package_manifest.c)
     add_test(NAME package_manifest_harness COMMAND package_manifest_harness)
 
+    add_executable(upload_parsing_harness
+      tests/upload_parsing_harness.c
+      src/upload/archive.c
+      src/upload/http_parse.c
+      src/core/arena.c
+      src/core/package_library.c
+      src/core/package_manifest.c
+    )
+    target_link_libraries(upload_parsing_harness ZLIB::ZLIB)
+    add_test(NAME upload_parsing_harness COMMAND upload_parsing_harness)
+
     set(SMOKE_HARNESS_SOURCES
       tests/smoke_harness.c
       src/core/arena.c
