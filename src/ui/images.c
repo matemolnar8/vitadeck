@@ -3,9 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "core/package_manifest.h"
 #include "core/util.h"
-#include "core/package_library.h"
 
 #define VD_IMAGE_NAME_MAX 64
 #define VD_IMAGE_MAX 32
@@ -42,28 +40,22 @@ static bool load_texture_file(const char *path, Texture2D *out, char *error, siz
     return true;
 }
 
-bool image_registry_load_package(const char *package_path, char *error, size_t error_size)
+bool image_registry_load_package(const char *package_path, const VdPackageManifest *manifest, char *error,
+                                 size_t error_size)
 {
     unload_package_images();
-    if (!package_path || package_path[0] == '\0') return true;
+    if (!manifest) return true;
 
-    char package_name[VD_PACKAGE_NAME_MAX];
-    package_library_active_package_name(package_name, sizeof(package_name));
-    VdPackageManifest manifest;
-    if (!package_manifest_read(package_path, package_name, &manifest, error, error_size)) {
-        return false;
-    }
-
-    for (int i = 0; i < manifest.image_count; i++) {
+    for (int i = 0; i < manifest->image_count; i++) {
         char image_path[VD_PATH_MAX];
-        vd_join_path(image_path, sizeof(image_path), package_path, manifest.images[i].path);
+        vd_join_path(image_path, sizeof(image_path), package_path, manifest->images[i].path);
         Texture2D texture = {0};
         if (!load_texture_file(image_path, &texture, error, error_size)) {
             unload_package_images();
             return false;
         }
         snprintf(g_package_images[g_package_image_count].name, sizeof(g_package_images[g_package_image_count].name),
-                 "%s", manifest.images[i].name);
+                 "%s", manifest->images[i].name);
         g_package_images[g_package_image_count].texture = texture;
         g_package_image_count++;
     }

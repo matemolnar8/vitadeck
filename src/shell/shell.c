@@ -257,6 +257,7 @@ void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart)
 {
     if (start_pressed()) {
         if (shell->state == VD_SHELL_HIDDEN) {
+            package_library_refresh();
             shell->state = VD_SHELL_HOME;
             shell->focus_row = 0;
             shell->scroll_row = 0;

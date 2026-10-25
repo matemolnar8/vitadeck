@@ -21,10 +21,14 @@ static char g_root[VD_PATH_MAX] = VD_DATA_ROOT;
 static char g_installed_root[VD_PATH_MAX];
 static char g_staging_root[VD_PATH_MAX];
 
-// Guards the active package state and changes to installed package directories.
+// Guards the active package state, the cached package list, and changes to installed package directories.
 static vd_mutex *g_mutex;
 static char g_active_name[VD_PACKAGE_NAME_MAX];
 static char g_active_path[VD_PATH_MAX];
+// Scanned on the first list after an invalidation; is_active is filled in when copied out.
+static VdPackageInfo g_list[VD_PACKAGE_LIST_MAX];
+static int g_list_count;
+static bool g_list_valid;
 
 static bool read_package_info(const char *package_path, const char *package_name, VdPackageInfo *out_info, char *error,
                               size_t error_size)
@@ -113,27 +117,44 @@ static int package_compare(const void *a, const void *b)
     return strcmp(pa->package_name, pb->package_name);
 }
 
-int package_library_list(VdPackageInfo *items, int max_items)
+static void scan_list_locked(void)
 {
-    if (!items || max_items <= 0) return 0;
-    char active_name[VD_PACKAGE_NAME_MAX];
-    package_library_active_package_name(active_name, sizeof(active_name));
+    g_list_count = 0;
+    g_list_valid = true;
     DIR *dir = opendir(g_installed_root);
-    if (!dir) return 0;
+    if (!dir) return;
 
-    int count = 0;
     struct dirent *entry;
-    while ((entry = readdir(dir)) && count < max_items) {
+    while ((entry = readdir(dir)) && g_list_count < VD_PACKAGE_LIST_MAX) {
         if (entry->d_name[0] == '.' || !vd_has_suffix(entry->d_name, ".vdapp")) continue;
         char path[VD_PATH_MAX];
         vd_join_path(path, sizeof(path), g_installed_root, entry->d_name);
-        if (!read_package_info(path, entry->d_name, &items[count], NULL, 0)) continue;
-        items[count].is_active = strcmp(entry->d_name, active_name) == 0;
-        count++;
+        if (!read_package_info(path, entry->d_name, &g_list[g_list_count], NULL, 0)) continue;
+        g_list_count++;
     }
     closedir(dir);
-    qsort(items, (size_t)count, sizeof(VdPackageInfo), package_compare);
+    qsort(g_list, (size_t)g_list_count, sizeof(VdPackageInfo), package_compare);
+}
+
+int package_library_list(VdPackageInfo *items, int max_items)
+{
+    if (!items || max_items <= 0) return 0;
+    vd_mutex_lock(g_mutex);
+    if (!g_list_valid) scan_list_locked();
+    int count = g_list_count < max_items ? g_list_count : max_items;
+    for (int i = 0; i < count; i++) {
+        items[i] = g_list[i];
+        items[i].is_active = strcmp(items[i].package_name, g_active_name) == 0;
+    }
+    vd_mutex_unlock(g_mutex);
     return count;
+}
+
+void package_library_refresh(void)
+{
+    vd_mutex_lock(g_mutex);
+    g_list_valid = false;
+    vd_mutex_unlock(g_mutex);
 }
 
 bool package_library_init(char *error, size_t error_size)
@@ -230,8 +251,9 @@ bool package_library_remove(const char *package_name, char *error, size_t error_
     vd_mutex_lock(g_mutex);
     if (strcmp(package_name, g_active_name) == 0) {
         failure = "Cannot remove the Active Deck App.";
-    } else if (!vd_remove_tree(path)) {
-        failure = "Could not remove Deck App Package.";
+    } else {
+        g_list_valid = false;
+        if (!vd_remove_tree(path)) failure = "Could not remove Deck App Package.";
     }
     vd_mutex_unlock(g_mutex);
 
@@ -259,6 +281,7 @@ bool package_library_publish_package(const char *source_path, const char *packag
     vd_remove_tree(backup);
 
     vd_mutex_lock(g_mutex);
+    g_list_valid = false;
     if (vd_is_dir(destination) && rename(destination, backup) != 0) {
         vd_mutex_unlock(g_mutex);
         vd_set_error(error, error_size, "Could not prepare existing package for replacement.");

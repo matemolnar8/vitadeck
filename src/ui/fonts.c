@@ -2,9 +2,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "core/package_manifest.h"
 #include "core/util.h"
-#include "core/package_library.h"
 
 #define VD_FONT_LOAD_SIZE 64
 #define VD_FONT_NAME_MAX 64
@@ -51,28 +49,22 @@ bool font_registry_init(char *error, size_t error_size)
     return true;
 }
 
-bool font_registry_load_package(const char *package_path, char *error, size_t error_size)
+bool font_registry_load_package(const char *package_path, const VdPackageManifest *manifest, char *error,
+                                size_t error_size)
 {
     unload_package_fonts();
-    if (!package_path || package_path[0] == '\0') return true;
+    if (!manifest) return true;
 
-    char package_name[VD_PACKAGE_NAME_MAX];
-    package_library_active_package_name(package_name, sizeof(package_name));
-    VdPackageManifest manifest;
-    if (!package_manifest_read(package_path, package_name, &manifest, error, error_size)) {
-        return false;
-    }
-
-    for (int i = 0; i < manifest.font_count; i++) {
+    for (int i = 0; i < manifest->font_count; i++) {
         char font_path[VD_PATH_MAX];
-        vd_join_path(font_path, sizeof(font_path), package_path, manifest.fonts[i].path);
+        vd_join_path(font_path, sizeof(font_path), package_path, manifest->fonts[i].path);
         Font font = {0};
         if (!load_font_file(font_path, &font, error, error_size)) {
             unload_package_fonts();
             return false;
         }
         snprintf(g_package_fonts[g_package_font_count].name, sizeof(g_package_fonts[g_package_font_count].name), "%s",
-                 manifest.fonts[i].name);
+                 manifest->fonts[i].name);
         g_package_fonts[g_package_font_count].font = font;
         g_package_font_count++;
     }

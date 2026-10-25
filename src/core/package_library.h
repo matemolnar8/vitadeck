@@ -24,7 +24,10 @@ const char *package_library_staging_root(void);
 void package_library_active_package_name(char *out, size_t out_size);
 void package_library_active_package_path(char *out, size_t out_size);
 
+// Copies the cached Installed Deck App Library listing. Publish and remove refresh it automatically.
 int package_library_list(VdPackageInfo *items, int max_items);
+// Rescans the installed packages on the next list, for changes made outside the library.
+void package_library_refresh(void);
 bool package_library_set_active(const char *package_name, char *error, size_t error_size);
 bool package_library_remove(const char *package_name, char *error, size_t error_size);
 bool package_library_validate_package(const char *package_path, const char *package_name, VdPackageInfo *out_info,

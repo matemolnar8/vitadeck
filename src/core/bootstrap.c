@@ -5,6 +5,7 @@
 
 #include "core/event_queue.h"
 #include "core/package_library.h"
+#include "core/package_manifest.h"
 #include "ui/fonts.h"
 #include "ui/images.h"
 #include "ui/instance_tree.h"
@@ -14,17 +15,24 @@ static bool load_active_package_assets(VdBootstrap *bootstrap, char *error, size
 {
     char package_path[VD_PATH_MAX] = "";
     if (package_library_has_active_deck_app()) package_library_active_package_path(package_path, sizeof(package_path));
-    if (!font_registry_load_package(package_path, error, error_size)) {
-        js_runtime_fail(&bootstrap->js_runtime, error, NULL);
-        image_registry_load_package("", NULL, 0);
-        return false;
+
+    VdPackageManifest manifest;
+    const VdPackageManifest *active_manifest = NULL;
+    bool ok = true;
+    if (package_path[0] != '\0') {
+        char package_name[VD_PACKAGE_NAME_MAX];
+        package_library_active_package_name(package_name, sizeof(package_name));
+        ok = package_manifest_read(package_path, package_name, &manifest, error, error_size);
+        if (ok) active_manifest = &manifest;
     }
-    if (!image_registry_load_package(package_path, error, error_size)) {
+    ok = ok && font_registry_load_package(package_path, active_manifest, error, error_size) &&
+         image_registry_load_package(package_path, active_manifest, error, error_size);
+    if (!ok) {
         js_runtime_fail(&bootstrap->js_runtime, error, NULL);
-        font_registry_load_package("", error, error_size);
-        return false;
+        font_registry_load_package(NULL, NULL, NULL, 0);
+        image_registry_load_package(NULL, NULL, NULL, 0);
     }
-    return true;
+    return ok;
 }
 
 void bootstrap_init(VdBootstrap *bootstrap)
