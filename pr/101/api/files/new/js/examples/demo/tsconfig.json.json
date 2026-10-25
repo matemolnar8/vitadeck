@@ -1,0 +1,1 @@
+{"path":"js/examples/demo/tsconfig.json","ref":"1ac414061e4d8ecdbe718effe4daca0449592e05","side":"new","content":"{\n  \"extends\": \"@vitadeck/sdk/tsconfig\",\n  \"include\": [\"src\", \".vitadeck/**/*.d.ts\"]\n}\n","language":"json"}
