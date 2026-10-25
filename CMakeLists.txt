@@ -247,6 +247,18 @@ if(NOT DEFINED ENV{VITASDK})
     target_link_libraries(upload_parsing_harness ZLIB::ZLIB)
     add_test(NAME upload_parsing_harness COMMAND upload_parsing_harness)
 
+    add_executable(storage_harness
+      tests/storage_harness.c
+      src/jslib/storage.c
+      src/core/deck_app_storage.c
+      src/core/package_library.c
+      src/core/package_manifest.c
+      src/core/util.c
+      ${PLATFORM_SOURCES}
+    )
+    target_link_libraries(storage_harness quickjs m pthread)
+    add_test(NAME storage_harness COMMAND storage_harness)
+
     add_executable(event_queue_harness tests/event_queue_harness.c src/core/event_queue.c ${PLATFORM_SOURCES})
     target_link_libraries(event_queue_harness pthread)
     add_test(NAME event_queue_harness COMMAND event_queue_harness)
