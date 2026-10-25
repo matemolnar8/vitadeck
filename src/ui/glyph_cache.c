@@ -62,6 +62,7 @@ static int g_page_count = 0;
 static int g_current_page = -1;
 static unsigned g_frame = 1;
 static int g_rasterised = 0;
+static int g_overflowed = 0;
 static const VdGlyphFont *g_fallback = NULL;
 static VdGlyphFontLoader g_fallback_loader = NULL;
 static const VdGlyphFont *g_last_fallback = NULL;
@@ -223,7 +224,11 @@ static bool rasterise(const VdGlyphFont *font, int glyph_index, int size, VdGlyp
     int x = 0, y = 0;
     int page = atlas_allocate(width, height, &x, &y);
     unsigned char *coverage = page >= 0 ? malloc((size_t)width * (size_t)height) : NULL;
-    if (!coverage) return false;
+    if (!coverage) {
+        *out = (VdGlyph){-1, 0, 0, width, height, x0, y0, out->advance, false};
+        g_overflowed++;
+        return false;
+    }
     stbtt_MakeGlyphBitmap(info, coverage, width, height, width, scale, scale, glyph_index);
 
     unsigned char *pixels = g_pages[page].pixels;
@@ -283,7 +288,12 @@ static bool rasterise_emoji(const VdGlyphFont *font, int size, const unsigned ch
     *out = (VdGlyph){.page = -1, .offset_y = -(int)roundf(ascent), .advance = (float)size, .color = true};
     int x = 0, y = 0;
     int page = atlas_allocate(size, size, &x, &y);
-    if (page < 0) return false;
+    if (page < 0) {
+        out->width = out->height = size;
+        out->color = false;
+        g_overflowed++;
+        return false;
+    }
 
     unsigned char *pixels = g_pages[page].pixels;
     for (int row = 0; row < size; row++) {
@@ -384,6 +394,7 @@ VdGlyph glyph_cache_get_emoji(const VdGlyphFont *font, int size, const VdEmojiSe
 void glyph_cache_begin_frame(void)
 {
     g_frame++;
+    g_overflowed = 0;
 }
 
 void glyph_cache_reset(void)
@@ -397,6 +408,7 @@ void glyph_cache_reset(void)
     hmfree(g_glyphs);
     hmfree(g_emoji);
     g_rasterised = 0;
+    g_overflowed = 0;
 }
 
 const unsigned char *glyph_cache_take_dirty_page(int page)
@@ -408,7 +420,7 @@ const unsigned char *glyph_cache_take_dirty_page(int page)
 
 VdGlyphCacheStats glyph_cache_stats(void)
 {
-    return (VdGlyphCacheStats){g_page_count, (int)hmlen(g_glyphs), g_rasterised};
+    return (VdGlyphCacheStats){g_page_count, (int)hmlen(g_glyphs), g_rasterised, g_overflowed};
 }
 
 uint32_t vd_utf8_next(const char *text, int *length)

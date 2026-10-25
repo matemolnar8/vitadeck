@@ -8,6 +8,7 @@
 #define TEXT_SPACING 1.0f
 
 static Texture2D g_page_textures[VD_GLYPH_ATLAS_PAGE_MAX];
+static bool g_overflow_warned = false;
 
 void text_begin_frame(void)
 {
@@ -26,6 +27,12 @@ void text_reset(void)
 // Once per frame, before drawing: vitaGL copies the whole texture when one already drawn this frame changes.
 void text_upload_pages(void)
 {
+    int overflowed = glyph_cache_stats().overflowed;
+    if (overflowed > 0 && !g_overflow_warned) {
+        TraceLog(LOG_WARNING, "TEXT: This frame needs more glyphs than %d atlas pages hold; %d draw as boxes",
+                 VD_GLYPH_ATLAS_PAGE_MAX, overflowed);
+        g_overflow_warned = true;
+    }
     for (int page = 0; page < VD_GLYPH_ATLAS_PAGE_MAX; page++) {
         const unsigned char *pixels = glyph_cache_take_dirty_page(page);
         if (!pixels) continue;
@@ -130,11 +137,13 @@ void text_draw(const VdFont *font, const char *text, Vector2 position, int font_
         if (!cluster.emoji && draws_nothing(cluster.codepoint)) continue;
 
         VdGlyph glyph = cluster.emoji ? cluster.glyph : glyph_cache_get(font->outline, font_size, cluster.codepoint);
+        Vector2 at = {roundf(pen) + (float)glyph.offset_x, baseline + (float)glyph.offset_y};
         if (glyph.page >= 0 && IsTextureValid(g_page_textures[glyph.page])) {
             Rectangle source = {(float)glyph.x, (float)glyph.y, (float)glyph.width, (float)glyph.height};
-            Vector2 at = {roundf(pen) + (float)glyph.offset_x, baseline + (float)glyph.offset_y};
             Color tint = glyph.color ? (Color){255, 255, 255, color.a} : color;
             DrawTextureRec(g_page_textures[glyph.page], source, at, tint);
+        } else if (glyph.page < 0 && glyph.width > 0) {
+            DrawRectangleLines((int)at.x, (int)at.y, glyph.width, glyph.height, color);
         }
         pen += glyph.advance + TEXT_SPACING;
     }

@@ -422,7 +422,21 @@ static void test_pages(const VdGlyphFont *full)
     expect(pages_in_order, "pages fill one after another");
     expect(glyph_cache_stats().pages == VD_GLYPH_ATLAS_PAGE_MAX, "pages grow up to the cap");
     expect(refused != 0, "with every page used this frame, a new glyph waits for a later frame");
+    VdGlyph box = glyph_cache_get(full, size, refused);
+    expect(box.page == -1 && box.width > 0 && box.height > 0, "a glyph with no room is a box to draw in its place");
+    expect(glyph_cache_stats().overflowed == 2, "each lookup with no room counts as overflow");
     int glyphs_before = glyph_cache_stats().glyphs;
+
+    glyph_cache_begin_frame();
+    expect(glyph_cache_stats().overflowed == 0, "a frame starts without overflow");
+    int rasterised_before = glyph_cache_stats().rasterised;
+    for (uint32_t codepoint = first; codepoint <= refused; codepoint++) {
+        if (codepoint >= 0x7f && codepoint < 0xa1) continue;
+        glyph_cache_get(full, size, codepoint);
+    }
+    expect(glyph_cache_stats().rasterised == rasterised_before,
+           "repeating an overflowing frame keeps its glyphs instead of clearing pages it draws from");
+    expect(glyph_cache_stats().overflowed == 1, "repeating an overflowing frame overflows the same way");
 
     glyph_cache_begin_frame();
     VdGlyph placed = glyph_cache_get(full, size, refused);

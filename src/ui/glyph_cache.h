@@ -6,7 +6,8 @@
 
 // Glyphs rasterise on first use at the exact pixel size into RGBA8 atlas pages: white, with coverage in alpha.
 // Colour emoji share the pages, resampled to a Font Size square.
-// When every page is full, the least recently used one is cleared; one used this frame is never cleared.
+// When every page is full, the least recently used one is cleared; one used this frame is never cleared, so a glyph
+// that finds no room waits for a later frame and draws as a missing-glyph box until then.
 #define VD_GLYPH_ATLAS_PAGE_SIZE 1024
 #define VD_GLYPH_ATLAS_PAGE_BYTES (VD_GLYPH_ATLAS_PAGE_SIZE * VD_GLYPH_ATLAS_PAGE_SIZE * 4)
 #define VD_GLYPH_ATLAS_PAGE_MAX 4
@@ -27,7 +28,8 @@ typedef struct {
 } VdGlyphFontMetrics;
 
 typedef struct {
-    // -1 when the glyph has no pixels, like a space, or found no room this frame.
+    // -1 when the glyph has no pixels, like a space, or found no room this frame; then width and height, if set, are
+    // the box to draw in its place.
     int page;
     int x, y, width, height;
     // From the pen position on the baseline to the bitmap's top-left corner.
@@ -52,6 +54,8 @@ typedef struct {
     int pages;
     int glyphs;
     int rasterised;
+    // Lookups this frame that found no room in the atlas.
+    int overflowed;
 } VdGlyphCacheStats;
 
 // TrueType or OpenType; NULL when the file is missing or not a font.
