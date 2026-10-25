@@ -10,6 +10,8 @@
 #define VD_IMAGE_NAME_MAX 64
 #define VD_IMAGE_MAX 32
 
+_Static_assert(VD_IMAGE_MAX >= VD_PACKAGE_IMAGE_MAX, "image registry must hold every manifest image");
+
 typedef struct {
     char name[VD_IMAGE_NAME_MAX];
     Texture2D texture;

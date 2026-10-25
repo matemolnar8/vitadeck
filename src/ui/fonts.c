@@ -11,6 +11,8 @@
 #define VD_FONT_MAX 32
 #define VD_DEFAULT_FONT_PATH "assets/fonts/DejaVuSans.ttf"
 
+_Static_assert(VD_FONT_MAX >= VD_PACKAGE_FONT_MAX, "font registry must hold every manifest font");
+
 typedef struct {
     char name[VD_FONT_NAME_MAX];
     Font font;
