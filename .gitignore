@@ -17,6 +17,7 @@ node_modules/
 **/node_modules/
 
 # Downloaded by cmake/fetch_asset.cmake
+/assets/.downloads/
 /assets/emoji/*
 !/assets/emoji/LICENSE.txt
 !/assets/emoji/README.md

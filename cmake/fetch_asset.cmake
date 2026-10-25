@@ -3,13 +3,14 @@
 # Downloads a pinned file once at configure time into the gitignored <dir> and checks its SHA-256. With EXTRACT the
 # download is an archive and the members matching <glob> land in <dir> without their archive folders; without it the
 # download itself lands as <dir>/<url's file name>. STRIP removes <text> from each landed file name.
-# A stamp file <dir>/.<name>-<hash> lists the landed files, so a changed pin replaces them and an unchanged one does
-# not download again. Sets <name>_FOUND in the caller. A failed download only warns with FALLBACK, what the build does without the
-# file, so offline builds still succeed.
+# A stamp in the gitignored assets/.downloads lists the landed files, so a changed pin replaces them and an unchanged
+# one does not download again; <dir> holds only what ships. Sets <name>_FOUND in the caller. A failed download only
+# warns with FALLBACK, what the build does without the file, so offline builds still succeed.
 function(vitadeck_fetch_asset name)
   cmake_parse_arguments(PARSE_ARGV 1 arg "" "URL;SHA256;DIR;FALLBACK;EXTRACT;STRIP" "")
   set(dir "${arg_DIR}")
-  set(stamp "${dir}/.${name}-${arg_SHA256}")
+  set(state "${CMAKE_SOURCE_DIR}/assets/.downloads")
+  set(stamp "${state}/${name}-${arg_SHA256}")
   set(${name}_FOUND OFF PARENT_SCOPE)
   if(EXISTS "${stamp}")
     file(STRINGS "${stamp}" stamped_files)
@@ -30,7 +31,7 @@ function(vitadeck_fetch_asset name)
     return()
   endif()
 
-  set(staging "${dir}/.download-${name}")
+  set(staging "${state}/${name}")
   get_filename_component(file_name "${arg_URL}" NAME)
   set(download "${staging}/${file_name}")
   file(REMOVE_RECURSE "${staging}")
@@ -66,7 +67,7 @@ function(vitadeck_fetch_asset name)
     return()
   endif()
 
-  file(GLOB previous_stamps "${dir}/.${name}-*")
+  file(GLOB previous_stamps "${state}/${name}-*")
   foreach(previous_stamp IN LISTS previous_stamps)
     file(STRINGS "${previous_stamp}" previous_files)
     foreach(previous IN LISTS previous_files)

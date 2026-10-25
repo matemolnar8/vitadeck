@@ -79,6 +79,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: |
+            assets/.downloads
             assets/emoji
             assets/fonts
           key: assets-${{ hashFiles('cmake/fetch_asset.cmake', 'cmake/twemoji.cmake', 'cmake/fonts.cmake') }}
@@ -132,6 +133,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: |
+            assets/.downloads
             assets/emoji
             assets/fonts
           key: assets-${{ hashFiles('cmake/fetch_asset.cmake', 'cmake/twemoji.cmake', 'cmake/fonts.cmake') }}
