@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include "arena.h"
 #include "core/util.h"
+#include "platform/socket.h"
 #include "upload/archive.h"
 #include "upload/http_parse.h"
 
@@ -72,6 +73,17 @@ static void set_last_message(VdUploadServer *server, const char *message)
     vd_mutex_unlock(server->mutex);
 }
 
+static bool send_all(int fd, const char *data, size_t size)
+{
+    while (size > 0) {
+        ssize_t n = send(fd, data, size, VD_MSG_NOSIGNAL);
+        if (n <= 0) return false;
+        data += n;
+        size -= (size_t)n;
+    }
+    return true;
+}
+
 static void send_response(int fd, int status, const char *status_text, const char *content_type, const char *body)
 {
     char header[512];
@@ -83,8 +95,7 @@ static void send_response(int fd, int status, const char *status_text, const cha
                               "Connection: close\r\n"
                               "\r\n",
                               status, status_text, content_type, body_len);
-    send(fd, header, (size_t)header_len, 0);
-    send(fd, body, (size_t)body_len, 0);
+    if (send_all(fd, header, (size_t)header_len)) send_all(fd, body, (size_t)body_len);
 }
 
 static void drain_request_headers(int fd)

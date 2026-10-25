@@ -142,6 +142,25 @@ static void test_lock_released_on_every_exit(VdUploadServer *server)
     expect(!is_ingesting(server), "a wrong content type releases the ingest lock");
 }
 
+// Writing a reply to a client that already hung up must fail the send, not raise SIGPIPE and kill the process.
+static void test_client_gone_before_reply(VdUploadServer *server)
+{
+    Client client;
+    if (!client_open(&client, server,
+                     "POST /upload HTTP/1.1\r\n"
+                     "Content-Type: text/plain\r\n"
+                     "Content-Length: 4\r\n"
+                     "\r\n"
+                     "junk")) {
+        expect(false, "could not open a socketpair client");
+        return;
+    }
+    close(client.client_fd);
+    handle_upload(&client.arg, NULL);
+    close(client.arg.fd);
+    expect(!is_ingesting(server), "a reply to a gone client releases the ingest lock");
+}
+
 int main(void)
 {
     char root[] = "/tmp/vitadeck-single-flight-XXXXXX";
@@ -155,6 +174,7 @@ int main(void)
     upload_server_init(&server);
     test_second_upload_is_rejected(&server);
     test_lock_released_on_every_exit(&server);
+    test_client_gone_before_reply(&server);
     vd_mutex_destroy(server.mutex);
     vd_remove_tree(root);
 
