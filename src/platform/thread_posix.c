@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <sched.h>
+#include <time.h>
 
 struct vd_thread {
     pthread_t handle;
@@ -37,6 +38,12 @@ void vd_thread_destroy(vd_thread *t)
 void vd_thread_yield(void)
 {
     sched_yield();
+}
+
+void vd_sleep_ms(int ms)
+{
+    struct timespec ts = {.tv_sec = ms / 1000, .tv_nsec = (long)(ms % 1000) * 1000000L};
+    nanosleep(&ts, NULL);
 }
 
 vd_mutex *vd_mutex_create(void)

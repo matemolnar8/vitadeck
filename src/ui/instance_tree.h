@@ -4,6 +4,9 @@
 #include <stdbool.h>
 #include <raylib.h>
 
+// Longest instance id including its terminator; native create calls reject longer ids.
+#define VD_INSTANCE_ID_MAX 64
+
 typedef enum { NT_RECT = 1, NT_TEXT = 2, NT_BUTTON = 3, NT_RAW_TEXT = 4, NT_SCROLL = 5, NT_IMAGE = 6 } NodeType;
 
 typedef struct {
@@ -84,18 +87,19 @@ int scroll_content_height(const ReactInstance *scroll);
 bool instance_scroll_metrics(const char *id, int *viewport_height, int *content_height);
 
 // Nearest scroll container containing this instance, or the instance itself if it is a scroll.
-// Returns a malloc'd id (caller frees) or NULL.
-char *instance_scroll_for_descendant(const char *id);
+// Copies its id into out_id and returns true, or returns false when there is none.
+bool instance_scroll_for_descendant(const char *id, char out_id[VD_INSTANCE_ID_MAX]);
 
 // Deepest scroll container whose viewport contains (x, y).
-// Returns a malloc'd id (caller frees) or NULL.
-char *instance_scroll_at(int x, int y);
+// Copies its id into out_id and returns true, or returns false when there is none.
+bool instance_scroll_at(int x, int y, char out_id[VD_INSTANCE_ID_MAX]);
 
 // Initialize the instance tree (call once at startup before any threads)
 void instance_tree_init(void);
 
-// Swap back buffer to front buffer (call from JS thread after mutations)
-void instance_tree_swap(void);
+// Publish the back buffer as the front snapshot if a mutation marked it dirty since the last swap.
+// Call from the JS thread. Returns whether it swapped.
+bool instance_tree_swap(void);
 void instance_tree_clear(void);
 
 // Render lock/unlock - UI thread must hold lock during entire render
@@ -105,8 +109,8 @@ void instance_tree_render_unlock(void);
 // Get root children for rendering (must hold render lock)
 ReactInstance **instance_get_root_children(void);
 
-// Hit testing (thread-safe, acquires lock internally). Caller frees the returned id.
-char *instance_hit_test(int x, int y);
+// Hit testing (thread-safe, acquires lock internally). Copies the hit id into out_id and returns true on a hit.
+bool instance_hit_test(int x, int y, char out_id[VD_INSTANCE_ID_MAX]);
 bool instance_exists(const char *id);
 
 // Focusable elements for gamepad navigation
@@ -119,6 +123,7 @@ FocusableElement *get_focusable_elements(int *count);
 void free_focusable_elements(FocusableElement *elems, int count);
 
 // Back-buffer operations (called from JS thread only)
+void instance_back_mark_dirty(void);
 ReactInstance *instance_back_find(const char *id);
 void instance_back_put(ReactInstance *inst);
 void instance_back_del(const char *id);

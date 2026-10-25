@@ -294,9 +294,9 @@ static JSValue js_native_fetch(JSContext *ctx, JSValueConst this_val, int argc, 
     return promise;
 }
 
-void run_fetch(JSContext *ctx)
+bool run_fetch(JSContext *ctx)
 {
-    if (!fetch_pending) return;
+    if (!fetch_pending) return false;
 
     FetchRequest **finished = NULL;
     vd_mutex_lock(fetch_mutex);
@@ -315,7 +315,9 @@ void run_fetch(JSContext *ctx)
         resolve_fetch(ctx, req);
         free_fetch_request(ctx, req);
     }
+    bool ran = arrlen(finished) > 0;
     arrfree(finished);
+    return ran;
 }
 
 void fetch_shutdown(JSContext *ctx)

@@ -70,6 +70,11 @@ void vd_thread_yield(void)
     sceKernelDelayThread(1000);
 }
 
+void vd_sleep_ms(int ms)
+{
+    sceKernelDelayThread((SceUInt)ms * 1000);
+}
+
 vd_mutex *vd_mutex_create(void)
 {
     vd_mutex *m = malloc(sizeof(vd_mutex));

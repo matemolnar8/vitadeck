@@ -198,6 +198,15 @@ if(NOT DEFINED ENV{VITASDK})
     add_executable(package_manifest_harness tests/package_manifest_harness.c src/core/package_manifest.c src/core/util.c)
     add_test(NAME package_manifest_harness COMMAND package_manifest_harness)
 
+    add_executable(package_library_harness
+      tests/package_library_harness.c
+      src/core/package_library.c
+      src/core/package_manifest.c
+      src/core/util.c
+      ${PLATFORM_SOURCES}
+    )
+    add_test(NAME package_library_harness COMMAND package_library_harness)
+
     add_executable(upload_parsing_harness
       tests/upload_parsing_harness.c
       src/upload/archive.c

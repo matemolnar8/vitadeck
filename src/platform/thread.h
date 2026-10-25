@@ -9,6 +9,7 @@ vd_thread *vd_thread_create(void *(*func)(void *), void *arg);
 void vd_thread_join(vd_thread *t);
 void vd_thread_destroy(vd_thread *t);
 void vd_thread_yield(void);
+void vd_sleep_ms(int ms);
 
 // Mutex
 vd_mutex *vd_mutex_create(void);

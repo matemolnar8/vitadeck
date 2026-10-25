@@ -16,7 +16,8 @@ type Type = keyof VitaHostPropsByType;
 type Props = VitaHostPropsByType[Type] & { key?: string };
 type PropsByType = { [K in Type]: VitaHostPropsByType[K] };
 type HostContext = { root: boolean };
-type UpdatePayload = { props: string[] } | null;
+// native: a prop the C instance stores changed; handlers: only the JS input handlers need re-registering.
+type UpdatePayload = { native: boolean; handlers: boolean };
 
 type Instance = {
   id: string;
@@ -169,6 +170,37 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
   }
 };
 
+const handlerKeys = new Set(["onPress", "onPressStart", "onPressEnd"]);
+
+const isColor = (value: unknown): value is Color =>
+  typeof value === "object" && value !== null && "r" in value && "g" in value && "b" in value && "a" in value;
+
+// Colors are often fresh object literals on every render, so they compare by value.
+const samePropValue = (prev: unknown, next: unknown): boolean =>
+  prev === next ||
+  (isColor(prev) && isColor(next) && prev.r === next.r && prev.g === next.g && prev.b === next.b && prev.a === next.a);
+
+const propRecord = (props: Props): Readonly<Record<string, unknown>> => props;
+
+const diffProps = (oldProps: Props, newProps: Props): UpdatePayload | null => {
+  const prev = propRecord(oldProps);
+  const next = propRecord(newProps);
+  let native = false;
+  let handlers = false;
+  const compare = (key: string) => {
+    // Children are reconciled as their own instances and never reach the native update.
+    if (key === "children") return;
+    if (handlerKeys.has(key)) {
+      handlers ||= prev[key] !== next[key];
+    } else {
+      native ||= !samePropValue(prev[key], next[key]);
+    }
+  };
+  for (const key of Object.keys(next)) compare(key);
+  for (const key of Object.keys(prev)) if (!(key in next)) compare(key);
+  return native || handlers ? { native, handlers } : null;
+};
+
 // Update native instance based on type
 const updateNativeInstance = (id: string, type: Type, props: Props): void => {
   if (type === "vita-rect") {
@@ -196,7 +228,6 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
       outlineColor.a,
       p.borderRadius ?? 0,
     );
-    updateHandlers(id, extractHandlers(props));
   } else if (type === "vita-text") {
     const p = props as PropsByType["vita-text"];
     const [hasColor, r, g, b, a] = colorToArgs(p.color, Colors.BLACK);
@@ -240,7 +271,6 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
       textColor.b,
       textColor.a,
     );
-    updateHandlers(id, extractHandlers(props));
   } else if (type === "vita-scroll") {
     const p = props as PropsByType["vita-scroll"];
     const [hasFill, r, g, b, a] = colorToArgs(p.color, Colors.BLANK);
@@ -311,16 +341,7 @@ const rawHostConfig = {
 
   prepareUpdate(_instance, type, oldProps, newProps, _rootContainerInstance, _hostContext) {
     logReconcilerFunction("prepareUpdate", type);
-    const changes = {
-      props: [] as string[],
-    };
-    const keys = Object.keys({ ...oldProps, ...newProps });
-    for (const key of keys) {
-      if ((oldProps as Record<string, unknown>)[key] !== (newProps as Record<string, unknown>)[key]) {
-        changes.props.push(key);
-      }
-    }
-    return changes.props.length > 0 ? { props: changes.props } : null;
+    return diffProps(oldProps, newProps);
   },
 
   appendChild(parentInstance, child) {
@@ -364,9 +385,10 @@ const rawHostConfig = {
     // Text content is managed via children, no action needed
   },
 
-  commitUpdate(instance, _updatePayload, type, _prevProps, nextProps: Props, _internalInstanceHandle) {
+  commitUpdate(instance, updatePayload, type, _prevProps, nextProps: Props, _internalInstanceHandle) {
     logReconcilerFunction("commitUpdate", type);
-    updateNativeInstance(instance.id, type, nextProps);
+    if (updatePayload.native) updateNativeInstance(instance.id, type, nextProps);
+    if (updatePayload.handlers) updateHandlers(instance.id, extractHandlers(nextProps));
   },
 
   clearContainer(_container) {
