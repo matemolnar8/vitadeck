@@ -71,7 +71,7 @@ npx @vitadeck/sdk build
 
 ## Focus and pad buttons
 
-One `Button` at a time has focus: the D-pad moves it and Cross presses it. Touch presses a `Button` directly.
+One `Button` or `TextInput` at a time has focus: the D-pad moves it and Cross presses it. Touch presses it directly.
 
 ```tsx
 import { Button, usePadButton } from "@vitadeck/sdk";
@@ -84,6 +84,20 @@ usePadButton("circle", { onPressStart: () => setScreen("menu") });
 - `onFocus` / `onBlur` fire when the `Button` gains or loses focus. `focusColor` fills it while focused (default: `color` lightened). `autoFocus` focuses it on mount; the last one mounted wins.
 - `usePadButton(button, { onPressStart, onPressEnd })` listens to `"circle"`, `"triangle"`, `"square"`, `"l"` or `"r"` while the component is mounted. Start and Select belong to VitaDeck.
 - On the desktop build, arrow keys and Enter are the D-pad and Cross; Backspace, T, S, L and R are Circle, Triangle, Square, L and R; hovering a `Button` with the mouse focuses it. The full table is under [Host mappings](https://github.com/matemolnar8/vitadeck/blob/main/CONTEXT.md#host-mappings).
+
+## Text input
+
+`TextInput` is a controlled single-line field. Pressing it starts an edit: the Vita opens its keyboard dialog, pre-filled with `value` and titled with `placeholder`; the desktop build edits in place, where you type, Backspace deletes, Enter confirms and Escape cancels. `onChange` fires once with the final text when the edit is confirmed; a cancelled edit fires nothing.
+
+```tsx
+import { TextInput } from "@vitadeck/sdk";
+
+const [name, setName] = useState("");
+
+<TextInput x={20} y={80} width={400} height={56} value={name} onChange={setName} placeholder="Your name" />;
+```
+
+`maxLength` (default 256, at most 2048) counts like `string.length`. It takes focus like a `Button`, with `focusColor` as its outline (default: `textColor`). Text is UTF-8; characters outside the runtime font render as boxes.
 
 ## Links
 
