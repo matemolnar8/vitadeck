@@ -117,12 +117,6 @@ importers:
         specifier: 'catalog:'
         version: 7.0.2
 
-  examples:
-    devDependencies:
-      '@vitadeck/sdk':
-        specifier: workspace:*
-        version: link:../packages/sdk
-
   examples/chat:
     dependencies:
       '@vitadeck/sdk':

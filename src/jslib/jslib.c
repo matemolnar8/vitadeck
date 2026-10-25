@@ -76,7 +76,9 @@ static JSValue js_native_get_active_deck_app_path(JSContext *ctx, JSValueConst t
     (void)this_val;
     (void)argc;
     (void)argv;
-    return JS_NewString(ctx, package_library_active_package_path());
+    char path[VD_PATH_MAX];
+    package_library_active_package_path(path, sizeof(path));
+    return JS_NewString(ctx, path);
 }
 
 static void call_input_event_from_native(JSContext *ctx, const char *id, const char *event)
@@ -90,13 +92,7 @@ static void call_input_event_from_native(JSContext *ctx, const char *id, const c
 
     JSValue result = JS_Call(ctx, fn, input, 2, args);
 
-    if (JS_IsException(result)) {
-        JSValue exc = JS_GetException(ctx);
-        const char *str = JS_ToCString(ctx, exc);
-        TraceLog(LOG_ERROR, "Error calling input event from native: %s", str ? str : "unknown");
-        JS_FreeCString(ctx, str);
-        JS_FreeValue(ctx, exc);
-    }
+    if (JS_IsException(result)) js_report_exception(ctx, "input");
 
     JS_FreeValue(ctx, result);
     JS_FreeValue(ctx, args[0]);
@@ -120,6 +116,7 @@ void process_input_events(JSContext *ctx)
 void register_js_lib(JSContext *ctx)
 {
     register_js_log(ctx);
+    register_js_error(ctx);
     register_js_colors(ctx);
     register_js_timeout(ctx);
     register_js_fetch(ctx);

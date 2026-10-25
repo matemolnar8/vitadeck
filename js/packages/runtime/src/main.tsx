@@ -1,6 +1,6 @@
 import * as vitadeckSdk from "@vitadeck/sdk";
 import { ThemeProvider, type DeckAppPackageManifest } from "@vitadeck/sdk/internal";
-import React, { StrictMode, type ComponentType } from "react";
+import React, { Component, StrictMode, type ComponentType, type ErrorInfo, type ReactNode } from "react";
 import * as reactCompilerRuntime from "react-compiler-runtime";
 import { installFetch } from "./fetch";
 import { onInputEventFromNative } from "./input";
@@ -52,13 +52,32 @@ function loadDeckApp(): ComponentType {
   return deckAppComponent;
 }
 
+class DeckAppErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  override state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  override componentDidCatch(error: unknown, info: ErrorInfo) {
+    const stack = (error instanceof Error ? error.stack : undefined) ?? info.componentStack ?? "";
+    nativeReportDeckAppError(String(error), stack);
+  }
+
+  override render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
 export function updateContainer() {
   const DeckApp = loadDeckApp();
   render(
     <StrictMode>
-      <ThemeProvider>
-        <DeckApp />
-      </ThemeProvider>
+      <DeckAppErrorBoundary>
+        <ThemeProvider>
+          <DeckApp />
+        </ThemeProvider>
+      </DeckAppErrorBoundary>
     </StrictMode>,
   );
 }

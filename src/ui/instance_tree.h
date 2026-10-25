@@ -105,8 +105,8 @@ void instance_tree_render_unlock(void);
 // Get root children for rendering (must hold render lock)
 ReactInstance **instance_get_root_children(void);
 
-// Hit testing (thread-safe, acquires lock internally)
-const char *instance_hit_test(int x, int y);
+// Hit testing (thread-safe, acquires lock internally). Caller frees the returned id.
+char *instance_hit_test(int x, int y);
 bool instance_exists(const char *id);
 
 // Focusable elements for gamepad navigation

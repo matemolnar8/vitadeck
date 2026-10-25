@@ -1,8 +1,7 @@
 import { copyFileSync, existsSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const root = join(import.meta.dirname, "..");
 const target = join(root, "src/genesys/genesys.local.ts");
 const template = join(root, "src/genesys/genesys.local.example.ts");
 

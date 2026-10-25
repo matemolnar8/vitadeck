@@ -60,12 +60,12 @@ The common defect is a change that works on the host and breaks the Vita, or wor
 
 Use `scripts/agent-check.sh` from the repo root; pick the smallest tier that proves the change:
 
-- `fast` - JS typecheck, JS lint, C format check. Run after every change.
+- `fast` - JS typecheck, SDK CLI tests, JS lint, JS and C format checks. Run after every change.
 - `host` - JS build, host build, non-smoke CTest. Run for any `src/` or runtime change.
 - `smoke` - Dockerized Linux visual smoke. Run when rendering, theme, fonts, or Deck App output change.
 - `full` - all of the above plus the Vita Docker build. Run before a PR that touches native code.
 
-Individual commands: `pnpm --dir js tsc`, `pnpm --dir js lint`, `pnpm --dir js format:check`, `pnpm --dir js build`, `./scripts/clang-format.sh check` (or `format` to apply), `cmake -S . -B out && cmake --build out`, Vita: `docker-compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"`.
+Individual commands: `pnpm --dir js tsc`, `pnpm --dir js test:cli`, `pnpm --dir js lint`, `pnpm --dir js format:check`, `pnpm --dir js build`, `./scripts/clang-format.sh check` (or `format` to apply), `cmake -S . -B out && cmake --build out`, Vita: `docker-compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"`.
 
 - C under `src/` follows `.clang-format`; run `cmake -S . -B out` so `out/compile_commands.json` exists for clangd.
 - Write React for the React Compiler: pure renders, Rules of Hooks, accurate effect deps, no manual `useMemo`/`useCallback`/`memo`.

@@ -372,12 +372,13 @@ static const char *hit_test_recursive(ReactInstance **children, int x, int y, in
     return NULL;
 }
 
-const char *instance_hit_test(int x, int y)
+char *instance_hit_test(int x, int y)
 {
+    char *result = NULL;
     vd_mutex_lock(snapshot_mutex);
-    const char *result = NULL;
     if (front_snapshot) {
-        result = hit_test_recursive(front_snapshot->root_children, x, y, 0, 0);
+        const char *hit = hit_test_recursive(front_snapshot->root_children, x, y, 0, 0);
+        if (hit) result = strdup(hit);
     }
     vd_mutex_unlock(snapshot_mutex);
     return result;

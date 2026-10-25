@@ -111,6 +111,7 @@ set(JSLIB_SOURCES
     src/jslib/timeout.c
     src/jslib/log.c
     src/jslib/fetch.c
+    src/jslib/error.c
 )
 
 set(VITADECK_SOURCES
@@ -130,6 +131,7 @@ set(VITADECK_SOURCES
     src/core/event_queue.c
     src/shell/shell.c
     src/upload/archive.c
+    src/upload/http_parse.c
     src/upload/http_server.c
     ${PLATFORM_SOURCES}
 )
@@ -188,12 +190,23 @@ target_link_libraries(${PROJECT_NAME} ${VITADECK_LIBRARIES})
 if(NOT DEFINED ENV{VITASDK})
   include(CTest)
   if(BUILD_TESTING)
-    add_executable(timer_reload_harness tests/timer_reload_harness.c src/jslib/timeout.c)
+    add_executable(timer_reload_harness tests/timer_reload_harness.c src/jslib/timeout.c src/jslib/error.c)
     target_link_libraries(timer_reload_harness quickjs m ${RAYLIB_LIBRARIES})
     add_test(NAME timer_reload_harness COMMAND timer_reload_harness)
 
     add_executable(package_manifest_harness tests/package_manifest_harness.c src/core/package_manifest.c)
     add_test(NAME package_manifest_harness COMMAND package_manifest_harness)
+
+    add_executable(upload_parsing_harness
+      tests/upload_parsing_harness.c
+      src/upload/archive.c
+      src/upload/http_parse.c
+      src/core/arena.c
+      src/core/package_library.c
+      src/core/package_manifest.c
+    )
+    target_link_libraries(upload_parsing_harness ZLIB::ZLIB)
+    add_test(NAME upload_parsing_harness COMMAND upload_parsing_harness)
 
     set(SMOKE_HARNESS_SOURCES
       tests/smoke_harness.c
@@ -227,7 +240,7 @@ if(NOT DEFINED ENV{VITASDK})
 endif()
 
 add_custom_target(js_build
-  COMMAND pnpm build:prod
+  COMMAND pnpm build
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/js
   COMMENT "Building JavaScript with pnpm"
   VERBATIM
@@ -242,9 +255,9 @@ add_custom_target(js_copy
 
 add_custom_target(js
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/js
-  COMMAND pnpm build:prod
+  COMMAND pnpm build
   COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${PROJECT_NAME}
-  COMMENT "Build JS bundle (pnpm build:prod) then native ${PROJECT_NAME}"
+  COMMENT "Build JS bundle (pnpm build) then native ${PROJECT_NAME}"
   VERBATIM
 )
 

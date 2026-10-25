@@ -34,7 +34,7 @@ static JSValue set_timeout_impl(JSContext *ctx, int argc, JSValueConst *argv, bo
 
     TimeoutItem item = {.func = func,
                         .next_scheduled_at = GetTime() + delay_in_seconds,
-                        .id = timeout_id_counter,
+                        .id = timeout_id_counter++,
                         .interval_ms = is_interval ? delay_in_ms : -1};
 
     hmput(timeout_hm, item.id, item);
@@ -99,29 +99,32 @@ void run_timeouts(JSContext *ctx)
         int idx = hmgeti(timeout_hm, id);
         if (idx < 0) continue;
 
-        TimeoutItem item = timeout_hm[idx].value;
+        // The callback may clear its own entry, which frees the map's reference mid-call.
+        JSValue func = JS_DupValue(ctx, timeout_hm[idx].value.func);
 
         JSValue global = JS_GetGlobalObject(ctx);
-        JSValue result = JS_Call(ctx, item.func, global, 0, NULL);
+        JSValue result = JS_Call(ctx, func, global, 0, NULL);
         JS_FreeValue(ctx, global);
+        JS_FreeValue(ctx, func);
 
         if (JS_IsException(result)) {
-            JSValue exc = JS_GetException(ctx);
-            const char *str = JS_ToCString(ctx, exc);
-            TraceLog(LOG_ERROR, "[run_timeouts] %u ID: %u Error: %s", tick_count, id, str ? str : "unknown");
-            JS_FreeCString(ctx, str);
-            JS_FreeValue(ctx, exc);
+            js_report_exception(ctx, "timer");
         } else {
             TraceLog(LOG_DEBUG, "[run_timeouts] %u ID: %u executed", tick_count, id);
         }
         JS_FreeValue(ctx, result);
 
-        if (item.interval_ms >= 0) {
-            item.next_scheduled_at = GetTime() + item.interval_ms / 1000.0;
-            hmput(timeout_hm, item.id, item);
+        // The callback may have cleared this entry or grown the map, so look it up again.
+        idx = hmgeti(timeout_hm, id);
+        if (idx < 0) continue;
+
+        TimeoutItem *item = &timeout_hm[idx].value;
+        if (item->interval_ms >= 0) {
+            item->next_scheduled_at = GetTime() + item->interval_ms / 1000.0;
         } else {
-            hmdel(timeout_hm, item.id);
-            JS_FreeValue(ctx, item.func);
+            JSValue done = item->func;
+            hmdel(timeout_hm, id);
+            JS_FreeValue(ctx, done);
         }
     }
 

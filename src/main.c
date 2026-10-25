@@ -15,12 +15,6 @@
         goto defer;                                                                                                    \
     } while (0)
 
-static void draw_shell_runtime_recovery_hint(const VdBootstrap *bootstrap)
-{
-    if (!js_runtime_failed(&bootstrap->js_runtime)) return;
-    DrawText("Open the Shell with F1/Start to choose another Deck App.", 10, 44, 20, RAYWHITE);
-}
-
 int main(int argc, char *argv[])
 {
     (void)argc;
@@ -43,7 +37,7 @@ int main(int argc, char *argv[])
         TraceLog(LOG_ERROR, "%s", init_error);
         return_defer(1);
     }
-    if (bootstrap.js_runtime.failed) TraceLog(LOG_ERROR, "%s", init_error);
+    if (js_runtime_failed(&bootstrap.js_runtime)) TraceLog(LOG_ERROR, "%s", init_error);
 
     bootstrap_draw_loading_splash();
 
@@ -66,7 +60,7 @@ int main(int argc, char *argv[])
                     TraceLog(LOG_ERROR, "%s", font_error);
                 } else if (!bootstrap_start_active_deck_app(&bootstrap, font_error, sizeof(font_error))) {
                     TraceLog(LOG_ERROR, "%s", font_error);
-                    bootstrap.js_runtime.failed = true;
+                    js_runtime_fail(&bootstrap.js_runtime, font_error, NULL);
                 }
             } else {
                 char font_error[256];
@@ -77,7 +71,7 @@ int main(int argc, char *argv[])
         }
 
         if (!shell_is_visible(&shell) && package_library_has_active_deck_app() &&
-            js_runtime_is_ready(&bootstrap.js_runtime)) {
+            js_runtime_is_ready(&bootstrap.js_runtime) && !js_runtime_failed(&bootstrap.js_runtime)) {
             poll_mouse_input();
             poll_touch_input();
             poll_gamepad_input();
@@ -86,7 +80,6 @@ int main(int argc, char *argv[])
         BeginDrawing();
         ClearBackground(BLACK);
         bootstrap_draw_deck_canvas(&bootstrap);
-        draw_shell_runtime_recovery_hint(&bootstrap);
         shell_render(&shell);
         DrawFPS(VD_SCREEN_WIDTH - 100, 10);
 

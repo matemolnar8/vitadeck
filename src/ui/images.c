@@ -55,8 +55,10 @@ bool image_registry_load_package(const char *package_path, char *error, size_t e
     unload_package_images();
     if (!package_path || package_path[0] == '\0') return true;
 
+    char package_name[VD_PACKAGE_NAME_MAX];
+    package_library_active_package_name(package_name, sizeof(package_name));
     VdPackageManifest manifest;
-    if (!package_manifest_read(package_path, package_library_active_package_name(), &manifest, error, error_size)) {
+    if (!package_manifest_read(package_path, package_name, &manifest, error, error_size)) {
         return false;
     }
 

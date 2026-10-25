@@ -1,5 +1,5 @@
 import { Button, Rect, Screen, Text, insetContent, useTheme } from "@vitadeck/sdk";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 
 type Cell = {
   id: string;
@@ -139,63 +139,55 @@ export default function MinesweeperDeckApp() {
   const longPressFiredRef = useRef(false);
   const pressedCellRef = useRef<{ r: number; c: number } | null>(null);
 
-  const flagsLeft = useMemo(() => {
-    let totalFlags = 0;
-    for (const row of grid) {
-      for (const cell of row) if (cell.flagged) totalFlags++;
-    }
-    return numMines - totalFlags;
-  }, [grid]);
+  let totalFlags = 0;
+  for (const row of grid) {
+    for (const cell of row) if (cell.flagged) totalFlags++;
+  }
+  const flagsLeft = numMines - totalFlags;
 
-  const revealCell = useCallback(
-    (r: number, c: number) => {
-      if (gameOver) return;
-      const current = cloneGrid(grid);
-      if (!minesPlaced) {
-        placeMines(current, numMines, r, c);
-        setMinesPlaced(true);
-      }
-      if (!current[r] || !current[r][c]) return;
-      const cell = current[r][c];
-      if (cell.revealed || cell.flagged) return;
-      cell.revealed = true;
-      if (cell.mine) {
-        setGrid(current);
-        setGameOver("lost");
-        return;
-      }
-      if (cell.adjacent === 0) {
-        floodReveal(current, r, c);
-      }
-      let allSafeRevealed = true;
-      outer: for (const row of current) {
-        for (const gridCell of row) {
-          if (!gridCell.mine && !gridCell.revealed) {
-            allSafeRevealed = false;
-            break outer;
-          }
+  const revealCell = (r: number, c: number) => {
+    if (gameOver) return;
+    const current = cloneGrid(grid);
+    if (!minesPlaced) {
+      placeMines(current, numMines, r, c);
+      setMinesPlaced(true);
+    }
+    if (!current[r] || !current[r][c]) return;
+    const cell = current[r][c];
+    if (cell.revealed || cell.flagged) return;
+    cell.revealed = true;
+    if (cell.mine) {
+      setGrid(current);
+      setGameOver("lost");
+      return;
+    }
+    if (cell.adjacent === 0) {
+      floodReveal(current, r, c);
+    }
+    let allSafeRevealed = true;
+    outer: for (const row of current) {
+      for (const gridCell of row) {
+        if (!gridCell.mine && !gridCell.revealed) {
+          allSafeRevealed = false;
+          break outer;
         }
       }
-      if (allSafeRevealed) setGameOver("won");
-      setGrid(current);
-    },
-    [grid, gameOver, minesPlaced],
-  );
+    }
+    if (allSafeRevealed) setGameOver("won");
+    setGrid(current);
+  };
 
-  const toggleFlag = useCallback(
-    (r: number, c: number) => {
-      if (gameOver || !minesPlaced) return;
-      const current = cloneGrid(grid);
-      if (!current[r] || !current[r][c]) return;
-      const cell = current[r][c];
-      if (cell.revealed) return;
-      cell.flagged = !cell.flagged;
-      setGrid(current);
-    },
-    [grid, gameOver, minesPlaced],
-  );
+  const toggleFlag = (r: number, c: number) => {
+    if (gameOver || !minesPlaced) return;
+    const current = cloneGrid(grid);
+    if (!current[r] || !current[r][c]) return;
+    const cell = current[r][c];
+    if (cell.revealed) return;
+    cell.flagged = !cell.flagged;
+    setGrid(current);
+  };
 
-  const reset = useCallback(() => {
+  const reset = () => {
     setGrid(makeEmptyGrid(gridSize.rows, gridSize.cols));
     setMinesPlaced(false);
     setGameOver(null);
@@ -205,42 +197,32 @@ export default function MinesweeperDeckApp() {
       pressTimerIdRef.current = null;
     }
     pressedCellRef.current = null;
-  }, []);
+  };
 
-  const onCellPressStart = useCallback(
-    (r: number, c: number) => {
-      if (gameOver) return;
-      pressedCellRef.current = { r, c };
-      longPressFiredRef.current = false;
-      if (pressTimerIdRef.current !== null) clearTimeout(pressTimerIdRef.current);
-      pressTimerIdRef.current = setTimeout(() => {
-        longPressFiredRef.current = true;
-        toggleFlag(r, c);
-        pressTimerIdRef.current = null;
-      }, longPressMs);
-    },
-    [toggleFlag, gameOver],
-  );
+  const onCellPressStart = (r: number, c: number) => {
+    if (gameOver) return;
+    pressedCellRef.current = { r, c };
+    longPressFiredRef.current = false;
+    if (pressTimerIdRef.current !== null) clearTimeout(pressTimerIdRef.current);
+    pressTimerIdRef.current = setTimeout(() => {
+      longPressFiredRef.current = true;
+      toggleFlag(r, c);
+      pressTimerIdRef.current = null;
+    }, longPressMs);
+  };
 
-  const onCellPressEnd = useCallback(
-    (r: number, c: number) => {
-      if (gameOver) return;
-      const wasPressing = pressedCellRef.current?.r === r && pressedCellRef.current.c === c;
-      if (pressTimerIdRef.current !== null) {
-        clearTimeout(pressTimerIdRef.current);
-        pressTimerIdRef.current = null;
-      }
-      pressedCellRef.current = null;
-      if (wasPressing && !longPressFiredRef.current) revealCell(r, c);
-    },
-    [revealCell, gameOver],
-  );
+  const onCellPressEnd = (r: number, c: number) => {
+    if (gameOver) return;
+    const wasPressing = pressedCellRef.current?.r === r && pressedCellRef.current.c === c;
+    if (pressTimerIdRef.current !== null) {
+      clearTimeout(pressTimerIdRef.current);
+      pressTimerIdRef.current = null;
+    }
+    pressedCellRef.current = null;
+    if (wasPressing && !longPressFiredRef.current) revealCell(r, c);
+  };
 
-  const headerText = useMemo(() => {
-    if (gameOver === "won") return "You win!";
-    if (gameOver === "lost") return "Boom!";
-    return `Flags left: ${flagsLeft}`;
-  }, [gameOver, flagsLeft]);
+  const headerText = gameOver === "won" ? "You win!" : gameOver === "lost" ? "Boom!" : `Flags left: ${flagsLeft}`;
 
   return (
     <Screen>

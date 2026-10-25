@@ -20,10 +20,9 @@ typedef struct {
 
 bool package_library_init(char *error, size_t error_size);
 bool package_library_has_active_deck_app(void);
-const char *package_library_root(void);
 const char *package_library_staging_root(void);
-const char *package_library_active_package_name(void);
-const char *package_library_active_package_path(void);
+void package_library_active_package_name(char *out, size_t out_size);
+void package_library_active_package_path(char *out, size_t out_size);
 
 int package_library_list(VdPackageInfo *items, int max_items);
 bool package_library_set_active(const char *package_name, char *error, size_t error_size);
