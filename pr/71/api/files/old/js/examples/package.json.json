@@ -1,1 +1,0 @@
-{"path":"js/examples/package.json","ref":"34ef1c8e1b3eea604180cb158cd9bdffa48ed89d","side":"old","content":"{\n  \"name\": \"@vitadeck/examples\",\n  \"version\": \"0.1.0\",\n  \"private\": true,\n  \"type\": \"module\",\n  \"devDependencies\": {\n    \"@vitadeck/sdk\": \"workspace:*\"\n  }\n}\n","language":"json"}
