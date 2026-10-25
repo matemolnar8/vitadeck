@@ -2,7 +2,13 @@ import React, { type ReactNode } from "react";
 import { vitaHost } from "./host-elements";
 import { useTheme, type Theme, type ThemeContextValue } from "./theme";
 import type { Color, ColorsMap } from "./types";
-import type { VitaImageProps, VitaRectProps, VitaScrollProps, VitaTextProps } from "./vitadeck-host-types";
+import type {
+  VitaButtonProps,
+  VitaImageProps,
+  VitaRectProps,
+  VitaScrollProps,
+  VitaTextProps,
+} from "./vitadeck-host-types";
 
 export const VITA_SCREEN = { width: 960, height: 544 } as const;
 export const VITA_INSET = 20;
@@ -56,7 +62,10 @@ export function Scroll(props: ScrollProps) {
   return vitaHost("vita-scroll", props);
 }
 
-export type ImageProps = VitaImageProps;
+// Distributes over the width/height union, which a plain `Omit` would flatten.
+type OmitKey<T> = T extends unknown ? Omit<T, "key"> : never;
+
+export type ImageProps = OmitKey<VitaImageProps>;
 
 /**
  * Draws a declared **Deck App Image**. Provide exactly one of `width` or
@@ -66,20 +75,7 @@ export function Image(props: ImageProps) {
   return vitaHost("vita-image", props);
 }
 
-export type ButtonProps = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  color?: Color;
-  textColor?: Color;
-  /** Corner radius in pixels (CSS `border-radius` semantics). */
-  borderRadius?: number;
-  label: string;
-  onPress?: () => void;
-  onPressStart?: () => void;
-  onPressEnd?: () => void;
-};
+export type ButtonProps = Omit<VitaButtonProps, "key">;
 
 export function Button({ onPress, onPressStart, onPressEnd, ...props }: ButtonProps) {
   return vitaHost("vita-button", { ...props, onPress, onPressStart, onPressEnd });
