@@ -279,6 +279,9 @@ if(NOT DEFINED ENV{VITASDK})
     target_link_libraries(scroll_math_harness m)
     add_test(NAME scroll_math_harness COMMAND scroll_math_harness)
 
+    add_executable(layout_harness tests/layout_harness.c src/ui/layout.c)
+    add_test(NAME layout_harness COMMAND layout_harness)
+
     # Links raylib only because input.c and text_input_host.c also hold the raylib polls; the harness drives the
     # input_apply_* and vd_text_input_apply_keys steps.
     add_executable(input_harness

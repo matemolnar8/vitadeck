@@ -187,6 +187,37 @@ static void test_focus_navigation(void)
     instance_tree_clear();
 }
 
+// Scroll S2 at (0, 300) 400x100, padding 10, holding a row Stack of two buttons 20 apart: left at (10, 310),
+// right at (130, 310). A column Stack at (500, 0) holds a 30px header and a Scroll whose own y keeps it below.
+static void test_stack(void)
+{
+    ReactInstance *s = fixture_scroll(NULL, "S2", 0, 300, 400, 100, 0, 10);
+    ReactInstance *row = fixture_stack(s, "row", 0, 0, STACK_ROW, 20);
+    fixture_button(row, "left", 0, 0, 100, 40);
+    fixture_button(row, "right", 0, 0, 100, 40);
+    ReactInstance *col = fixture_stack(NULL, "col", 500, 0, STACK_COLUMN, 0);
+    fixture_rect(col, "header", 0, 0, 100, 30);
+    fixture_scroll(col, "list", 0, 30, 100, 50, 0, 0);
+    fixture_publish();
+
+    expect_hit(150, 330, "right", "a row stack places its second child after the first and the gap");
+    expect_hit(120, 330, "row", "the gap inside a stack hits the stack");
+    expect_hit(50, 380, "S2", "below a fitted stack is its scroll container");
+    expect_nav("left", NAV_RIGHT, "right", "right moves along a row stack");
+    expect_nav("right", NAV_LEFT, "left", "left moves back along a row stack");
+    expect(strcmp(scroll_at(550, 40), "list") == 0, "scroll at finds a scroll inside a stack");
+    expect(strcmp(scroll_at(550, 10), "") == 0, "a stack is not a scroll container");
+
+    scroll_set_offset("S2", 5);
+    int count = 0;
+    FocusableElement *elems = get_focusable_elements(&count);
+    expect(has_focusable(elems, count, "right", 130, 305), "stack children move with the scroll offset");
+    free_focusable_elements(elems, count);
+
+    instance_tree_clear();
+    scroll_reset();
+}
+
 int main(void)
 {
     instance_tree_init();
@@ -196,6 +227,7 @@ int main(void)
     test_scroll_offset();
     test_focusables_clip();
     test_focus_navigation();
+    test_stack();
 
     if (failures) {
         fprintf(stderr, "hit_test_harness: %d failure(s)\n", failures);
