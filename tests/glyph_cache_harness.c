@@ -268,6 +268,50 @@ static void test_emoji(const VdGlyphFont *full)
 #endif
 }
 
+static int missing_loads = 0;
+
+static unsigned char *missing_emoji_loader(const VdEmojiSequence *sequence, int *width, int *height)
+{
+    (void)sequence;
+    (void)width;
+    (void)height;
+    missing_loads++;
+    return NULL;
+}
+
+// assets/emoji without images, as after a failed Twemoji download.
+static void test_emoji_without_assets(const VdGlyphFont *full)
+{
+    glyph_cache_reset();
+    glyph_cache_set_emoji_loader(missing_emoji_loader);
+    const int size = 24;
+    VdGlyph fallback = glyph_cache_get(full, size, VD_EMOJI_FALLBACK);
+    expect(fallback.page >= 0 && fallback.width > 0 && !fallback.color, "the fallback glyph is a font glyph");
+
+    const char *texts[] = {
+        "\xf0\x9f\x8e\xae",
+        "\xf0\x9f\x91\x8d\xf0\x9f\x8f\xbd",
+        "\xf0\x9f\x87\xad\xf0\x9f\x87\xba",
+        "\xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x91\xa7",
+    };
+    int first_frame_loads = 0;
+    for (int frame = 0; frame < 3; frame++) {
+        glyph_cache_begin_frame();
+        for (size_t i = 0; i < sizeof(texts) / sizeof(texts[0]); i++) {
+            VdEmojiSequence sequence = cluster_of(texts[i]);
+            expect(same_glyph(glyph_cache_get_emoji(full, size, &sequence), fallback),
+                   "an emoji cluster without its image draws one fallback glyph");
+        }
+        if (frame == 0) first_frame_loads = missing_loads;
+    }
+    expect(first_frame_loads > 0 && missing_loads == first_frame_loads, "missing images load once, not every frame");
+
+    VdEmojiSequence heart = cluster_of("\xe2\x9d\xa4\xef\xb8\x8f");
+    expect(same_glyph(glyph_cache_get_emoji(full, size, &heart), glyph_cache_get(full, size, 0x2764)),
+           "a symbol with U+FE0F and no image draws the font's symbol");
+    glyph_cache_set_emoji_loader(NULL);
+}
+
 static void test_pages(const VdGlyphFont *full)
 {
     glyph_cache_reset();
@@ -322,6 +366,7 @@ int main(void)
         test_fallback(full, ascii);
         test_hungarian(full);
         test_emoji(full);
+        test_emoji_without_assets(full);
         test_pages(full);
     }
 
