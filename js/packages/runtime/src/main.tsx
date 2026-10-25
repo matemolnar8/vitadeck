@@ -1,5 +1,5 @@
 import * as vitadeckSdk from "@vitadeck/sdk";
-import { ThemeProvider, type DeckAppPackageManifest } from "@vitadeck/sdk/internal";
+import { ThemeProvider } from "@vitadeck/sdk/internal";
 import React, { Component, StrictMode, type ComponentType, type ErrorInfo, type ReactNode } from "react";
 import * as reactCompilerRuntime from "react-compiler-runtime";
 import { installFetch } from "./fetch";
@@ -20,35 +20,13 @@ globalThis.vitadeckPackage = {
   },
 };
 
-function readManifest(): DeckAppPackageManifest {
-  const packagePath = nativeGetActiveDeckAppPath();
-  const raw = nativeReadTextFile(`${packagePath}/manifest.json`);
-  const manifest = JSON.parse(raw) as Partial<DeckAppPackageManifest>;
-  if (manifest.schemaVersion !== 1) {
-    throw new Error(`Unsupported Deck App package schema: ${String(manifest.schemaVersion)}`);
-  }
-  if (typeof manifest.name !== "string" || manifest.name.length === 0) {
-    throw new Error("Deck App package manifest must define a name.");
-  }
-  if (typeof manifest.version !== "string" || manifest.version.length === 0) {
-    throw new Error("Deck App package manifest must define a version.");
-  }
-  if (manifest.entry !== "app.js") {
-    throw new Error("Deck App package manifest entry must be app.js.");
-  }
-  return manifest as DeckAppPackageManifest;
-}
-
 function loadDeckApp(): ComponentType {
   if (deckAppComponent) return deckAppComponent;
   if (packageLoaded) throw new Error("Deck App package did not register a component.");
 
-  const manifest = readManifest();
   packageLoaded = true;
-  nativeEvalFile(`${nativeGetActiveDeckAppPath()}/${manifest.entry}`);
-  if (!deckAppComponent) {
-    throw new Error(`Deck App package "${manifest.name}" did not register a component.`);
-  }
+  nativeEvalActiveDeckAppEntry();
+  if (!deckAppComponent) throw new Error("Deck App package did not register a component.");
   return deckAppComponent;
 }
 
