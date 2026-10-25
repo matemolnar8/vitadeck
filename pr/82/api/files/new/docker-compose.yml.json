@@ -1,1 +1,0 @@
-{"path":"docker-compose.yml","ref":"9d671384dbb819d16682adc129c7e1e2ea8547a5","side":"new","content":"services:\n  vitasdk:\n    build: .\n    platform: linux/amd64\n    volumes:\n      - ./:/build/git\n    working_dir: /build/git\n    environment:\n      - PSVITAIP\n    stdin_open: true\n    tty: true\n    restart: \"no\"\n","language":"yaml"}
