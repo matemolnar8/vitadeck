@@ -1,5 +1,6 @@
 #include "upload/http_parse.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -37,4 +38,25 @@ long upload_content_length(const char *headers)
     long length = strtol(value, &end, 10);
     if (end == value || *end != '\0') return -1;
     return length;
+}
+
+void upload_json_escape(char *out, size_t out_size, const char *in)
+{
+    if (out_size == 0) return;
+    size_t used = 0;
+    for (const unsigned char *p = (const unsigned char *)in; *p; p++) {
+        char escaped[7];
+        int len = 1;
+        if (*p == '"' || *p == '\\') {
+            len = snprintf(escaped, sizeof(escaped), "\\%c", *p);
+        } else if (*p < 0x20) {
+            len = snprintf(escaped, sizeof(escaped), "\\u%04x", *p);
+        } else {
+            escaped[0] = (char)*p;
+        }
+        if (used + (size_t)len >= out_size) break;
+        memcpy(out + used, escaped, (size_t)len);
+        used += (size_t)len;
+    }
+    out[used] = '\0';
 }

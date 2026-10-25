@@ -122,8 +122,12 @@ static void send_simple_response(int fd, int status, const char *status_text, co
 
 static void send_json_error(int fd, int status, const char *code, const char *message)
 {
-    char body[512];
-    snprintf(body, sizeof(body), "{\"ok\":false,\"code\":\"%s\",\"message\":\"%s\"}", code, message);
+    char code_json[128];
+    char message_json[1536];
+    upload_json_escape(code_json, sizeof(code_json), code);
+    upload_json_escape(message_json, sizeof(message_json), message);
+    char body[2048];
+    snprintf(body, sizeof(body), "{\"ok\":false,\"code\":\"%s\",\"message\":\"%s\"}", code_json, message_json);
     send_response(fd, status,
                   status == 409   ? "Conflict"
                   : status == 413 ? "Payload Too Large"
@@ -373,9 +377,13 @@ static void handle_upload(HandlerArg *arg, const char *headers)
         goto done;
     }
 
-    char body_json[512];
-    snprintf(body_json, sizeof(body_json), "{\"ok\":true,\"packageName\":\"%s\",\"version\":\"%s\"}", info.package_name,
-             info.version);
+    char name_json[VD_PACKAGE_NAME_MAX * 6];
+    char version_json[VD_VERSION_MAX * 6];
+    upload_json_escape(name_json, sizeof(name_json), info.package_name);
+    upload_json_escape(version_json, sizeof(version_json), info.version);
+    char body_json[2048];
+    snprintf(body_json, sizeof(body_json), "{\"ok\":true,\"packageName\":\"%s\",\"version\":\"%s\"}", name_json,
+             version_json);
     send_response(arg->fd, 200, "OK", "application/json", body_json);
 
     vd_mutex_lock(server->mutex);
