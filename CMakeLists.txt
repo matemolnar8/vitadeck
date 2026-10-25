@@ -414,6 +414,7 @@ if(DEFINED ENV{VITASDK})
       FILE js/dist/runtime/runtime.js js/runtime.js
       FILE assets/fonts/DejaVuSans.ttf assets/fonts/DejaVuSans.ttf
       FILE assets/fonts/DejaVuSans-LICENSE.txt assets/fonts/DejaVuSans-LICENSE.txt
+      FILE assets/emoji assets/emoji
   )
 
   # Create an explicit `upload_vpk` target to upload the VPK file to Vita's download folder
