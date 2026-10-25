@@ -47,6 +47,11 @@ void instance_back_free(ReactInstance *inst)
     if (inst->type == NT_BUTTON && inst->props.button.label) {
         free(inst->props.button.label);
     }
+    if (inst->type == NT_TEXT_INPUT) {
+        free(inst->props.text_input.font_name);
+        free(inst->props.text_input.value);
+        free(inst->props.text_input.placeholder);
+    }
     if (inst->type == NT_RAW_TEXT && inst->props.raw_text) {
         free(inst->props.raw_text);
     }
@@ -121,6 +126,14 @@ static ReactInstance *copy_instance(Arena *arena, ReactInstance *src)
         dst->props.button = src->props.button;
         dst->props.button.label = src->props.button.label ? arena_strdup(arena, src->props.button.label) : NULL;
         break;
+    case NT_TEXT_INPUT: {
+        const TextInputProps *t = &src->props.text_input;
+        dst->props.text_input = *t;
+        dst->props.text_input.font_name = t->font_name ? arena_strdup(arena, t->font_name) : NULL;
+        dst->props.text_input.value = t->value ? arena_strdup(arena, t->value) : NULL;
+        dst->props.text_input.placeholder = t->placeholder ? arena_strdup(arena, t->placeholder) : NULL;
+        break;
+    }
     case NT_RAW_TEXT:
         dst->props.raw_text = src->props.raw_text ? arena_strdup(arena, src->props.raw_text) : NULL;
         break;
@@ -150,6 +163,10 @@ bool scroll_flow_step(const ReactInstance *child, int gap, int *flow_y, int *bas
     case NT_BUTTON:
         margin_top = child->props.button.y;
         height = child->props.button.height;
+        break;
+    case NT_TEXT_INPUT:
+        margin_top = child->props.text_input.y;
+        height = child->props.text_input.height;
         break;
     case NT_IMAGE:
         margin_top = child->props.image.y;
@@ -308,14 +325,30 @@ bool instance_exists(const char *id)
     return exists;
 }
 
-bool instance_is_button(const char *id)
+bool instance_is_focusable(const char *id)
 {
     if (!id) return false;
     vd_mutex_lock(snapshot_mutex);
     ReactInstance *inst = find_front_instance_unlocked(front_snapshot, id);
-    bool is_button = inst && inst->type == NT_BUTTON;
+    bool focusable = inst && (inst->type == NT_BUTTON || inst->type == NT_TEXT_INPUT);
     vd_mutex_unlock(snapshot_mutex);
-    return is_button;
+    return focusable;
+}
+
+bool instance_text_input_session(const char *id, char **value, char **placeholder, int *max_length)
+{
+    if (!id) return false;
+    vd_mutex_lock(snapshot_mutex);
+    ReactInstance *inst = find_front_instance_unlocked(front_snapshot, id);
+    bool found = inst && inst->type == NT_TEXT_INPUT;
+    if (found) {
+        const TextInputProps *t = &inst->props.text_input;
+        *value = strdup(t->value ? t->value : "");
+        *placeholder = strdup(t->placeholder ? t->placeholder : "");
+        *max_length = t->max_length;
+    }
+    vd_mutex_unlock(snapshot_mutex);
+    return found;
 }
 
 void instance_back_request_focus(const char *id)
@@ -336,6 +369,16 @@ bool instance_take_focus_request(char out_id[VD_INSTANCE_ID_MAX])
     return requested;
 }
 
+// Bounds of a Button or Text Input, relative to its parent.
+static void control_bounds(const ReactInstance *inst, int *x, int *y, int *width, int *height)
+{
+    const bool text_input = inst->type == NT_TEXT_INPUT;
+    *x = text_input ? inst->props.text_input.x : inst->props.button.x;
+    *y = text_input ? inst->props.text_input.y : inst->props.button.y;
+    *width = text_input ? inst->props.text_input.width : inst->props.button.width;
+    *height = text_input ? inst->props.text_input.height : inst->props.button.height;
+}
+
 // Hit testing
 static const char *hit_test_recursive(ReactInstance **children, int x, int y, int offset_x, int offset_y);
 
@@ -354,12 +397,13 @@ static const char *hit_test_instance(ReactInstance *inst, int x, int y, int offs
         if (x >= abs_x && x < abs_x + r->width && y >= abs_y && y < abs_y + r->height) {
             return inst->id;
         }
-    } else if (inst->type == NT_BUTTON) {
-        ButtonProps *b = &inst->props.button;
-        int abs_x = offset_x + b->x;
-        int abs_y = offset_y + b->y;
+    } else if (inst->type == NT_BUTTON || inst->type == NT_TEXT_INPUT) {
+        int cx, cy, cw, ch;
+        control_bounds(inst, &cx, &cy, &cw, &ch);
+        int abs_x = offset_x + cx;
+        int abs_y = offset_y + cy;
 
-        if (x >= abs_x && x < abs_x + b->width && y >= abs_y && y < abs_y + b->height) {
+        if (x >= abs_x && x < abs_x + cw && y >= abs_y && y < abs_y + ch) {
             return inst->id;
         }
     } else if (inst->type == NT_SCROLL) {
@@ -487,10 +531,11 @@ static void collect_focusable_instance(ReactInstance *inst, int offset_x, int of
 {
     if (!inst) return;
 
-    if (inst->type == NT_BUTTON) {
-        ButtonProps *b = &inst->props.button;
-        add_focusable_if_visible(inst->id, offset_x + b->x, offset_y + b->y, b->width, b->height, has_clip, clip_x,
-                                 clip_y, clip_width, clip_height, out_elems);
+    if (inst->type == NT_BUTTON || inst->type == NT_TEXT_INPUT) {
+        int x, y, width, height;
+        control_bounds(inst, &x, &y, &width, &height);
+        add_focusable_if_visible(inst->id, offset_x + x, offset_y + y, width, height, has_clip, clip_x, clip_y,
+                                 clip_width, clip_height, out_elems);
     } else if (inst->type == NT_RECT) {
         RectProps *r = &inst->props.rect;
         collect_focusable_recursive(inst->children, offset_x + r->x, offset_y + r->y, has_clip, clip_x, clip_y,

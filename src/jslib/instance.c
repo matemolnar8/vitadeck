@@ -189,6 +189,89 @@ static JSValue native_create_button(JSContext *ctx, JSValueConst this_val, int a
     return JS_UNDEFINED;
 }
 
+static Color read_color(JSContext *ctx, JSValueConst *argv)
+{
+    int32_t r, g, b, a;
+    JS_ToInt32(ctx, &r, argv[0]);
+    JS_ToInt32(ctx, &g, argv[1]);
+    JS_ToInt32(ctx, &b, argv[2]);
+    JS_ToInt32(ctx, &a, argv[3]);
+    return (Color){r, g, b, a};
+}
+
+static void replace_string(JSContext *ctx, char **slot, JSValueConst value, const char *fallback)
+{
+    const char *str = JS_ToCString(ctx, value);
+    free(*slot);
+    *slot = strdup(str ? str : fallback);
+    JS_FreeCString(ctx, str);
+}
+
+#define TEXT_INPUT_ARGC 24
+
+// Create and update share every argument; the strings replace any the instance already owns.
+static void read_text_input_props(JSContext *ctx, TextInputProps *t, JSValueConst *argv)
+{
+    int32_t tmp;
+    JS_ToInt32(ctx, &tmp, argv[1]);
+    t->x = tmp;
+    JS_ToInt32(ctx, &tmp, argv[2]);
+    t->y = tmp;
+    JS_ToInt32(ctx, &tmp, argv[3]);
+    t->width = tmp;
+    JS_ToInt32(ctx, &tmp, argv[4]);
+    t->height = tmp;
+    t->color = read_color(ctx, argv + 5);
+    t->text_color = read_color(ctx, argv + 9);
+    t->has_focus_color = JS_ToBool(ctx, argv[13]);
+    t->focus_color = read_color(ctx, argv + 14);
+    replace_string(ctx, &t->font_name, argv[18], "default");
+    JS_ToInt32(ctx, &tmp, argv[19]);
+    t->font_size = tmp;
+    double border_radius;
+    JS_ToFloat64(ctx, &border_radius, argv[20]);
+    t->border_radius = (float)border_radius;
+    JS_ToInt32(ctx, &tmp, argv[21]);
+    t->max_length = tmp;
+    replace_string(ctx, &t->value, argv[22], "");
+    replace_string(ctx, &t->placeholder, argv[23], "");
+}
+
+static JSValue native_create_text_input(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    instance_back_mark_dirty();
+    if (argc < TEXT_INPUT_ARGC) return JS_UNDEFINED;
+
+    const char *id = to_new_instance_id(ctx, argv[0]);
+    if (!id) return JS_UNDEFINED;
+
+    ReactInstance *inst = calloc(1, sizeof(ReactInstance));
+    inst->id = strdup(id);
+    inst->type = NT_TEXT_INPUT;
+    read_text_input_props(ctx, &inst->props.text_input, argv);
+
+    instance_back_put(inst);
+    JS_FreeCString(ctx, id);
+    return JS_UNDEFINED;
+}
+
+static JSValue native_update_text_input(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    instance_back_mark_dirty();
+    if (argc < TEXT_INPUT_ARGC) return JS_UNDEFINED;
+
+    const char *id = JS_ToCString(ctx, argv[0]);
+    if (!id) return JS_UNDEFINED;
+
+    ReactInstance *inst = instance_back_find(id);
+    if (inst && inst->type == NT_TEXT_INPUT) read_text_input_props(ctx, &inst->props.text_input, argv);
+
+    JS_FreeCString(ctx, id);
+    return JS_UNDEFINED;
+}
+
 static void read_scroll_props(JSContext *ctx, ScrollProps *scroll, JSValueConst *argv)
 {
     int32_t tmp;
@@ -691,6 +774,7 @@ void register_instance_tree(JSContext *ctx)
     js_set_global_function(ctx, "nativeCreateRect", native_create_rect, 16);
     js_set_global_function(ctx, "nativeCreateText", native_create_text, 15);
     js_set_global_function(ctx, "nativeCreateButton", native_create_button, 21);
+    js_set_global_function(ctx, "nativeCreateTextInput", native_create_text_input, TEXT_INPUT_ARGC);
     js_set_global_function(ctx, "nativeCreateScroll", native_create_scroll, 12);
     js_set_global_function(ctx, "nativeCreateImage", native_create_image, 6);
     js_set_global_function(ctx, "nativeCreateRawText", native_create_raw_text, 2);
@@ -701,6 +785,7 @@ void register_instance_tree(JSContext *ctx)
     js_set_global_function(ctx, "nativeUpdateRect", native_update_rect, 16);
     js_set_global_function(ctx, "nativeUpdateText", native_update_text, 15);
     js_set_global_function(ctx, "nativeUpdateButton", native_update_button, 21);
+    js_set_global_function(ctx, "nativeUpdateTextInput", native_update_text_input, TEXT_INPUT_ARGC);
     js_set_global_function(ctx, "nativeUpdateScroll", native_update_scroll, 12);
     js_set_global_function(ctx, "nativeUpdateImage", native_update_image, 6);
     js_set_global_function(ctx, "nativeUpdateRawText", native_update_raw_text, 2);

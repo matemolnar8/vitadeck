@@ -98,7 +98,11 @@ bool process_input_events(JSContext *ctx)
         case EVT_PAD_BUTTON:
             call_runtime_input(ctx, "onPadButtonFromNative", evt.id, evt.event_name);
             break;
+        case EVT_TEXT_INPUT:
+            call_runtime_input(ctx, "onTextInputFromNative", evt.id, evt.text ? evt.text : "");
+            break;
         }
+        free(evt.text);
         ran = true;
     }
     return ran;
