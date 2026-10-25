@@ -199,7 +199,7 @@ void poll_mouse_input(void)
     prev_mouse_x = x;
     prev_mouse_y = y;
 
-    const char *top_id = instance_hit_test(x, y);
+    char *top_id = instance_hit_test(x, y);
 
     if (hovered_id && !instance_exists(hovered_id)) {
         free(hovered_id);
@@ -275,6 +275,7 @@ void poll_mouse_input(void)
     }
 
     prev_is_mouse_down = is_mouse_down;
+    free(top_id);
 }
 
 void poll_touch_input(void)
@@ -294,7 +295,7 @@ void poll_touch_input(void)
         y = (int)pos.y;
     }
 
-    const char *top_id = is_down ? instance_hit_test(x, y) : NULL;
+    char *top_id = is_down ? instance_hit_test(x, y) : NULL;
 
     if (touch_hovered_id && !instance_exists(touch_hovered_id)) {
         free(touch_hovered_id);
@@ -429,6 +430,7 @@ void poll_touch_input(void)
     }
 
     prev_touch_down = is_down;
+    free(top_id);
 }
 
 typedef enum { NAV_UP, NAV_DOWN, NAV_LEFT, NAV_RIGHT } NavDirection;
