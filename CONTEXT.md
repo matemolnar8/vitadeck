@@ -57,7 +57,7 @@ A named image file included in a **Deck App Package** and declared by the **Deck
 _Avoid_: Raw image path, texture path, sprite sheet path
 
 **Runtime Default Font**:
-The VitaDeck-provided sans-serif font (DejaVu Sans) used for text when a **Deck App** does not request a **Deck App Font** or explicitly requests the reserved default font name. It is also the first fallback for characters the requested **Deck App Font** lacks.
+The VitaDeck-provided sans-serif font (DejaVu Sans) used for text when a **Deck App** does not request a **Deck App Font** or explicitly requests the reserved default font name. It is also the first fallback for characters the requested **Deck App Font** lacks. A build that could not download it draws this font with raylib's built-in font instead.
 _Avoid_: Built-in Raylib font, implicit app font, serif default
 
 **Runtime Fallback Font**:
