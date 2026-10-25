@@ -10,6 +10,7 @@
 // DejaVuSans-ascii.ttf is assets/fonts/DejaVuSans.ttf subset to U+0020-007E, under the same licence.
 #define FULL_FONT_PATH VD_SOURCE_DIR "/assets/fonts/DejaVuSans.ttf"
 #define ASCII_FONT_PATH VD_SOURCE_DIR "/tests/fixtures/DejaVuSans-ascii.ttf"
+#define FALLBACK_FONT_PATH VD_SOURCE_DIR "/assets/fonts/DroidSansFallbackFull.ttf"
 
 static int failures = 0;
 
@@ -127,6 +128,75 @@ static void test_fallback(const VdGlyphFont *full, const VdGlyphFont *ascii)
     expect(same_shape(neither, notdef), "a glyph neither font has is the requested font's missing-glyph box");
     VdGlyph self = glyph_cache_get(full, 30, ideograph);
     expect(self.width > 0, "the fallback font's own missing glyph still draws a box");
+}
+
+static int fallback_loads = 0;
+static VdGlyphFont *fallback_font = NULL;
+
+static VdGlyphFont *counting_fallback_loader(void)
+{
+    fallback_loads++;
+    fallback_font = glyph_font_load(FALLBACK_FONT_PATH);
+    return fallback_font;
+}
+
+static VdGlyphFont *failing_fallback_loader(void)
+{
+    fallback_loads++;
+    return NULL;
+}
+
+static void test_fallback_chain(const VdGlyphFont *full, const VdGlyphFont *ascii)
+{
+    const uint32_t ideograph = 0x65e5; // 日
+    const uint32_t kana = 0x3042;      // あ
+    const uint32_t private_use = 0xe000;
+
+    glyph_cache_reset();
+    glyph_cache_set_fallback(NULL);
+    glyph_cache_set_fallback_loader(NULL);
+    VdGlyph ascii_notdef = glyph_cache_get(ascii, 30, private_use);
+    VdGlyph full_notdef = glyph_cache_get(full, 30, private_use);
+    glyph_cache_reset();
+
+    fallback_loads = 0;
+    glyph_cache_set_fallback(full);
+    glyph_cache_set_fallback_loader(counting_fallback_loader);
+    VdGlyph own = glyph_cache_get(ascii, 30, 'g');
+    VdGlyph latin = glyph_cache_get(ascii, 30, 0x153); // œ
+    expect(own.width > 0 && latin.width > 0 && !same_shape(latin, ascii_notdef),
+           "Latin text resolves from the requested font and the Runtime Default Font");
+    expect(fallback_loads == 0, "Latin text does not open the Runtime Fallback Font");
+
+    VdGlyph from_default = glyph_cache_get(full, 30, ideograph);
+    expect(fallback_loads == 1 && fallback_font != NULL,
+           "the first character both fonts lack opens the Runtime Fallback Font");
+    VdGlyph from_deck_font = glyph_cache_get(ascii, 30, kana);
+    expect(fallback_loads == 1, "the Runtime Fallback Font opens once");
+    if (fallback_font) {
+        VdGlyph droid_ideograph = glyph_cache_get(fallback_font, 30, ideograph);
+        VdGlyph droid_kana = glyph_cache_get(fallback_font, 30, kana);
+        expect(same_shape(from_default, droid_ideograph) && !same_shape(from_default, full_notdef),
+               "an ideograph the Runtime Default Font lacks comes from the Runtime Fallback Font");
+        expect(same_shape(from_deck_font, droid_kana) && !same_shape(from_deck_font, ascii_notdef),
+               "kana a Deck App Font lacks comes from the Runtime Fallback Font");
+    }
+
+    VdGlyph unknown = glyph_cache_get(ascii, 30, private_use);
+    expect(same_shape(unknown, ascii_notdef), "a character no font has is the requested font's missing-glyph box");
+    expect(fallback_loads == 1, "a character no font has does not open the Runtime Fallback Font again");
+
+    glyph_cache_reset();
+    fallback_loads = 0;
+    glyph_cache_set_fallback_loader(failing_fallback_loader);
+    glyph_cache_get(full, 30, ideograph);
+    glyph_cache_get(full, 30, kana);
+    expect(fallback_loads == 1, "a Runtime Fallback Font that fails to open is not retried");
+
+    glyph_cache_reset();
+    glyph_cache_set_fallback_loader(NULL);
+    glyph_font_free(fallback_font);
+    fallback_font = NULL;
 }
 
 static void test_hungarian(const VdGlyphFont *full)
@@ -320,6 +390,7 @@ int main(void)
     if (full && ascii) {
         test_hits_and_sizes(full);
         test_fallback(full, ascii);
+        test_fallback_chain(full, ascii);
         test_hungarian(full);
         test_emoji(full);
         test_pages(full);
