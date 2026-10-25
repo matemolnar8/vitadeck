@@ -58,26 +58,26 @@ static void test_utf8(void)
     expect_utf8("\xff", VD_UTF8_REPLACEMENT, 1, "an invalid lead byte is replaced");
 }
 
-static void test_hits_and_sizes(const VdGlyphFont *full)
+static void test_hits_and_sizes(const VdGlyphFont *font)
 {
     glyph_cache_reset();
 
-    VdGlyph a = glyph_cache_get(full, 30, 'A');
+    VdGlyph a = glyph_cache_get(font, 30, 'A');
     expect(a.page == 0 && a.width > 0 && a.height > 0 && a.advance > 0.0f, "a miss rasterises into the first page");
     expect(a.offset_y < 0, "a capital sits above the baseline");
     expect(glyph_cache_stats().rasterised == 1, "the first lookup rasterises");
 
-    VdGlyph again = glyph_cache_get(full, 30, 'A');
+    VdGlyph again = glyph_cache_get(font, 30, 'A');
     expect(same_glyph(a, again), "a hit returns the cached glyph");
     expect(glyph_cache_stats().rasterised == 1, "a hit does not rasterise");
 
-    VdGlyph large = glyph_cache_get(full, 60, 'A');
+    VdGlyph large = glyph_cache_get(font, 60, 'A');
     expect(glyph_cache_stats().rasterised == 2, "another size is another glyph");
     expect(!same_glyph(a, large), "sizes do not share a glyph");
     float ratio = (float)large.height / (float)a.height;
     expect(ratio > 1.8f && ratio < 2.2f, "a glyph at twice the size is about twice as tall");
 
-    VdGlyph space = glyph_cache_get(full, 30, ' ');
+    VdGlyph space = glyph_cache_get(font, 30, ' ');
     expect(space.page == -1 && space.advance > 0.0f, "a space advances without pixels");
 
     const unsigned char *pixels = glyph_cache_take_dirty_page(0);
@@ -96,7 +96,7 @@ static void test_hits_and_sizes(const VdGlyphFont *full)
     }
     expect(covered, "the glyph's rect holds coverage");
 
-    VdGlyphFontMetrics metrics = glyph_font_metrics(full, 30);
+    VdGlyphFontMetrics metrics = glyph_font_metrics(font, 30);
     expect(fabsf(metrics.ascent + metrics.descent - 30.0f) < 0.01f, "ascent plus descent is the Font Size");
 }
 
@@ -128,6 +128,24 @@ static void test_fallback(const VdGlyphFont *full, const VdGlyphFont *ascii)
     expect(same_shape(neither, notdef), "a glyph neither font has is the requested font's missing-glyph box");
     VdGlyph self = glyph_cache_get(full, 30, ideograph);
     expect(self.width > 0, "the fallback font's own missing glyph still draws a box");
+}
+
+static VdEmojiSequence cluster_of(const char *text)
+{
+    VdEmojiSequence sequence = {0};
+    vd_emoji_cluster(text, &sequence);
+    return sequence;
+}
+
+static int missing_loads = 0;
+
+static unsigned char *missing_emoji_loader(const VdEmojiSequence *sequence, int *width, int *height)
+{
+    (void)sequence;
+    (void)width;
+    (void)height;
+    missing_loads++;
+    return NULL;
 }
 
 static int fallback_loads = 0;
@@ -186,17 +204,32 @@ static void test_fallback_chain(const VdGlyphFont *full, const VdGlyphFont *asci
     expect(same_shape(unknown, ascii_notdef), "a character no font has is the requested font's missing-glyph box");
     expect(fallback_loads == 1, "a character no font has does not open the Runtime Fallback Font again");
 
-    glyph_cache_reset();
-    fallback_loads = 0;
-    glyph_cache_set_fallback_loader(failing_fallback_loader);
-    glyph_cache_get(full, 30, ideograph);
-    glyph_cache_get(full, 30, kana);
-    expect(fallback_loads == 1, "a Runtime Fallback Font that fails to open is not retried");
+    if (fallback_font) {
+        glyph_cache_set_emoji_loader(missing_emoji_loader);
+        VdEmojiSequence ideograph_emoji = cluster_of("\xe6\x97\xa5\xef\xb8\x8f"); // 日 U+FE0F
+        VdGlyph emoji = glyph_cache_get_emoji(ascii, 30, &ideograph_emoji);
+        expect(same_shape(emoji, glyph_cache_get(fallback_font, 30, ideograph)) && !same_shape(emoji, ascii_notdef),
+               "an emoji without an image draws its first character from the Runtime Fallback Font");
+        glyph_cache_set_emoji_loader(NULL);
+    }
 
     glyph_cache_reset();
     glyph_cache_set_fallback_loader(NULL);
     glyph_font_free(fallback_font);
     fallback_font = NULL;
+}
+
+static void test_failing_fallback_loader(const VdGlyphFont *font)
+{
+    glyph_cache_reset();
+    fallback_loads = 0;
+    glyph_cache_set_fallback_loader(failing_fallback_loader);
+    glyph_cache_get(font, 30, 0x65e5);
+    glyph_cache_get(font, 30, 0x3042);
+    expect(fallback_loads == 1, "a Runtime Fallback Font that fails to open is not retried");
+
+    glyph_cache_reset();
+    glyph_cache_set_fallback_loader(NULL);
 }
 
 static void test_hungarian(const VdGlyphFont *full)
@@ -269,25 +302,18 @@ static unsigned char *fake_emoji_loader(const VdEmojiSequence *sequence, int *wi
     return pixels;
 }
 
-static VdEmojiSequence cluster_of(const char *text)
-{
-    VdEmojiSequence sequence = {0};
-    vd_emoji_cluster(text, &sequence);
-    return sequence;
-}
-
-static void test_emoji(const VdGlyphFont *full)
+static void test_emoji(const VdGlyphFont *font)
 {
     glyph_cache_reset();
     glyph_cache_set_emoji_loader(fake_emoji_loader);
     const int size = 24;
 
     VdEmojiSequence controller = cluster_of("\xf0\x9f\x8e\xae");
-    VdGlyph emoji = glyph_cache_get_emoji(full, size, &controller);
+    VdGlyph emoji = glyph_cache_get_emoji(font, size, &controller);
     expect(emoji.color && emoji.page == 0, "an emoji with an image is a colour glyph in an atlas page");
     expect(emoji.width == size && emoji.height == size && emoji.advance == (float)size,
            "an emoji is a Font Size square");
-    expect(emoji.offset_y == -(int)roundf(glyph_font_metrics(full, size).ascent), "an emoji sits at the ascent");
+    expect(emoji.offset_y == -(int)roundf(glyph_font_metrics(font, size).ascent), "an emoji sits at the ascent");
 
     const unsigned char *pixels = glyph_cache_take_dirty_page(0);
     expect(pixels != NULL, "an emoji marks its page dirty");
@@ -301,32 +327,32 @@ static void test_emoji(const VdGlyphFont *full)
     }
 
     int loads = emoji_loads;
-    VdGlyph again = glyph_cache_get_emoji(full, size, &controller);
+    VdGlyph again = glyph_cache_get_emoji(font, size, &controller);
     expect(same_glyph(emoji, again) && emoji_loads == loads, "a cached emoji does not load again");
-    VdGlyph large = glyph_cache_get_emoji(full, size * 2, &controller);
+    VdGlyph large = glyph_cache_get_emoji(font, size * 2, &controller);
     expect(large.width == size * 2 && !same_glyph(emoji, large), "another size is another emoji");
 
     VdEmojiSequence heart = cluster_of("\xe2\x9d\xa4\xef\xb8\x8f");
-    expect(glyph_cache_get_emoji(full, size, &heart).color, "a symbol with U+FE0F resolves to its emoji image");
+    expect(glyph_cache_get_emoji(font, size, &heart).color, "a symbol with U+FE0F resolves to its emoji image");
 
     VdEmojiSequence family = cluster_of("\xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x91\xa7");
     VdEmojiSequence man = cluster_of("\xf0\x9f\x91\xa8");
     loads = emoji_loads;
-    VdGlyph from_family = glyph_cache_get_emoji(full, size, &family);
+    VdGlyph from_family = glyph_cache_get_emoji(font, size, &family);
     expect(from_family.color, "a ZWJ sequence without an image resolves");
     expect(emoji_loads - loads == 3 && emoji_last_length == 1,
            "a ZWJ sequence tries itself and each shorter prefix that ends on an emoji");
-    expect(same_glyph(from_family, glyph_cache_get_emoji(full, size, &man)), "a ZWJ sequence without an image draws as its first emoji");
+    expect(same_glyph(from_family, glyph_cache_get_emoji(font, size, &man)), "a ZWJ sequence without an image draws as its first emoji");
 
     VdEmojiSequence missing = cluster_of("\xf0\x9f\x99\x82");
-    VdGlyph fallback = glyph_cache_get(full, size, VD_EMOJI_FALLBACK);
-    expect(same_glyph(glyph_cache_get_emoji(full, size, &missing), fallback),
+    VdGlyph fallback = glyph_cache_get(font, size, VD_EMOJI_FALLBACK);
+    expect(same_glyph(glyph_cache_get_emoji(font, size, &missing), fallback),
            "an emoji without an image no font has draws the fallback glyph");
     loads = emoji_loads;
-    expect(same_glyph(glyph_cache_get_emoji(full, size, &missing), fallback) && emoji_loads == loads,
+    expect(same_glyph(glyph_cache_get_emoji(font, size, &missing), fallback) && emoji_loads == loads,
            "a missing image is remembered");
     VdEmojiSequence keycap = cluster_of("1\xef\xb8\x8f\xe2\x83\xa3");
-    expect(same_glyph(glyph_cache_get_emoji(full, size, &keycap), glyph_cache_get(full, size, '1')),
+    expect(same_glyph(glyph_cache_get_emoji(font, size, &keycap), glyph_cache_get(font, size, '1')),
            "an emoji without an image draws its first codepoint when a font has it");
 
     glyph_cache_set_emoji_loader(NULL);
@@ -338,17 +364,6 @@ static void test_emoji(const VdGlyphFont *full)
 #endif
 }
 
-static int missing_loads = 0;
-
-static unsigned char *missing_emoji_loader(const VdEmojiSequence *sequence, int *width, int *height)
-{
-    (void)sequence;
-    (void)width;
-    (void)height;
-    missing_loads++;
-    return NULL;
-}
-
 // assets/emoji without images, as after a failed Twemoji download.
 static void test_emoji_without_assets(const VdGlyphFont *full)
 {
@@ -356,7 +371,7 @@ static void test_emoji_without_assets(const VdGlyphFont *full)
     glyph_cache_set_emoji_loader(missing_emoji_loader);
     const int size = 24;
     VdGlyph fallback = glyph_cache_get(full, size, VD_EMOJI_FALLBACK);
-    expect(fallback.page >= 0 && fallback.width > 0 && !fallback.color, "the fallback glyph is a font glyph");
+    expect(fallback.page >= 0 && fallback.width > 0 && !fallback.color, "the fallback glyph is a full glyph");
 
     const char *texts[] = {
         "\xf0\x9f\x8e\xae",
@@ -378,7 +393,7 @@ static void test_emoji_without_assets(const VdGlyphFont *full)
 
     VdEmojiSequence heart = cluster_of("\xe2\x9d\xa4\xef\xb8\x8f");
     expect(same_glyph(glyph_cache_get_emoji(full, size, &heart), glyph_cache_get(full, size, 0x2764)),
-           "a symbol with U+FE0F and no image draws the font's symbol");
+           "a symbol with U+FE0F and no image draws the full's symbol");
     glyph_cache_set_emoji_loader(NULL);
 }
 
@@ -420,25 +435,41 @@ static void test_pages(const VdGlyphFont *full)
     expect(glyph_cache_stats().rasterised == before + 1, "a glyph from a cleared page rasterises again");
 }
 
+static bool file_exists(const char *path)
+{
+    FILE *file = fopen(path, "rb");
+    if (file) fclose(file);
+    return file != NULL;
+}
+
 int main(void)
 {
     test_utf8();
     test_emoji_clusters();
 
-    VdGlyphFont *full = glyph_font_load(FULL_FONT_PATH);
     VdGlyphFont *ascii = glyph_font_load(ASCII_FONT_PATH);
-    expect(full && ascii, "test fonts load");
+    expect(ascii != NULL, "the ASCII test font loads");
     expect(glyph_font_load(VD_SOURCE_DIR "/tests/fixtures/missing.ttf") == NULL, "a missing font file fails");
     expect(glyph_font_load(VD_SOURCE_DIR "/CMakeLists.txt") == NULL, "a file that is not a font fails");
 
-    if (full && ascii) {
-        test_hits_and_sizes(full);
+    // The runtime fonts download at configure time, so an offline build tests what it can with the ASCII fixture.
+    VdGlyphFont *full = glyph_font_load(FULL_FONT_PATH);
+    if (!full) printf("glyph_cache_harness: skipping Runtime Default Font cases, %s is missing\n", FULL_FONT_PATH);
+    bool cjk = file_exists(FALLBACK_FONT_PATH);
+    if (!cjk) printf("glyph_cache_harness: skipping Runtime Fallback Font cases, %s is missing\n", FALLBACK_FONT_PATH);
+
+    if (ascii) {
+        const VdGlyphFont *font = full ? full : ascii;
+        test_hits_and_sizes(font);
+        test_failing_fallback_loader(font);
+        test_emoji(font);
+    }
+    if (ascii && full) {
         test_fallback(full, ascii);
-        test_fallback_chain(full, ascii);
         test_hungarian(full);
-        test_emoji(full);
         test_emoji_without_assets(full);
         test_pages(full);
+        if (cjk) test_fallback_chain(full, ascii);
     }
 
     glyph_cache_reset();
