@@ -6,6 +6,8 @@
 #include "scroll.h"
 #include "core/event_queue.h"
 
+_Static_assert(sizeof(((InputEvent *)0)->id) >= VD_INSTANCE_ID_MAX, "input events must hold every instance id");
+
 // Scroll speeds tuned at 60 FPS reference; continuous motion scales with delta time.
 #define SCROLL_REF_FPS 60.0f
 #define SCROLL_MAX_DT 0.1f
@@ -199,7 +201,8 @@ void poll_mouse_input(void)
     prev_mouse_x = x;
     prev_mouse_y = y;
 
-    char *top_id = instance_hit_test(x, y);
+    char top_id_buf[VD_INSTANCE_ID_MAX];
+    const char *top_id = instance_hit_test(x, y, top_id_buf) ? top_id_buf : NULL;
 
     if (hovered_id && !instance_exists(hovered_id)) {
         free(hovered_id);
@@ -267,15 +270,11 @@ void poll_mouse_input(void)
     // Mouse wheel scrolls the scroll container under the cursor
     const float wheel = GetMouseWheelMove();
     if (wheel != 0.0f) {
-        char *scroll_id = instance_scroll_at(x, y);
-        if (scroll_id) {
-            scroll_apply_delta(scroll_id, -(int)(wheel * SCROLL_WHEEL_STEP));
-            free(scroll_id);
-        }
+        char scroll_id[VD_INSTANCE_ID_MAX];
+        if (instance_scroll_at(x, y, scroll_id)) scroll_apply_delta(scroll_id, -(int)(wheel * SCROLL_WHEEL_STEP));
     }
 
     prev_is_mouse_down = is_mouse_down;
-    free(top_id);
 }
 
 void poll_touch_input(void)
@@ -295,7 +294,8 @@ void poll_touch_input(void)
         y = (int)pos.y;
     }
 
-    char *top_id = is_down ? instance_hit_test(x, y) : NULL;
+    char top_id_buf[VD_INSTANCE_ID_MAX];
+    const char *top_id = is_down && instance_hit_test(x, y, top_id_buf) ? top_id_buf : NULL;
 
     if (touch_hovered_id && !instance_exists(touch_hovered_id)) {
         free(touch_hovered_id);
@@ -333,10 +333,10 @@ void poll_touch_input(void)
         touch_start_y = y;
         touch_prev_y = y;
 
-        char *scroll_at = instance_scroll_at(x, y);
-        if (scroll_at) {
+        char scroll_at[VD_INSTANCE_ID_MAX];
+        if (instance_scroll_at(x, y, scroll_at)) {
             touch_scroll_viewport = true;
-            touch_scroll_id = scroll_at;
+            touch_scroll_id = strdup(scroll_at);
             touch_pending_press = top_id != NULL;
         } else {
             touch_scroll_viewport = false;
@@ -430,7 +430,6 @@ void poll_touch_input(void)
     }
 
     prev_touch_down = is_down;
-    free(top_id);
 }
 
 typedef enum { NAV_UP, NAV_DOWN, NAV_LEFT, NAV_RIGHT } NavDirection;
@@ -568,15 +567,15 @@ void poll_gamepad_input(void)
     confirm_down = confirm_down || IsKeyDown(KEY_ENTER);
 
     int viewport_h = 0, content_h = 0;
-    char *scroll_id = focused_id ? instance_scroll_for_descendant(focused_id) : NULL;
-    if (scroll_id && instance_scroll_metrics(scroll_id, &viewport_h, &content_h)) {
+    char scroll_id[VD_INSTANCE_ID_MAX];
+    if (focused_id && instance_scroll_for_descendant(focused_id, scroll_id) &&
+        instance_scroll_metrics(scroll_id, &viewport_h, &content_h)) {
         const float dt = input_frame_dt();
         if (fabsf(stick_y) > SCROLL_ANALOG_DEADZONE) {
             const float delta = stick_y * SCROLL_ANALOG_SPEED_PX_PER_S * dt;
             scroll_apply_delta(scroll_id, (int)roundf(delta));
         }
     }
-    if (scroll_id) free(scroll_id);
 
     // Navigation
     if (up || down || left || right) {

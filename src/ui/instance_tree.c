@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <raylib.h>
@@ -368,16 +369,21 @@ static const char *hit_test_recursive(ReactInstance **children, int x, int y, in
     return NULL;
 }
 
-char *instance_hit_test(int x, int y)
+// Copies under the snapshot lock: the id lives in the snapshot arena, which the JS thread frees on swap.
+static bool copy_id(char out_id[VD_INSTANCE_ID_MAX], const char *id)
 {
-    char *result = NULL;
+    if (!id) return false;
+    snprintf(out_id, VD_INSTANCE_ID_MAX, "%s", id);
+    return true;
+}
+
+bool instance_hit_test(int x, int y, char out_id[VD_INSTANCE_ID_MAX])
+{
+    bool hit = false;
     vd_mutex_lock(snapshot_mutex);
-    if (front_snapshot) {
-        const char *hit = hit_test_recursive(front_snapshot->root_children, x, y, 0, 0);
-        if (hit) result = strdup(hit);
-    }
+    if (front_snapshot) hit = copy_id(out_id, hit_test_recursive(front_snapshot->root_children, x, y, 0, 0));
     vd_mutex_unlock(snapshot_mutex);
-    return result;
+    return hit;
 }
 
 static bool rect_intersects_clip(int x, int y, int width, int height, bool has_clip, int clip_x, int clip_y,
@@ -565,41 +571,41 @@ static ReactInstance *scroll_at_instance(ReactInstance *inst, int x, int y, int 
     return found;
 }
 
-char *instance_scroll_for_descendant(const char *id)
+bool instance_scroll_for_descendant(const char *id, char out_id[VD_INSTANCE_ID_MAX])
 {
-    if (!id) return NULL;
+    if (!id) return false;
 
-    char *result = NULL;
+    bool found = false;
     vd_mutex_lock(snapshot_mutex);
     if (front_snapshot) {
         ReactInstance *inst = find_front_instance_unlocked(front_snapshot, id);
         while (inst) {
             if (inst->type == NT_SCROLL && inst->id) {
-                result = strdup(inst->id);
+                found = copy_id(out_id, inst->id);
                 break;
             }
             inst = inst->parent;
         }
     }
     vd_mutex_unlock(snapshot_mutex);
-    return result;
+    return found;
 }
 
-char *instance_scroll_at(int x, int y)
+bool instance_scroll_at(int x, int y, char out_id[VD_INSTANCE_ID_MAX])
 {
-    char *result = NULL;
+    bool found = false;
     vd_mutex_lock(snapshot_mutex);
     if (front_snapshot) {
-        ReactInstance *found = NULL;
+        ReactInstance *scroll = NULL;
         int count = arrlen(front_snapshot->root_children);
         for (int i = 0; i < count; i++) {
             ReactInstance *hit = scroll_at_instance(front_snapshot->root_children[i], x, y, 0, 0);
-            if (hit) found = hit;
+            if (hit) scroll = hit;
         }
-        if (found && found->id) result = strdup(found->id);
+        found = scroll && copy_id(out_id, scroll->id);
     }
     vd_mutex_unlock(snapshot_mutex);
-    return result;
+    return found;
 }
 
 // Back-buffer operations (JS thread only)

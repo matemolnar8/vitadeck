@@ -4,13 +4,25 @@
 #include "ui/images.h"
 #include "ui/instance_tree.h"
 
+// Input events and hit tests copy ids into VD_INSTANCE_ID_MAX buffers, so an id that does not fit is rejected.
+static const char *to_new_instance_id(JSContext *ctx, JSValueConst value)
+{
+    const char *id = JS_ToCString(ctx, value);
+    if (id && strlen(id) >= VD_INSTANCE_ID_MAX) {
+        TraceLog(LOG_WARNING, "Instance id is longer than %d characters: %s", VD_INSTANCE_ID_MAX - 1, id);
+        JS_FreeCString(ctx, id);
+        return NULL;
+    }
+    return id;
+}
+
 static JSValue native_create_rect(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
     instance_back_mark_dirty();
     if (argc < 16) return JS_UNDEFINED;
 
-    const char *id = JS_ToCString(ctx, argv[0]);
+    const char *id = to_new_instance_id(ctx, argv[0]);
     if (!id) return JS_UNDEFINED;
 
     ReactInstance *inst = calloc(1, sizeof(ReactInstance));
@@ -78,7 +90,7 @@ static JSValue native_create_text(JSContext *ctx, JSValueConst this_val, int arg
     instance_back_mark_dirty();
     if (argc < 15) return JS_UNDEFINED;
 
-    const char *id = JS_ToCString(ctx, argv[0]);
+    const char *id = to_new_instance_id(ctx, argv[0]);
     if (!id) return JS_UNDEFINED;
     const char *font_name = JS_ToCString(ctx, argv[1]);
 
@@ -116,7 +128,7 @@ static JSValue native_create_button(JSContext *ctx, JSValueConst this_val, int a
     instance_back_mark_dirty();
     if (argc < 16) return JS_UNDEFINED;
 
-    const char *id = JS_ToCString(ctx, argv[0]);
+    const char *id = to_new_instance_id(ctx, argv[0]);
     if (!id) return JS_UNDEFINED;
 
     ReactInstance *inst = calloc(1, sizeof(ReactInstance));
@@ -197,7 +209,7 @@ static JSValue native_create_scroll(JSContext *ctx, JSValueConst this_val, int a
     instance_back_mark_dirty();
     if (argc < 12) return JS_UNDEFINED;
 
-    const char *id = JS_ToCString(ctx, argv[0]);
+    const char *id = to_new_instance_id(ctx, argv[0]);
     if (!id) return JS_UNDEFINED;
 
     ReactInstance *inst = calloc(1, sizeof(ReactInstance));
@@ -262,7 +274,7 @@ static JSValue native_create_image(JSContext *ctx, JSValueConst this_val, int ar
     instance_back_mark_dirty();
     if (argc < 6) return JS_UNDEFINED;
 
-    const char *id = JS_ToCString(ctx, argv[0]);
+    const char *id = to_new_instance_id(ctx, argv[0]);
     if (!id) return JS_UNDEFINED;
     const char *image_name = JS_ToCString(ctx, argv[1]);
     if (!image_name) {
@@ -320,9 +332,9 @@ static JSValue native_create_raw_text(JSContext *ctx, JSValueConst this_val, int
     instance_back_mark_dirty();
     if (argc < 2) return JS_UNDEFINED;
 
-    const char *id = JS_ToCString(ctx, argv[0]);
-    const char *text = JS_ToCString(ctx, argv[1]);
+    const char *id = to_new_instance_id(ctx, argv[0]);
     if (!id) return JS_UNDEFINED;
+    const char *text = JS_ToCString(ctx, argv[1]);
 
     ReactInstance *inst = calloc(1, sizeof(ReactInstance));
     inst->id = strdup(id);
