@@ -76,7 +76,9 @@ static JSValue js_native_get_active_deck_app_path(JSContext *ctx, JSValueConst t
     (void)this_val;
     (void)argc;
     (void)argv;
-    return JS_NewString(ctx, package_library_active_package_path());
+    char path[VD_PATH_MAX];
+    package_library_active_package_path(path, sizeof(path));
+    return JS_NewString(ctx, path);
 }
 
 static void call_input_event_from_native(JSContext *ctx, const char *id, const char *event)
