@@ -29,7 +29,7 @@ From the root of a Deck App (with `vitadeck.config.json`):
 npx @vitadeck/sdk build
 ```
 
-`npx @vitadeck/sdk` with no subcommand runs **build**. Use `npx @vitadeck/sdk build --no-zip` to skip the `.zip` archive.
+`npx @vitadeck/sdk` with no subcommand runs **build**. Use `npx @vitadeck/sdk build --no-zip` to skip the `.zip` archive. Builds bundle your app with `NODE_ENV=production`; pass `--dev` (`npx @vitadeck/sdk build --dev`) for a development build.
 
 ## Links
 
