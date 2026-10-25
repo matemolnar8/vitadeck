@@ -3,6 +3,7 @@
 #include "core/event_queue.h"
 #include "ui/input.h"
 
+#include <raylib.h>
 #include <stdio.h>
 
 static int failures = 0;
@@ -14,7 +15,8 @@ static void expect(bool condition, const char *message)
     failures++;
 }
 
-// Drains the queue as space-separated "event:id" for instance events and "pad:button:phase" for Pad Buttons.
+// Drains the queue as space-separated "event:id" for instance events, "pad:button:phase" for Pad Buttons and
+// "text:id:value" for confirmed Text Input values.
 static const char *drain(void)
 {
     static char out[512];
@@ -23,8 +25,14 @@ static const char *drain(void)
     InputEvent evt;
     while (event_queue_pop(&evt)) {
         const char *sep = len > 0 ? " " : "";
-        int n = evt.type == EVT_PAD_BUTTON ? snprintf(out + len, sizeof(out) - len, "%spad:%s:%s", sep, evt.id, evt.event_name)
-                                           : snprintf(out + len, sizeof(out) - len, "%s%s:%s", sep, evt.event_name, evt.id);
+        int n = 0;
+        if (evt.type == EVT_PAD_BUTTON)
+            n = snprintf(out + len, sizeof(out) - len, "%spad:%s:%s", sep, evt.id, evt.event_name);
+        else if (evt.type == EVT_TEXT_INPUT)
+            n = snprintf(out + len, sizeof(out) - len, "%stext:%s:%s", sep, evt.id, evt.text);
+        else
+            n = snprintf(out + len, sizeof(out) - len, "%s%s:%s", sep, evt.event_name, evt.id);
+        free(evt.text);
         if (n > 0 && (size_t)n < sizeof(out) - len) len += (size_t)n;
     }
     return out;
@@ -210,6 +218,161 @@ static void test_auto_focus(void)
     instance_tree_clear();
 }
 
+// One frame of host keyboard editing: typed UTF-8, then Backspace, Enter or Escape.
+static void keys(const char *typed, bool backspace, bool confirm, bool cancel)
+{
+    int codepoints[64];
+    int count = 0;
+    for (const char *p = typed; *p != '\0' && count < 64;) {
+        int size = 0;
+        codepoints[count++] = GetCodepointNext(p, &size);
+        p += size;
+    }
+    const VdTextInputKeys sample = {
+        .codepoints = codepoints,
+        .codepoint_count = count,
+        .backspace = backspace,
+        .confirm = confirm,
+        .cancel = cancel,
+    };
+    input_apply_text_input(vd_text_input_apply_keys(&sample));
+}
+
+static void type(const char *typed)
+{
+    keys(typed, false, false, false);
+}
+
+static void expect_editing(const char *text, const char *message)
+{
+    const char *got = input_editing_text("t");
+    if (!got || strcmp(got, text) != 0) {
+        fprintf(stderr, "input_harness: editing \"%s\", want \"%s\"\n", got ? got : "(none)", text);
+        expect(false, message);
+    }
+}
+
+// Text Input t (value "hi", at most 5 UTF-16 code units) left of Button a.
+static ReactInstance *build_text_input_tree(void)
+{
+    ReactInstance *t = fixture_text_input(NULL, "t", 0, 0, 200, 40, "hi", 5);
+    fixture_button(NULL, "a", 300, 0, 40, 40);
+    fixture_publish();
+    return t;
+}
+
+static void test_text_input_editing(void)
+{
+    build_text_input_tree();
+    reset();
+
+    mouse(10, 10, false);
+    expect_events("focus:t", "hovering a Text Input focuses it");
+    mouse(10, 10, true);
+    expect(!input_is_editing_text(), "a Text Input does not edit before the Press ends");
+    mouse(10, 10, false);
+    expect_events("pressstart:t pressend:t press:t", "a Text Input is pressed like a Button");
+    expect(input_is_editing_text(), "a Press on a Text Input starts editing");
+    expect_editing("hi", "editing starts from the value");
+    expect(input_editing_text("a") == NULL, "only the edited Text Input shows editing text");
+
+    type("!é");
+    expect_editing("hi!é", "typed characters append, UTF-8 included");
+    type("xyz");
+    expect_editing("hi!éx", "typing stops at maxLength");
+    keys("", true, false, false);
+    keys("", true, false, false);
+    expect_editing("hi!", "Backspace deletes whole characters");
+    expect_events("", "editing reports nothing before it ends");
+
+    keys("", false, true, false);
+    expect_events("text:t:hi!", "Enter confirms once with the edited value");
+    expect(!input_is_editing_text(), "confirming ends editing");
+    expect(input_editing_text("t") == NULL, "no editing text after the edit");
+    expect(input_is_focused("t"), "the Text Input keeps Focus after the edit");
+
+    gamepad((GamepadSample){.confirm = true});
+    gamepad((GamepadSample){0});
+    expect_events("", "the Enter that confirmed does not press again");
+    gamepad((GamepadSample){.confirm = true});
+    gamepad((GamepadSample){0});
+    expect_events("pressstart:t pressend:t press:t", "the next Cross presses the Text Input again");
+    expect_editing("hi", "a new edit starts from the value the Deck App holds");
+
+    type("zz");
+    keys("q", false, false, true);
+    expect_events("", "Escape cancels without a change");
+    expect(!input_is_editing_text(), "cancelling ends editing");
+
+    instance_tree_clear();
+}
+
+static void test_text_input_ends(void)
+{
+    ReactInstance *t = build_text_input_tree();
+    reset();
+
+    gamepad((GamepadSample){.right = true});
+    gamepad((GamepadSample){.confirm = true});
+    gamepad((GamepadSample){0});
+    drain();
+    expect(input_is_editing_text(), "Cross on a focused Text Input starts editing");
+    input_cancel_text_input();
+    expect(!input_is_editing_text(), "opening the Shell cancels editing");
+    keys("", false, true, false);
+    expect_events("", "keys after a cancel reach nothing");
+
+    gamepad((GamepadSample){0});
+    gamepad((GamepadSample){.confirm = true});
+    gamepad((GamepadSample){0});
+    drain();
+    input_clear_focus();
+    expect(!input_is_editing_text(), "a runtime restart cancels editing");
+    expect_events("blur:t", "a runtime restart reports no value, only the blur");
+
+    gamepad((GamepadSample){.right = true});
+    gamepad((GamepadSample){.confirm = true});
+    gamepad((GamepadSample){0});
+    drain();
+    fixture_destroy(t);
+    fixture_publish();
+    type("x");
+    expect(!input_is_editing_text(), "removing the Text Input ends editing");
+    expect_events("", "a removed Text Input reports no value");
+
+    instance_tree_clear();
+}
+
+static void test_text_input_limits(void)
+{
+    fixture_text_input(NULL, "t", 0, 0, 200, 40, "abcdef", 3);
+    fixture_publish();
+    reset();
+
+    mouse(10, 10, true);
+    mouse(10, 10, false);
+    expect_editing("abc", "a value longer than maxLength is cut when editing starts");
+    keys("", false, false, true);
+
+    instance_tree_clear();
+    fixture_text_input(NULL, "t", 0, 0, 200, 40, "", 2);
+    fixture_publish();
+    reset();
+
+    mouse(10, 10, true);
+    mouse(10, 10, false);
+    type("\t\x7f");
+    expect_editing("", "control characters are not typed");
+    type("\xf0\x9f\x98\x80a");
+    expect_editing("\xf0\x9f\x98\x80", "an emoji counts as two code units, like a JS string");
+    keys("", true, false, false);
+    type("ab");
+    keys("", false, true, false);
+    expect_events("focus:t pressstart:t pressend:t press:t text:t:ab", "the value is confirmed once");
+
+    instance_tree_clear();
+}
+
 int main(void)
 {
     instance_tree_init();
@@ -222,6 +385,9 @@ int main(void)
     test_press();
     test_pad_buttons();
     test_auto_focus();
+    test_text_input_editing();
+    test_text_input_ends();
+    test_text_input_limits();
 
     reset();
     event_queue_destroy();
