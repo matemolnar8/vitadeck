@@ -26,6 +26,12 @@ static uint32_t le32(const unsigned char *p)
     return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
 }
 
+/* True when [offset, offset + len) lies inside size bytes, without computing a sum that can wrap on 32-bit size_t. */
+static bool in_bounds(size_t offset, size_t len, size_t size)
+{
+    return offset <= size && len <= size - offset;
+}
+
 static bool has_suffix(const char *value, const char *suffix)
 {
     size_t value_len = strlen(value);
@@ -126,27 +132,32 @@ static bool write_stored(const unsigned char *data, size_t size, const char *out
     return ok;
 }
 
-static bool write_deflated(Arena *arena, const unsigned char *data, size_t compressed_size, size_t uncompressed_size,
+static bool write_deflated(const unsigned char *data, size_t compressed_size, size_t uncompressed_size,
                            const char *out_path)
 {
-    unsigned char *out = arena_alloc(arena, uncompressed_size);
-    if (!out) return false;
+    if (!mkdir_parent(out_path)) return false;
+    FILE *f = fopen(out_path, "wb");
+    if (!f) return false;
 
     z_stream stream;
     memset(&stream, 0, sizeof(stream));
     stream.next_in = (Bytef *)data;
     stream.avail_in = (uInt)compressed_size;
-    stream.next_out = out;
-    stream.avail_out = (uInt)uncompressed_size;
 
+    unsigned char chunk[16 * 1024];
     bool ok = inflateInit2(&stream, -MAX_WBITS) == Z_OK;
-    if (ok) {
-        int ret = inflate(&stream, Z_FINISH);
-        ok = ret == Z_STREAM_END && stream.total_out == uncompressed_size;
+    int ret = Z_OK;
+    while (ok && ret != Z_STREAM_END) {
+        stream.next_out = chunk;
+        stream.avail_out = sizeof(chunk);
+        ret = inflate(&stream, Z_NO_FLUSH);
+        size_t produced = sizeof(chunk) - stream.avail_out;
+        ok = (ret == Z_OK || ret == Z_STREAM_END) && stream.total_out <= uncompressed_size &&
+             fwrite(chunk, 1, produced, f) == produced;
     }
+    ok = ok && stream.total_out == uncompressed_size;
     inflateEnd(&stream);
-
-    if (ok) ok = write_stored(out, uncompressed_size, out_path);
+    fclose(f);
     return ok;
 }
 
@@ -161,10 +172,14 @@ bool upload_archive_extract(Arena *arena, const char *zip_path, VdArchiveExtract
         set_error(error, error_size, "Archive is missing or exceeds upload size limit.");
         return false;
     }
+    if (zip_size < 22) {
+        set_error(error, error_size, "Archive is not a supported zip file.");
+        return false;
+    }
 
     size_t eocd_pos = (size_t)-1;
     size_t search_start = zip_size > 66000 ? zip_size - 66000 : 0;
-    for (size_t i = zip_size >= 22 ? zip_size - 22 : 0; i >= search_start && i < zip_size; i--) {
+    for (size_t i = zip_size - 22; i >= search_start && i < zip_size; i--) {
         if (le32(zip + i) == 0x06054b50) {
             eocd_pos = i;
             break;
@@ -179,7 +194,7 @@ bool upload_archive_extract(Arena *arena, const char *zip_path, VdArchiveExtract
     unsigned int entry_count = le16(zip + eocd_pos + 10);
     uint32_t central_size = le32(zip + eocd_pos + 12);
     uint32_t central_offset = le32(zip + eocd_pos + 16);
-    if (entry_count == 0 || entry_count > VD_UPLOAD_MAX_ENTRIES || central_offset + central_size > zip_size) {
+    if (entry_count == 0 || entry_count > VD_UPLOAD_MAX_ENTRIES || !in_bounds(central_offset, central_size, zip_size)) {
         set_error(error, error_size, "Archive entry count or directory is invalid.");
         return false;
     }
@@ -234,17 +249,17 @@ bool upload_archive_extract(Arena *arena, const char *zip_path, VdArchiveExtract
         bool is_directory = entry_name[strlen(entry_name) - 1] == '/';
         if (is_directory) continue;
 
-        total_unpacked += uncompressed_size;
-        if (total_unpacked > VD_UPLOAD_MAX_UNPACKED_BYTES || local_offset + 30 > zip_size ||
-            le32(zip + local_offset) != 0x04034b50) {
+        if (uncompressed_size > VD_UPLOAD_MAX_UNPACKED_BYTES - total_unpacked ||
+            !in_bounds(local_offset, 30, zip_size) || le32(zip + local_offset) != 0x04034b50) {
             set_error(error, error_size, "Archive exceeds unpacked size limit or has invalid local data.");
             return false;
         }
+        total_unpacked += uncompressed_size;
 
         uint16_t local_name_len = le16(zip + local_offset + 26);
         uint16_t local_extra_len = le16(zip + local_offset + 28);
         size_t data_offset = local_offset + 30 + local_name_len + local_extra_len;
-        if (data_offset + compressed_size > zip_size) {
+        if (!in_bounds(data_offset, compressed_size, zip_size)) {
             set_error(error, error_size, "Archive entry data is invalid.");
             return false;
         }
@@ -255,7 +270,7 @@ bool upload_archive_extract(Arena *arena, const char *zip_path, VdArchiveExtract
         if (method == 0) {
             ok = compressed_size == uncompressed_size && write_stored(zip + data_offset, uncompressed_size, out_path);
         } else if (method == 8) {
-            ok = write_deflated(arena, zip + data_offset, compressed_size, uncompressed_size, out_path);
+            ok = write_deflated(zip + data_offset, compressed_size, uncompressed_size, out_path);
         }
         if (!ok) {
             set_error(error, error_size, "Archive contains an unsupported or invalid compressed entry.");
