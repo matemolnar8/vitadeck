@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify b31c0d62da5f6d3d7dd8ae66c1f968e692df5619` and `git rev-parse --verify 2d9850830f3b8f421e81f7d6750564e89db51ccc` in this repository.
+   Run `git rev-parse --verify 6ec5488d92569d22ca087ea754dd8d016282272b` and `git rev-parse --verify d3d67e5780fccc6aeb1ca3cd56276f72dd1ceddc` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -22,17 +22,19 @@ When no question follows this paste, explain this change.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  b31c0d62da5f6d3d7dd8ae66c1f968e692df5619
+base (merge-base)  6ec5488d92569d22ca087ea754dd8d016282272b
 
-head               2d9850830f3b8f421e81f7d6750564e89db51ccc
+head               d3d67e5780fccc6aeb1ca3cd56276f72dd1ceddc
 
-Named refs at pin: origin/feat/focus-and-pad-input ... feat/text-input
+Named refs at pin: 6ec5488 ... d3d67e5
 
 Read the diff:
 
-git diff --find-renames b31c0d62da5f6d3d7dd8ae66c1f968e692df5619 2d9850830f3b8f421e81f7d6750564e89db51ccc
+git diff --find-renames 6ec5488d92569d22ca087ea754dd8d016282272b d3d67e5780fccc6aeb1ca3cd56276f72dd1ceddc
 
 Commits:
+- d3d67e5 docs(context): drop glossary and host mapping blocks the merge duplicated
+- 1b13b09 Merge origin/main into feat/text-input
 - 2d98508 test(input): split the emoji literal so its hex escape ends
 - ac74646 docs: Text Input glossary entry, host mappings and SDK README section
 - f20e514 feat(examples): write your own message in the chat compose row
@@ -41,6 +43,11 @@ Commits:
 - 7bc88db feat(runtime): create text inputs and deliver confirmed values to onChange
 - b0150c5 feat(ui): vita-text-input instance, editing session and rendering
 - 12859cc feat(platform): text input editing via Vita IME dialog and host keyboard
+- b31c0d6 docs: Focus, Pad Button and the host mapping table
+- de0d962 feat(examples): minesweeper uses focus color, autoFocus and pad buttons
+- 6ca8d96 feat(runtime): dispatch focus, blur and pad buttons; autoFocus on commit
+- 62534f5 feat(sdk): Button focus props and usePadButton
+- 95723a6 feat(input): native focus events, pad buttons and hover focus
 
 Sources:
 - ticket #48 Approved design proposal: controlled TextInput, IME dialog on Vita, in-place host editing, onChange once on confirm, no onSubmit.
