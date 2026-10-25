@@ -1,6 +1,6 @@
 import React, { type ReactNode } from "react";
 import { vitaHost } from "./host-elements";
-import { useTheme, type Theme, type ThemeContextValue, type ThemeName } from "./theme";
+import { useTheme, type Theme, type ThemeContextValue } from "./theme";
 import type { Color, ColorsMap } from "./types";
 import type { VitaImageProps, VitaRectProps, VitaScrollProps, VitaTextProps } from "./vitadeck-host-types";
 
@@ -87,5 +87,5 @@ export function Button({ onPress, onPressStart, onPressEnd, ...props }: ButtonPr
 
 const runtimeColors = (globalThis as unknown as { Colors: ColorsMap }).Colors;
 export { runtimeColors as Colors, useTheme };
-export type { Theme, ThemeContextValue, ThemeName };
+export type { Theme, ThemeContextValue };
 export type { Color, ColorName, ColorsMap, FontName, ImageName, VitaDeckFontMap, VitaDeckImageMap } from "./types";

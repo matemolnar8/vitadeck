@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext } from "react";
 import type { Color } from "./types";
 
 function hex(value: string): Color {
@@ -11,39 +11,7 @@ function hex(value: string): Color {
   };
 }
 
-const palette = {
-  oledBlack: hex("#000000"),
-  oledSurface: hex("#080b0e"),
-  oledSurfaceAlt: hex("#11171d"),
-  oledOutline: hex("#6f8490"),
-  brand10: hex("#f7fbfd"),
-  brand20: hex("#ebf5f9"),
-  brand30: hex("#d0e7f1"),
-  brand40: hex("#a8d3e6"),
-  brand50: hex("#75b9d7"),
-  brand60: hex("#41a0c8"),
-  brand70: hex("#2e7c9e"),
-  brand80: hex("#20576f"),
-  brand90: hex("#153847"),
-  brand100: hex("#071318"),
-  gray10: hex("#fafafa"),
-  gray20: hex("#f2f2f3"),
-  gray30: hex("#dfe1e2"),
-  gray40: hex("#c4c7c9"),
-  gray50: hex("#a2a7aa"),
-  gray60: hex("#80868a"),
-  gray70: hex("#62676a"),
-  gray80: hex("#45484a"),
-  gray90: hex("#2c2e2f"),
-  gray100: hex("#0f0f10"),
-  accent: hex("#f7733b"),
-  success: hex("#2bca75"),
-  warning: hex("#eeda2b"),
-  danger: hex("#d96226"),
-};
-
 export type Theme = {
-  name: ThemeName;
   background: Color;
   navBackground: Color;
   navText: Color;
@@ -60,58 +28,34 @@ export type Theme = {
   danger: Color;
 };
 
-export type ThemeName = "dark" | "light";
-
-const THEMES: Record<ThemeName, Theme> = {
-  dark: {
-    name: "dark",
-    background: palette.oledBlack,
-    navBackground: palette.oledSurface,
-    navText: palette.gray10,
-    surface: palette.oledSurface,
-    surfaceAlt: palette.oledSurfaceAlt,
-    primary: palette.brand90,
-    text: palette.gray10,
-    outline: palette.oledOutline,
-    buttonBackground: palette.brand90,
-    buttonText: palette.gray10,
-    accent: palette.accent,
-    success: palette.success,
-    warning: palette.warning,
-    danger: palette.danger,
-  },
-  light: {
-    name: "light",
-    background: palette.gray30,
-    navBackground: palette.brand90,
-    navText: palette.gray10,
-    surface: palette.gray10,
-    surfaceAlt: palette.gray40,
-    primary: palette.brand70,
-    text: palette.gray100,
-    outline: palette.gray50,
-    buttonBackground: palette.brand70,
-    buttonText: palette.gray10,
-    accent: palette.accent,
-    success: palette.success,
-    warning: palette.warning,
-    danger: palette.danger,
-  },
+const theme: Theme = {
+  background: hex("#000000"),
+  navBackground: hex("#080b0e"),
+  navText: hex("#fafafa"),
+  surface: hex("#080b0e"),
+  surfaceAlt: hex("#11171d"),
+  primary: hex("#153847"),
+  text: hex("#fafafa"),
+  outline: hex("#6f8490"),
+  buttonBackground: hex("#153847"),
+  buttonText: hex("#fafafa"),
+  accent: hex("#f7733b"),
+  success: hex("#2bca75"),
+  warning: hex("#eeda2b"),
+  danger: hex("#d96226"),
 };
 
 export type ThemeContextValue = {
   theme: Theme;
-  themeName: ThemeName;
 };
+
+const themeContextValue: ThemeContextValue = { theme };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [themeName] = useState<ThemeName>("dark");
-  const theme = THEMES[themeName];
-
-  return <ThemeContext.Provider value={{ theme, themeName }}>{children}</ThemeContext.Provider>;
-};
+export const ThemeProvider = ({ children }: { children: React.ReactNode }) => (
+  <ThemeContext.Provider value={themeContextValue}>{children}</ThemeContext.Provider>
+);
 
 export function useTheme(): ThemeContextValue {
   const ctx = useContext(ThemeContext);
