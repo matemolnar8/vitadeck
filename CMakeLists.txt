@@ -166,6 +166,8 @@ set(VITADECK_SOURCES
     src/ui/instance_tree.c
     src/ui/layout.c
     src/ui/fonts.c
+    src/ui/glyph_cache.c
+    src/ui/text.c
     src/ui/images.c
     src/ui/render.c
     src/ui/input.c
@@ -311,6 +313,11 @@ if(NOT DEFINED ENV{VITASDK})
     add_executable(layout_harness tests/layout_harness.c src/ui/layout.c)
     add_test(NAME layout_harness COMMAND layout_harness)
 
+    add_executable(glyph_cache_harness tests/glyph_cache_harness.c src/ui/glyph_cache.c src/core/util.c)
+    target_compile_definitions(glyph_cache_harness PRIVATE VD_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    target_link_libraries(glyph_cache_harness m)
+    add_test(NAME glyph_cache_harness COMMAND glyph_cache_harness)
+
     # Links raylib only because input.c and text_input_host.c also hold the raylib polls; the harness drives the
     # input_apply_* and vd_text_input_apply_keys steps.
     add_executable(input_harness
@@ -357,6 +364,8 @@ if(NOT DEFINED ENV{VITASDK})
       src/ui/instance_tree.c
       src/ui/layout.c
       src/ui/fonts.c
+      src/ui/glyph_cache.c
+      src/ui/text.c
       src/ui/images.c
       src/ui/render.c
       src/ui/input.c

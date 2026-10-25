@@ -49,7 +49,7 @@ The generated JavaScript file inside a **Deck App Package** that registers the c
 _Avoid_: User entry, source entry, main runtime
 
 **Deck App Font**:
-A named font file included in a **Deck App Package** and declared by the **Deck App Package Manifest** for author code to reference.
+A named font file included in a **Deck App Package** and declared by the **Deck App Package Manifest** for author code to reference. Characters a TrueType or OpenType **Deck App Font** lacks render from the **Runtime Default Font**; `.fnt` and `.bdf` fonts do not fall back.
 _Avoid_: Raw font path, system font, hardcoded font
 
 **Deck App Image**:
@@ -57,7 +57,7 @@ A named image file included in a **Deck App Package** and declared by the **Deck
 _Avoid_: Raw image path, texture path, sprite sheet path
 
 **Runtime Default Font**:
-The VitaDeck-provided sans-serif font used for text when a **Deck App** does not request a **Deck App Font** or explicitly requests the reserved default font name.
+The VitaDeck-provided sans-serif font (DejaVu Sans) used for text when a **Deck App** does not request a **Deck App Font** or explicitly requests the reserved default font name. It is also the fallback for characters the requested **Deck App Font** lacks; a character neither has renders as the requested font's missing-glyph box.
 _Avoid_: Built-in Raylib font, implicit app font, serif default
 
 **Font Size**:
@@ -492,7 +492,7 @@ Every Vita input has a desktop host equivalent, and a connected gamepad works al
 > **Domain expert:** "No — load declared **Deck App Fonts** when the **Deck App Package** starts so rendering does not partially proceed with font errors."
 >
 > **Dev:** "Must each Deck App declare every pixel size it will use?"
-> **Domain expert:** "No — a loaded **Deck App Font** renders at the requested **Font Size**; size-specific font atlases are a future rendering-quality optimization."
+> **Domain expert:** "No — a loaded **Deck App Font** renders at the requested **Font Size**; VitaDeck rasterises each character at that size the first time it is drawn."
 >
 > **Dev:** "Do authors copy fonts into the package output by hand?"
 > **Domain expert:** "No — authors declare **Deck App Fonts** in SDK configuration, and the **VitaDeck SDK** copies them into the built **Deck App Package Directory**."
@@ -643,7 +643,7 @@ Every Vita input has a desktop host equivalent, and a connected gamepad works al
 - "font size" could mean CSS points, scaling, or theme tokens; resolved: **Font Size** is a raw pixel value in the **VitaDeck Runtime API**.
 - "default font" could mean Raylib's built-in bitmap font or a bundled VitaDeck typeface; resolved: use a VitaDeck-provided sans-serif **Runtime Default Font**.
 - "`default` font" could mean an app-declared font name or VitaDeck fallback; resolved: `default` is VitaDeck-reserved and selects the **Runtime Default Font**.
-- "font fallback" could hide invalid packages; resolved: missing or unsupported declared **Deck App Fonts** fail package validation instead of silently falling back.
+- "font fallback" could hide invalid packages; resolved: missing or unsupported declared **Deck App Fonts** fail package validation instead of silently falling back, while a valid **Deck App Font** falls back to the **Runtime Default Font** per character it lacks.
 - "font loading" could mean lazy render-time loading or package startup loading; resolved: declared **Deck App Fonts** load when the **Deck App Package** starts.
 - "font sizes" could imply package-declared preloaded size sets; resolved: **Deck App Fonts** render at arbitrary raw-pixel **Font Size** values for now.
 - "providing fonts" could mean hand-editing the package output; resolved: authors declare **Deck App Fonts** in SDK configuration and the **VitaDeck SDK** copies them into the package.

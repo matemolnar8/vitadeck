@@ -1,0 +1,211 @@
+#define STB_DS_IMPLEMENTATION
+#include "stb_ds.h"
+#include "ui/glyph_cache.h"
+
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+
+// DejaVuSans-ascii.ttf is assets/fonts/DejaVuSans.ttf subset to U+0020-007E, under the same licence.
+#define FULL_FONT_PATH VD_SOURCE_DIR "/assets/fonts/DejaVuSans.ttf"
+#define ASCII_FONT_PATH VD_SOURCE_DIR "/tests/fixtures/DejaVuSans-ascii.ttf"
+
+static int failures = 0;
+
+static void expect(bool condition, const char *message)
+{
+    if (condition) return;
+    fprintf(stderr, "glyph_cache_harness: %s\n", message);
+    failures++;
+}
+
+static void expect_utf8(const char *text, uint32_t codepoint, int length, const char *message)
+{
+    int got_length = 0;
+    uint32_t got = vd_utf8_next(text, &got_length);
+    if (got == codepoint && got_length == length) return;
+    fprintf(stderr, "glyph_cache_harness: decoded U+%04X in %d bytes, want U+%04X in %d\n", (unsigned)got, got_length,
+            (unsigned)codepoint, length);
+    expect(false, message);
+}
+
+static bool same_glyph(VdGlyph a, VdGlyph b)
+{
+    return a.page == b.page && a.x == b.x && a.y == b.y && a.width == b.width && a.height == b.height &&
+           a.offset_x == b.offset_x && a.offset_y == b.offset_y && a.advance == b.advance;
+}
+
+static bool same_shape(VdGlyph a, VdGlyph b)
+{
+    return a.width == b.width && a.height == b.height && a.offset_x == b.offset_x && a.offset_y == b.offset_y &&
+           a.advance == b.advance;
+}
+
+static void test_utf8(void)
+{
+    expect_utf8("A", 'A', 1, "ASCII decodes as itself");
+    expect_utf8("\xc5\x91", 0x151, 2, "two-byte sequence decodes");
+    expect_utf8("\xe2\x82\xac", 0x20ac, 3, "three-byte sequence decodes");
+    expect_utf8("\xf0\x9f\x91\x8d", 0x1f44d, 4, "four-byte sequence decodes");
+    expect_utf8("\x80", VD_UTF8_REPLACEMENT, 1, "a lone continuation byte is replaced");
+    expect_utf8("\xc5", VD_UTF8_REPLACEMENT, 1, "a sequence cut by the terminator is replaced");
+    expect_utf8("\xe2\x82(", VD_UTF8_REPLACEMENT, 1, "a sequence cut by ASCII is replaced");
+    expect_utf8("\xc0\xaf", VD_UTF8_REPLACEMENT, 1, "an overlong sequence is replaced");
+    expect_utf8("\xed\xa0\x80", VD_UTF8_REPLACEMENT, 1, "a surrogate is replaced");
+    expect_utf8("\xf4\x90\x80\x80", VD_UTF8_REPLACEMENT, 1, "a codepoint past U+10FFFF is replaced");
+    expect_utf8("\xff", VD_UTF8_REPLACEMENT, 1, "an invalid lead byte is replaced");
+}
+
+static void test_hits_and_sizes(const VdGlyphFont *full)
+{
+    glyph_cache_reset();
+
+    VdGlyph a = glyph_cache_get(full, 30, 'A');
+    expect(a.page == 0 && a.width > 0 && a.height > 0 && a.advance > 0.0f, "a miss rasterises into the first page");
+    expect(a.offset_y < 0, "a capital sits above the baseline");
+    expect(glyph_cache_stats().rasterised == 1, "the first lookup rasterises");
+
+    VdGlyph again = glyph_cache_get(full, 30, 'A');
+    expect(same_glyph(a, again), "a hit returns the cached glyph");
+    expect(glyph_cache_stats().rasterised == 1, "a hit does not rasterise");
+
+    VdGlyph large = glyph_cache_get(full, 60, 'A');
+    expect(glyph_cache_stats().rasterised == 2, "another size is another glyph");
+    expect(!same_glyph(a, large), "sizes do not share a glyph");
+    float ratio = (float)large.height / (float)a.height;
+    expect(ratio > 1.8f && ratio < 2.2f, "a glyph at twice the size is about twice as tall");
+
+    VdGlyph space = glyph_cache_get(full, 30, ' ');
+    expect(space.page == -1 && space.advance > 0.0f, "a space advances without pixels");
+
+    const unsigned char *pixels = glyph_cache_take_dirty_page(0);
+    expect(pixels != NULL, "rasterising marks the page dirty");
+    expect(glyph_cache_take_dirty_page(0) == NULL, "taking a dirty page clears it");
+    bool covered = false;
+    for (int row = 0; pixels && row < a.height; row++) {
+        for (int col = 0; col < a.width; col++) {
+            const unsigned char *pixel =
+                pixels + ((size_t)(a.y + row) * VD_GLYPH_ATLAS_PAGE_SIZE + (size_t)(a.x + col)) * 4;
+            if (pixel[3] > 0) {
+                covered = true;
+                expect(pixel[0] == 255 && pixel[1] == 255 && pixel[2] == 255, "glyph pixels are white");
+            }
+        }
+    }
+    expect(covered, "the glyph's rect holds coverage");
+
+    VdGlyphFontMetrics metrics = glyph_font_metrics(full, 30);
+    expect(fabsf(metrics.ascent + metrics.descent - 30.0f) < 0.01f, "ascent plus descent is the Font Size");
+}
+
+static void test_fallback(const VdGlyphFont *full, const VdGlyphFont *ascii)
+{
+    glyph_cache_reset();
+    const uint32_t accented = 0x151;   // ő
+    const uint32_t ideograph = 0x65e5; // 日, in neither font
+    const uint32_t private_use = 0xe000;
+
+    glyph_cache_set_fallback(NULL);
+    VdGlyph notdef = glyph_cache_get(ascii, 30, private_use);
+    VdGlyph no_fallback = glyph_cache_get(ascii, 30, accented);
+    expect(same_shape(no_fallback, notdef), "without a fallback a missing glyph is the font's missing-glyph box");
+
+    glyph_cache_set_fallback(full);
+    VdGlyph from_full = glyph_cache_get(full, 30, accented);
+    VdGlyph fallback = glyph_cache_get(ascii, 30, 0x153); // œ
+    VdGlyph full_oe = glyph_cache_get(full, 30, 0x153);
+    expect(same_shape(fallback, full_oe), "a glyph the font lacks comes from the fallback");
+    expect(!same_shape(fallback, notdef), "a fallback glyph is not the missing-glyph box");
+    expect(from_full.advance > 0.0f, "the fallback has the accented glyph");
+
+    VdGlyph own = glyph_cache_get(ascii, 30, 'g');
+    VdGlyph full_g = glyph_cache_get(full, 30, 'g');
+    expect(same_shape(own, full_g), "a glyph the font has comes from the font");
+
+    VdGlyph neither = glyph_cache_get(ascii, 30, ideograph);
+    expect(same_shape(neither, notdef), "a glyph neither font has is the requested font's missing-glyph box");
+    VdGlyph self = glyph_cache_get(full, 30, ideograph);
+    expect(self.width > 0, "the fallback font's own missing glyph still draws a box");
+}
+
+static void test_hungarian(const VdGlyphFont *full)
+{
+    glyph_cache_reset();
+    glyph_cache_set_fallback(NULL);
+    VdGlyph notdef = glyph_cache_get(full, 22, 0x65e5);
+    const uint32_t letters[] = {0xc1, 0xe1, 0xc9, 0xe9, 0xcd, 0xed, 0xd3, 0xf3, 0xd6, 0xf6,
+                                0x150, 0x151, 0xda, 0xfa, 0xdc, 0xfc, 0x170, 0x171};
+    for (size_t i = 0; i < sizeof(letters) / sizeof(letters[0]); i++) {
+        VdGlyph glyph = glyph_cache_get(full, 22, letters[i]);
+        if (glyph.width > 0 && !same_shape(glyph, notdef)) continue;
+        fprintf(stderr, "glyph_cache_harness: U+%04X\n", (unsigned)letters[i]);
+        expect(false, "every Hungarian letter, ő and ű included, is a real glyph in the Runtime Default Font");
+    }
+}
+
+static void test_pages(const VdGlyphFont *full)
+{
+    glyph_cache_reset();
+    glyph_cache_set_fallback(NULL);
+    const int size = 300;
+
+    uint32_t first = 0;
+    uint32_t refused = 0;
+    int last_page = -1;
+    bool pages_in_order = true;
+    for (uint32_t codepoint = 0x21; codepoint < 0x250 && !refused; codepoint++) {
+        if (codepoint >= 0x7f && codepoint < 0xa1) continue;
+        int before = glyph_cache_stats().rasterised;
+        VdGlyph glyph = glyph_cache_get(full, size, codepoint);
+        if (glyph.page < 0 && glyph.advance > 0.0f && glyph_cache_stats().rasterised == before) {
+            refused = codepoint;
+            break;
+        }
+        if (!first) first = codepoint;
+        if (glyph.page < last_page || glyph.page > last_page + 1) pages_in_order = false;
+        if (glyph.page > last_page) last_page = glyph.page;
+    }
+    expect(pages_in_order, "pages fill one after another");
+    expect(glyph_cache_stats().pages == VD_GLYPH_ATLAS_PAGE_MAX, "pages grow up to the cap");
+    expect(refused != 0, "with every page used this frame, a new glyph waits for a later frame");
+    int glyphs_before = glyph_cache_stats().glyphs;
+
+    glyph_cache_begin_frame();
+    VdGlyph placed = glyph_cache_get(full, size, refused);
+    expect(placed.page == 0, "a later frame clears the least recently used page");
+    expect(glyph_cache_stats().pages == VD_GLYPH_ATLAS_PAGE_MAX, "clearing a page keeps the cap");
+    expect(glyph_cache_stats().glyphs < glyphs_before, "clearing a page drops its glyphs");
+
+    int before = glyph_cache_stats().rasterised;
+    glyph_cache_get(full, size, first);
+    expect(glyph_cache_stats().rasterised == before + 1, "a glyph from a cleared page rasterises again");
+}
+
+int main(void)
+{
+    test_utf8();
+
+    VdGlyphFont *full = glyph_font_load(FULL_FONT_PATH);
+    VdGlyphFont *ascii = glyph_font_load(ASCII_FONT_PATH);
+    expect(full && ascii, "test fonts load");
+    expect(glyph_font_load(VD_SOURCE_DIR "/tests/fixtures/missing.ttf") == NULL, "a missing font file fails");
+    expect(glyph_font_load(VD_SOURCE_DIR "/CMakeLists.txt") == NULL, "a file that is not a font fails");
+
+    if (full && ascii) {
+        test_hits_and_sizes(full);
+        test_fallback(full, ascii);
+        test_hungarian(full);
+        test_pages(full);
+    }
+
+    glyph_cache_reset();
+    glyph_font_free(full);
+    glyph_font_free(ascii);
+
+    if (failures > 0) {
+        fprintf(stderr, "glyph_cache_harness: %d failure(s)\n", failures);
+        return 1;
+    }
+    printf("glyph_cache_harness: ok\n");
+    return 0;
+}

@@ -69,6 +69,9 @@ export type VitaButtonProps = WithKey<
       /** Corner radius in pixels (CSS `border-radius` semantics). */
       borderRadius?: number;
       label: string;
+      font?: FontName;
+      /** Defaults to 20. */
+      fontSize?: number;
       onPress?: () => void;
       onPressStart?: () => void;
       onPressEnd?: () => void;
