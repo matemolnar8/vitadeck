@@ -1,11 +1,12 @@
 import { dispatchPadButton, type PadButton, type PadButtonPhase } from "@vitadeck/sdk/internal";
 
-type EventHandlers = {
+export type EventHandlers = {
   onPress?: () => void;
   onPressStart?: () => void;
   onPressEnd?: () => void;
   onFocus?: () => void;
   onBlur?: () => void;
+  onChange?: (value: string) => void;
 };
 
 type NativeInputEventType = "focus" | "blur" | "pressstart" | "pressend" | "press";
@@ -51,6 +52,10 @@ export function onInputEventFromNative(id: string, type: NativeInputEventType): 
       handlers.onPress?.();
       break;
   }
+}
+
+export function onTextInputFromNative(id: string, value: string): void {
+  handlersById.get(id)?.onChange?.(value);
 }
 
 export function onPadButtonFromNative(button: PadButton, phase: PadButtonPhase): void {

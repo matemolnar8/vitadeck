@@ -3,7 +3,7 @@ import { ThemeProvider, type DeckAppPackageManifest } from "@vitadeck/sdk/intern
 import React, { Component, StrictMode, type ComponentType, type ErrorInfo, type ReactNode } from "react";
 import * as reactCompilerRuntime from "react-compiler-runtime";
 import { installFetch } from "./fetch";
-import { onInputEventFromNative, onPadButtonFromNative } from "./input";
+import { onInputEventFromNative, onPadButtonFromNative, onTextInputFromNative } from "./input";
 import type { MetricSummary } from "./reconciler-metrics";
 import { getMetrics, render, resetMetrics } from "./vitadeck-react-reconciler-mutation";
 
@@ -85,6 +85,7 @@ export function updateContainer() {
 export const input = {
   onInputEventFromNative,
   onPadButtonFromNative,
+  onTextInputFromNative,
 };
 
 const METRICS_REFRESH_MS = 1500;

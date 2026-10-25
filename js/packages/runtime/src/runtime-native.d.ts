@@ -69,6 +69,33 @@ declare global {
     focusColorA: number,
   ): void;
 
+  function nativeCreateTextInput(
+    id: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    colorR: number,
+    colorG: number,
+    colorB: number,
+    colorA: number,
+    textColorR: number,
+    textColorG: number,
+    textColorB: number,
+    textColorA: number,
+    hasFocusColor: boolean,
+    focusColorR: number,
+    focusColorG: number,
+    focusColorB: number,
+    focusColorA: number,
+    fontName: string,
+    fontSize: number,
+    borderRadius: number,
+    maxLength: number,
+    value: string,
+    placeholder: string,
+  ): void;
+
   function nativeCreateScroll(
     id: string,
     x: number,
@@ -152,6 +179,33 @@ declare global {
     focusColorG: number,
     focusColorB: number,
     focusColorA: number,
+  ): void;
+
+  function nativeUpdateTextInput(
+    id: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    colorR: number,
+    colorG: number,
+    colorB: number,
+    colorA: number,
+    textColorR: number,
+    textColorG: number,
+    textColorB: number,
+    textColorA: number,
+    hasFocusColor: boolean,
+    focusColorR: number,
+    focusColorG: number,
+    focusColorB: number,
+    focusColorA: number,
+    fontName: string,
+    fontSize: number,
+    borderRadius: number,
+    maxLength: number,
+    value: string,
+    placeholder: string,
   ): void;
 
   function nativeUpdateScroll(
