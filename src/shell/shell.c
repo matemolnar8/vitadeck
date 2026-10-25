@@ -3,10 +3,8 @@
 #include <raylib.h>
 #include <stdio.h>
 #include <string.h>
+#include "core/bootstrap.h"
 #include "core/package_library.h"
-
-#define SCREEN_WIDTH 960
-#define SCREEN_HEIGHT 544
 
 #define SHELL_INSET 24
 #define SHELL_PADDING (SHELL_INSET + 8)
@@ -19,7 +17,7 @@
 #define SHELL_SPACE_SM 8
 #define SHELL_SPACE_MD 16
 
-#define SHELL_FOOTER_Y (SCREEN_HEIGHT - SHELL_PADDING - SHELL_FONT_CAPTION)
+#define SHELL_FOOTER_Y (VD_SCREEN_HEIGHT - SHELL_PADDING - SHELL_FONT_CAPTION)
 
 #define SHELL_TITLE_Y SHELL_PADDING
 #define SHELL_SECTION_Y (SHELL_TITLE_Y + SHELL_FONT_TITLE + SHELL_SPACE_SM)
@@ -32,7 +30,7 @@
 #define SHELL_OVERFLOW_ROW_H 18
 #define SHELL_OVERFLOW_ROW_STEP (SHELL_OVERFLOW_ROW_H + SHELL_SPACE_SM)
 #define SHELL_NAME_X SHELL_PADDING
-#define SHELL_X_CX (SCREEN_WIDTH - SHELL_PADDING - 28)
+#define SHELL_X_CX (VD_SCREEN_WIDTH - SHELL_PADDING - 28)
 #define SHELL_TICK_CX (SHELL_X_CX - 80)
 
 static int shell_text_baseline_y(int row_top, int font_h)
@@ -336,8 +334,8 @@ void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart)
 
 static void draw_panel(void)
 {
-    DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, (Color){18, 22, 30, 200});
-    DrawRectangleLines(24, 24, SCREEN_WIDTH - 48, SCREEN_HEIGHT - 48, (Color){120, 150, 190, 200});
+    DrawRectangle(0, 0, VD_SCREEN_WIDTH, VD_SCREEN_HEIGHT, (Color){18, 22, 30, 200});
+    DrawRectangleLines(24, 24, VD_SCREEN_WIDTH - 48, VD_SCREEN_HEIGHT - 48, (Color){120, 150, 190, 200});
 }
 
 static void draw_tick_cell(int cx, int row_top, bool is_active, bool row_focused, bool col_focused)
@@ -379,13 +377,13 @@ static void draw_x_cell(int cx, int row_top, bool row_focused, bool col_focused)
 
 static void draw_overflow_row(int row_top, bool points_up)
 {
-    int row_w = SCREEN_WIDTH - SHELL_PADDING - SHELL_PADDING;
+    int row_w = VD_SCREEN_WIDTH - SHELL_PADDING - SHELL_PADDING;
     DrawRectangle(SHELL_PADDING, row_top, row_w, SHELL_OVERFLOW_ROW_H, (Color){24, 30, 40, 255});
 
     Color chevron = (Color){120, 140, 170, 255};
     int cy = row_top + SHELL_OVERFLOW_ROW_H / 2;
     for (int i = -1; i <= 1; i++) {
-        int cx = SCREEN_WIDTH / 2 + i * 20;
+        int cx = VD_SCREEN_WIDTH / 2 + i * 20;
         if (points_up) {
             DrawLineEx((Vector2){(float)(cx - 6), (float)(cy + 3)}, (Vector2){(float)cx, (float)(cy - 4)}, 2.0f,
                        chevron);
@@ -439,7 +437,7 @@ void shell_render(VdShell *shell)
         bool upload_row = row_is_upload(row, package_count);
         bool upload_running = upload_row && upload_server_is_running(&shell->upload_server);
 
-        int row_w = SCREEN_WIDTH - SHELL_PADDING - SHELL_PADDING;
+        int row_w = VD_SCREEN_WIDTH - SHELL_PADDING - SHELL_PADDING;
         int band_h = row_band_height(row, package_count);
         int bottom_reserve = row + 1 < row_count ? SHELL_OVERFLOW_ROW_STEP : 0;
         if (row_top + band_h + bottom_reserve > SHELL_LIST_BOTTOM) break;
@@ -477,8 +475,8 @@ void shell_render(VdShell *shell)
     if (end_row < row_count) draw_overflow_row(row_top, false);
 
     if (shell->remove_confirm_package[0] != '\0') {
-        int box_y = (int)(SCREEN_HEIGHT * 0.40f);
-        DrawRectangle(0, box_y, SCREEN_WIDTH, 112, (Color){10, 12, 18, 255});
+        int box_y = (int)(VD_SCREEN_HEIGHT * 0.40f);
+        DrawRectangle(0, box_y, VD_SCREEN_WIDTH, 112, (Color){10, 12, 18, 255});
         int ly = box_y + SHELL_SPACE_MD;
         DrawText(shell->remove_confirm_label, SHELL_PADDING, ly, SHELL_FONT_BODY, RAYWHITE);
         DrawText("Confirm: remove · Back: cancel", SHELL_PADDING, ly + SHELL_FONT_BODY + SHELL_SPACE_SM,
