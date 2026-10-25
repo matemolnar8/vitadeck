@@ -152,6 +152,7 @@ set(VITADECK_SOURCES
     src/ui/layout.c
     src/ui/fonts.c
     src/ui/glyph_cache.c
+    src/ui/text.c
     src/ui/images.c
     src/ui/render.c
     src/ui/input.c
@@ -328,6 +329,7 @@ if(NOT DEFINED ENV{VITASDK})
       src/ui/layout.c
       src/ui/fonts.c
       src/ui/glyph_cache.c
+      src/ui/text.c
       src/ui/images.c
       src/ui/render.c
       src/ui/input.c

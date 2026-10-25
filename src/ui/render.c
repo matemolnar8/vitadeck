@@ -4,10 +4,12 @@
 #include <raylib.h>
 #include "stb_ds.h"
 #include "fonts.h"
+#include "glyph_cache.h"
 #include "images.h"
 #include "instance_tree.h"
 #include "input.h"
 #include "scroll.h"
+#include "text.h"
 
 #define TEXT_LAYOUT_MAX_LINES 128
 #define TEXT_LAYOUT_MAX_LINE_CHARS 512
@@ -45,34 +47,39 @@ typedef struct {
 
 static void render_instance(ReactInstance *inst, RenderContext ctx);
 
-static int measure_text_width(Font font, const char *text, int font_size)
+static int measure_text_width(const VdFont *font, const char *text, int font_size)
 {
-    Vector2 size = MeasureTextEx(font, text, (float)font_size, 1.0f);
-    return (int)(size.x + 0.5f);
+    return (int)(text_measure(font, text, font_size) + 0.5f);
 }
 
-static int text_glyph_height(Font font, int font_size)
+static int text_font_size(const TextProps *t)
 {
-    Vector2 size = MeasureTextEx(font, "Ay", (float)font_size, 1.0f);
-    int height = (int)(size.y + 0.5f);
-    return height > 0 ? height : font_size;
+    return t->font_size > 0 ? t->font_size : VD_TEXT_FONT_SIZE_DEFAULT;
 }
 
-static int text_line_height(const TextProps *t)
+static int button_font_size(const ButtonProps *b)
 {
-    int font_size = t->font_size > 0 ? t->font_size : 30;
+    return b->font_size > 0 ? b->font_size : VD_BUTTON_FONT_SIZE_DEFAULT;
+}
+
+static int text_input_font_size(const TextInputProps *t)
+{
+    return t->font_size > 0 ? t->font_size : VD_TEXT_INPUT_FONT_SIZE_DEFAULT;
+}
+
+static int text_props_line_height(const TextProps *t)
+{
     if (t->line_height > 0) return t->line_height;
-    return text_glyph_height(font_registry_get(t->font_name), font_size) + 4;
+    return text_line_height(font_registry_get(t->font_name), text_font_size(t)) + 4;
 }
 
-static int text_block_height(int line_count, int line_height, Font font, int font_size)
+static int text_block_height(int line_count, int line_height, const VdFont *font, int font_size)
 {
     if (line_count <= 0) return 0;
-    if (line_count == 1) return text_glyph_height(font, font_size);
-    return (line_count - 1) * line_height + text_glyph_height(font, font_size);
+    return (line_count - 1) * line_height + text_line_height(font, font_size);
 }
 
-static void text_layout_add_line(TextLayout *layout, const char *line, Font font, int font_size)
+static void text_layout_add_line(TextLayout *layout, const char *line, const VdFont *font, int font_size)
 {
     if (layout->count >= TEXT_LAYOUT_MAX_LINES) return;
 
@@ -84,7 +91,8 @@ static void text_layout_add_line(TextLayout *layout, const char *line, Font font
     layout->count++;
 }
 
-static void text_layout_wrap_word(const char *paragraph, Font font, int font_size, int max_width, TextLayout *layout)
+static void text_layout_wrap_word(const char *paragraph, const VdFont *font, int font_size, int max_width,
+                                  TextLayout *layout)
 {
     const char *cursor = paragraph;
     char current[TEXT_LAYOUT_MAX_LINE_CHARS] = {0};
@@ -113,19 +121,18 @@ static void text_layout_wrap_word(const char *paragraph, Font font, int font_siz
                 current_len = 0;
             }
 
+            // Chunks hold whole codepoints, and at least one even when it alone is too wide.
             int chunk_start = 0;
             while (chunk_start < word_len) {
-                int chunk_end = chunk_start + 1;
-                while (chunk_end <= word_len) {
+                int length = 0;
+                vd_utf8_next(word + chunk_start, &length);
+                int chunk_end = chunk_start + length;
+                while (chunk_end < word_len) {
+                    vd_utf8_next(word + chunk_end, &length);
                     char probe[TEXT_LAYOUT_MAX_LINE_CHARS] = {0};
-                    int probe_len = chunk_end - chunk_start;
-                    memcpy(probe, word + chunk_start, (size_t)probe_len);
-                    if (measure_text_width(font, probe, font_size) > max_width && chunk_end - chunk_start > 1) {
-                        chunk_end--;
-                        break;
-                    }
-                    if (chunk_end == word_len) break;
-                    chunk_end++;
+                    memcpy(probe, word + chunk_start, (size_t)(chunk_end + length - chunk_start));
+                    if (measure_text_width(font, probe, font_size) > max_width) break;
+                    chunk_end += length;
                 }
 
                 char chunk[TEXT_LAYOUT_MAX_LINE_CHARS] = {0};
@@ -161,9 +168,9 @@ static void text_layout_build(const char *text, const TextProps *t, TextLayout *
 {
     memset(layout, 0, sizeof(*layout));
 
-    int font_size = t->font_size > 0 ? t->font_size : 30;
-    Font font = font_registry_get(t->font_name);
-    int line_height = text_line_height(t);
+    int font_size = text_font_size(t);
+    const VdFont *font = font_registry_get(t->font_name);
+    int line_height = text_props_line_height(t);
     int max_width = t->width;
 
     if (max_width <= 0 || t->wrap != TEXT_WRAP_WORD) {
@@ -283,9 +290,9 @@ static void render_text_instance(ReactInstance *inst, RenderContext ctx)
         }
     }
 
-    int font_size = t->font_size > 0 ? t->font_size : 30;
-    Font font = font_registry_get(t->font_name);
-    int line_height = text_line_height(t);
+    int font_size = text_font_size(t);
+    const VdFont *font = font_registry_get(t->font_name);
+    int line_height = text_props_line_height(t);
     int base_x = ctx.x + inst->layout.x;
     int base_y = ctx.y + inst->layout.y + ctx.text_index * line_height;
     Color color = t->has_color ? t->color : BLACK;
@@ -306,7 +313,7 @@ static void render_text_instance(ReactInstance *inst, RenderContext ctx)
         int line_width = measure_text_width(font, layout.lines[i], font_size);
         int line_x = text_layout_line_x(base_x, align_box_width, line_width, t->align);
         int line_y = base_y + i * line_height;
-        DrawTextEx(font, layout.lines[i], (Vector2){line_x, line_y}, (float)font_size, 1.0f, color);
+        text_draw(font, layout.lines[i], (Vector2){line_x, line_y}, font_size, color);
     }
 }
 
@@ -338,25 +345,15 @@ static void render_button_instance(ReactInstance *inst, RenderContext ctx)
     }
 
     const int padding = 8;
-    int font_size = b->font_size > 0 ? b->font_size : 20;
-    DrawTextEx(font_registry_default(), b->label, (Vector2){abs_x + padding, abs_y + padding}, (float)font_size, 1.0f,
-               b->text_color);
-}
-
-static float glyph_width(Font font, int codepoint, float scale)
-{
-    int index = GetGlyphIndex(font, codepoint);
-    float advance = font.glyphs[index].advanceX != 0 ? (float)font.glyphs[index].advanceX
-                                                     : font.recs[index].width + (float)font.glyphs[index].offsetX;
-    return advance * scale + 1.0f;
+    text_draw(font_registry_get(NULL), b->label, (Vector2){abs_x + padding, abs_y + padding},
+              button_font_size(b), b->text_color);
 }
 
 // The longest run of whole codepoints from the start of text, or with keep_end from its end, that fits max_width
 // and out_size. Copies it into out and returns its width.
-static float fit_text(Font font, const char *text, int font_size, float max_width, bool keep_end, char *out,
+static float fit_text(const VdFont *font, const char *text, int font_size, float max_width, bool keep_end, char *out,
                       size_t out_size)
 {
-    const float scale = font.baseSize > 0 ? (float)font_size / (float)font.baseSize : 1.0f;
     const size_t len = strlen(text);
     size_t start = 0, end = 0;
     float width = 0.0f;
@@ -368,7 +365,7 @@ static float fit_text(Font font, const char *text, int font_size, float max_widt
             while (prev > 0 && ((unsigned char)text[prev] & 0xc0) == 0x80)
                 prev--;
             int size = 0;
-            float w = glyph_width(font, GetCodepointNext(text + prev, &size), scale);
+            float w = text_codepoint_width(font, vd_utf8_next(text + prev, &size), font_size);
             if (width + w > max_width || end - prev >= out_size) break;
             width += w;
             start = prev;
@@ -376,7 +373,7 @@ static float fit_text(Font font, const char *text, int font_size, float max_widt
     } else {
         while (end < len) {
             int size = 0;
-            float w = glyph_width(font, GetCodepointNext(text + end, &size), scale);
+            float w = text_codepoint_width(font, vd_utf8_next(text + end, &size), font_size);
             if (width + w > max_width || end + (size_t)size >= out_size) break;
             width += w;
             end += (size_t)size;
@@ -414,9 +411,9 @@ static void render_text_input_instance(ReactInstance *inst, RenderContext ctx)
 
     const int padding = 8;
     const int caret_width = 2;
-    int font_size = t->font_size > 0 ? t->font_size : 20;
-    Font font = font_registry_get(t->font_name);
-    int glyph_height = text_glyph_height(font, font_size);
+    int font_size = text_input_font_size(t);
+    const VdFont *font = font_registry_get(t->font_name);
+    int glyph_height = text_line_height(font, font_size);
     float text_x = rect.x + padding;
     float text_y = rect.y + (rect.height - glyph_height) / 2.0f;
     float max_width = rect.width - padding * 2 - (editing ? caret_width + 1 : 0);
@@ -424,7 +421,7 @@ static void render_text_input_instance(ReactInstance *inst, RenderContext ctx)
     // While editing, the end of the text stays visible so the caret does.
     char visible[1024];
     float width = fit_text(font, text, font_size, max_width, editing != NULL, visible, sizeof(visible));
-    DrawTextEx(font, visible, (Vector2){text_x, text_y}, (float)font_size, 1.0f, color);
+    text_draw(font, visible, (Vector2){text_x, text_y}, font_size, color);
 
     if (editing && fmod(GetTime(), 1.0) < 0.5) {
         DrawRectangle((int)(text_x + width + 1), (int)text_y, caret_width, glyph_height, t->text_color);
@@ -532,12 +529,57 @@ static void render_instance(ReactInstance *inst, RenderContext ctx)
     }
 }
 
+// Caches every glyph the frame draws, so the atlas pages upload once before anything draws from them.
+static void cache_glyphs(ReactInstance *inst)
+{
+    if (!inst) return;
+    int count = arrlen(inst->children);
+    switch (inst->type) {
+    case NT_TEXT: {
+        const TextProps *t = &inst->props.text;
+        for (int i = 0; i < count; i++) {
+            ReactInstance *child = inst->children[i];
+            if (child && child->type == NT_RAW_TEXT && child->props.raw_text) {
+                text_measure(font_registry_get(t->font_name), child->props.raw_text, text_font_size(t));
+            }
+        }
+        return;
+    }
+    case NT_BUTTON: {
+        const ButtonProps *b = &inst->props.button;
+        if (b->label) text_measure(font_registry_get(NULL), b->label, button_font_size(b));
+        break;
+    }
+    case NT_TEXT_INPUT: {
+        const TextInputProps *t = &inst->props.text_input;
+        const VdFont *font = font_registry_get(t->font_name);
+        const char *editing = input_editing_text(inst->id);
+        if (editing) text_measure(font, editing, text_input_font_size(t));
+        if (t->value) text_measure(font, t->value, text_input_font_size(t));
+        if (t->placeholder) text_measure(font, t->placeholder, text_input_font_size(t));
+        break;
+    }
+    default:
+        break;
+    }
+    for (int i = 0; i < count; i++) {
+        cache_glyphs(inst->children[i]);
+    }
+}
+
 void render_draw_list(void)
 {
     instance_tree_render_lock();
     ReactInstance **root = instance_get_root_children();
     RenderContext ctx = {0, 0, 0};
     int count = arrlen(root);
+
+    text_begin_frame();
+    for (int i = 0; i < count; i++) {
+        cache_glyphs(root[i]);
+    }
+    text_upload_pages();
+
     for (int i = 0; i < count; i++) {
         if (root[i]) {
             render_instance(root[i], ctx);
