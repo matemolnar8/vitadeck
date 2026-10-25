@@ -1,20 +1,3 @@
-export type VitaHeadersInit = Record<string, string> | Array<[string, string]>;
-
-export interface VitaRequestInit {
-  method?: string;
-  headers?: VitaHeadersInit;
-  body?: string;
-}
-
-export interface VitaResponse {
-  readonly status: number;
-  readonly ok: boolean;
-  readonly statusText: string;
-  readonly headers: Record<string, string>;
-  text(): Promise<string>;
-  json<T = unknown>(): Promise<T>;
-}
-
 function normalizeHeaders(init?: VitaHeadersInit): string[] {
   if (!init) return [];
   const entries = Array.isArray(init) ? init : Object.entries(init);
