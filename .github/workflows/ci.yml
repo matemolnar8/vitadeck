@@ -83,6 +83,7 @@ jobs:
             exit 1
           fi
           cmake -S . -B out \
+            -DVITADECK_WERROR=ON \
             -DCMAKE_C_COMPILER_LAUNCHER="$CCACHE" \
             -DCMAKE_CXX_COMPILER_LAUNCHER="$CCACHE"
           cmake --build out --parallel "$(sysctl -n hw.logicalcpu)"
@@ -122,6 +123,10 @@ jobs:
       - name: Smoke test
         # macOS cannot initialize NSGL for raylib on GitHub runners — see docs/adr/0002-smoke-ci-linux-xvfb.md
         run: VITADECK_SMOKE_NO_BUILD=1 scripts/smoke-docker.sh test
+
+      - name: Sanitized CTest
+        # ASan + UBSan over every CTest harness, smoke included; reuses the image built above
+        run: VITADECK_SMOKE_NO_BUILD=1 VITADECK_SANITIZE=address,undefined scripts/smoke-docker.sh ctest
 
       - name: Upload smoke screenshot
         if: always()

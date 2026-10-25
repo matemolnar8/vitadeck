@@ -3,20 +3,27 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IMAGE="${VITADECK_SMOKE_IMAGE:-vitadeck-smoke}"
-BUILD_DIR="${VITADECK_SMOKE_BUILD_DIR:-out-smoke}"
+SANITIZE="${VITADECK_SANITIZE:-}"
+if [[ -n "$SANITIZE" ]]; then
+  BUILD_DIR="${VITADECK_SMOKE_BUILD_DIR:-out-sanitize}"
+else
+  BUILD_DIR="${VITADECK_SMOKE_BUILD_DIR:-out-smoke}"
+fi
 PNPM_INSTALL_ARGS="${VITADECK_SMOKE_PNPM_INSTALL_ARGS:---frozen-lockfile}"
 
 usage() {
   cat <<'EOF'
-usage: scripts/smoke-docker.sh [test|update-golden|shell]
+usage: scripts/smoke-docker.sh [test|ctest|update-golden|shell]
 
 test          Build and run the Linux smoke test.
+ctest         Build every host target and run all CTest harnesses, smoke included.
 update-golden Build and refresh tests/fixtures/smoke_golden.Linux.png.
 shell         Open a shell in the smoke Docker image.
 
 Environment:
   VITADECK_SMOKE_IMAGE       Docker image tag to build/use (default: vitadeck-smoke)
-  VITADECK_SMOKE_BUILD_DIR   Build directory inside the repo (default: out-smoke)
+  VITADECK_SMOKE_BUILD_DIR   Build directory inside the repo (default: out-smoke, or out-sanitize)
+  VITADECK_SANITIZE          -fsanitize= list for the host build, e.g. address,undefined
   VITADECK_SMOKE_NO_BUILD    Set to 1 to skip docker build
 EOF
 }
@@ -45,15 +52,24 @@ run_inside() {
   pnpm --dir js build
 
   step "Configure host smoke build"
-  CC=gcc CXX=g++ cmake -S . -B "$BUILD_DIR" -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group"
+  CC=gcc CXX=g++ cmake -S . -B "$BUILD_DIR" -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group" -DVITADECK_SANITIZE="$SANITIZE"
 
-  step "Build smoke harness"
-  cmake --build "$BUILD_DIR" --parallel "$(nproc)" --target smoke_harness
+  if [[ "$mode" == "ctest" ]]; then
+    step "Build host targets"
+    cmake --build "$BUILD_DIR" --parallel "$(nproc)"
+  else
+    step "Build smoke harness"
+    cmake --build "$BUILD_DIR" --parallel "$(nproc)" --target smoke_harness
+  fi
 
   case "$mode" in
     test)
       step "Run smoke test"
       ctest --test-dir "$BUILD_DIR" --output-on-failure -R smoke_harness
+      ;;
+    ctest)
+      step "Run all CTest harnesses"
+      ctest --test-dir "$BUILD_DIR" --output-on-failure
       ;;
     update-golden)
       step "Update Linux smoke golden"
@@ -90,6 +106,7 @@ run_outside() {
       -w /build/git \
       -e VITADECK_SMOKE_BUILD_DIR="$BUILD_DIR" \
       -e VITADECK_SMOKE_PNPM_INSTALL_ARGS="$PNPM_INSTALL_ARGS" \
+    -e VITADECK_SANITIZE="$SANITIZE" \
       -e LOCAL_UID="$(id -u)" \
       -e LOCAL_GID="$(id -g)" \
       "$IMAGE" bash
@@ -104,6 +121,7 @@ run_outside() {
     -w /build/git \
     -e VITADECK_SMOKE_BUILD_DIR="$BUILD_DIR" \
     -e VITADECK_SMOKE_PNPM_INSTALL_ARGS="$PNPM_INSTALL_ARGS" \
+    -e VITADECK_SANITIZE="$SANITIZE" \
     -e LOCAL_UID="$(id -u)" \
     -e LOCAL_GID="$(id -g)" \
     "$IMAGE" scripts/smoke-docker.sh --inside "$mode"
@@ -114,7 +132,7 @@ if [[ "${1:-}" == "--inside" ]]; then
   run_inside "${1:-test}"
 else
   case "${1:-test}" in
-    test|update-golden|shell)
+    test|ctest|update-golden|shell)
       run_outside "${1:-test}"
       ;;
     -h|--help|help)

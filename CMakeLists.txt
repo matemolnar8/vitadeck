@@ -10,16 +10,32 @@ project(vitadeck)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+option(VITADECK_WERROR "Treat compiler warnings as errors (CI only; newer compilers add warnings)" OFF)
+set(VITADECK_SANITIZE "" CACHE STRING "Host-only -fsanitize= list, e.g. address,undefined")
+
+add_compile_options(-Wall -Wextra)
+if(VITADECK_WERROR)
+  add_compile_options(-Werror)
+endif()
+
 if(DEFINED ENV{VITASDK})
   message(STATUS "VITA is ON")
   include("${VITASDK}/share/vita.cmake" REQUIRED)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+  if(VITADECK_SANITIZE)
+    message(FATAL_ERROR "VITADECK_SANITIZE is host-only")
+  endif()
 else()
   message(STATUS "VITA is OFF")
   if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Og -g")
   else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+  endif()
+  if(VITADECK_SANITIZE)
+    message(STATUS "Sanitizers: ${VITADECK_SANITIZE}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=${VITADECK_SANITIZE} -fno-sanitize-recover=all -fno-omit-frame-pointer -g")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=${VITADECK_SANITIZE}")
   endif()
 endif()
 
@@ -61,8 +77,11 @@ if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/quickjs/quickjs.c")
 endif()
 
 # Set up include directories
-set(VITADECK_INCLUDE_DIRS src vendor vendor/quickjs)
-list(APPEND VITADECK_INCLUDE_DIRS ${OPENSSL_INCLUDE_DIR})
+set(VITADECK_INCLUDE_DIRS src)
+# Third-party headers are not ours to fix; SYSTEM (-isystem) keeps their warnings
+# out of our builds. System libcurl (e.g. macOS SDK) lives under usr/include, where
+# -I would also make Clang diagnose libc headers.
+set(VITADECK_SYSTEM_INCLUDE_DIRS vendor vendor/quickjs ${OPENSSL_INCLUDE_DIR} ${CURL_INCLUDE_DIRS})
 
 if(DEFINED ENV{VITASDK})
   list(APPEND VITADECK_INCLUDE_DIRS
@@ -70,14 +89,12 @@ if(DEFINED ENV{VITASDK})
     $ENV{VITASDK}/arm-vita-eabi/include/SDL2
   )
 else()
-  list(APPEND VITADECK_INCLUDE_DIRS ${RAYLIB_INCLUDE_DIRS})
+  list(APPEND VITADECK_SYSTEM_INCLUDE_DIRS ${RAYLIB_INCLUDE_DIRS})
   list(APPEND VITADECK_LIBRARY_DIRS ${RAYLIB_LIBRARY_DIRS})
 endif()
 
 include_directories(${VITADECK_INCLUDE_DIRS})
-# System libcurl (e.g. macOS SDK) lives under usr/include; -I there makes Clang
-# diagnose SDK headers. SYSTEM uses -isystem so libc headers stay quiet.
-include_directories(SYSTEM ${CURL_INCLUDE_DIRS})
+include_directories(SYSTEM ${VITADECK_SYSTEM_INCLUDE_DIRS})
 link_directories(${VITADECK_LIBRARY_DIRS})
 
 # QuickJS
@@ -89,6 +106,11 @@ set(QUICKJS_SOURCES
     vendor/quickjs/dtoa.c
 )
 add_library(quickjs STATIC ${QUICKJS_SOURCES})
+target_compile_options(quickjs PRIVATE -w)
+if(VITADECK_SANITIZE)
+  # QuickJS relies on signed-shift and similar UB upstream; ASan still covers it.
+  target_compile_options(quickjs PRIVATE -fno-sanitize=undefined)
+endif()
 target_compile_definitions(quickjs PRIVATE
     CONFIG_VERSION="2024-01-13"
     $<$<NOT:$<BOOL:$ENV{VITASDK}>>:_GNU_SOURCE>
@@ -220,8 +242,8 @@ if(NOT DEFINED ENV{VITASDK})
     target_link_libraries(upload_parsing_harness ZLIB::ZLIB)
     add_test(NAME upload_parsing_harness COMMAND upload_parsing_harness)
 
-    set(SMOKE_HARNESS_SOURCES
-      tests/smoke_harness.c
+    # The native app without main.c, the shell and Runtime Upload, for harnesses that drive the real JS thread.
+    set(HOST_RUNTIME_SOURCES
       src/core/arena.c
       src/core/bootstrap.c
       src/core/js_runtime.c
@@ -238,7 +260,17 @@ if(NOT DEFINED ENV{VITASDK})
       src/ui/scroll.c
       src/platform/thread_posix.c
     )
-    add_executable(smoke_harness ${SMOKE_HARNESS_SOURCES})
+    add_executable(js_limits_harness tests/js_limits_harness.c ${HOST_RUNTIME_SOURCES})
+    target_link_libraries(js_limits_harness ${VITADECK_LIBRARIES})
+    add_test(NAME js_limits_harness COMMAND js_limits_harness)
+
+    # Same checks on the Vita JS thread stack, to prove the QuickJS stack headroom fits it.
+    add_executable(js_limits_vita_stack_harness tests/js_limits_harness.c ${HOST_RUNTIME_SOURCES})
+    target_compile_definitions(js_limits_vita_stack_harness PRIVATE VD_THREAD_STACK_SIZE=VD_VITA_THREAD_STACK_SIZE)
+    target_link_libraries(js_limits_vita_stack_harness ${VITADECK_LIBRARIES})
+    add_test(NAME js_limits_vita_stack_harness COMMAND js_limits_vita_stack_harness)
+
+    add_executable(smoke_harness tests/smoke_harness.c ${HOST_RUNTIME_SOURCES})
     target_link_libraries(smoke_harness ${VITADECK_LIBRARIES})
     add_dependencies(smoke_harness js_copy)
     add_test(
@@ -249,6 +281,11 @@ if(NOT DEFINED ENV{VITASDK})
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       LABELS "smoke"
     )
+    if(VITADECK_SANITIZE)
+      set_tests_properties(smoke_harness PROPERTIES
+        ENVIRONMENT "LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/tests/lsan.supp"
+      )
+    endif()
   endif()
 endif()
 

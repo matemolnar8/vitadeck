@@ -4,8 +4,6 @@
 #include <psp2/kernel/threadmgr.h>
 #include <stdlib.h>
 
-#define JS_THREAD_STACK_SIZE (256 * 1024)
-
 struct vd_thread {
     SceUID tid;
     void *(*func)(void *);
@@ -18,6 +16,7 @@ struct vd_mutex {
 
 static int vita_thread_entry(SceSize args, void *argp)
 {
+    (void)args;
     vd_thread *t = *(vd_thread **)argp;
     t->func(t->arg);
     return 0;
@@ -31,7 +30,7 @@ vd_thread *vd_thread_create(void *(*func)(void *), void *arg)
     t->func = func;
     t->arg = arg;
 
-    t->tid = sceKernelCreateThread("VdThread", vita_thread_entry, 0x10000100, JS_THREAD_STACK_SIZE, 0, 0, NULL);
+    t->tid = sceKernelCreateThread("VdThread", vita_thread_entry, 0x10000100, VD_THREAD_STACK_SIZE, 0, 0, NULL);
 
     if (t->tid < 0) {
         free(t);
