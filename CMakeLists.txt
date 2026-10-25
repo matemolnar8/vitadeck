@@ -147,12 +147,14 @@ set(JSLIB_SOURCES
     src/jslib/log.c
     src/jslib/fetch.c
     src/jslib/error.c
+    src/jslib/storage.c
 )
 
 set(VITADECK_SOURCES
     src/main.c
     src/core/arena.c
     src/core/bootstrap.c
+    src/core/deck_app_storage.c
     src/core/js_runtime.c
     src/core/package_manifest.c
     src/core/package_library.c
@@ -236,6 +238,7 @@ if(NOT DEFINED ENV{VITASDK})
 
     add_executable(package_library_harness
       tests/package_library_harness.c
+      src/core/deck_app_storage.c
       src/core/package_library.c
       src/core/package_manifest.c
       src/core/util.c
@@ -248,6 +251,7 @@ if(NOT DEFINED ENV{VITASDK})
       src/upload/archive.c
       src/upload/http_parse.c
       src/core/arena.c
+      src/core/deck_app_storage.c
       src/core/package_library.c
       src/core/package_manifest.c
       src/core/util.c
@@ -255,6 +259,18 @@ if(NOT DEFINED ENV{VITASDK})
     )
     target_link_libraries(upload_parsing_harness ZLIB::ZLIB)
     add_test(NAME upload_parsing_harness COMMAND upload_parsing_harness)
+
+    add_executable(storage_harness
+      tests/storage_harness.c
+      src/jslib/storage.c
+      src/core/deck_app_storage.c
+      src/core/package_library.c
+      src/core/package_manifest.c
+      src/core/util.c
+      ${PLATFORM_SOURCES}
+    )
+    target_link_libraries(storage_harness quickjs m pthread)
+    add_test(NAME storage_harness COMMAND storage_harness)
 
     add_executable(event_queue_harness tests/event_queue_harness.c src/core/event_queue.c ${PLATFORM_SOURCES})
     target_link_libraries(event_queue_harness pthread ${RAYLIB_LIBRARIES})
@@ -311,6 +327,7 @@ if(NOT DEFINED ENV{VITASDK})
       src/upload/archive.c
       src/upload/http_parse.c
       src/core/arena.c
+      src/core/deck_app_storage.c
       src/core/package_library.c
       src/core/package_manifest.c
       src/core/util.c
@@ -325,6 +342,7 @@ if(NOT DEFINED ENV{VITASDK})
       src/core/bootstrap.c
       src/core/js_runtime.c
       src/core/package_manifest.c
+      src/core/deck_app_storage.c
       src/core/package_library.c
       src/core/util.c
       src/core/event_queue.c

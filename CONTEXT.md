@@ -252,6 +252,10 @@ _Avoid_: Host Control Companion, desktop app, daemon, host build
 The step where the **Host Companion**, given the address shown in the **VitaDeck Shell**, tells VitaDeck where to send **Host Control** commands. VitaDeck keeps that address until a newer link replaces it or the user forgets it. It exchanges addresses, not credentials.
 _Avoid_: Pairing, Upload Pairing, session, typing the computer's address on the Vita
 
+**Deck App Storage**:
+The string key-value store a **Deck App** keeps across **Deck App Runtime Restarts** and VitaDeck restarts, through `storage` in the **VitaDeck Runtime API**.
+_Avoid_: localStorage, save file, cache, settings
+
 ## Relationships
 
 - A **Deck App** is rendered by the VitaDeck runtime.
@@ -361,6 +365,9 @@ _Avoid_: Pairing, Upload Pairing, session, typing the computer's address on the 
 - **Host Control Link** starts from the **VitaDeck Shell** and does not use the **Runtime Upload Listener**.
 - **Host Control** results use the same `ok` / `code` / `message` JSON shape as **Runtime Upload POST**.
 - **Host Control Link** is not **Upload Pairing**; initial **Host Control** trusts the local network like initial **Runtime Upload**.
+- Each **Deck App Package Name** has its own **Deck App Storage**, limited to 1 MiB; a **Deck App** cannot read another's.
+- **Runtime Upload Replacement** keeps the package's **Deck App Storage**; **Installed Deck App Removal** deletes it.
+- **Deck App Storage** is the only filesystem a **Deck App** reaches; no **VitaDeck Runtime API** call takes a file path.
 
 ## Host mappings
 
