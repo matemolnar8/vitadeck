@@ -118,10 +118,10 @@ _Avoid_: Escape, window manager shortcuts, in-app hotkeys
 
 **Host Shell Confirm Mapping**:
 The desktop host keyboard key that maps to Cross confirm in **Shell Face Input** while the **VitaDeck Shell** is open (Enter).
-_Avoid_: Mouse click, Deck App **Press**, text field submission in **Deck Apps**
+_Avoid_: Mouse click, Deck App **Press**, confirming a **Text Input** edit
 
 **Host Pad Button Mapping**:
-The desktop host keyboard keys that map to the **Pad Buttons** while a **Deck App** runs: Circle Backspace, Triangle T, Square S, L L, R R (see Host mappings).
+The desktop host keyboard keys that map to the **Pad Buttons** while a **Deck App** runs and no **Text Input** edit does: Circle Backspace, Triangle T, Square S, L L, R R (see Host mappings).
 _Avoid_: Keybinding, hotkey, shortcut
 
 **Host Shell Back Mapping**:
@@ -233,12 +233,16 @@ The VitaDeck input gesture used by public **Button** callbacks.
 _Avoid_: Click, mouse down, mouse up, hover
 
 **Focus**:
-The one **Deck App** control, if any, that the D-pad moves between and Cross presses. Only **Button** takes Focus today.
+The one **Deck App** control, if any, that the D-pad moves between and Cross presses. **Button** and **Text Input** take Focus.
 _Avoid_: Selection, hover, highlight, active element
 
 **Pad Button**:
 A Vita button a **Deck App** listens to directly through `usePadButton`: Circle, Triangle, Square, L or R. The D-pad and Cross drive **Focus** instead, and Start and Select are **System Input**.
 _Avoid_: Hotkey, shortcut, raw button, gamepad event
+
+**Text Input**:
+The **VitaDeck Runtime API** component (`TextInput`) for entering one line of text. A **Press** on it starts an edit, in the Vita's system keyboard dialog or in place on the desktop host, and confirming the edit reports the new text once.
+_Avoid_: Text field, text box, IME, keyboard input
 
 **Host Control**:
 The VitaDeck capability for a **Deck App** to ask a nearby computer on the LAN to run a typed command through the **Host Companion**.
@@ -321,13 +325,16 @@ _Avoid_: localStorage, save file, cache, settings
 - VitaDeck-owned native bridge entry points used to drive rendering and input are not part of the **VitaDeck Runtime API**; **Deck App** source is not written against them.
 - The **Screen** component is the root of a **Deck App** UI.
 - A **Deck App Component** explicitly renders **Screen**.
-- **Button** is the only public component that receives **Press** input. `Scroll` is the only public component that takes scroll input (touch drag, analog stick, mouse wheel); it does not receive **Press**.
+- **Button** and **Text Input** are the only public components that receive **Press** input. `Scroll` is the only public component that takes scroll input (touch drag, analog stick, mouse wheel); it does not receive **Press**.
 - **Button** exposes press-oriented callbacks: `onPress`, `onPressStart`, and `onPressEnd`.
 - **Button** exposes **Focus** callbacks `onFocus` and `onBlur`; `focusColor` fills it while it has **Focus**, and `autoFocus` gives it **Focus** on mount, the last mounted one winning.
 - At most one control has **Focus**. The D-pad moves it spatially and Cross presses it; a touch press presses directly and clears it.
 - On the desktop host, mouse hover moves **Focus** to the hovered **Button**, and a mouse press focuses the **Button** it presses, so focus styling can be tested without a gamepad. Moving the pointer to empty space keeps **Focus**.
 - **Pad Buttons** reach a **Deck App** only through `usePadButton` and only while the **VitaDeck Shell** is hidden; one held when the Shell hides is ignored until released.
 - Circle is a **Pad Button** in a **Deck App** and back in the **VitaDeck Shell**; on the desktop host both are Backspace.
+- A **Text Input** is controlled: `onChange` fires once with the final text when the user confirms an edit, on the Vita and the desktop host alike; a cancelled edit fires nothing.
+- On the Vita a **Text Input** edit opens the system keyboard dialog, pre-filled with `value` and titled with `placeholder`; on the desktop host the field edits in place (see Host mappings).
+- While a **Text Input** edit runs, no other **Deck App** input is delivered; opening the **VitaDeck Shell** cancels the edit.
 - **Runtime Upload** uses a **Runtime Upload Listener** on the Vita and on the desktop host.
 - The **Runtime Upload Listener** starts when the user confirms the **Shell Upload Entry** and runs until **Shell Upload Cancel** or VitaDeck exits, including while the shell is hidden.
 - The **Runtime Upload Listener** listens on all interfaces with default port **8787** and falls forward to following ports until one binds or **10** attempts fail; the **Runtime Upload URL** reflects the bound port when binding succeeds.
@@ -371,12 +378,12 @@ _Avoid_: localStorage, save file, cache, settings
 
 ## Host mappings
 
-Every Vita input has a desktop host equivalent, and a connected gamepad works alongside the keyboard. `src/ui/input.c` implements the **Deck App** column and `src/shell/shell.c` the Shell column; change them together with this table.
+Every Vita input has a desktop host equivalent, and a connected gamepad works alongside the keyboard. `src/ui/input.c` implements the **Deck App** column, `src/platform/text_input_host.c` the **Text Input** editing rows, and `src/shell/shell.c` the Shell column; change them together with this table.
 
 | Vita | Desktop host | In a **Deck App** | In the **VitaDeck Shell** |
 | --- | --- | --- | --- |
 | D-pad | Arrow keys | Moves **Focus** | Moves between rows and actions |
-| Cross | Enter | Presses the **Button** with **Focus** | Confirm |
+| Cross | Enter | Presses the **Button** or **Text Input** with **Focus** | Confirm |
 | Circle | Backspace | **Pad Button** `circle` | Back |
 | Triangle | T | **Pad Button** `triangle` | |
 | Square | S | **Pad Button** `square` | |
@@ -387,6 +394,9 @@ Every Vita input has a desktop host equivalent, and a connected gamepad works al
 | Touch press | Mouse press | Presses the **Button** under it; touch clears **Focus**, the mouse focuses that **Button** | |
 | | Mouse hover | Moves **Focus** to the hovered **Button** | |
 | Touch drag, left stick | Mouse wheel | Scrolls a `Scroll`: drag and wheel the one under the pointer, the stick the one holding **Focus** | |
+| Keyboard dialog keys | Typing, Backspace | While a **Text Input** edit runs: edit its text | |
+| Keyboard dialog Enter | Enter | While a **Text Input** edit runs: confirms it | |
+| Keyboard dialog close or cancel | Escape | While a **Text Input** edit runs: cancels it | |
 
 ## Example dialogue
 
@@ -436,7 +446,7 @@ Every Vita input has a desktop host equivalent, and a connected gamepad works al
 > **Domain expert:** "No — a **Deck App Component** explicitly renders **Screen** so display ownership is visible in author code."
 >
 > **Dev:** "Can any visual element receive clicks?"
-> **Domain expert:** "No — **Button** is the only public component that receives **Press**; `Scroll` takes scroll input but not **Press**."
+> **Domain expert:** "No — **Button** and **Text Input** are the only public components that receive **Press**; `Scroll` takes scroll input but not **Press**."
 >
 > **Dev:** "Should Deck Apps use mouse event names?"
 > **Domain expert:** "No — public input is described as **Press**, using `onPress`, `onPressStart`, and `onPressEnd`."
@@ -611,12 +621,12 @@ Every Vita input has a desktop host equivalent, and a connected gamepad works al
 - "`runtime` package" is too narrow for the package that also builds artifacts; resolved: use **VitaDeck SDK** for `@vitadeck/sdk`.
 - "React dependency" could mean bundled app code or a VitaDeck-provided runtime dependency; resolved: React is a **Runtime Dependency** and Deck App projects develop against the SDK-compatible version.
 - "theme" can mean sample app styling or runtime styling; resolved: the shared theme is a **Runtime Theme** owned by VitaDeck.
-- "clickable rect" suggests visual primitives are interactive; resolved: **Press** goes through **Button**, and only `Scroll` takes scroll input.
+- "clickable rect" suggests visual primitives are interactive; resolved: **Press** goes through **Button** and **Text Input**, and only `Scroll` takes scroll input.
 - "click" and "mouse" terms are implementation leakage; resolved: public input language is **Press**.
 - "confirm" could mean **Deck App** **Press** or **VitaDeck Shell** confirmation; resolved: **Shell Face Input** uses Cross/Circle conventions in the Shell, while **Deck Apps** use **Press**.
-- "Enter" could mean **Deck App** activation or **Shell Face Input** confirm; resolved: **Host Shell Confirm Mapping** applies only while the **VitaDeck Shell** is open; in a **Deck App** Enter is Cross and presses the **Button** with **Focus**.
+- "Enter" could mean **Deck App** activation or **Shell Face Input** confirm; resolved: **Host Shell Confirm Mapping** applies only while the **VitaDeck Shell** is open; in a **Deck App** Enter is Cross and presses the control with **Focus**, except during a **Text Input** edit, where it confirms the edit.
 - "focus" could mean the Shell's highlighted row or the **Deck App** control Cross presses; resolved: **Focus** is the **Deck App** term, and the Shell keeps **Shell Face Input** language.
-- "Backspace" could mean Shell back or a **Deck App** input; resolved: it is Circle, so back while the **VitaDeck Shell** is open and the `circle` **Pad Button** while a **Deck App** runs.
+- "Backspace" could mean Shell back or a **Deck App** input; resolved: it is Circle, so back while the **VitaDeck Shell** is open and the `circle` **Pad Button** while a **Deck App** runs; during a **Text Input** edit it deletes a character.
 - "Surface" and "viewport" were considered for the root display component; resolved: the public component is **Screen**.
 - "render function" suggests author-controlled bootstrapping; resolved: authors export a **Deck App Component** and VitaDeck bootstraps it.
 - "entry" can mean author source or generated package code; resolved: **Deck App Source Entry** is authored, **Deck App Package Entry** is generated.

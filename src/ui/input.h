@@ -2,6 +2,7 @@
 #define INPUT_H
 
 #include <stdbool.h>
+#include "platform/text_input.h"
 
 // Pad Buttons a Deck App can subscribe to. The D-pad, Cross, Start and Select never reach this list.
 typedef enum { PAD_CIRCLE, PAD_TRIANGLE, PAD_SQUARE, PAD_L, PAD_R, PAD_BUTTON_COUNT } PadButton;
@@ -30,7 +31,17 @@ void poll_gamepad_input(void);
 void input_apply_mouse(const MouseSample *sample);
 void input_apply_gamepad(const GamepadSample *sample);
 
-// Forget Focus and held Pad Buttons. Called when the Deck App runtime starts or stops.
+// Text Input editing. A Press on a Text Input starts it; while it runs, skip the other polls and call
+// poll_text_input every frame, even while the Shell is open, so a closing Vita IME dialog finishes.
+bool input_is_editing_text(void);
+void poll_text_input(void);
+void input_apply_text_input(VdTextInputStatus status);
+// Ends the edit without a change, e.g. when the Shell opens.
+void input_cancel_text_input(void);
+// The text to draw in Text Input id while it is edited in place (the desktop host), or NULL.
+const char *input_editing_text(const char *id);
+
+// Forget Focus, held Pad Buttons and any edit. Called when the Deck App runtime starts or stops.
 void input_clear_focus(void);
 
 // Ignore Pad Buttons held right now until they are released, e.g. the Circle that hides the Shell.

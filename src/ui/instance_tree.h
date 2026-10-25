@@ -7,7 +7,15 @@
 // Longest instance id including its terminator; native create calls reject longer ids.
 #define VD_INSTANCE_ID_MAX 64
 
-typedef enum { NT_RECT = 1, NT_TEXT = 2, NT_BUTTON = 3, NT_RAW_TEXT = 4, NT_SCROLL = 5, NT_IMAGE = 6 } NodeType;
+typedef enum {
+    NT_RECT = 1,
+    NT_TEXT = 2,
+    NT_BUTTON = 3,
+    NT_RAW_TEXT = 4,
+    NT_SCROLL = 5,
+    NT_IMAGE = 6,
+    NT_TEXT_INPUT = 7,
+} NodeType;
 
 typedef struct {
     int x, y, width, height;
@@ -47,6 +55,20 @@ typedef struct {
 
 typedef struct {
     int x, y, width, height;
+    Color color;
+    Color text_color;
+    bool has_focus_color;
+    Color focus_color;
+    char *font_name;
+    int font_size;
+    float border_radius;
+    int max_length;
+    char *value;
+    char *placeholder;
+} TextInputProps;
+
+typedef struct {
+    int x, y, width, height;
     bool has_fill;
     Color fill_color;
     int gap;
@@ -67,6 +89,7 @@ struct ReactInstance {
         RectProps rect;
         TextProps text;
         ButtonProps button;
+        TextInputProps text_input;
         ScrollProps scroll;
         ImageProps image;
         char *raw_text;
@@ -75,7 +98,7 @@ struct ReactInstance {
     ReactInstance *parent;
 };
 
-// Minimal column layout for scroll containers. Rect, button, and image children
+// Minimal column layout for scroll containers. Rect, button, text input and image children
 // participate in the flow: each is placed at the current flow position
 // (its own y acts as a top margin) and advances the flow by margin +
 // height + gap. Returns false for children that are not part of the flow.
@@ -114,7 +137,11 @@ ReactInstance **instance_get_root_children(void);
 // Hit testing (thread-safe, acquires lock internally). Copies the hit id into out_id and returns true on a hit.
 bool instance_hit_test(int x, int y, char out_id[VD_INSTANCE_ID_MAX]);
 bool instance_exists(const char *id);
-bool instance_is_button(const char *id);
+// Buttons and Text Inputs take Focus.
+bool instance_is_focusable(const char *id);
+
+// What a Text Input edit starts from, as heap copies the caller frees. Returns false when id is not a Text Input.
+bool instance_text_input_session(const char *id, char **value, char **placeholder, int *max_length);
 
 // autoFocus: the JS thread asks for Focus on a back-tree instance; the request is published with the next swap.
 // The UI thread takes it once, copying the id into out_id. The last request before a swap wins.

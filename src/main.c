@@ -69,8 +69,12 @@ int main(int argc, char *argv[])
             }
         }
 
-        if (!shell_is_visible(&shell) && package_library_has_active_deck_app() &&
-            js_runtime_is_ready(&bootstrap.js_runtime) && !js_runtime_failed(&bootstrap.js_runtime)) {
+        const bool deck_app_owns_input = !shell_is_visible(&shell) && package_library_has_active_deck_app() &&
+                                         js_runtime_is_ready(&bootstrap.js_runtime) &&
+                                         !js_runtime_failed(&bootstrap.js_runtime);
+        if (!deck_app_owns_input) input_cancel_text_input();
+        poll_text_input();
+        if (deck_app_owns_input && !input_is_editing_text()) {
             poll_mouse_input();
             poll_touch_input();
             poll_gamepad_input();

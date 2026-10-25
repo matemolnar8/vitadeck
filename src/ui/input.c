@@ -8,6 +8,7 @@
 #include "focus_nav.h"
 #include "scroll.h"
 #include "core/event_queue.h"
+#include "platform/text_input.h"
 
 _Static_assert(sizeof(((InputEvent *)0)->id) >= VD_INSTANCE_ID_MAX, "input events must hold every instance id");
 
@@ -87,6 +88,9 @@ typedef enum { PAD_STATE_UP, PAD_STATE_DOWN, PAD_STATE_IGNORED } PadState;
 static PadState pad_states[PAD_BUTTON_COUNT];
 static bool pad_ignore_held = false;
 
+// The Text Input being edited, if any. Other Deck App input waits until the edit ends.
+static char *editing_id = NULL;
+
 static void push_event(EventType type, const char *id, const char *event)
 {
     InputEvent evt = {.type = type};
@@ -98,6 +102,13 @@ static void push_event(EventType type, const char *id, const char *event)
 static void push_input_event(const char *id, const char *event)
 {
     push_event(EVT_INPUT, id, event);
+}
+
+static void push_text_event(const char *id, const char *text)
+{
+    InputEvent evt = {.type = EVT_TEXT_INPUT, .text = strdup(text)};
+    snprintf(evt.id, sizeof(evt.id), "%s", id);
+    event_queue_push(&evt);
 }
 
 static bool same_id(const char *a, const char *b)
@@ -215,8 +226,72 @@ static void clear_focus(void)
     replace_id(&gamepad_down_id, NULL);
 }
 
+static void end_text_input(void)
+{
+    replace_id(&editing_id, NULL);
+    // Whatever ended the edit (Enter, Cross, a touch on the IME dialog) may still be held; it must not press again.
+    prev_confirm_down = true;
+    prev_touch_down = true;
+    prev_is_mouse_down = true;
+    pad_ignore_held = true;
+}
+
+static void begin_text_input(const char *id)
+{
+    char *value = NULL;
+    char *placeholder = NULL;
+    int max_length = 0;
+    if (!instance_text_input_session(id, &value, &placeholder, &max_length)) return;
+    if (vd_text_input_begin(placeholder, value, max_length)) replace_id(&editing_id, id);
+    free(value);
+    free(placeholder);
+}
+
+// A Press on a Text Input starts editing it.
+static void push_press(const char *id)
+{
+    push_input_event(id, "press");
+    begin_text_input(id);
+}
+
+bool input_is_editing_text(void)
+{
+    return editing_id != NULL;
+}
+
+void input_apply_text_input(VdTextInputStatus status)
+{
+    if (!editing_id) return;
+    if (status == VD_TEXT_INPUT_EDITING && instance_exists(editing_id)) return;
+
+    if (status == VD_TEXT_INPUT_EDITING)
+        vd_text_input_cancel();
+    else if (status == VD_TEXT_INPUT_CONFIRMED)
+        push_text_event(editing_id, vd_text_input_text());
+    end_text_input();
+}
+
+void poll_text_input(void)
+{
+    input_apply_text_input(vd_text_input_poll());
+}
+
+void input_cancel_text_input(void)
+{
+    if (!editing_id) return;
+    vd_text_input_cancel();
+    end_text_input();
+}
+
+const char *input_editing_text(const char *id)
+{
+    if (!vd_text_input_edits_in_place() || !same_id(editing_id, id)) return NULL;
+    return vd_text_input_text();
+}
+
 void input_clear_focus(void)
 {
+    input_cancel_text_input();
     clear_focus();
     for (int i = 0; i < PAD_BUTTON_COUNT; i++)
         pad_states[i] = PAD_STATE_UP;
@@ -236,21 +311,21 @@ void input_apply_mouse(const MouseSample *s)
 
     char top_id_buf[VD_INSTANCE_ID_MAX];
     const char *top_id = instance_hit_test(s->x, s->y, top_id_buf) ? top_id_buf : NULL;
-    const bool top_is_button = top_id && instance_is_button(top_id);
+    const bool top_is_focusable = top_id && instance_is_focusable(top_id);
 
     if (hovered_id && !instance_exists(hovered_id)) replace_id(&hovered_id, NULL);
 
-    // Hovering a Button gives it Focus; leaving it for empty space keeps Focus.
+    // Hovering a focusable control gives it Focus; leaving it for empty space keeps Focus.
     if (mouse_moved && !same_id(hovered_id, top_id)) {
         replace_id(&hovered_id, top_id);
-        if (top_is_button) set_focus(top_id);
+        if (top_is_focusable) set_focus(top_id);
     }
 
     const bool just_pressed = s->left_down && !prev_is_mouse_down;
     const bool just_released = !s->left_down && prev_is_mouse_down;
 
     if (just_pressed) {
-        if (top_is_button)
+        if (top_is_focusable)
             set_focus(top_id);
         else
             clear_focus();
@@ -262,7 +337,7 @@ void input_apply_mouse(const MouseSample *s)
 
     if (just_released && mouse_down_id) {
         push_input_event(mouse_down_id, "pressend");
-        if (same_id(mouse_down_id, hovered_id)) push_input_event(mouse_down_id, "press");
+        if (same_id(mouse_down_id, hovered_id)) push_press(mouse_down_id);
         replace_id(&mouse_down_id, NULL);
     }
 
@@ -385,7 +460,7 @@ void poll_touch_input(void)
         } else if (touch_down_id) {
             if (touch_pending_press) push_input_event(touch_down_id, "pressstart");
             push_input_event(touch_down_id, "pressend");
-            if (same_id(touch_down_id, touch_hovered_id)) push_input_event(touch_down_id, "press");
+            if (same_id(touch_down_id, touch_hovered_id)) push_press(touch_down_id);
         }
 
         replace_id(&touch_down_id, NULL);
@@ -465,7 +540,7 @@ void input_apply_gamepad(const GamepadSample *s)
 
     if (just_released && gamepad_down_id) {
         push_input_event(gamepad_down_id, "pressend");
-        if (same_id(gamepad_down_id, focused_id)) push_input_event(gamepad_down_id, "press");
+        if (same_id(gamepad_down_id, focused_id)) push_press(gamepad_down_id);
         replace_id(&gamepad_down_id, NULL);
     }
 

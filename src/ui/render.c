@@ -324,6 +324,94 @@ static void render_button_instance(ReactInstance *inst, RenderContext ctx)
                b->text_color);
 }
 
+static float glyph_width(Font font, int codepoint, float scale)
+{
+    int index = GetGlyphIndex(font, codepoint);
+    float advance = font.glyphs[index].advanceX != 0 ? (float)font.glyphs[index].advanceX
+                                                     : font.recs[index].width + (float)font.glyphs[index].offsetX;
+    return advance * scale + 1.0f;
+}
+
+// The longest run of whole codepoints from the start of text, or with keep_end from its end, that fits max_width
+// and out_size. Copies it into out and returns its width.
+static float fit_text(Font font, const char *text, int font_size, float max_width, bool keep_end, char *out,
+                      size_t out_size)
+{
+    const float scale = font.baseSize > 0 ? (float)font_size / (float)font.baseSize : 1.0f;
+    const size_t len = strlen(text);
+    size_t start = 0, end = 0;
+    float width = 0.0f;
+    if (keep_end) {
+        start = len;
+        end = len;
+        while (start > 0) {
+            size_t prev = start - 1;
+            while (prev > 0 && ((unsigned char)text[prev] & 0xc0) == 0x80)
+                prev--;
+            int size = 0;
+            float w = glyph_width(font, GetCodepointNext(text + prev, &size), scale);
+            if (width + w > max_width || end - prev >= out_size) break;
+            width += w;
+            start = prev;
+        }
+    } else {
+        while (end < len) {
+            int size = 0;
+            float w = glyph_width(font, GetCodepointNext(text + end, &size), scale);
+            if (width + w > max_width || end + (size_t)size >= out_size) break;
+            width += w;
+            end += (size_t)size;
+        }
+    }
+    memcpy(out, text + start, end - start);
+    out[end - start] = '\0';
+    return width;
+}
+
+static void render_text_input_instance(ReactInstance *inst, RenderContext ctx)
+{
+    TextInputProps *t = &inst->props.text_input;
+    Rectangle rect = {ctx.x + t->x, ctx.y + t->y, t->width, t->height};
+    float roundness = border_radius_to_roundness(rect, t->border_radius);
+
+    if (roundness > 0.0f)
+        DrawRectangleRounded(rect, roundness, 8, t->color);
+    else
+        DrawRectangleRec(rect, t->color);
+
+    if (input_is_focused(inst->id)) {
+        Color ring = t->has_focus_color ? t->focus_color : t->text_color;
+        if (roundness > 0.0f)
+            DrawRectangleRoundedLinesEx(rect, roundness, 8, 2.0f, ring);
+        else
+            DrawRectangleLinesEx(rect, 2.0f, ring);
+    }
+
+    const char *editing = input_editing_text(inst->id);
+    const char *value = editing ? editing : t->value ? t->value : "";
+    const bool show_placeholder = !editing && value[0] == '\0';
+    const char *text = show_placeholder && t->placeholder ? t->placeholder : value;
+    Color color = show_placeholder ? mix_color(t->text_color, t->color, 0.5f) : t->text_color;
+
+    const int padding = 8;
+    const int caret_width = 2;
+    int font_size = t->font_size > 0 ? t->font_size : 20;
+    Font font = font_registry_get(t->font_name);
+    int glyph_height = text_glyph_height(font, font_size);
+    float text_x = rect.x + padding;
+    float text_y = rect.y + (rect.height - glyph_height) / 2.0f;
+    float max_width = rect.width - padding * 2 - (editing ? caret_width + 1 : 0);
+
+    // While editing, the end of the text stays visible so the caret does.
+    char visible[1024];
+    float width = fit_text(font, text, font_size, max_width, editing != NULL, visible, sizeof(visible));
+    DrawTextEx(font, visible, (Vector2){text_x, text_y}, (float)font_size, 1.0f, color);
+
+    if (editing && fmod(GetTime(), 1.0) < 0.5) {
+        DrawRectangle((int)(text_x + width + 1), (int)text_y, caret_width, glyph_height, t->text_color);
+    }
+}
+
 static void render_image_instance(ReactInstance *inst, RenderContext ctx)
 {
     ImageProps *image = &inst->props.image;
@@ -426,6 +514,9 @@ static void render_instance(ReactInstance *inst, RenderContext ctx)
         break;
     case NT_BUTTON:
         render_button_instance(inst, ctx);
+        break;
+    case NT_TEXT_INPUT:
+        render_text_input_instance(inst, ctx);
         break;
     case NT_SCROLL:
         render_scroll_instance(inst, ctx);

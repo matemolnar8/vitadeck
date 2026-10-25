@@ -3,14 +3,17 @@
 
 #include <stdbool.h>
 
-typedef enum { EVT_INPUT, EVT_PAD_BUTTON } EventType;
+typedef enum { EVT_INPUT, EVT_PAD_BUTTON, EVT_TEXT_INPUT } EventType;
 
 // EVT_INPUT: id is the instance, event_name is focus, blur, pressstart, pressend or press.
 // EVT_PAD_BUTTON: id is the Pad Button name, event_name is pressstart or pressend.
+// EVT_TEXT_INPUT: id is the Text Input instance, text its confirmed UTF-8 value.
+// text is heap-allocated or NULL; push takes ownership and pop hands it to the caller, who frees it.
 typedef struct {
     EventType type;
     char id[64];
     char event_name[32];
+    char *text;
 } InputEvent;
 
 bool event_queue_init(void);

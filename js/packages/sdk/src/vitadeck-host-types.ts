@@ -39,7 +39,10 @@ export type FocusProps = {
   onFocus?: () => void;
   /** Called when this control loses **Focus**. */
   onBlur?: () => void;
-  /** Fill while focused. Defaults to `color` lightened by 40%. */
+  /**
+   * Shows **Focus**: a Button fills with it, defaulting to `color` lightened by 40%; a TextInput outlines with it,
+   * defaulting to `textColor`.
+   */
   focusColor?: Color;
   /** Take **Focus** on mount; when several mount together, the last one wins. */
   autoFocus?: boolean;
@@ -59,6 +62,28 @@ export type VitaButtonProps = WithKey<
     onPress?: () => void;
     onPressStart?: () => void;
     onPressEnd?: () => void;
+  }
+>;
+
+export type VitaTextInputProps = WithKey<
+  FocusProps & {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    value: string;
+    /** Called once with the final text when the user confirms an edit; cancelling calls nothing. */
+    onChange: (value: string) => void;
+    /** Shown dimmed while `value` is empty; also the title of the Vita's keyboard dialog. */
+    placeholder?: string;
+    /** Longest text, counted like `string.length`. Defaults to 256; at most 2048. */
+    maxLength?: number;
+    font?: FontName;
+    fontSize?: number;
+    color?: Color;
+    textColor?: Color;
+    /** Corner radius in pixels (CSS `border-radius` semantics). */
+    borderRadius?: number;
   }
 >;
 
@@ -87,6 +112,7 @@ export type VitaHostPropsByType = {
   "vita-text": VitaTextProps;
   "vita-rect": VitaRectProps;
   "vita-button": VitaButtonProps;
+  "vita-text-input": VitaTextInputProps;
   "vita-scroll": VitaScrollProps;
   "vita-image": VitaImageProps;
 };

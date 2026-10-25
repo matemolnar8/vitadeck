@@ -38,6 +38,20 @@ static inline ReactInstance *fixture_button(ReactInstance *parent, const char *i
     return inst;
 }
 
+static inline ReactInstance *fixture_text_input(ReactInstance *parent, const char *id, int x, int y, int width,
+                                                int height, const char *value, int max_length)
+{
+    ReactInstance *inst = fixture_new(parent, NT_TEXT_INPUT, id);
+    inst->props.text_input = (TextInputProps){.x = x,
+                                              .y = y,
+                                              .width = width,
+                                              .height = height,
+                                              .max_length = max_length,
+                                              .value = strdup(value),
+                                              .placeholder = strdup("")};
+    return inst;
+}
+
 static inline ReactInstance *fixture_scroll(ReactInstance *parent, const char *id, int x, int y, int width, int height,
                                             int gap, int padding)
 {

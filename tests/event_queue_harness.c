@@ -95,6 +95,33 @@ static void test_clear_and_shutdown(void)
     expect(pop_numbered() == 2, "shutdown is only a flag; push and pop still work");
 }
 
+static void push_text(const char *text)
+{
+    InputEvent evt = {.type = EVT_TEXT_INPUT, .text = strdup(text)};
+    snprintf(evt.id, sizeof(evt.id), "field");
+    event_queue_push(&evt);
+}
+
+// The sanitizer run's leak check proves that a full queue and clear free the text they drop.
+static void test_text_ownership(void)
+{
+    push_text("héllo");
+    InputEvent out;
+    expect(event_queue_pop(&out) && out.type == EVT_TEXT_INPUT && strcmp(out.text, "héllo") == 0,
+           "a text event hands its text to the popper");
+    free(out.text);
+
+    for (int i = 0; i < CAPACITY; i++)
+        push_numbered(i);
+    push_text("dropped");
+    event_queue_clear();
+
+    for (int i = 0; i < 3; i++)
+        push_text("cleared");
+    event_queue_clear();
+    expect(pop_numbered() == -1, "clear drops pending text events");
+}
+
 static atomic_bool producer_done;
 
 static void *producer(void *arg)
@@ -148,6 +175,7 @@ int main(void)
     test_fifo_and_wraparound();
     test_full_queue_drops_newest();
     test_clear_and_shutdown();
+    test_text_ownership();
 
     event_queue_destroy();
     expect(event_queue_init(), "the queue re-initializes after destroy");

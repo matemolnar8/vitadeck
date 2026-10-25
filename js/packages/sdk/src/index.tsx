@@ -7,6 +7,7 @@ import type {
   VitaImageProps,
   VitaRectProps,
   VitaScrollProps,
+  VitaTextInputProps,
   VitaTextProps,
 } from "./vitadeck-host-types";
 
@@ -79,6 +80,17 @@ export type ButtonProps = Omit<VitaButtonProps, "key">;
 
 export function Button(props: ButtonProps) {
   return vitaHost("vita-button", props);
+}
+
+export type TextInputProps = Omit<VitaTextInputProps, "key">;
+
+/**
+ * Single-line text field. It takes **Focus** like a Button, and a Press starts an edit: the Vita opens its keyboard
+ * dialog, the desktop host edits in place (type, Backspace, Enter confirms, Escape cancels). `onChange` fires once
+ * when the edit is confirmed.
+ */
+export function TextInput(props: TextInputProps) {
+  return vitaHost("vita-text-input", props);
 }
 
 export { usePadButton } from "./pad-buttons";

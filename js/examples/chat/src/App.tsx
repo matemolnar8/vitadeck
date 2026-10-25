@@ -1,4 +1,4 @@
-import { Button, Rect, Screen, Scroll, Text, insetContent, useTheme } from "@vitadeck/sdk";
+import { Button, Rect, Screen, Scroll, Text, TextInput, insetContent, useTheme } from "@vitadeck/sdk";
 import React, { useState } from "react";
 import { FOLLOW_UPS, pendingUserMessage } from "./conversationScript";
 import { isGenesysConfigured } from "./genesys/config";
@@ -41,6 +41,7 @@ export default function ChatDeckApp() {
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [showSendButton, setShowSendButton] = useState(configured);
   const [sending, setSending] = useState(false);
+  const [draft, setDraft] = useState("");
 
   const selectedUserMessage = configured ? pendingUserMessage(turn, followUpIndex) : "";
   const showFollowUpPicker = turn > 0;
@@ -48,9 +49,10 @@ export default function ChatDeckApp() {
   const sendMessage = async () => {
     if (sending || !configured) return;
 
-    const userText = selectedUserMessage;
+    const userText = draft.trim() || selectedUserMessage;
     const messageTurn = turn;
 
+    setDraft("");
     setShowSendButton(false);
     setSending(true);
     setMessages((prev) => [...prev, { id: `u-${messageTurn}`, role: "user", text: userText }]);
@@ -80,6 +82,7 @@ export default function ChatDeckApp() {
   const lineHeight = 28;
   const charsPerLine = Math.max(12, Math.floor(textWidth / (fontSize * 0.55)));
 
+  const draftHeight = 44;
   const sendButtonWidth = 88;
   const sendButtonHeight = 40;
   const navButtonWidth = 48;
@@ -248,6 +251,22 @@ export default function ChatDeckApp() {
                 </Text>
               </Rect>
             )}
+
+            <TextInput
+              x={contentWidth - bubbleWidth}
+              y={0}
+              width={bubbleWidth}
+              height={draftHeight}
+              value={draft}
+              onChange={setDraft}
+              placeholder="Or write your own message"
+              font="chatMono"
+              fontSize={fontSize}
+              color={theme.surface}
+              textColor={theme.text}
+              focusColor={theme.accent}
+              borderRadius={bubbleRadiusPx}
+            />
 
             <Button
               x={contentWidth - sendButtonWidth}

@@ -1,9 +1,9 @@
 import type { Color } from "@vitadeck/sdk/types";
-import type { VitaHostPropsByType } from "@vitadeck/sdk/vitadeck-host-types";
+import type { FocusProps, VitaHostPropsByType } from "@vitadeck/sdk/vitadeck-host-types";
 import type { ReactNode } from "react";
 import Reconciler, { type HostConfig } from "react-reconciler";
 import { DefaultEventPriority } from "react-reconciler/constants";
-import { registerHandlers, unregisterHandlers, updateHandlers } from "./input";
+import { registerHandlers, unregisterHandlers, updateHandlers, type EventHandlers } from "./input";
 import { instrumentHostConfig, ReconcilerMetrics } from "./reconciler-metrics";
 import { exhaustiveGuard } from "./utils";
 
@@ -66,12 +66,19 @@ const colorToArgs = (color: Color | undefined, defaultColor: Color): [boolean, n
   return [false, defaultColor.r, defaultColor.g, defaultColor.b, defaultColor.a];
 };
 
-const handlerKeys = ["onPress", "onPressStart", "onPressEnd", "onFocus", "onBlur"] as const;
-type HandlerKey = (typeof handlerKeys)[number];
+const handlerKeys = [
+  "onPress",
+  "onPressStart",
+  "onPressEnd",
+  "onFocus",
+  "onBlur",
+  "onChange",
+] as const satisfies ReadonlyArray<keyof EventHandlers>;
 
-const extractHandlers = (props: Props) => {
-  const { onPress, onPressStart, onPressEnd, onFocus, onBlur } = props as Pick<PropsByType["vita-button"], HandlerKey>;
-  return { onPress, onPressStart, onPressEnd, onFocus, onBlur };
+// Buttons and TextInputs carry handlers; the other host types lack these keys.
+const extractHandlers = (props: Props): EventHandlers => {
+  const { onPress, onPressStart, onPressEnd, onFocus, onBlur, onChange } = props as EventHandlers;
+  return { onPress, onPressStart, onPressEnd, onFocus, onBlur, onChange };
 };
 
 const textAlignToNative = (align: PropsByType["vita-text"]["align"]): number => {
@@ -86,6 +93,32 @@ const textWrapToNative = (wrap: PropsByType["vita-text"]["wrap"]): number => {
 
 const textLayoutArgs = (p: PropsByType["vita-text"]) =>
   [p.x ?? 8, p.y ?? 8, p.width ?? 0, p.lineHeight ?? 0, textAlignToNative(p.align), textWrapToNative(p.wrap)] as const;
+
+const textInputArgs = (p: PropsByType["vita-text-input"]) => {
+  const color = p.color ?? Colors.RAYWHITE;
+  const textColor = p.textColor ?? Colors.BLACK;
+  return [
+    p.x,
+    p.y,
+    p.width,
+    p.height,
+    color.r,
+    color.g,
+    color.b,
+    color.a,
+    textColor.r,
+    textColor.g,
+    textColor.b,
+    textColor.a,
+    ...colorToArgs(p.focusColor, Colors.BLANK),
+    p.font ?? "default",
+    p.fontSize ?? 20,
+    p.borderRadius ?? 0,
+    p.maxLength ?? 256,
+    p.value,
+    p.placeholder ?? "",
+  ] as const;
+};
 
 // Create native instance based on type
 const createNativeInstance = (id: string, type: Type, props: Props): void => {
@@ -159,6 +192,9 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
       textColor.a,
       ...colorToArgs(p.focusColor, Colors.BLANK),
     );
+    registerHandlers(id, extractHandlers(props));
+  } else if (type === "vita-text-input") {
+    nativeCreateTextInput(id, ...textInputArgs(props as PropsByType["vita-text-input"]));
     registerHandlers(id, extractHandlers(props));
   } else if (type === "vita-scroll") {
     const p = props as PropsByType["vita-scroll"];
@@ -275,6 +311,8 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
       textColor.a,
       ...colorToArgs(p.focusColor, Colors.BLANK),
     );
+  } else if (type === "vita-text-input") {
+    nativeUpdateTextInput(id, ...textInputArgs(props as PropsByType["vita-text-input"]));
   } else if (type === "vita-scroll") {
     const p = props as PropsByType["vita-scroll"];
     const [hasFill, r, g, b, a] = colorToArgs(p.color, Colors.BLANK);
@@ -338,10 +376,10 @@ const rawHostConfig = {
     nativeAppendChild(parentInstance.id, child.id);
   },
 
-  // Returning true schedules commitMount, which applies autoFocus once the Button is committed.
+  // Returning true schedules commitMount, which applies autoFocus once the Button or TextInput is committed.
   finalizeInitialChildren(_instance, type, props: Props) {
     logReconcilerFunction("finalizeInitialChildren", type);
-    return type === "vita-button" && (props as PropsByType["vita-button"]).autoFocus === true;
+    return (type === "vita-button" || type === "vita-text-input") && (props as FocusProps).autoFocus === true;
   },
 
   prepareUpdate(_instance, type, oldProps, newProps, _rootContainerInstance, _hostContext) {

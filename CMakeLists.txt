@@ -135,8 +135,11 @@ endif()
 set(PLATFORM_SOURCES)
 if(DEFINED ENV{VITASDK})
   list(APPEND PLATFORM_SOURCES src/platform/thread_vita.c)
+  set(TEXT_INPUT_SOURCES src/platform/text_input_vita.c)
 else()
   list(APPEND PLATFORM_SOURCES src/platform/thread_posix.c)
+  # Kept apart from PLATFORM_SOURCES because it needs raylib, which most harnesses do not link.
+  set(TEXT_INPUT_SOURCES src/platform/text_input_host.c)
 endif()
 
 set(JSLIB_SOURCES
@@ -173,6 +176,7 @@ set(VITADECK_SOURCES
     src/upload/http_parse.c
     src/upload/http_server.c
     ${PLATFORM_SOURCES}
+    ${TEXT_INPUT_SOURCES}
 )
 add_executable(${PROJECT_NAME} ${VITADECK_SOURCES})
 
@@ -307,7 +311,8 @@ if(NOT DEFINED ENV{VITASDK})
     target_link_libraries(scroll_math_harness m pthread)
     add_test(NAME scroll_math_harness COMMAND scroll_math_harness)
 
-    # Links raylib only because input.c also holds the raylib polls; the harness drives input_apply_*.
+    # Links raylib only because input.c and text_input_host.c also hold the raylib polls; the harness drives the
+    # input_apply_* and vd_text_input_apply_keys steps.
     add_executable(input_harness
       tests/input_harness.c
       src/ui/input.c
@@ -317,6 +322,7 @@ if(NOT DEFINED ENV{VITASDK})
       src/core/arena.c
       src/core/event_queue.c
       ${PLATFORM_SOURCES}
+      ${TEXT_INPUT_SOURCES}
     )
     target_link_libraries(input_harness m pthread ${RAYLIB_LIBRARIES})
     add_test(NAME input_harness COMMAND input_harness)
@@ -355,6 +361,7 @@ if(NOT DEFINED ENV{VITASDK})
       src/ui/focus_nav.c
       src/ui/scroll.c
       src/platform/thread_posix.c
+      ${TEXT_INPUT_SOURCES}
     )
     add_executable(js_limits_harness tests/js_limits_harness.c ${HOST_RUNTIME_SOURCES})
     target_link_libraries(js_limits_harness ${VITADECK_LIBRARIES})

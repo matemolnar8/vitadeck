@@ -44,6 +44,8 @@ void event_queue_push(const InputEvent *evt)
         memcpy(&queue.events[queue.tail], evt, sizeof(InputEvent));
         queue.tail = (queue.tail + 1) % QUEUE_CAPACITY;
         queue.count++;
+    } else {
+        free(evt->text);
     }
 
     vd_mutex_unlock(queue.mutex);
@@ -88,6 +90,8 @@ bool event_queue_is_shutdown(void)
 void event_queue_clear(void)
 {
     vd_mutex_lock(queue.mutex);
+    for (int i = 0; i < queue.count; i++)
+        free(queue.events[(queue.head + i) % QUEUE_CAPACITY].text);
     queue.head = 0;
     queue.tail = 0;
     queue.count = 0;
