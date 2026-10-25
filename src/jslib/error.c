@@ -10,15 +10,14 @@ static void report_failure(JSContext *ctx, const char *source, const char *messa
     if (runtime) js_runtime_fail(runtime, message, stack);
 }
 
-void js_report_exception(JSContext *ctx, const char *source)
+static void report_value(JSContext *ctx, const char *source, JSValueConst value)
 {
-    JSValue exc = JS_GetException(ctx);
-    const char *message = JS_ToCString(ctx, exc);
+    const char *message = JS_ToCString(ctx, value);
     if (!message) JS_FreeValue(ctx, JS_GetException(ctx));
 
     const char *stack = NULL;
-    if (JS_IsError(ctx, exc)) {
-        JSValue stack_value = JS_GetPropertyStr(ctx, exc, "stack");
+    if (JS_IsError(ctx, value)) {
+        JSValue stack_value = JS_GetPropertyStr(ctx, value, "stack");
         if (JS_IsString(stack_value)) stack = JS_ToCString(ctx, stack_value);
         JS_FreeValue(ctx, stack_value);
     }
@@ -26,7 +25,18 @@ void js_report_exception(JSContext *ctx, const char *source)
     report_failure(ctx, source, message ? message : "unknown error", stack);
     JS_FreeCString(ctx, stack);
     JS_FreeCString(ctx, message);
+}
+
+void js_report_exception(JSContext *ctx, const char *source)
+{
+    JSValue exc = JS_GetException(ctx);
+    report_value(ctx, source, exc);
     JS_FreeValue(ctx, exc);
+}
+
+void js_report_rejection(JSContext *ctx, JSValueConst reason)
+{
+    report_value(ctx, "unhandled rejection", reason);
 }
 
 static JSValue js_native_report_deck_app_error(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
