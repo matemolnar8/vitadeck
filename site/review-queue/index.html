@@ -46,7 +46,7 @@
 <body>
 <header>
   <h1>VitaDeck review queue</h1>
-  <p id="sub">Batch 1 (2026-10-25): all 10 merged (plus hotfix #73). Batch 2: #74 awaiting your decision; #54 in progress. New PRs appear here as they open. Approve means Claude squash-merges; Request changes sends your note to a fix agent.</p>
+  <p id="sub">Batch 1 (2026-10-25): all 10 merged (plus hotfix #73). Batch 2: #74 merged; #54 in progress. New PRs appear here as they open. Approve means Claude squash-merges; Request changes sends your note to a fix agent.</p>
 </header>
 <main id="list"></main>
 <footer>
@@ -65,7 +65,7 @@ const PRS = [
   {n:70, t:"docs(adr): host control sliced delivery and topology", fixes:"refs #45", diff:"+61 −0", base:"main", ci:"merged", note:"Five confirmations for you on issue #45."},
   {n:62, t:"fix(upload): reap finished handler threads so the listener keeps accepting", fixes:"#41", diff:"+65 −27", base:"main", ci:"merged"},
   {n:68, t:"fix(upload): harden zip bounds, header matching and JSON escaping", fixes:"#43", diff:"+427 −54", base:"fix/upload-handler-reaping (stacked on #62)", ci:"merged", note:"Merge after #62; it retargets to main automatically."},
-  {n:74, t:"refactor(core): share path and file helpers in a util module", fixes:"#55", diff:"+284 −496", base:"main", ci:"all green", note:"Batch 2. Helpers moved to src/core/util.c (vd_ prefix), stricter package-name check everywhere, file readers now fail instead of mallocing bad lengths, dead code removed. #54 will stack on it."},
+  {n:74, t:"refactor(core): share path and file helpers in a util module", fixes:"#55", diff:"+284 −496", base:"main", ci:"merged", note:"Batch 2. Helpers moved to src/core/util.c (vd_ prefix), stricter package-name check everywhere, file readers now fail instead of mallocing bad lengths, dead code removed. #54 will stack on it."},
 ];
 const HOOK = "https://relay.t3.codes/v1/hooks/42fc44312fd4d5ff/scheduled-task%3Acommand%3Amcp%3A1b32e1ca-ff48-4bf5-b05a-502dcff0cbe1%3Aschedule-task%3Avitadeck-review-webhook-1/tdotXduMyeg1WvbI3hOgTmP2jAnrLA5K7-1c3z7KvO4";
 const KEY = "vitadeck-review-queue-v1";
