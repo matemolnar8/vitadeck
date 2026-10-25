@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include "stb_ds.h"
@@ -41,4 +42,23 @@ void scroll_reset(void)
     shfree(offsets);
     offsets = NULL;
     map_initialized = false;
+}
+
+int scroll_max_offset(int viewport_height, int content_height)
+{
+    int max_offset = content_height - viewport_height;
+    return max_offset < 0 ? 0 : max_offset;
+}
+
+int scroll_momentum_step(int offset, int max_offset, float *velocity, float dt)
+{
+    int next = offset + (int)roundf(*velocity * dt);
+    if (next <= 0) {
+        next = 0;
+        *velocity = 0.0f;
+    } else if (next >= max_offset) {
+        next = max_offset;
+        *velocity = 0.0f;
+    }
+    return next;
 }

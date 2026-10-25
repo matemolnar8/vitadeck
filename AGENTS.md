@@ -20,7 +20,7 @@ When this file speaks:
 
 ## Where code lives
 
-- `src/core/` - bootstrap, QuickJS runtime, event queue, package library and manifest parsing (vendored `jimp.h`, see ADR 0003)
+- `src/core/` - bootstrap, QuickJS runtime, event queue, package library and manifest parsing (vendored `vendor/jimp/jimp.h`, see ADR 0003)
 - `src/jslib/` - native functions exposed to JS: instances, timers, fetch, log, colors
 - `src/ui/` - instance tree, rendering, fonts, images, input, scroll
 - `src/shell/` - VitaDeck Shell; `src/upload/` - Runtime Upload listener; `src/platform/` - threads (POSIX vs Vita)
