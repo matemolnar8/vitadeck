@@ -1,16 +1,14 @@
 #include "package_library.h"
 
 #include "core/package_manifest.h"
+#include "core/util.h"
 #include "platform/thread.h"
 
 #include <dirent.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #ifdef __vita__
 #define VD_DATA_ROOT "ux0:data/vitadeck"
@@ -27,107 +25,6 @@ static char g_staging_root[VD_PATH_MAX];
 static vd_mutex *g_mutex;
 static char g_active_name[VD_PACKAGE_NAME_MAX];
 static char g_active_path[VD_PATH_MAX];
-
-static void set_error(char *error, size_t error_size, const char *message)
-{
-    if (!error || error_size == 0) return;
-    snprintf(error, error_size, "%s", message);
-}
-
-static bool has_suffix(const char *value, const char *suffix)
-{
-    size_t value_len = strlen(value);
-    size_t suffix_len = strlen(suffix);
-    return value_len >= suffix_len && strcmp(value + value_len - suffix_len, suffix) == 0;
-}
-
-static void join_path(char *out, size_t out_size, const char *a, const char *b)
-{
-    snprintf(out, out_size, "%s/%s", a, b);
-}
-
-static bool is_dir(const char *path)
-{
-    struct stat st;
-    return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
-}
-
-static bool mkdir_p(const char *path)
-{
-    char tmp[VD_PATH_MAX];
-    snprintf(tmp, sizeof(tmp), "%s", path);
-    size_t len = strlen(tmp);
-    if (len == 0) return false;
-    if (tmp[len - 1] == '/') tmp[len - 1] = '\0';
-
-    for (char *p = tmp + 1; *p; p++) {
-        if (*p != '/') continue;
-        *p = '\0';
-        if (mkdir(tmp, 0777) != 0 && errno != EEXIST) return false;
-        *p = '/';
-    }
-    return mkdir(tmp, 0777) == 0 || errno == EEXIST;
-}
-
-static bool remove_tree(const char *path)
-{
-    DIR *dir = opendir(path);
-    if (!dir) return unlink(path) == 0 || errno == ENOENT;
-
-    struct dirent *entry;
-    bool ok = true;
-    while ((entry = readdir(dir))) {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
-        char child[VD_PATH_MAX];
-        join_path(child, sizeof(child), path, entry->d_name);
-        if (!remove_tree(child)) {
-            ok = false;
-            break;
-        }
-    }
-    closedir(dir);
-    return ok && (rmdir(path) == 0 || errno == ENOENT);
-}
-
-static char *read_text_file(const char *path)
-{
-    FILE *f = fopen(path, "rb");
-    if (!f) return NULL;
-    if (fseek(f, 0, SEEK_END) != 0) {
-        fclose(f);
-        return NULL;
-    }
-    long len = ftell(f);
-    if (len < 0) {
-        fclose(f);
-        return NULL;
-    }
-    rewind(f);
-    char *buffer = malloc((size_t)len + 1);
-    if (!buffer) {
-        fclose(f);
-        return NULL;
-    }
-    size_t read_len = fread(buffer, 1, (size_t)len, f);
-    buffer[read_len] = '\0';
-    fclose(f);
-    return buffer;
-}
-
-static bool write_text_file(const char *path, const char *contents)
-{
-    FILE *f = fopen(path, "wb");
-    if (!f) return false;
-    bool ok = fwrite(contents, 1, strlen(contents), f) == strlen(contents);
-    fclose(f);
-    return ok;
-}
-
-static bool safe_package_name(const char *package_name)
-{
-    return package_name && package_name[0] != '\0' && has_suffix(package_name, ".vdapp") &&
-           !strstr(package_name, "/") && !strstr(package_name, "\\") && !strstr(package_name, "..");
-}
 
 static bool read_package_info(const char *package_path, const char *package_name, VdPackageInfo *out_info, char *error,
                               size_t error_size)
@@ -160,11 +57,11 @@ bool package_library_validate_package(const char *package_path, const char *pack
 static bool read_active_state(void)
 {
     char state_path[VD_PATH_MAX];
-    join_path(state_path, sizeof(state_path), g_root, "active-package.txt");
-    char *contents = read_text_file(state_path);
+    vd_join_path(state_path, sizeof(state_path), g_root, "active-package.txt");
+    char *contents = vd_read_file(state_path, NULL);
     if (!contents) return false;
     contents[strcspn(contents, "\r\n")] = '\0';
-    bool ok = safe_package_name(contents);
+    bool ok = vd_safe_package_name(contents);
     if (ok) snprintf(g_active_name, sizeof(g_active_name), "%s", contents);
     free(contents);
     return ok;
@@ -173,8 +70,8 @@ static bool read_active_state(void)
 static bool write_active_state(const char *package_name)
 {
     char state_path[VD_PATH_MAX];
-    join_path(state_path, sizeof(state_path), g_root, "active-package.txt");
-    return write_text_file(state_path, package_name);
+    vd_join_path(state_path, sizeof(state_path), g_root, "active-package.txt");
+    return vd_write_text_file(state_path, package_name);
 }
 
 static void refresh_active_path(void)
@@ -183,13 +80,13 @@ static void refresh_active_path(void)
         g_active_path[0] = '\0';
         return;
     }
-    join_path(g_active_path, sizeof(g_active_path), g_installed_root, g_active_name);
+    vd_join_path(g_active_path, sizeof(g_active_path), g_installed_root, g_active_name);
 }
 
 static void clear_active_state_file(void)
 {
     char state_path[VD_PATH_MAX];
-    join_path(state_path, sizeof(state_path), g_root, "active-package.txt");
+    vd_join_path(state_path, sizeof(state_path), g_root, "active-package.txt");
     (void)remove(state_path);
 }
 
@@ -204,7 +101,7 @@ bool package_library_has_active_deck_app(void)
 {
     char path[VD_PATH_MAX];
     copy_locked(path, sizeof(path), g_active_path);
-    return path[0] != '\0' && is_dir(path);
+    return path[0] != '\0' && vd_is_dir(path);
 }
 
 static int package_compare(const void *a, const void *b)
@@ -227,9 +124,9 @@ int package_library_list(VdPackageInfo *items, int max_items)
     int count = 0;
     struct dirent *entry;
     while ((entry = readdir(dir)) && count < max_items) {
-        if (entry->d_name[0] == '.' || !has_suffix(entry->d_name, ".vdapp")) continue;
+        if (entry->d_name[0] == '.' || !vd_has_suffix(entry->d_name, ".vdapp")) continue;
         char path[VD_PATH_MAX];
-        join_path(path, sizeof(path), g_installed_root, entry->d_name);
+        vd_join_path(path, sizeof(path), g_installed_root, entry->d_name);
         if (!read_package_info(path, entry->d_name, &items[count], NULL, 0)) continue;
         items[count].is_active = strcmp(entry->d_name, active_name) == 0;
         count++;
@@ -243,7 +140,7 @@ bool package_library_init(char *error, size_t error_size)
 {
     if (!g_mutex) g_mutex = vd_mutex_create();
     if (!g_mutex) {
-        set_error(error, error_size, "Could not initialize Installed Deck App Library lock.");
+        vd_set_error(error, error_size, "Could not initialize Installed Deck App Library lock.");
         return false;
     }
 
@@ -252,11 +149,11 @@ bool package_library_init(char *error, size_t error_size)
         snprintf(g_root, sizeof(g_root), "%s", env_root);
     }
 
-    join_path(g_installed_root, sizeof(g_installed_root), g_root, "installed-deck-apps");
-    join_path(g_staging_root, sizeof(g_staging_root), g_root, "staging/runtime-upload");
+    vd_join_path(g_installed_root, sizeof(g_installed_root), g_root, "installed-deck-apps");
+    vd_join_path(g_staging_root, sizeof(g_staging_root), g_root, "staging/runtime-upload");
 
-    if (!mkdir_p(g_installed_root) || !mkdir_p(g_staging_root)) {
-        set_error(error, error_size, "Could not initialize Installed Deck App Library paths.");
+    if (!vd_mkdir_p(g_installed_root) || !vd_mkdir_p(g_staging_root)) {
+        vd_set_error(error, error_size, "Could not initialize Installed Deck App Library paths.");
         return false;
     }
 
@@ -265,7 +162,7 @@ bool package_library_init(char *error, size_t error_size)
     g_active_path[0] = '\0';
     read_active_state();
     refresh_active_path();
-    if (g_active_name[0] != '\0' && !is_dir(g_active_path)) {
+    if (g_active_name[0] != '\0' && !vd_is_dir(g_active_path)) {
         clear_active_state_file();
         g_active_name[0] = '\0';
         g_active_path[0] = '\0';
@@ -297,7 +194,7 @@ void package_library_active_package_path(char *out, size_t out_size)
 static bool set_active_locked(const char *package_name, char *error, size_t error_size)
 {
     if (!write_active_state(package_name)) {
-        set_error(error, error_size, "Could not persist Active Deck App.");
+        vd_set_error(error, error_size, "Could not persist Active Deck App.");
         return false;
     }
     snprintf(g_active_name, sizeof(g_active_name), "%s", package_name);
@@ -307,12 +204,12 @@ static bool set_active_locked(const char *package_name, char *error, size_t erro
 
 bool package_library_set_active(const char *package_name, char *error, size_t error_size)
 {
-    if (!safe_package_name(package_name)) {
-        set_error(error, error_size, "Invalid Active Deck App package name.");
+    if (!vd_safe_package_name(package_name)) {
+        vd_set_error(error, error_size, "Invalid Active Deck App package name.");
         return false;
     }
     char path[VD_PATH_MAX];
-    join_path(path, sizeof(path), g_installed_root, package_name);
+    vd_join_path(path, sizeof(path), g_installed_root, package_name);
     vd_mutex_lock(g_mutex);
     bool ok = read_package_info(path, package_name, NULL, error, error_size) &&
               set_active_locked(package_name, error, error_size);
@@ -322,24 +219,24 @@ bool package_library_set_active(const char *package_name, char *error, size_t er
 
 bool package_library_remove(const char *package_name, char *error, size_t error_size)
 {
-    if (!safe_package_name(package_name)) {
-        set_error(error, error_size, "Invalid Deck App Package Name.");
+    if (!vd_safe_package_name(package_name)) {
+        vd_set_error(error, error_size, "Invalid Deck App Package Name.");
         return false;
     }
     char path[VD_PATH_MAX];
-    join_path(path, sizeof(path), g_installed_root, package_name);
+    vd_join_path(path, sizeof(path), g_installed_root, package_name);
 
     const char *failure = NULL;
     vd_mutex_lock(g_mutex);
     if (strcmp(package_name, g_active_name) == 0) {
         failure = "Cannot remove the Active Deck App.";
-    } else if (!remove_tree(path)) {
+    } else if (!vd_remove_tree(path)) {
         failure = "Could not remove Deck App Package.";
     }
     vd_mutex_unlock(g_mutex);
 
     if (failure) {
-        set_error(error, error_size, failure);
+        vd_set_error(error, error_size, failure);
         return false;
     }
     return true;
@@ -352,21 +249,21 @@ bool package_library_publish_package(const char *source_path, const char *packag
 
     char destination[VD_PATH_MAX];
     char backup[VD_PATH_MAX];
-    join_path(destination, sizeof(destination), g_installed_root, package_name);
+    vd_join_path(destination, sizeof(destination), g_installed_root, package_name);
     snprintf(backup, sizeof(backup), "%s.replacing", destination);
-    remove_tree(backup);
+    vd_remove_tree(backup);
 
     vd_mutex_lock(g_mutex);
-    if (is_dir(destination) && rename(destination, backup) != 0) {
+    if (vd_is_dir(destination) && rename(destination, backup) != 0) {
         vd_mutex_unlock(g_mutex);
-        set_error(error, error_size, "Could not prepare existing package for replacement.");
+        vd_set_error(error, error_size, "Could not prepare existing package for replacement.");
         return false;
     }
 
     if (rename(source_path, destination) != 0) {
-        if (is_dir(backup)) rename(backup, destination);
+        if (vd_is_dir(backup)) rename(backup, destination);
         vd_mutex_unlock(g_mutex);
-        set_error(error, error_size, "Could not publish Deck App Package.");
+        vd_set_error(error, error_size, "Could not publish Deck App Package.");
         return false;
     }
 
@@ -374,7 +271,7 @@ bool package_library_publish_package(const char *source_path, const char *packag
     if (replaced_active) *replaced_active = strcmp(package_name, g_active_name) == 0;
     vd_mutex_unlock(g_mutex);
 
-    remove_tree(backup);
+    vd_remove_tree(backup);
     if (!ok) return false;
     if (out_info) package_library_validate_package(destination, package_name, out_info, NULL, 0);
     return true;
@@ -382,6 +279,6 @@ bool package_library_publish_package(const char *source_path, const char *packag
 
 void package_library_clear_staging(void)
 {
-    remove_tree(g_staging_root);
-    mkdir_p(g_staging_root);
+    vd_remove_tree(g_staging_root);
+    vd_mkdir_p(g_staging_root);
 }

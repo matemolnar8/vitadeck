@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "core/package_manifest.h"
+#include "core/util.h"
 #include "core/package_library.h"
 
 #define VD_IMAGE_NAME_MAX 64
@@ -16,17 +17,6 @@ typedef struct {
 
 static VdLoadedImage g_package_images[VD_IMAGE_MAX];
 static int g_package_image_count = 0;
-
-static void set_error(char *error, size_t error_size, const char *message)
-{
-    if (!error || error_size == 0) return;
-    snprintf(error, error_size, "%s", message);
-}
-
-static void join_path(char *out, size_t out_size, const char *a, const char *b)
-{
-    snprintf(out, out_size, "%s/%s", a, b);
-}
 
 static void unload_package_images(void)
 {
@@ -42,7 +32,7 @@ static bool load_texture_file(const char *path, Texture2D *out, char *error, siz
 {
     Texture2D texture = LoadTexture(path);
     if (!IsTextureValid(texture)) {
-        set_error(error, error_size, "Could not load image file.");
+        vd_set_error(error, error_size, "Could not load image file.");
         return false;
     }
     SetTextureFilter(texture, TEXTURE_FILTER_BILINEAR);
@@ -64,7 +54,7 @@ bool image_registry_load_package(const char *package_path, char *error, size_t e
 
     for (int i = 0; i < manifest.image_count; i++) {
         char image_path[VD_PATH_MAX];
-        join_path(image_path, sizeof(image_path), package_path, manifest.images[i].path);
+        vd_join_path(image_path, sizeof(image_path), package_path, manifest.images[i].path);
         Texture2D texture = {0};
         if (!load_texture_file(image_path, &texture, error, error_size)) {
             unload_package_images();

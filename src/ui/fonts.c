@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "core/package_manifest.h"
+#include "core/util.h"
 #include "core/package_library.h"
 
 #define VD_FONT_LOAD_SIZE 64
@@ -20,17 +21,6 @@ static bool g_default_loaded = false;
 static VdLoadedFont g_package_fonts[VD_FONT_MAX];
 static int g_package_font_count = 0;
 
-static void set_error(char *error, size_t error_size, const char *message)
-{
-    if (!error || error_size == 0) return;
-    snprintf(error, error_size, "%s", message);
-}
-
-static void join_path(char *out, size_t out_size, const char *a, const char *b)
-{
-    snprintf(out, out_size, "%s/%s", a, b);
-}
-
 static void unload_package_fonts(void)
 {
     for (int i = 0; i < g_package_font_count; i++) {
@@ -43,7 +33,7 @@ static bool load_font_file(const char *path, Font *out, char *error, size_t erro
 {
     Font font = LoadFontEx(path, VD_FONT_LOAD_SIZE, NULL, 0);
     if (!IsFontValid(font)) {
-        set_error(error, error_size, "Could not load font file.");
+        vd_set_error(error, error_size, "Could not load font file.");
         return false;
     }
     SetTextureFilter(font.texture, TEXTURE_FILTER_BILINEAR);
@@ -73,7 +63,7 @@ bool font_registry_load_package(const char *package_path, char *error, size_t er
 
     for (int i = 0; i < manifest.font_count; i++) {
         char font_path[VD_PATH_MAX];
-        join_path(font_path, sizeof(font_path), package_path, manifest.fonts[i].path);
+        vd_join_path(font_path, sizeof(font_path), package_path, manifest.fonts[i].path);
         Font font = {0};
         if (!load_font_file(font_path, &font, error, error_size)) {
             unload_package_fonts();

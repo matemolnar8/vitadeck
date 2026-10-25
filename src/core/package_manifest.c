@@ -2,75 +2,18 @@
 #include "jimp/jimp.h"
 
 #include "core/package_manifest.h"
+#include "core/util.h"
 
 #include <ctype.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 
-static void set_error(char *error, size_t error_size, const char *message)
-{
-    if (!error || error_size == 0) return;
-    snprintf(error, error_size, "%s", message);
-}
-
-static bool has_suffix(const char *value, const char *suffix)
-{
-    size_t value_len = strlen(value);
-    size_t suffix_len = strlen(suffix);
-    return value_len >= suffix_len && strcmp(value + value_len - suffix_len, suffix) == 0;
-}
-
-static bool join_path(char *out, size_t out_size, const char *a, const char *b)
-{
-    if (!out || out_size == 0 || !a || !b) return false;
-    size_t a_len = strlen(a);
-    size_t b_len = strlen(b);
-    if (a_len >= out_size || b_len >= out_size - a_len - 1) return false;
-    memcpy(out, a, a_len);
-    out[a_len] = '/';
-    memcpy(out + a_len + 1, b, b_len + 1);
-    return true;
-}
-
 static bool path_exists(const char *path)
 {
     struct stat st;
     return stat(path, &st) == 0;
-}
-
-static bool is_dir(const char *path)
-{
-    struct stat st;
-    return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
-}
-
-static char *read_text_file(const char *path, size_t *out_len)
-{
-    FILE *f = fopen(path, "rb");
-    if (!f) return NULL;
-    if (fseek(f, 0, SEEK_END) != 0) {
-        fclose(f);
-        return NULL;
-    }
-    long len = ftell(f);
-    if (len < 0) {
-        fclose(f);
-        return NULL;
-    }
-    rewind(f);
-    char *buffer = malloc((size_t)len + 1);
-    if (!buffer) {
-        fclose(f);
-        return NULL;
-    }
-    size_t read_len = fread(buffer, 1, (size_t)len, f);
-    buffer[read_len] = '\0';
-    fclose(f);
-    if (out_len) *out_len = read_len;
-    return buffer;
 }
 
 static bool copy_string(char *out, size_t out_size, const char *value)
@@ -132,13 +75,6 @@ static bool supported_path_extension(const char *path, const char *const *extens
     return false;
 }
 
-static bool safe_package_name(const char *package_name)
-{
-    return package_name && package_name[0] != '\0' && strlen(package_name) < VD_PACKAGE_NAME_MAX &&
-           has_suffix(package_name, ".vdapp") && !strstr(package_name, "/") && !strstr(package_name, "\\") &&
-           !strstr(package_name, "..");
-}
-
 static bool skip_json_value(Jimp *jimp)
 {
     if (jimp_is_string_ahead(jimp)) return jimp_string(jimp);
@@ -181,12 +117,12 @@ static bool validate_asset_file(const char *package_path, const char *rel_path, 
                                 const char *missing_message, char *error, size_t error_size)
 {
     char asset_path[VD_PATH_MAX];
-    if (!join_path(asset_path, sizeof(asset_path), package_path, rel_path)) {
-        set_error(error, error_size, invalid_message);
+    if (!vd_join_path(asset_path, sizeof(asset_path), package_path, rel_path)) {
+        vd_set_error(error, error_size, invalid_message);
         return false;
     }
     if (!path_exists(asset_path)) {
-        set_error(error, error_size, missing_message);
+        vd_set_error(error, error_size, missing_message);
         return false;
     }
     return true;
@@ -201,25 +137,25 @@ static bool parse_asset_object(Jimp *jimp, const char *package_path, VdPackageAs
 
     *out_count = 0;
     if (!jimp_object_begin(jimp)) {
-        set_error(error, error_size,
-                  is_font ? "Deck App Package Manifest fonts are invalid."
-                          : "Deck App Package Manifest images are invalid.");
+        vd_set_error(error, error_size,
+                     is_font ? "Deck App Package Manifest fonts are invalid."
+                             : "Deck App Package Manifest images are invalid.");
         return false;
     }
 
     while (jimp_object_member(jimp)) {
         if (*out_count >= max_count) {
-            set_error(error, error_size,
-                      is_font ? "Deck App Package declares too many fonts."
-                              : "Deck App Package declares too many images.");
+            vd_set_error(error, error_size,
+                         is_font ? "Deck App Package declares too many fonts."
+                                 : "Deck App Package declares too many images.");
             return false;
         }
 
         char name[VD_PACKAGE_ASSET_NAME_MAX];
         if (!copy_string(name, sizeof(name), jimp->string) || !safe_asset_name(name, !is_font)) {
-            set_error(error, error_size,
-                      is_font ? "Deck App Package declares an invalid font name."
-                              : "Deck App Package declares an invalid image name.");
+            vd_set_error(error, error_size,
+                         is_font ? "Deck App Package declares an invalid font name."
+                                 : "Deck App Package declares an invalid image name.");
             return false;
         }
 
@@ -229,9 +165,9 @@ static bool parse_asset_object(Jimp *jimp, const char *package_path, VdPackageAs
                                       : (int)(sizeof(image_extensions) / sizeof(image_extensions[0]));
         if (!read_json_string(jimp, rel_path, sizeof(rel_path)) || !safe_relative_path(rel_path) ||
             !supported_path_extension(rel_path, extensions, extension_count)) {
-            set_error(error, error_size,
-                      is_font ? "Deck App Package declares an invalid font path."
-                              : "Deck App Package declares an invalid image path.");
+            vd_set_error(error, error_size,
+                         is_font ? "Deck App Package declares an invalid font path."
+                                 : "Deck App Package declares an invalid image path.");
             return false;
         }
 
@@ -249,9 +185,9 @@ static bool parse_asset_object(Jimp *jimp, const char *package_path, VdPackageAs
     }
 
     if (!jimp_object_end(jimp)) {
-        set_error(error, error_size,
-                  is_font ? "Deck App Package Manifest fonts are invalid."
-                          : "Deck App Package Manifest images are invalid.");
+        vd_set_error(error, error_size,
+                     is_font ? "Deck App Package Manifest fonts are invalid."
+                             : "Deck App Package Manifest images are invalid.");
         return false;
     }
     return true;
@@ -262,29 +198,29 @@ bool package_manifest_read(const char *package_path, const char *package_name, V
 {
     if (error && error_size > 0) error[0] = '\0';
     if (!out_manifest) {
-        set_error(error, error_size, "Deck App Package Manifest is invalid.");
+        vd_set_error(error, error_size, "Deck App Package Manifest is invalid.");
         return false;
     }
     memset(out_manifest, 0, sizeof(*out_manifest));
 
-    if (!safe_package_name(package_name)) {
-        set_error(error, error_size, "Invalid Deck App Package Name.");
+    if (!vd_safe_package_name(package_name)) {
+        vd_set_error(error, error_size, "Invalid Deck App Package Name.");
         return false;
     }
-    if (!is_dir(package_path)) {
-        set_error(error, error_size, "Deck App Package Directory is missing.");
+    if (!vd_is_dir(package_path)) {
+        vd_set_error(error, error_size, "Deck App Package Directory is missing.");
         return false;
     }
 
     char manifest_path[VD_PATH_MAX];
-    if (!join_path(manifest_path, sizeof(manifest_path), package_path, "manifest.json")) {
-        set_error(error, error_size, "Deck App Package Manifest is missing.");
+    if (!vd_join_path(manifest_path, sizeof(manifest_path), package_path, "manifest.json")) {
+        vd_set_error(error, error_size, "Deck App Package Manifest is missing.");
         return false;
     }
     size_t manifest_len = 0;
-    char *manifest_json = read_text_file(manifest_path, &manifest_len);
+    char *manifest_json = vd_read_file(manifest_path, &manifest_len);
     if (!manifest_json) {
-        set_error(error, error_size, "Deck App Package Manifest is missing.");
+        vd_set_error(error, error_size, "Deck App Package Manifest is missing.");
         return false;
     }
 
@@ -331,7 +267,7 @@ bool package_manifest_read(const char *package_path, const char *package_name, V
 
     if (!ok) {
         if (!error || error_size == 0 || error[0] == '\0') {
-            set_error(error, error_size, "Deck App Package Manifest is invalid.");
+            vd_set_error(error, error_size, "Deck App Package Manifest is invalid.");
         }
         free(jimp.string);
         free(manifest_json);
@@ -340,21 +276,21 @@ bool package_manifest_read(const char *package_path, const char *package_name, V
 
     if (!saw_schema_version || !saw_name || !saw_version || !saw_entry || schema_version != 1 ||
         strcmp(out_manifest->entry, "app.js") != 0 || !valid_semverish(out_manifest->version)) {
-        set_error(error, error_size, "Deck App Package Manifest is invalid.");
+        vd_set_error(error, error_size, "Deck App Package Manifest is invalid.");
         free(jimp.string);
         free(manifest_json);
         return false;
     }
 
     char entry_path[VD_PATH_MAX];
-    if (!join_path(entry_path, sizeof(entry_path), package_path, out_manifest->entry)) {
-        set_error(error, error_size, "Deck App Package Entry is missing.");
+    if (!vd_join_path(entry_path, sizeof(entry_path), package_path, out_manifest->entry)) {
+        vd_set_error(error, error_size, "Deck App Package Entry is missing.");
         free(jimp.string);
         free(manifest_json);
         return false;
     }
     if (!path_exists(entry_path)) {
-        set_error(error, error_size, "Deck App Package Entry is missing.");
+        vd_set_error(error, error_size, "Deck App Package Entry is missing.");
         free(jimp.string);
         free(manifest_json);
         return false;
