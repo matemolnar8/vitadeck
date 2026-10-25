@@ -16,7 +16,9 @@ js/examples/chat/src/genesys/genesys.local.ts
 node_modules/
 **/node_modules/
 
-# Twemoji images, downloaded by cmake/twemoji.cmake
+# Downloaded by cmake/fetch_asset.cmake
 /assets/emoji/*
 !/assets/emoji/LICENSE.txt
 !/assets/emoji/README.md
+/assets/fonts/*
+!/assets/fonts/*-LICENSE.txt

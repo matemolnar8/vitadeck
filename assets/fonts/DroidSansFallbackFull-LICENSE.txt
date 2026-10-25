@@ -1,6 +1,7 @@
 Droid Sans Fallback Full is part of the Android Open Source Project.
 
 Source: https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-7.1.2_r39/data/fonts/DroidSansFallbackFull.ttf
+cmake/fonts.cmake downloads it from that tag on GitHub's mirror, https://github.com/aosp-mirror/platform_frameworks_base.
 
    Copyright (c) 2005-2008, The Android Open Source Project
 

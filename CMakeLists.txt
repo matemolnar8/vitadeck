@@ -10,6 +10,7 @@ project(vitadeck)
 
 include(cmake/fetch_asset.cmake)
 include(cmake/twemoji.cmake)
+include(cmake/fonts.cmake)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -444,6 +445,16 @@ if(DEFINED ENV{VITASDK})
 
   vita_create_self(eboot.bin ${PROJECT_NAME} UNSAFE NOSTRIP)
 
+  set(vpk_fonts "")
+  set(upload_fonts "")
+  foreach(font IN LISTS VITADECK_RUNTIME_FONTS)
+    list(APPEND vpk_fonts FILE assets/fonts/${font} assets/fonts/${font})
+    list(APPEND upload_fonts
+      COMMAND echo "Sending ${VITA_TITLEID}/assets/fonts/${font} to vita"
+      COMMAND curl --ftp-create-dirs -T ${CMAKE_SOURCE_DIR}/assets/fonts/${font} ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/assets/fonts/${font}
+    )
+  endforeach()
+
   vita_create_vpk(${PROJECT_NAME}.vpk ${VITA_TITLEID} eboot.bin
       VERSION ${VITA_VERSION}
       NAME ${VITA_APP_NAME}
@@ -451,7 +462,7 @@ if(DEFINED ENV{VITASDK})
       FILE js/dist/runtime/runtime.js js/runtime.js
       FILE assets/fonts/DejaVuSans.ttf assets/fonts/DejaVuSans.ttf
       FILE assets/fonts/DejaVuSans-LICENSE.txt assets/fonts/DejaVuSans-LICENSE.txt
-      FILE assets/fonts/DroidSansFallbackFull.ttf assets/fonts/DroidSansFallbackFull.ttf
+      ${vpk_fonts}
       FILE assets/fonts/DroidSansFallbackFull-LICENSE.txt assets/fonts/DroidSansFallbackFull-LICENSE.txt
       FILE assets/emoji assets/emoji
   )
@@ -491,8 +502,7 @@ if(DEFINED ENV{VITASDK})
     COMMAND curl -T ${CMAKE_SOURCE_DIR}/js/dist/runtime/runtime.js ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/js/runtime.js
     COMMAND echo "Sending ${VITA_TITLEID}/assets/fonts/DejaVuSans.ttf to vita"
     COMMAND curl --ftp-create-dirs -T ${CMAKE_SOURCE_DIR}/assets/fonts/DejaVuSans.ttf ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/assets/fonts/DejaVuSans.ttf
-    COMMAND echo "Sending ${VITA_TITLEID}/assets/fonts/DroidSansFallbackFull.ttf to vita"
-    COMMAND curl --ftp-create-dirs -T ${CMAKE_SOURCE_DIR}/assets/fonts/DroidSansFallbackFull.ttf ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/assets/fonts/DroidSansFallbackFull.ttf
+    ${upload_fonts}
     # Launch the app
     COMMAND echo "Launching ${VITA_TITLEID}"
     COMMAND echo launch ${VITA_TITLEID} | nc ${PSVITAIP} 1338

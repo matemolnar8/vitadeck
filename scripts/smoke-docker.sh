@@ -82,7 +82,7 @@ run_inside() {
   esac
 
   if [[ -n "${LOCAL_UID:-}" && -n "${LOCAL_GID:-}" ]]; then
-    chown -R "$LOCAL_UID:$LOCAL_GID" "$BUILD_DIR" js/dist js/examples/smoke/dist assets/emoji tests/fixtures/smoke_golden.Linux.png 2>/dev/null || true
+    chown -R "$LOCAL_UID:$LOCAL_GID" "$BUILD_DIR" js/dist js/examples/smoke/dist assets/emoji assets/fonts tests/fixtures/smoke_golden.Linux.png 2>/dev/null || true
   fi
 }
 
