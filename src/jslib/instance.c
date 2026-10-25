@@ -122,11 +122,52 @@ static JSValue native_create_text(JSContext *ctx, JSValueConst this_val, int arg
     return JS_UNDEFINED;
 }
 
+// Everything but the label, which create and update own differently.
+static void read_button_props(JSContext *ctx, ButtonProps *button, JSValueConst *argv)
+{
+    int32_t tmp;
+    JS_ToInt32(ctx, &tmp, argv[1]);
+    button->x = tmp;
+    JS_ToInt32(ctx, &tmp, argv[2]);
+    button->y = tmp;
+    JS_ToInt32(ctx, &tmp, argv[3]);
+    button->width = tmp;
+    JS_ToInt32(ctx, &tmp, argv[4]);
+    button->height = tmp;
+
+    int32_t r, g, b, a;
+    JS_ToInt32(ctx, &r, argv[5]);
+    JS_ToInt32(ctx, &g, argv[6]);
+    JS_ToInt32(ctx, &b, argv[7]);
+    JS_ToInt32(ctx, &a, argv[8]);
+    button->color = (Color){r, g, b, a};
+
+    JS_ToInt32(ctx, &tmp, argv[10]);
+    button->font_size = tmp;
+
+    double border_radius;
+    JS_ToFloat64(ctx, &border_radius, argv[11]);
+    button->border_radius = (float)border_radius;
+
+    JS_ToInt32(ctx, &r, argv[12]);
+    JS_ToInt32(ctx, &g, argv[13]);
+    JS_ToInt32(ctx, &b, argv[14]);
+    JS_ToInt32(ctx, &a, argv[15]);
+    button->text_color = (Color){r, g, b, a};
+
+    button->has_focus_color = JS_ToBool(ctx, argv[16]);
+    JS_ToInt32(ctx, &r, argv[17]);
+    JS_ToInt32(ctx, &g, argv[18]);
+    JS_ToInt32(ctx, &b, argv[19]);
+    JS_ToInt32(ctx, &a, argv[20]);
+    button->focus_color = (Color){r, g, b, a};
+}
+
 static JSValue native_create_button(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
     instance_back_mark_dirty();
-    if (argc < 16) return JS_UNDEFINED;
+    if (argc < 21) return JS_UNDEFINED;
 
     const char *id = to_new_instance_id(ctx, argv[0]);
     if (!id) return JS_UNDEFINED;
@@ -134,41 +175,12 @@ static JSValue native_create_button(JSContext *ctx, JSValueConst this_val, int a
     ReactInstance *inst = calloc(1, sizeof(ReactInstance));
     inst->id = strdup(id);
     inst->type = NT_BUTTON;
-
-    int32_t tmp;
-    JS_ToInt32(ctx, &tmp, argv[1]);
-    inst->props.button.x = tmp;
-    JS_ToInt32(ctx, &tmp, argv[2]);
-    inst->props.button.y = tmp;
-    JS_ToInt32(ctx, &tmp, argv[3]);
-    inst->props.button.width = tmp;
-    JS_ToInt32(ctx, &tmp, argv[4]);
-    inst->props.button.height = tmp;
-
-    int32_t r, g, b, a;
-    JS_ToInt32(ctx, &r, argv[5]);
-    JS_ToInt32(ctx, &g, argv[6]);
-    JS_ToInt32(ctx, &b, argv[7]);
-    JS_ToInt32(ctx, &a, argv[8]);
-    inst->props.button.color = (Color){r, g, b, a};
+    read_button_props(ctx, &inst->props.button, argv);
 
     const char *label = JS_ToCString(ctx, argv[9]);
     inst->props.button.label = strdup(label ? label : "");
     JS_FreeCString(ctx, label);
 
-    JS_ToInt32(ctx, &tmp, argv[10]);
-    inst->props.button.font_size = tmp;
-
-    double border_radius;
-    JS_ToFloat64(ctx, &border_radius, argv[11]);
-    inst->props.button.border_radius = (float)border_radius;
-
-    int32_t tr, tg, tb, ta;
-    JS_ToInt32(ctx, &tr, argv[12]);
-    JS_ToInt32(ctx, &tg, argv[13]);
-    JS_ToInt32(ctx, &tb, argv[14]);
-    JS_ToInt32(ctx, &ta, argv[15]);
-    inst->props.button.text_color = (Color){tr, tg, tb, ta};
     inst->children = NULL;
     inst->parent = NULL;
 
@@ -603,7 +615,7 @@ static JSValue native_update_button(JSContext *ctx, JSValueConst this_val, int a
 {
     (void)this_val;
     instance_back_mark_dirty();
-    if (argc < 16) return JS_UNDEFINED;
+    if (argc < 21) return JS_UNDEFINED;
 
     const char *id = JS_ToCString(ctx, argv[0]);
     if (!id) return JS_UNDEFINED;
@@ -614,41 +626,26 @@ static JSValue native_update_button(JSContext *ctx, JSValueConst this_val, int a
         return JS_UNDEFINED;
     }
 
-    int32_t tmp;
-    JS_ToInt32(ctx, &tmp, argv[1]);
-    inst->props.button.x = tmp;
-    JS_ToInt32(ctx, &tmp, argv[2]);
-    inst->props.button.y = tmp;
-    JS_ToInt32(ctx, &tmp, argv[3]);
-    inst->props.button.width = tmp;
-    JS_ToInt32(ctx, &tmp, argv[4]);
-    inst->props.button.height = tmp;
-
-    int32_t r, g, b, a;
-    JS_ToInt32(ctx, &r, argv[5]);
-    JS_ToInt32(ctx, &g, argv[6]);
-    JS_ToInt32(ctx, &b, argv[7]);
-    JS_ToInt32(ctx, &a, argv[8]);
-    inst->props.button.color = (Color){r, g, b, a};
+    read_button_props(ctx, &inst->props.button, argv);
 
     if (inst->props.button.label) free(inst->props.button.label);
     const char *label = JS_ToCString(ctx, argv[9]);
     inst->props.button.label = strdup(label ? label : "");
     JS_FreeCString(ctx, label);
 
-    JS_ToInt32(ctx, &tmp, argv[10]);
-    inst->props.button.font_size = tmp;
+    JS_FreeCString(ctx, id);
+    return JS_UNDEFINED;
+}
 
-    double border_radius;
-    JS_ToFloat64(ctx, &border_radius, argv[11]);
-    inst->props.button.border_radius = (float)border_radius;
+static JSValue native_request_focus(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    if (argc < 1) return JS_UNDEFINED;
 
-    int32_t tr, tg, tb, ta;
-    JS_ToInt32(ctx, &tr, argv[12]);
-    JS_ToInt32(ctx, &tg, argv[13]);
-    JS_ToInt32(ctx, &tb, argv[14]);
-    JS_ToInt32(ctx, &ta, argv[15]);
-    inst->props.button.text_color = (Color){tr, tg, tb, ta};
+    const char *id = JS_ToCString(ctx, argv[0]);
+    if (!id) return JS_UNDEFINED;
+
+    if (instance_back_find(id)) instance_back_request_focus(id);
 
     JS_FreeCString(ctx, id);
     return JS_UNDEFINED;
@@ -693,7 +690,7 @@ void register_instance_tree(JSContext *ctx)
 {
     js_set_global_function(ctx, "nativeCreateRect", native_create_rect, 16);
     js_set_global_function(ctx, "nativeCreateText", native_create_text, 15);
-    js_set_global_function(ctx, "nativeCreateButton", native_create_button, 16);
+    js_set_global_function(ctx, "nativeCreateButton", native_create_button, 21);
     js_set_global_function(ctx, "nativeCreateScroll", native_create_scroll, 12);
     js_set_global_function(ctx, "nativeCreateImage", native_create_image, 6);
     js_set_global_function(ctx, "nativeCreateRawText", native_create_raw_text, 2);
@@ -703,9 +700,10 @@ void register_instance_tree(JSContext *ctx)
     js_set_global_function(ctx, "nativeDestroyInstance", native_destroy_instance, 1);
     js_set_global_function(ctx, "nativeUpdateRect", native_update_rect, 16);
     js_set_global_function(ctx, "nativeUpdateText", native_update_text, 15);
-    js_set_global_function(ctx, "nativeUpdateButton", native_update_button, 16);
+    js_set_global_function(ctx, "nativeUpdateButton", native_update_button, 21);
     js_set_global_function(ctx, "nativeUpdateScroll", native_update_scroll, 12);
     js_set_global_function(ctx, "nativeUpdateImage", native_update_image, 6);
     js_set_global_function(ctx, "nativeUpdateRawText", native_update_raw_text, 2);
+    js_set_global_function(ctx, "nativeRequestFocus", native_request_focus, 1);
     js_set_global_function(ctx, "nativeClearContainer", native_clear_container, 0);
 }

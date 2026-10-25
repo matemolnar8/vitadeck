@@ -41,6 +41,8 @@ typedef struct {
     char *label;
     int font_size;
     float border_radius;
+    bool has_focus_color;
+    Color focus_color;
 } ButtonProps;
 
 typedef struct {
@@ -112,6 +114,12 @@ ReactInstance **instance_get_root_children(void);
 // Hit testing (thread-safe, acquires lock internally). Copies the hit id into out_id and returns true on a hit.
 bool instance_hit_test(int x, int y, char out_id[VD_INSTANCE_ID_MAX]);
 bool instance_exists(const char *id);
+bool instance_is_button(const char *id);
+
+// autoFocus: the JS thread asks for Focus on a back-tree instance; the request is published with the next swap.
+// The UI thread takes it once, copying the id into out_id. The last request before a swap wins.
+void instance_back_request_focus(const char *id);
+bool instance_take_focus_request(char out_id[VD_INSTANCE_ID_MAX]);
 
 // Focusable elements for gamepad navigation
 typedef struct {
