@@ -50,6 +50,8 @@ cmake -S . -B out && cmake --build out
 docker-compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"
 ```
 
+The `upload_vita`, `upload_vpk`, and `run` targets send the build to a Vita over FTP. They need the Vita's IP in `PSVITAIP` at configure time (Compose passes it into the container), e.g. `PSVITAIP=192.168.1.177 docker-compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita --target run"`. They fail with a message when it is unset.
+
 ## Workflows
 
 ### Canonical agent checks

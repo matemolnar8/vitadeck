@@ -31,7 +31,7 @@ Produces `<outDir>/<name>.vdapp/` and `<outDir>/<name>.vdapp.zip` (e.g. `dist/ch
 
 ## Vita IP
 
-Override explicitly:
+Pass `--ip`, or set `PSVITAIP` (the same variable the Vita `upload_vita` / `upload_vpk` CMake targets read):
 
 ```sh
 upload-vdapp.sh --ip 192.168.1.50 myapp.vdapp.zip
@@ -39,17 +39,10 @@ upload-vdapp.sh --ip 192.168.1.50 myapp.vdapp.zip
 PSVITAIP=192.168.1.50 upload-vdapp.sh myapp.vdapp.zip
 ```
 
-Default resolution (first hit wins):
-
-1. `--ip` / `PSVITAIP`
-2. `out-vita/CMakeCache.txt` → `PSVITAIP:STRING=…`
-3. `out/CMakeCache.txt` → `PSVITAIP:STRING=…`
-4. `CMakeLists.txt` → `set(PSVITAIP "…")` (repo default)
-
 ## Manual curl
 
 ```sh
-curl -X POST "http://${PSVITAIP:-192.168.1.177}:8787/upload" \
+curl -X POST "http://${PSVITAIP}:8787/upload" \
   -F archive=@/path/to/myapp.vdapp.zip
 ```
 
