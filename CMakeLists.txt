@@ -463,6 +463,7 @@ if(DEFINED ENV{VITASDK})
       ${vpk_fonts}
       FILE assets/fonts/DejaVuSans-LICENSE.txt assets/fonts/DejaVuSans-LICENSE.txt
       FILE assets/fonts/DroidSansFallbackFull-LICENSE.txt assets/fonts/DroidSansFallbackFull-LICENSE.txt
+      FILE assets/fonts/NotoSansKR-LICENSE.txt assets/fonts/NotoSansKR-LICENSE.txt
       FILE assets/emoji assets/emoji
   )
 

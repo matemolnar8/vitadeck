@@ -46,7 +46,7 @@ npx @vitadeck/sdk create <project-name>
 
 Reference assets by name, never by path: `<Text font="title" …>`, `<Button font="title" fontSize={24} …>`, `<Image image="logo" …>`.
 
-Text, Button and TextInput take any `fontSize` in pixels, and text is UTF-8. Without `font` they use the runtime's DejaVu Sans. Characters a `.ttf` or `.otf` font lacks render in DejaVu Sans, then in Droid Sans Fallback Full (Chinese and Japanese, not Korean); a character none of them has renders as a box. `.fnt` and `.bdf` fonts have no fallback.
+Text, Button and TextInput take any `fontSize` in pixels, and text is UTF-8. Without `font` they use the runtime's DejaVu Sans. Characters a `.ttf` or `.otf` font lacks render in DejaVu Sans, then in Droid Sans Fallback Full (Chinese and Japanese) or Noto Sans KR (Korean); a character none of them has renders as a box. `.fnt` and `.bdf` fonts have no fallback.
 
 Emoji render in colour, sized to `fontSize`, from the [Twemoji](https://github.com/jdecked/twemoji) images (CC-BY 4.0) that ship with VitaDeck. Single emoji, emoji with `U+FE0F`, skin tones, flags and keycaps work. A ZWJ sequence Twemoji has no image for draws as its first emoji, and a symbol such as `❤` without `U+FE0F` stays a font glyph. `.fnt` and `.bdf` fonts draw no emoji.
 

@@ -11,6 +11,7 @@
 #define FULL_FONT_PATH VD_SOURCE_DIR "/assets/fonts/DejaVuSans.ttf"
 #define ASCII_FONT_PATH VD_SOURCE_DIR "/tests/fixtures/DejaVuSans-ascii.ttf"
 #define FALLBACK_FONT_PATH VD_SOURCE_DIR "/assets/fonts/DroidSansFallbackFull.ttf"
+#define KOREAN_FONT_PATH VD_SOURCE_DIR "/assets/fonts/NotoSansKR-Regular.otf"
 
 static int failures = 0;
 
@@ -164,6 +165,36 @@ static VdGlyphFont *failing_fallback_loader(void)
     return NULL;
 }
 
+static int korean_loads = 0;
+static VdGlyphFont *korean_font = NULL;
+
+static VdGlyphFont *counting_korean_loader(void)
+{
+    korean_loads++;
+    korean_font = glyph_font_load(KOREAN_FONT_PATH);
+    return korean_font;
+}
+
+static void set_lazy_font(VdGlyphFontLoader load)
+{
+    const VdLazyFont lazy = {load, vd_in_cjk_blocks};
+    glyph_cache_set_lazy_fonts(&lazy, load ? 1 : 0);
+}
+
+static void test_blocks(void)
+{
+    expect(vd_in_cjk_blocks(0x65e5) && vd_in_cjk_blocks(0x3042) && vd_in_cjk_blocks(0x3001) &&
+               vd_in_cjk_blocks(0xff01) && vd_in_cjk_blocks(0x20000),
+           "ideographs, kana, CJK punctuation and fullwidth forms are in the CJK blocks");
+    expect(!vd_in_cjk_blocks(0xd55c), "Hangul syllables are not in the CJK blocks");
+    expect(vd_in_hangul_blocks(0xd55c) && vd_in_hangul_blocks(0x3131) && vd_in_hangul_blocks(0x1100),
+           "syllables and jamo are in the Hangul blocks");
+    expect(!vd_in_hangul_blocks(0x65e5), "ideographs are not in the Hangul blocks");
+    expect(!vd_in_cjk_blocks('A') && !vd_in_cjk_blocks(0x151) && !vd_in_cjk_blocks(0xe000) &&
+               !vd_in_hangul_blocks(0xe000) && !vd_in_cjk_blocks(0x1f3ae),
+           "Latin, private use and emoji codepoints are in neither");
+}
+
 static void test_fallback_chain(const VdGlyphFont *full, const VdGlyphFont *ascii)
 {
     const uint32_t ideograph = 0x65e5; // 日
@@ -172,19 +203,22 @@ static void test_fallback_chain(const VdGlyphFont *full, const VdGlyphFont *asci
 
     glyph_cache_reset();
     glyph_cache_set_fallback(NULL);
-    glyph_cache_set_fallback_loader(NULL);
+    set_lazy_font(NULL);
     VdGlyph ascii_notdef = glyph_cache_get(ascii, 30, private_use);
     VdGlyph full_notdef = glyph_cache_get(full, 30, private_use);
     glyph_cache_reset();
 
     fallback_loads = 0;
     glyph_cache_set_fallback(full);
-    glyph_cache_set_fallback_loader(counting_fallback_loader);
+    set_lazy_font(counting_fallback_loader);
     VdGlyph own = glyph_cache_get(ascii, 30, 'g');
     VdGlyph latin = glyph_cache_get(ascii, 30, 0x153); // œ
     expect(own.width > 0 && latin.width > 0 && !same_shape(latin, ascii_notdef),
            "Latin text resolves from the requested font and the Runtime Default Font");
     expect(fallback_loads == 0, "Latin text does not open the Runtime Fallback Font");
+    VdGlyph stray = glyph_cache_get(ascii, 30, private_use);
+    expect(same_shape(stray, ascii_notdef) && fallback_loads == 0,
+           "a character outside the CJK blocks is the missing-glyph box without opening the Runtime Fallback Font");
 
     VdGlyph from_default = glyph_cache_get(full, 30, ideograph);
     expect(fallback_loads == 1 && fallback_font != NULL,
@@ -192,44 +226,89 @@ static void test_fallback_chain(const VdGlyphFont *full, const VdGlyphFont *asci
     VdGlyph from_deck_font = glyph_cache_get(ascii, 30, kana);
     expect(fallback_loads == 1, "the Runtime Fallback Font opens once");
     if (fallback_font) {
-        VdGlyph droid_ideograph = glyph_cache_get(fallback_font, 30, ideograph);
-        VdGlyph droid_kana = glyph_cache_get(fallback_font, 30, kana);
-        expect(same_shape(from_default, droid_ideograph) && !same_shape(from_default, full_notdef),
+        expect(from_default.width > 0 && !same_shape(from_default, full_notdef),
                "an ideograph the Runtime Default Font lacks comes from the Runtime Fallback Font");
-        expect(same_shape(from_deck_font, droid_kana) && !same_shape(from_deck_font, ascii_notdef),
+        expect(same_shape(from_deck_font, glyph_cache_get(full, 30, kana)) && !same_shape(from_deck_font, ascii_notdef),
                "kana a Deck App Font lacks comes from the Runtime Fallback Font");
+        float em = glyph_cache_get(full, 30, 0x2014).advance;
+        expect(fabsf(from_default.advance - em) < 0.01f,
+               "a fallback ideograph, one em wide in its font, is one em of the requested font wide");
     }
 
     VdGlyph unknown = glyph_cache_get(ascii, 30, private_use);
     expect(same_shape(unknown, ascii_notdef), "a character no font has is the requested font's missing-glyph box");
-    expect(fallback_loads == 1, "a character no font has does not open the Runtime Fallback Font again");
+    expect(fallback_loads == 1, "the Runtime Fallback Font is not opened again");
 
     if (fallback_font) {
         glyph_cache_set_emoji_loader(missing_emoji_loader);
         VdEmojiSequence ideograph_emoji = cluster_of("\xe6\x97\xa5\xef\xb8\x8f"); // 日 U+FE0F
         VdGlyph emoji = glyph_cache_get_emoji(ascii, 30, &ideograph_emoji);
-        expect(same_shape(emoji, glyph_cache_get(fallback_font, 30, ideograph)) && !same_shape(emoji, ascii_notdef),
+        expect(same_shape(emoji, glyph_cache_get(ascii, 30, ideograph)) && !same_shape(emoji, ascii_notdef),
                "an emoji without an image draws its first character from the Runtime Fallback Font");
         glyph_cache_set_emoji_loader(NULL);
     }
 
     glyph_cache_reset();
-    glyph_cache_set_fallback_loader(NULL);
+    set_lazy_font(NULL);
     glyph_font_free(fallback_font);
     fallback_font = NULL;
+}
+
+static void test_korean(const VdGlyphFont *full, const VdGlyphFont *ascii)
+{
+    const uint32_t han = 0xd55c; // 한
+    const uint32_t gul = 0xae00; // 글
+    const uint32_t private_use = 0xe000;
+
+    glyph_cache_reset();
+    glyph_cache_set_fallback(NULL);
+    set_lazy_font(NULL);
+    VdGlyph ascii_notdef = glyph_cache_get(ascii, 30, private_use);
+    glyph_cache_reset();
+
+    fallback_loads = korean_loads = 0;
+    glyph_cache_set_fallback(full);
+    const VdLazyFont lazy[] = {{counting_fallback_loader, vd_in_cjk_blocks}, {counting_korean_loader, vd_in_hangul_blocks}};
+    glyph_cache_set_lazy_fonts(lazy, 2);
+
+    glyph_cache_get(ascii, 30, private_use);
+    glyph_cache_get(ascii, 30, 0x10fffd);
+    expect(fallback_loads == 0 && korean_loads == 0, "a character outside every fallback's blocks opens none");
+
+    VdGlyph from_deck_font = glyph_cache_get(ascii, 30, han);
+    VdGlyph from_default = glyph_cache_get(full, 30, gul);
+    expect(korean_loads == 1, "the first Hangul syllable opens the Korean font once");
+    expect(fallback_loads == 0, "Hangul syllables do not open the CJK font");
+    if (korean_font) {
+        expect(from_deck_font.width > 0 && !same_shape(from_deck_font, ascii_notdef),
+               "Hangul a Deck App Font lacks comes from the Korean font");
+        // Noto Sans KR's syllables are 0.92 em wide.
+        float em = glyph_cache_get(full, 30, 0x2014).advance;
+        expect(from_default.width > 0 && fabsf(from_default.advance - 0.92f * em) < 0.01f,
+               "Hangul the Runtime Default Font lacks comes from the Korean font at the requested font's em size");
+    }
+
+    glyph_cache_get(ascii, 30, 0x65e5);
+    expect(fallback_loads == 1 && korean_loads == 1, "an ideograph opens the CJK font, not the Korean font again");
+
+    glyph_cache_reset();
+    glyph_cache_set_lazy_fonts(NULL, 0);
+    glyph_font_free(fallback_font);
+    glyph_font_free(korean_font);
+    fallback_font = korean_font = NULL;
 }
 
 static void test_failing_fallback_loader(const VdGlyphFont *font)
 {
     glyph_cache_reset();
     fallback_loads = 0;
-    glyph_cache_set_fallback_loader(failing_fallback_loader);
+    set_lazy_font(failing_fallback_loader);
     glyph_cache_get(font, 30, 0x65e5);
     glyph_cache_get(font, 30, 0x3042);
     expect(fallback_loads == 1, "a Runtime Fallback Font that fails to open is not retried");
 
     glyph_cache_reset();
-    glyph_cache_set_fallback_loader(NULL);
+    set_lazy_font(NULL);
 }
 
 static void test_hungarian(const VdGlyphFont *full)
@@ -460,6 +539,7 @@ int main(void)
 {
     test_utf8();
     test_emoji_clusters();
+    test_blocks();
 
     VdGlyphFont *ascii = glyph_font_load(ASCII_FONT_PATH);
     expect(ascii != NULL, "the ASCII test font loads");
@@ -471,6 +551,8 @@ int main(void)
     if (!full) printf("glyph_cache_harness: skipping Runtime Default Font cases, %s is missing\n", FULL_FONT_PATH);
     bool cjk = file_exists(FALLBACK_FONT_PATH);
     if (!cjk) printf("glyph_cache_harness: skipping Runtime Fallback Font cases, %s is missing\n", FALLBACK_FONT_PATH);
+    bool korean = file_exists(KOREAN_FONT_PATH);
+    if (!korean) printf("glyph_cache_harness: skipping Korean font cases, %s is missing\n", KOREAN_FONT_PATH);
 
     if (ascii) {
         const VdGlyphFont *font = full ? full : ascii;
@@ -484,6 +566,7 @@ int main(void)
         test_emoji_without_assets(full);
         test_pages(full);
         if (cjk) test_fallback_chain(full, ascii);
+        if (korean) test_korean(full, ascii);
     }
 
     glyph_cache_reset();

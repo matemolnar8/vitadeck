@@ -10,7 +10,8 @@
 #define VD_FONT_NAME_MAX 64
 #define VD_FONT_MAX 32
 #define VD_DEFAULT_FONT_PATH "assets/fonts/DejaVuSans.ttf"
-#define VD_FALLBACK_FONT_PATH "assets/fonts/DroidSansFallbackFull.ttf"
+#define VD_CJK_FONT_PATH "assets/fonts/DroidSansFallbackFull.ttf"
+#define VD_KOREAN_FONT_PATH "assets/fonts/NotoSansKR-Regular.otf"
 #define VD_EMOJI_DIR "assets/emoji"
 
 _Static_assert(VD_FONT_MAX >= VD_PACKAGE_FONT_MAX, "font registry must hold every manifest font");
@@ -22,7 +23,8 @@ typedef struct {
 
 static VdFont g_default_font = {0};
 static bool g_default_loaded = false;
-static VdGlyphFont *g_fallback_font = NULL;
+static VdGlyphFont *g_cjk_font = NULL;
+static VdGlyphFont *g_korean_font = NULL;
 static VdLoadedFont g_package_fonts[VD_FONT_MAX];
 static int g_package_font_count = 0;
 
@@ -97,17 +99,38 @@ static unsigned char *load_emoji_image(const VdEmojiSequence *sequence, int *wid
     return pixels;
 }
 
-// The Runtime Fallback Font is 4 MB, so it loads on the first character the other fonts lack, not at startup.
-static VdGlyphFont *load_fallback_font(void)
+// Each Runtime Fallback Font is over 4 MB, so it loads on the first character in its blocks the other fonts lack, not
+// at startup.
+static VdGlyphFont *load_fallback_font(const char *path)
 {
-    g_fallback_font = glyph_font_load(VD_FALLBACK_FONT_PATH);
-    if (g_fallback_font) {
-        TraceLog(LOG_DEBUG, "FONT: Runtime Fallback Font loaded from %s", VD_FALLBACK_FONT_PATH);
+    VdGlyphFont *font = glyph_font_load(path);
+    if (font) {
+        TraceLog(LOG_DEBUG, "FONT: Runtime Fallback Font loaded from %s", path);
     } else {
-        TraceLog(LOG_WARNING, "FONT: Could not load the Runtime Fallback Font from %s", VD_FALLBACK_FONT_PATH);
+        TraceLog(LOG_WARNING, "FONT: Could not load the Runtime Fallback Font from %s", path);
     }
-    return g_fallback_font;
+    return font;
 }
+
+static VdGlyphFont *load_cjk_font(void)
+{
+    g_cjk_font = load_fallback_font(VD_CJK_FONT_PATH);
+    return g_cjk_font;
+}
+
+static VdGlyphFont *load_korean_font(void)
+{
+    g_korean_font = load_fallback_font(VD_KOREAN_FONT_PATH);
+    return g_korean_font;
+}
+
+static const VdLazyFont g_fallback_fonts[] = {
+    {load_cjk_font, vd_in_cjk_blocks},
+    {load_korean_font, vd_in_hangul_blocks},
+};
+
+enum { FALLBACK_FONT_COUNT = sizeof(g_fallback_fonts) / sizeof(g_fallback_fonts[0]) };
+_Static_assert(FALLBACK_FONT_COUNT <= VD_LAZY_FONT_MAX, "the glyph cache must hold every Runtime Fallback Font");
 
 // A build that could not download the Runtime Default Font draws it with raylib's built-in font.
 void font_registry_init(void)
@@ -120,7 +143,7 @@ void font_registry_init(void)
         g_default_font.bitmap = GetFontDefault();
     }
     glyph_cache_set_fallback(g_default_font.outline);
-    glyph_cache_set_fallback_loader(load_fallback_font);
+    glyph_cache_set_lazy_fonts(g_fallback_fonts, FALLBACK_FONT_COUNT);
     glyph_cache_set_emoji_loader(load_emoji_image);
     g_default_loaded = true;
 }
@@ -156,8 +179,9 @@ void font_registry_shutdown(void)
         unload_font(&g_default_font);
         g_default_loaded = false;
     }
-    glyph_font_free(g_fallback_font);
-    g_fallback_font = NULL;
+    glyph_font_free(g_cjk_font);
+    glyph_font_free(g_korean_font);
+    g_cjk_font = g_korean_font = NULL;
 }
 
 const VdFont *font_registry_get(const char *name)

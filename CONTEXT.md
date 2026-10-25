@@ -49,7 +49,7 @@ The generated JavaScript file inside a **Deck App Package** that registers the c
 _Avoid_: User entry, source entry, main runtime
 
 **Deck App Font**:
-A named font file included in a **Deck App Package** and declared by the **Deck App Package Manifest** for author code to reference. Characters a TrueType or OpenType **Deck App Font** lacks render from the **Runtime Default Font**, then the **Runtime Fallback Font**; `.fnt` and `.bdf` fonts do not fall back. Emoji in text drawn with a TrueType or OpenType font render as colour Twemoji images that ship with VitaDeck, not from any font; an emoji without an image, as in a build that could not download them, draws its first character from those fonts, or `U+FFFD` when none has it. `.fnt` and `.bdf` fonts draw no emoji.
+A named font file included in a **Deck App Package** and declared by the **Deck App Package Manifest** for author code to reference. Characters a TrueType or OpenType **Deck App Font** lacks render from the **Runtime Default Font**, then a **Runtime Fallback Font**; `.fnt` and `.bdf` fonts do not fall back. Emoji in text drawn with a TrueType or OpenType font render as colour Twemoji images that ship with VitaDeck, not from any font; an emoji without an image, as in a build that could not download them, draws its first character from those fonts, or `U+FFFD` when none has it. `.fnt` and `.bdf` fonts draw no emoji.
 _Avoid_: Raw font path, system font, hardcoded font
 
 **Deck App Image**:
@@ -61,7 +61,7 @@ The VitaDeck-provided sans-serif font (DejaVu Sans) used for text when a **Deck 
 _Avoid_: Built-in Raylib font, implicit app font, serif default
 
 **Runtime Fallback Font**:
-The VitaDeck-provided CJK font (Droid Sans Fallback Full) for characters neither the requested font nor the **Runtime Default Font** has. It covers Chinese ideographs and Japanese kana but not Korean Hangul, and loads the first time a **Deck App** draws such a character. A character no font has renders as the requested font's missing-glyph box.
+One of the VitaDeck-provided fonts for characters neither the requested font nor the **Runtime Default Font** has: Droid Sans Fallback Full for Chinese ideographs and Japanese kana, then Noto Sans KR for Korean Hangul. Each loads the first time a **Deck App** draws a character from the Unicode blocks it covers, so other characters never load one. A character no font has renders as the requested font's missing-glyph box.
 _Avoid_: System font, Noto fallback, CJK default font
 
 **Font Size**:
@@ -647,7 +647,7 @@ Every Vita input has a desktop host equivalent, and a connected gamepad works al
 - "font size" could mean CSS points, scaling, or theme tokens; resolved: **Font Size** is a raw pixel value in the **VitaDeck Runtime API**.
 - "default font" could mean Raylib's built-in bitmap font or a bundled VitaDeck typeface; resolved: use a VitaDeck-provided sans-serif **Runtime Default Font**.
 - "`default` font" could mean an app-declared font name or VitaDeck fallback; resolved: `default` is VitaDeck-reserved and selects the **Runtime Default Font**.
-- "font fallback" could hide invalid packages; resolved: missing or unsupported declared **Deck App Fonts** fail package validation instead of silently falling back, while a valid **Deck App Font** falls back to the **Runtime Default Font**, then the **Runtime Fallback Font**, per character it lacks.
+- "font fallback" could hide invalid packages; resolved: missing or unsupported declared **Deck App Fonts** fail package validation instead of silently falling back, while a valid **Deck App Font** falls back to the **Runtime Default Font**, then the **Runtime Fallback Fonts**, per character it lacks.
 - "font loading" could mean lazy render-time loading or package startup loading; resolved: declared **Deck App Fonts** load when the **Deck App Package** starts.
 - "font sizes" could imply package-declared preloaded size sets; resolved: **Deck App Fonts** render at arbitrary raw-pixel **Font Size** values for now.
 - "providing fonts" could mean hand-editing the package output; resolved: authors declare **Deck App Fonts** in SDK configuration and the **VitaDeck SDK** copies them into the package.

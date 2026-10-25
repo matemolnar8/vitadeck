@@ -37,7 +37,7 @@ When this file speaks:
 - `git submodule update --init --recursive` if `vendor/quickjs/quickjs.c` is missing.
 - Host build needs CMake, raylib 5.5, curl, OpenSSL, zlib (`brew install raylib` on macOS; raylib + OpenGL/X11 dev packages on Linux). On Linux/GCC configure with `CC=gcc CXX=g++ cmake -S . -B out -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group"`.
 - Vita build and Linux smoke run in Docker. Start Docker Desktop first.
-- The first CMake configure downloads the pinned runtime fonts and Twemoji images ([cmake/fonts.cmake](cmake/fonts.cmake), [cmake/twemoji.cmake](cmake/twemoji.cmake)) into the gitignored `assets/fonts/` and `assets/emoji/`; offline it warns, builds anyway with fallbacks (raylib's built-in font, missing-glyph boxes for CJK, a fallback glyph for emoji), and the next configure retries.
+- The first CMake configure downloads the pinned runtime fonts and Twemoji images ([cmake/fonts.cmake](cmake/fonts.cmake), [cmake/twemoji.cmake](cmake/twemoji.cmake)) into the gitignored `assets/fonts/` and `assets/emoji/`; offline it warns, builds anyway with fallbacks (raylib's built-in font, missing-glyph boxes for CJK and Korean, a fallback glyph for emoji), and the next configure retries.
 - Uploading a Vita build (`upload_vita`, `upload_vpk`, `run`) reads the Vita's IP from `PSVITAIP` when CMake configures, e.g. `export PSVITAIP=192.168.1.177`.
 - Releases: [docs/releasing.md](docs/releasing.md).
 

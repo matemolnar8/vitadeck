@@ -44,8 +44,17 @@ typedef struct {
     int length;
 } VdEmojiSequence;
 
-// The font to fall back to last, opened on demand; NULL when it cannot be opened.
+// NULL when the font cannot be opened.
 typedef VdGlyphFont *(*VdGlyphFontLoader)(void);
+
+// A fallback font opened on the first codepoint in its blocks that every earlier font lacks, so a stray codepoint
+// outside them does not load it. A font that fails to open is not tried again.
+typedef struct {
+    VdGlyphFontLoader load;
+    bool (*covers)(uint32_t codepoint);
+} VdLazyFont;
+
+#define VD_LAZY_FONT_MAX 2
 
 // The RGBA8 image for a codepoint sequence, U+FE0F left out, in memory from malloc; NULL when there is none.
 typedef unsigned char *(*VdEmojiLoader)(const VdEmojiSequence *sequence, int *width, int *height);
@@ -64,11 +73,15 @@ VdGlyphFont *glyph_font_load(const char *path);
 void glyph_font_free(VdGlyphFont *font);
 VdGlyphFontMetrics glyph_font_metrics(const VdGlyphFont *font, int size);
 
-// Codepoints a font lacks come from the fallback, then from the loader's font; ones none has draw the requested font's
-// missing-glyph box.
+// Codepoints a font lacks come from the fallback, then from the lazy fonts in order; ones none has draw the requested
+// font's missing-glyph box.
 void glyph_cache_set_fallback(const VdGlyphFont *font);
-// Called once, on the first codepoint neither the requested font nor the fallback has. The caller owns the font.
-void glyph_cache_set_fallback_loader(VdGlyphFontLoader loader);
+// At most VD_LAZY_FONT_MAX; none are open yet. The caller owns the fonts they load.
+void glyph_cache_set_lazy_fonts(const VdLazyFont *fonts, int count);
+// CJK ideographs, kana, bopomofo, CJK symbols, fullwidth forms and Hangul jamo; not Hangul syllables.
+bool vd_in_cjk_blocks(uint32_t codepoint);
+// Hangul syllables and jamo.
+bool vd_in_hangul_blocks(uint32_t codepoint);
 VdGlyph glyph_cache_get(const VdGlyphFont *font, int size, uint32_t codepoint);
 void glyph_cache_set_emoji_loader(VdEmojiLoader loader);
 // The emoji for the longest prefix of sequence that has an image, as a Font Size square on the font's line, so a ZWJ
