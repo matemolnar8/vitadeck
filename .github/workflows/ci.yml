@@ -42,6 +42,9 @@ jobs:
       - name: Typecheck JS
         run: pnpm --dir js tsc
 
+      - name: Check native globals
+        run: pnpm --dir js test:native-globals
+
       - name: Test SDK CLI
         run: pnpm --dir js test:cli
 

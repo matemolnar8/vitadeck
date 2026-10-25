@@ -2,6 +2,7 @@ import type { Color } from "@vitadeck/sdk/types";
 import type { VitaHostPropsByType } from "@vitadeck/sdk/vitadeck-host-types";
 import type { ReactNode } from "react";
 import Reconciler, { type HostConfig } from "react-reconciler";
+import { DefaultEventPriority } from "react-reconciler/constants";
 import { registerHandlers, unregisterHandlers, updateHandlers } from "./input";
 import { instrumentHostConfig, ReconcilerMetrics } from "./reconciler-metrics";
 import { exhaustiveGuard } from "./utils";
@@ -404,11 +405,48 @@ const rawHostConfig = {
     unregisterHandlers(instance.id);
     nativeDestroyInstance(instance.id);
   },
-} satisfies Partial<VitadeckHostConfig>;
+
+  getPublicInstance(instance) {
+    return instance;
+  },
+
+  preparePortalMount(_container) {
+    logReconcilerFunction("preparePortalMount");
+  },
+
+  scheduleTimeout(fn, delay) {
+    return setTimeout(() => {
+      fn();
+    }, delay ?? 0);
+  },
+
+  cancelTimeout(id) {
+    clearTimeout(id);
+  },
+
+  getCurrentEventPriority() {
+    return DefaultEventPriority;
+  },
+
+  // The members below back React DOM-only features (event handle and scope APIs) that VitaDeck never enables.
+  getInstanceFromNode() {
+    return null;
+  },
+
+  beforeActiveInstanceBlur() {},
+
+  afterActiveInstanceBlur() {},
+
+  prepareScopeUpdate() {},
+
+  getInstanceFromScope() {
+    return null;
+  },
+} satisfies VitadeckHostConfig;
 
 const metrics = new ReconcilerMetrics("reconciler");
 const hostConfig = instrumentHostConfig(rawHostConfig, metrics, "reconciler");
-const reconciler = Reconciler(hostConfig as unknown as VitadeckHostConfig);
+const reconciler = Reconciler(hostConfig);
 
 const container: Container = {};
 type ReconcilerRoot = object;
