@@ -204,6 +204,7 @@ if(NOT DEFINED ENV{VITASDK})
       src/core/arena.c
       src/core/package_library.c
       src/core/package_manifest.c
+      ${PLATFORM_SOURCES}
     )
     target_link_libraries(upload_parsing_harness ZLIB::ZLIB)
     add_test(NAME upload_parsing_harness COMMAND upload_parsing_harness)
