@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<title>VitaDeck review queue</title>
+<style>
+  :root { --bg:#fff; --fg:#111; --muted:#666; --card:#f6f6f8; --border:#ddd; --ok:#1a7f37; --warn:#9a6700; --bad:#cf222e; --accent:#0969da; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0d1117; --fg:#e6edf3; --muted:#9aa4b2; --card:#161b22; --border:#30363d; --ok:#3fb950; --warn:#d29922; --bad:#f85149; --accent:#58a6ff; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font: 16px/1.45 -apple-system, system-ui, sans-serif; background:var(--bg); color:var(--fg); padding-bottom: 120px; }
+  header { padding: 16px; border-bottom: 1px solid var(--border); position: sticky; top:0; background:var(--bg); z-index:2; }
+  header h1 { margin:0; font-size: 18px; }
+  header p { margin:4px 0 0; color:var(--muted); font-size: 13px; }
+  main { padding: 12px; display:flex; flex-direction:column; gap:12px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px; }
+  .card.done-approve { border-color: var(--ok); }
+  .card.done-changes { border-color: var(--warn); }
+  .top { display:flex; align-items:baseline; gap:8px; }
+  .num { font-weight:700; color:var(--accent); white-space:nowrap; }
+  .title { font-weight:600; flex:1; }
+  .meta { color:var(--muted); font-size:13px; margin-top:4px; display:flex; flex-wrap:wrap; gap:6px 10px; }
+  .badge { font-size:12px; padding:1px 7px; border-radius:999px; border:1px solid var(--border); }
+  .badge.ok { color:var(--ok); border-color:var(--ok); }
+  .badge.bad { color:var(--bad); border-color:var(--bad); }
+  .badge.pend { color:var(--warn); border-color:var(--warn); }
+  .links { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .links a, .links button { font-size:14px; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--fg); text-decoration:none; }
+  .frame { display:none; margin-top:10px; }
+  .frame.open { display:block; }
+  .frame iframe { width:100%; height:70vh; border:1px solid var(--border); border-radius:8px; background:#fff; }
+  .decide { display:flex; gap:8px; margin-top:12px; }
+  .decide button { flex:1; padding:12px 8px; font-size:15px; font-weight:600; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--fg); }
+  .decide button.approve.on { background:var(--ok); color:#fff; border-color:var(--ok); }
+  .decide button.changes.on { background:var(--warn); color:#fff; border-color:var(--warn); }
+  textarea { width:100%; min-height:72px; margin-top:8px; padding:10px; font:inherit; font-size:15px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--fg); }
+  .sent { font-size:12px; color:var(--muted); margin-top:6px; }
+  footer { position:fixed; bottom:0; left:0; right:0; padding:12px 12px calc(12px + env(safe-area-inset-bottom)); background:var(--bg); border-top:1px solid var(--border); display:flex; gap:8px; align-items:center; }
+  footer button { flex:1; padding:14px; font-size:16px; font-weight:700; border-radius:12px; border:0; background:var(--accent); color:#fff; }
+  footer button:disabled { opacity:.5; }
+  footer .alt { flex:0; padding:14px; background:transparent; color:var(--fg); border:1px solid var(--border); }
+  #status { font-size:13px; color:var(--muted); padding:0 16px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>VitaDeck review queue</h1>
+  <p id="sub">10 PRs in merge order. Approve means Claude squash-merges; Request changes sends your note to a fix agent.</p>
+</header>
+<main id="list"></main>
+<footer>
+  <button id="send">Send decisions</button>
+  <button id="copy" class="alt" title="Copy as text">Copy</button>
+</footer>
+<script>
+const PRS = [
+  {n:60, t:"fix(ui): copy hit-test result before releasing snapshot lock", fixes:"#39", diff:"+10 −7", base:"main", ci:"all green"},
+  {n:61, t:"fix(jslib): handle timers that clear themselves from their callback", fixes:"#40", diff:"+75 −9", base:"main", ci:"all green"},
+  {n:63, t:"chore(ci): run CLI tests, lint and format check; production builds by default", fixes:"#57", diff:"+62 −22", base:"main", ci:"all green", note:"Author-visible: build is production by default, new --dev flag, NODE_ENV no longer read."},
+  {n:65, t:"fix(core): guard package library state with a mutex", fixes:"#42", diff:"+96 −45", base:"main", ci:"all green"},
+  {n:66, t:"fix(runtime): show a failure screen when a Deck App throws after boot", fixes:"#44", diff:"+167 −63", base:"main", ci:"all green", note:"Adds the Deck App Failure Screen term to CONTEXT.md. Screenshots in the PR body."},
+  {n:67, t:"refactor(js): single source for native globals and a typed host config", fixes:"#56", diff:"+114 −71", base:"main", ci:"all green", note:"One-line ci.yml conflict with #63; merge #63 first."},
+  {n:71, t:"chore: fix stale glossary, document SDK config, prune dead theme and files", fixes:"#59", diff:"+203 −930", base:"main", ci:"all green", note:"SDK type change: removes ThemeName, Theme.name, light theme."},
+  {n:70, t:"docs(adr): host control sliced delivery and topology", fixes:"refs #45", diff:"+61 −0", base:"main", ci:"all green", note:"Five confirmations for you on issue #45."},
+  {n:62, t:"fix(upload): reap finished handler threads so the listener keeps accepting", fixes:"#41", diff:"+65 −27", base:"main", ci:"all green"},
+  {n:68, t:"fix(upload): harden zip bounds, header matching and JSON escaping", fixes:"#43", diff:"+427 −54", base:"fix/upload-handler-reaping (stacked on #62)", ci:"build+smoke green, no vpk run on a non-main base", note:"Merge after #62; it retargets to main automatically."},
+];
+const HOOK = "https://relay.t3.codes/v1/hooks/42fc44312fd4d5ff/scheduled-task%3Acommand%3Amcp%3A1b32e1ca-ff48-4bf5-b05a-502dcff0cbe1%3Aschedule-task%3Avitadeck-review-webhook-1/tdotXduMyeg1WvbI3hOgTmP2jAnrLA5K7-1c3z7KvO4";
+const KEY = "vitadeck-review-queue-v1";
+const state = JSON.parse(localStorage.getItem(KEY) || "{}");
+const save = () => localStorage.setItem(KEY, JSON.stringify(state));
+const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+const list = document.getElementById("list");
+PRS.forEach((p, i) => {
+  const s = state[p.n] || {};
+  const card = document.createElement("section");
+  card.className = "card" + (s.decision ? " done-" + s.decision : "");
+  card.id = "pr-" + p.n;
+  card.innerHTML = `
+    <div class="top"><span class="num">${i+1}. #${p.n}</span><span class="title">${esc(p.t)}</span></div>
+    <div class="meta"><span>${esc(p.fixes)}</span><span>${esc(p.diff)}</span><span>base: ${esc(p.base)}</span><span class="badge ${p.ci.startsWith("all") ? "ok" : "pend"}">${esc(p.ci)}</span></div>
+    ${p.note ? `<div class="meta">${esc(p.note)}</div>` : ""}
+    <div class="links">
+      <button class="toggle">Show review here</button>
+      <a href="https://matemolnar8.github.io/vitadeck/pr/${p.n}/" target="_blank" rel="noopener">Review full screen</a>
+      <a href="https://github.com/matemolnar8/vitadeck/pull/${p.n}" target="_blank" rel="noopener">PR</a>
+    </div>
+    <div class="frame"></div>
+    <div class="decide">
+      <button class="approve ${s.decision==="approve"?"on":""}">Approve &amp; merge</button>
+      <button class="changes ${s.decision==="changes"?"on":""}">Request changes</button>
+    </div>
+    <textarea placeholder="Notes for Claude (required for changes, optional for approve)">${esc(s.note || "")}</textarea>
+    <div class="sent">${s.sentAt ? "Sent " + new Date(s.sentAt).toLocaleString() : ""}</div>`;
+  list.appendChild(card);
+
+  const frame = card.querySelector(".frame");
+  card.querySelector(".toggle").onclick = e => {
+    if (!frame.firstChild) frame.innerHTML = `<iframe src="https://matemolnar8.github.io/vitadeck/pr/${p.n}/" loading="lazy"></iframe>`;
+    frame.classList.toggle("open");
+    e.target.textContent = frame.classList.contains("open") ? "Hide review" : "Show review here";
+  };
+  const set = d => {
+    state[p.n] = { ...(state[p.n]||{}), decision: d, sentAt: null };
+    save();
+    card.className = "card done-" + d;
+    card.querySelector(".approve").classList.toggle("on", d==="approve");
+    card.querySelector(".changes").classList.toggle("on", d==="changes");
+    card.querySelector(".sent").textContent = "";
+    updateSend();
+  };
+  card.querySelector(".approve").onclick = () => set("approve");
+  card.querySelector(".changes").onclick = () => set("changes");
+  card.querySelector("textarea").oninput = e => { state[p.n] = { ...(state[p.n]||{}), note: e.target.value, sentAt: null }; save(); updateSend(); };
+});
+
+const pending = () => PRS.filter(p => state[p.n]?.decision && !state[p.n]?.sentAt).map(p => ({ pr: p.n, decision: state[p.n].decision, note: (state[p.n].note || "").trim() }));
+const sendBtn = document.getElementById("send");
+function updateSend() {
+  const d = pending();
+  const missing = d.filter(x => x.decision === "changes" && !x.note);
+  sendBtn.disabled = d.length === 0 || missing.length > 0;
+  sendBtn.textContent = missing.length ? `Add a note for #${missing.map(x=>x.pr).join(", #")}` : d.length ? `Send ${d.length} decision${d.length>1?"s":""}` : "Send decisions";
+}
+updateSend();
+
+sendBtn.onclick = async () => {
+  const decisions = pending();
+  const payload = { batchId: "batch-" + Date.now(), sentAt: new Date().toISOString(), source: "review-queue", decisions };
+  sendBtn.disabled = true; sendBtn.textContent = "Sending…";
+  try {
+    await fetch(HOOK, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain" }, body: JSON.stringify(payload) });
+    decisions.forEach(d => { state[d.pr].sentAt = payload.sentAt; document.querySelector(`#pr-${d.pr} .sent`).textContent = "Sent " + new Date(payload.sentAt).toLocaleString(); });
+    save();
+    sendBtn.textContent = "Sent. Claude will report in the thread.";
+    setTimeout(updateSend, 4000);
+  } catch (e) {
+    sendBtn.textContent = "Send failed. Use Copy and paste into the thread.";
+    sendBtn.disabled = false;
+  }
+};
+
+document.getElementById("copy").onclick = async () => {
+  const all = PRS.filter(p => state[p.n]?.decision).map(p => `#${p.n}: ${state[p.n].decision}${state[p.n].note ? " — " + state[p.n].note.trim() : ""}`).join("\n");
+  try { await navigator.clipboard.writeText(all || "(no decisions yet)"); document.getElementById("copy").textContent = "Copied"; setTimeout(() => document.getElementById("copy").textContent = "Copy", 1500); } catch { prompt("Copy:", all); }
+};
+</script>
+</body>
+</html>
