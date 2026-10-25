@@ -144,7 +144,7 @@ export default function SmokeDeckApp() {
           y={0}
           width={220}
           height={36}
-          label="Static button"
+          label="Static button 👍"
           color={theme.accent}
           textColor={theme.buttonText}
           borderRadius={8}
