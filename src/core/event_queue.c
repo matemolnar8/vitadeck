@@ -1,5 +1,6 @@
 #include "event_queue.h"
 #include "platform/thread.h"
+#include <raylib.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -38,13 +39,16 @@ void event_queue_push(const InputEvent *evt)
 {
     vd_mutex_lock(queue.mutex);
 
-    if (queue.count < QUEUE_CAPACITY) {
+    bool full = queue.count == QUEUE_CAPACITY;
+    if (!full) {
         memcpy(&queue.events[queue.tail], evt, sizeof(InputEvent));
         queue.tail = (queue.tail + 1) % QUEUE_CAPACITY;
         queue.count++;
     }
 
     vd_mutex_unlock(queue.mutex);
+
+    if (full) TraceLog(LOG_WARNING, "Event queue full, dropped %s on %s.", evt->event_name, evt->id);
 }
 
 bool event_queue_pop(InputEvent *evt)
