@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 34ef1c8e1b3eea604180cb158cd9bdffa48ed89d` and `git rev-parse --verify 1f5d95410d4b49d25bbb16ce1fe7c806178b8bb4` in this repository.
+   Run `git rev-parse --verify 24d9e5b7598d818b2bf067f3e2d5bfc70360c4ea` and `git rev-parse --verify 2763e8744697c1a6bd81f31c327ce0cfb09ade44` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 34ef1c8e1b3eea604180cb158cd9bdffa48ed89d 1f5d95410d4b49d25bbb16ce1fe7c806178b8bb4 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 24d9e5b7598d818b2bf067f3e2d5bfc70360c4ea 2763e8744697c1a6bd81f31c327ce0cfb09ade44 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -23,15 +23,15 @@ When no question follows this paste, explain this review concern.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  34ef1c8e1b3eea604180cb158cd9bdffa48ed89d
+base (merge-base)  24d9e5b7598d818b2bf067f3e2d5bfc70360c4ea
 
-head               1f5d95410d4b49d25bbb16ce1fe7c806178b8bb4
+head               2763e8744697c1a6bd81f31c327ce0cfb09ade44
 
-Named refs at pin: 34ef1c8e1b3eea604180cb158cd9bdffa48ed89d ... refactor/native-globals-single-source
+Named refs at pin: 24d9e5b7598d818b2bf067f3e2d5bfc70360c4ea ... HEAD
 
 Read the diff:
 
-git diff --find-renames 34ef1c8e1b3eea604180cb158cd9bdffa48ed89d 1f5d95410d4b49d25bbb16ce1fe7c806178b8bb4
+git diff --find-renames 24d9e5b7598d818b2bf067f3e2d5bfc70360c4ea 2763e8744697c1a6bd81f31c327ce0cfb09ade44
 
 Review concern 05 of 05: ButtonProps and ImageProps from host prop types (`props`)
 
