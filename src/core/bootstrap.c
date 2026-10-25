@@ -14,12 +14,12 @@ static bool load_active_package_assets(VdBootstrap *bootstrap, char *error, size
 {
     const char *package_path = package_library_has_active_deck_app() ? package_library_active_package_path() : "";
     if (!font_registry_load_package(package_path, error, error_size)) {
-        bootstrap->js_runtime.failed = true;
+        js_runtime_fail(&bootstrap->js_runtime, error, NULL);
         image_registry_load_package("", NULL, 0);
         return false;
     }
     if (!image_registry_load_package(package_path, error, error_size)) {
-        bootstrap->js_runtime.failed = true;
+        js_runtime_fail(&bootstrap->js_runtime, error, NULL);
         font_registry_load_package("", error, error_size);
         return false;
     }
@@ -92,12 +92,47 @@ void bootstrap_draw_loading_splash(void)
     EndDrawing();
 }
 
+#define FAILURE_MARGIN 20
+
+// Draws up to max_lines of text, breaking at newlines and at the screen edge. Returns the y below the last line.
+static int draw_failure_lines(const char *text, int y, int font_size, Color color, int max_lines)
+{
+    const int max_width = VD_SCREEN_WIDTH - 2 * FAILURE_MARGIN;
+    char line[256];
+    for (int drawn = 0; *text && drawn < max_lines; drawn++) {
+        size_t len = 0;
+        int width = 0;
+        while (text[len] && text[len] != '\n' && len < sizeof(line) - 1) {
+            char glyph[2] = {text[len], '\0'};
+            width += MeasureText(glyph, font_size) + font_size / 10;
+            if (width > max_width && len > 0) break;
+            line[len] = text[len];
+            len++;
+        }
+        line[len] = '\0';
+        DrawText(line, FAILURE_MARGIN, y, font_size, color);
+        y += font_size + 4;
+        text += len;
+        if (*text == '\n') text++;
+    }
+    return y;
+}
+
+static void draw_deck_app_failure_screen(const VdJsRuntime *runtime)
+{
+    DrawText("Deck App failed", FAILURE_MARGIN, FAILURE_MARGIN, 30, RED);
+    int y = draw_failure_lines(runtime->failure_message, FAILURE_MARGIN + 46, 20, RAYWHITE, 4);
+    draw_failure_lines(runtime->failure_stack, y + 12, 16, GRAY, 12);
+    DrawText("Press Start (F1) to open the VitaDeck Shell.", FAILURE_MARGIN, VD_SCREEN_HEIGHT - FAILURE_MARGIN - 20, 20,
+             RAYWHITE);
+}
+
 void bootstrap_draw_deck_canvas(const VdBootstrap *bootstrap)
 {
     if (!package_library_has_active_deck_app()) return;
 
     if (js_runtime_failed(&bootstrap->js_runtime)) {
-        DrawText("Deck App runtime failed to start.", 10, 10, 24, RED);
+        draw_deck_app_failure_screen(&bootstrap->js_runtime);
     } else if (!js_runtime_is_ready(&bootstrap->js_runtime)) {
         DrawText("Loading JavaScript...", 10, 10, 20, WHITE);
     } else {

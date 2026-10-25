@@ -9,6 +9,7 @@
 #include "quickjs.h"
 #include <raylib.h>
 #include "stb_ds.h"
+#include "jslib.h"
 
 static inline void js_set_global_function(JSContext *ctx, const char *name, JSCFunction *func, int length)
 {
@@ -18,6 +19,7 @@ static inline void js_set_global_function(JSContext *ctx, const char *name, JSCF
 }
 
 void register_js_log(JSContext *ctx);
+void register_js_error(JSContext *ctx);
 void register_js_colors(JSContext *ctx);
 void register_js_timeout(JSContext *ctx);
 void register_js_fetch(JSContext *ctx);

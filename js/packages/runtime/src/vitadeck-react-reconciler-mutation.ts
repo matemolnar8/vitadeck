@@ -392,12 +392,13 @@ const container: Container = {};
 type ReconcilerRoot = object;
 let root: ReconcilerRoot | null = null;
 
-function onError(error: unknown) {
-  console.error("[Reconciler] Error:", error);
+// React recovered from these; uncaught errors reach DeckAppErrorBoundary or the native exception reporters.
+function onRecoverableError(error: unknown) {
+  console.error("[Reconciler] Recoverable error:", error);
 }
 
 export function render(element: ReactNode): void {
-  root ??= reconciler.createContainer(container, 0, null, true, null, "vitadeck_", onError, null);
+  root ??= reconciler.createContainer(container, 0, null, true, null, "vitadeck_", onRecoverableError, null);
   reconciler.updateContainer(element, root as Parameters<typeof reconciler.updateContainer>[1]);
 }
 

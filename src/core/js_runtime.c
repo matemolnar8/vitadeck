@@ -20,12 +20,7 @@ static int run_function(JSContext *ctx, const char *func_name)
 
     int ret = 0;
     if (JS_IsException(result)) {
-        JSValue exc = JS_GetException(ctx);
-        const char *str = JS_ToCString(ctx, exc);
-        TraceLog(LOG_ERROR, "%s: an exception occurred in the javascript function", func_name);
-        TraceLog(LOG_ERROR, "%s", str ? str : "unknown error");
-        JS_FreeCString(ctx, str);
-        JS_FreeValue(ctx, exc);
+        js_report_exception(ctx, func_name);
         ret = -1;
     }
 
@@ -42,13 +37,7 @@ static void drain_microtasks(JSRuntime *rt)
     JSContext *pctx;
     int err;
     while ((err = JS_ExecutePendingJob(rt, &pctx)) != 0) {
-        if (err < 0) {
-            JSValue exc = JS_GetException(pctx);
-            const char *str = JS_ToCString(pctx, exc);
-            TraceLog(LOG_ERROR, "[microtask] %s", str ? str : "unknown error");
-            JS_FreeCString(pctx, str);
-            JS_FreeValue(pctx, exc);
-        }
+        if (err < 0) js_report_exception(pctx, "microtask");
     }
 }
 
@@ -81,24 +70,25 @@ static void *js_thread_func(void *arg)
     rt = JS_NewRuntime();
     if (!rt) {
         TraceLog(LOG_ERROR, "Could not initialize QuickJS runtime.");
-        runtime->failed = true;
+        js_runtime_fail(runtime, "Could not initialize QuickJS runtime.", NULL);
         return NULL;
     }
 
     ctx = JS_NewContext(rt);
     if (!ctx) {
         TraceLog(LOG_ERROR, "Could not initialize QuickJS context.");
-        runtime->failed = true;
+        js_runtime_fail(runtime, "Could not initialize QuickJS context.", NULL);
         goto defer;
     }
 
+    JS_SetContextOpaque(ctx, runtime);
     register_js_lib(ctx);
 
     size_t len = 0;
     char *code = read_file("js/runtime.js", &len);
     if (!code) {
         TraceLog(LOG_ERROR, "Could not load runtime.js.");
-        runtime->failed = true;
+        js_runtime_fail(runtime, "Could not load runtime.js.", NULL);
         goto defer;
     }
 
@@ -106,27 +96,19 @@ static void *js_thread_func(void *arg)
     free(code);
 
     if (JS_IsException(eval_result)) {
-        JSValue exc = JS_GetException(ctx);
-        const char *str = JS_ToCString(ctx, exc);
-        TraceLog(LOG_ERROR, "Error evaluating runtime.js: %s", str ? str : "unknown error");
-        JS_FreeCString(ctx, str);
-        JS_FreeValue(ctx, exc);
+        js_report_exception(ctx, "runtime.js");
         JS_FreeValue(ctx, eval_result);
-        runtime->failed = true;
         goto defer;
     }
     JS_FreeValue(ctx, eval_result);
 
-    if (run_function(ctx, "updateContainer") != 0) {
-        runtime->failed = true;
-        goto defer;
-    }
+    if (run_function(ctx, "updateContainer") != 0) goto defer;
 
     drain_microtasks(rt);
     instance_tree_swap();
     runtime->ready = true;
 
-    while (!runtime->stop_requested && !event_queue_is_shutdown()) {
+    while (!runtime->stop_requested && !runtime->failed && !event_queue_is_shutdown()) {
         process_input_events(ctx);
         run_timeouts(ctx);
         run_fetch(ctx);
@@ -143,12 +125,19 @@ defer:
     return result;
 }
 
+static void clear_failure(VdJsRuntime *runtime)
+{
+    runtime->failed = false;
+    runtime->failure_message[0] = '\0';
+    runtime->failure_stack[0] = '\0';
+}
+
 void js_runtime_init(VdJsRuntime *runtime)
 {
     runtime->thread = NULL;
     runtime->stop_requested = false;
     runtime->ready = false;
-    runtime->failed = false;
+    clear_failure(runtime);
 }
 
 bool js_runtime_start(VdJsRuntime *runtime)
@@ -156,7 +145,7 @@ bool js_runtime_start(VdJsRuntime *runtime)
     if (runtime->thread) return true;
     runtime->stop_requested = false;
     runtime->ready = false;
-    runtime->failed = false;
+    clear_failure(runtime);
     event_queue_clear();
     input_clear_focus();
     runtime->thread = vd_thread_create(js_thread_func, runtime);
@@ -165,12 +154,16 @@ bool js_runtime_start(VdJsRuntime *runtime)
 
 void js_runtime_stop(VdJsRuntime *runtime)
 {
-    if (!runtime->thread) return;
+    if (!runtime->thread) {
+        clear_failure(runtime);
+        return;
+    }
     runtime->stop_requested = true;
     vd_thread_join((vd_thread *)runtime->thread);
     vd_thread_destroy((vd_thread *)runtime->thread);
     runtime->thread = NULL;
     runtime->ready = false;
+    clear_failure(runtime);
     input_clear_focus();
     instance_tree_clear();
     event_queue_clear();

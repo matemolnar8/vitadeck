@@ -168,6 +168,10 @@ _Avoid_: Uninstall, rollback, package rename
 Restarting the Deck App JavaScript runtime with a fresh context after **Runtime Upload Replacement** of the **Active Deck App** or after changing the **Active Deck App**.
 _Avoid_: Hot reload, refresh, soft reload
 
+**Deck App Failure Screen**:
+The VitaDeck-painted screen that replaces the **Active Deck App** after it throws an uncaught error (during boot, render, effects, input handlers, or timers), showing the error message, the first lines of its stack, and that **Start Input** opens the **VitaDeck Shell**. A **Deck App Runtime Restart** clears it.
+_Avoid_: Crash screen, red box, blank screen
+
 **Runtime Upload Archive**:
 A zip file that unpacks to exactly one top-level **Deck App Package Directory** whose name ends in `.vdapp`.
 _Avoid_: Source zip, VPK, npm tarball
