@@ -224,6 +224,18 @@ _Avoid_: Texture, sprite, bitmap widget
 The VitaDeck input gesture used by public **Button** callbacks.
 _Avoid_: Click, mouse down, mouse up, hover
 
+**Host Control**:
+The VitaDeck capability for a **Deck App** to ask a nearby computer on the LAN to run a typed command through the **Host Companion**.
+_Avoid_: Remote desktop, PC control, Runtime Upload
+
+**Host Companion**:
+The program on a nearby Mac or Windows computer that performs **Host Control Link** and executes **Host Control** commands. It is not the desktop build of VitaDeck, even when both run on one machine during development.
+_Avoid_: Host Control Companion, desktop app, daemon, host build
+
+**Host Control Link**:
+The step where the **Host Companion**, given the address shown in the **VitaDeck Shell**, tells VitaDeck where to send **Host Control** commands. VitaDeck keeps that address until a newer link replaces it or the user forgets it. It exchanges addresses, not credentials.
+_Avoid_: Pairing, Upload Pairing, session, typing the computer's address on the Vita
+
 ## Relationships
 
 - A **Deck App** is rendered by the VitaDeck runtime.
@@ -322,6 +334,10 @@ _Avoid_: Click, mouse down, mouse up, hover
 - The **Shell Home Screen** lists **Deck App Package Version** from each installed **Deck App Package Manifest**, sorted by manifest **`name`** (case-insensitive), then **Deck App Package Name** when **`name`** ties.
 - **Runtime Upload** is offered from the **Shell Home Screen** as a primary action via **Shell Upload Entry**, not as a secondary or **Deck App**-hosted flow.
 - **Installed Deck App Removal** cannot target the **Active Deck App**.
+- **Host Control** commands go from VitaDeck to the **Host Companion**; the Vita listens only during **Host Control Link**.
+- **Host Control Link** starts from the **VitaDeck Shell** and does not use the **Runtime Upload Listener**.
+- **Host Control** results use the same `ok` / `code` / `message` JSON shape as **Runtime Upload POST**.
+- **Host Control Link** is not **Upload Pairing**; initial **Host Control** trusts the local network like initial **Runtime Upload**.
 
 ## Example dialogue
 
