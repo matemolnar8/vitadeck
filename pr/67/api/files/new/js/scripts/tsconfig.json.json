@@ -1,1 +1,0 @@
-{"path":"js/scripts/tsconfig.json","ref":"2763e8744697c1a6bd81f31c327ce0cfb09ade44","side":"new","content":"{\n  \"extends\": \"../tsconfig.json\",\n  \"compilerOptions\": {\n    \"types\": [\"node\"],\n    \"lib\": [\"es2023\"]\n  },\n  \"include\": [\"*.ts\"]\n}\n","language":"json"}
