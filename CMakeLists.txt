@@ -278,6 +278,20 @@ if(NOT DEFINED ENV{VITASDK})
     target_link_libraries(scroll_math_harness m pthread)
     add_test(NAME scroll_math_harness COMMAND scroll_math_harness)
 
+    # Includes src/upload/http_server.c itself, to reach the static request handler.
+    add_executable(upload_single_flight_harness
+      tests/upload_single_flight_harness.c
+      src/upload/archive.c
+      src/upload/http_parse.c
+      src/core/arena.c
+      src/core/package_library.c
+      src/core/package_manifest.c
+      src/core/util.c
+      ${PLATFORM_SOURCES}
+    )
+    target_link_libraries(upload_single_flight_harness ZLIB::ZLIB pthread)
+    add_test(NAME upload_single_flight_harness COMMAND upload_single_flight_harness)
+
     # The native app without main.c, the shell and Runtime Upload, for harnesses that drive the real JS thread.
     set(HOST_RUNTIME_SOURCES
       src/core/arena.c
