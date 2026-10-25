@@ -49,7 +49,7 @@ The generated JavaScript file inside a **Deck App Package** that registers the c
 _Avoid_: User entry, source entry, main runtime
 
 **Deck App Font**:
-A named font file included in a **Deck App Package** and declared by the **Deck App Package Manifest** for author code to reference. Characters a TrueType or OpenType **Deck App Font** lacks render from the **Runtime Default Font**; `.fnt` and `.bdf` fonts do not fall back. Emoji in text drawn with a TrueType or OpenType font render as colour Twemoji images that ship with VitaDeck, not from either font; `.fnt` and `.bdf` fonts draw no emoji.
+A named font file included in a **Deck App Package** and declared by the **Deck App Package Manifest** for author code to reference. Characters a TrueType or OpenType **Deck App Font** lacks render from the **Runtime Default Font**; `.fnt` and `.bdf` fonts do not fall back. Emoji in text drawn with a TrueType or OpenType font render as colour Twemoji images that ship with VitaDeck, not from either font; an emoji without an image, as in a build that could not download them, draws its first character from those fonts, or `U+FFFD` when neither has it. `.fnt` and `.bdf` fonts draw no emoji.
 _Avoid_: Raw font path, system font, hardcoded font
 
 **Deck App Image**:

@@ -18,7 +18,7 @@ metadata:
 
 **Host (current machine)** — e.g. macOS:
 
-- CMake 3.10+
+- CMake 3.18+ (older versions build without the Twemoji images)
 - [raylib](https://www.raylib.com/) via Homebrew: `brew install raylib`
 - CURL, OpenSSL, and zlib (typical on macOS; CMake `find_package` must succeed)
 
@@ -88,6 +88,7 @@ Run **JS build**, then the host quick start, then the Vita quick start. Fix comp
 
 ## Notes
 
+- Configure downloads the pinned Twemoji release once into the gitignored `assets/emoji/` (`cmake/twemoji.cmake`, SHA-256 checked); host and VPK builds both ship that folder. Without network it warns, emoji draw a fallback glyph, and the next configure retries.
 - In the container, `VITASDK` is set by the image; the project picks the Vita toolchain when that env var is present.
 - Host builds use `out/`; Vita builds use `out-vita/` on the **host** filesystem (bind-mounted from the container).
 - Host only: `cmake --build out --target stage_examples` copies every built `js/examples/*/dist/*.vdapp` into `out/vitadeck-data/installed-deck-apps`; `cmake --build out --target run` builds, stages, and launches `out/vitadeck`.
