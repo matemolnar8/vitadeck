@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        description: Release version X.Y.Z; sets the VPK version
+        type: string
+        default: ""
 
 concurrency:
   group: vita-${{ github.workflow }}-${{ github.ref }}
@@ -61,10 +67,12 @@ jobs:
           platforms: linux/amd64
           load: true
           tags: vitadeck-vitasdk:ci
-          cache-from: type=gha,scope=vitadeck-vitasdk-v2
-          cache-to: type=gha,mode=max,scope=vitadeck-vitasdk-v2
+          cache-from: type=gha,scope=vitadeck-vitasdk-v3
+          cache-to: type=gha,mode=max,scope=vitadeck-vitasdk-v3
 
       - name: Build Vita target in Vitasdk container
+        env:
+          VITADECK_VERSION: ${{ inputs.version }}
         run: |
           docker run --rm \
             -v "${{ github.workspace }}:/build/git" \
@@ -72,11 +80,13 @@ jobs:
             -e CCACHE_DIR=/build/git/.ccache \
             -e CCACHE_COMPILERCHECK=content \
             -e CCACHE_MAXSIZE=500M \
+            -e VITADECK_VERSION \
             vitadeck-vitasdk:ci \
             bash -lc 'if ! command -v ccache >/dev/null 2>&1; then \
                 apt-get update && apt-get install -y --no-install-recommends ccache; \
               fi && \
               cmake -S . -B out-vita \
+              -DVITADECK_VERSION="$VITADECK_VERSION" \
               -DCMAKE_C_COMPILER_LAUNCHER=ccache \
               -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && \
               cmake --build out-vita --parallel "$(nproc)"'

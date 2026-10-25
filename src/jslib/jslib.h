@@ -7,6 +7,8 @@
 void register_js_lib(JSContext *ctx);
 // Takes the pending exception, logs it, and puts the Active Deck App into the Deck App Failure Screen.
 void js_report_exception(JSContext *ctx, const char *source);
+// Same, for the reason of a promise rejection nothing handled.
+void js_report_rejection(JSContext *ctx, JSValueConst reason);
 // These return whether they ran any JS, so the JS thread knows when it is idle.
 bool process_input_events(JSContext *ctx);
 bool run_timeouts(JSContext *ctx);
