@@ -105,6 +105,28 @@ npx @vitadeck/sdk dev http://192.168.1.50:8787/
 
 Activate the Deck App once in the Shell. After that, each upload replaces the Active Deck App and restarts it with fresh state (a restart, not hot reload). Build errors are printed and watching continues; Ctrl-C stops. "Nothing is listening" means Upload is not open in the Shell or the address is wrong.
 
+## Layout
+
+`Stack` places its `Rect`, `Button`, `TextInput`, `Image` and `Stack` children one after another, so you don't compute every `x` and `y` yourself.
+
+```tsx
+import { Button, Image, Stack } from "@vitadeck/sdk";
+
+<Stack x={20} y={20} width={920} gap={12} padding={8} align="center">
+  <Image image="logo" height={80} />
+  <Stack direction="row" gap={8}>
+    <Button label="Easy" width={200} height={56} … />
+    <Button label="Hard" width={200} height={56} … />
+  </Stack>
+</Stack>;
+```
+
+- `direction` is `"column"` (default) or `"row"`; `gap` and `padding` are pixels; `align` (`"start"`, `"center"`, `"end"`) places children across the other axis.
+- Without `width` or `height` a `Stack` fits its content. `color` fills it.
+- `x` and `y` default to 0. On a child in a `Stack`, the one along the flow is a margin before the child and the other an offset from its aligned position.
+- `Text` is not laid out: wrap it in a `Rect`. A `Scroll` inside a `Stack` keeps its own `x`/`y` too.
+- `Scroll` lays out its children as a column `Stack` and scrolls them with touch drag, the left stick or the mouse wheel.
+
 ## Focus and pad buttons
 
 One `Button` or `TextInput` at a time has focus: the D-pad moves it and Cross presses it. Touch presses it directly.

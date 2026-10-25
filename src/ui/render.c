@@ -217,12 +217,27 @@ static int text_layout_line_x(int base_x, int box_width, int line_width, TextAli
     }
 }
 
+// Children are placed from (x, y); each Text child goes one line below the previous one.
+static void render_children(ReactInstance *inst, int x, int y)
+{
+    RenderContext child_ctx = {x, y, 0};
+    int count = arrlen(inst->children);
+    for (int i = 0; i < count; i++) {
+        ReactInstance *child = inst->children[i];
+        if (!child) continue;
+        render_instance(child, child_ctx);
+        if (child->type == NT_TEXT) {
+            child_ctx.text_index++;
+        }
+    }
+}
+
 static void render_rect_instance(ReactInstance *inst, RenderContext ctx)
 {
     RectProps *r = &inst->props.rect;
-    int abs_x = ctx.x + r->x;
-    int abs_y = ctx.y + r->y;
-    Rectangle rect = {abs_x, abs_y, r->width, r->height};
+    int abs_x = ctx.x + inst->layout.x;
+    int abs_y = ctx.y + inst->layout.y;
+    Rectangle rect = {abs_x, abs_y, inst->layout.width, inst->layout.height};
 
     if (r->border_radius > 0.0f) {
         float roundness = border_radius_to_roundness(rect, r->border_radius);
@@ -234,23 +249,25 @@ static void render_rect_instance(ReactInstance *inst, RenderContext ctx)
         }
     } else {
         if (r->has_fill) {
-            DrawRectangle(abs_x, abs_y, r->width, r->height, r->fill_color);
+            DrawRectangle(abs_x, abs_y, inst->layout.width, inst->layout.height, r->fill_color);
         }
         if (r->has_outline) {
-            DrawRectangleLines(abs_x, abs_y, r->width, r->height, r->border_color);
+            DrawRectangleLines(abs_x, abs_y, inst->layout.width, inst->layout.height, r->border_color);
         }
     }
 
-    RenderContext child_ctx = {abs_x, abs_y, 0};
-    int count = arrlen(inst->children);
-    for (int i = 0; i < count; i++) {
-        ReactInstance *child = inst->children[i];
-        if (!child) continue;
-        render_instance(child, child_ctx);
-        if (child->type == NT_TEXT) {
-            child_ctx.text_index++;
-        }
+    render_children(inst, abs_x, abs_y);
+}
+
+static void render_stack_instance(ReactInstance *inst, RenderContext ctx)
+{
+    const StackProps *s = &inst->props.stack;
+    int abs_x = ctx.x + inst->layout.x;
+    int abs_y = ctx.y + inst->layout.y;
+    if (s->has_fill) {
+        DrawRectangle(abs_x, abs_y, inst->layout.width, inst->layout.height, s->fill_color);
     }
+    render_children(inst, abs_x, abs_y);
 }
 
 static void render_text_instance(ReactInstance *inst, RenderContext ctx)
@@ -269,8 +286,8 @@ static void render_text_instance(ReactInstance *inst, RenderContext ctx)
     int font_size = t->font_size > 0 ? t->font_size : 30;
     Font font = font_registry_get(t->font_name);
     int line_height = text_line_height(t);
-    int base_x = ctx.x + t->x;
-    int base_y = ctx.y + t->y + ctx.text_index * line_height;
+    int base_x = ctx.x + inst->layout.x;
+    int base_y = ctx.y + inst->layout.y + ctx.text_index * line_height;
     Color color = t->has_color ? t->color : BLACK;
 
     TextLayout layout;
@@ -296,8 +313,10 @@ static void render_text_instance(ReactInstance *inst, RenderContext ctx)
 static void render_button_instance(ReactInstance *inst, RenderContext ctx)
 {
     ButtonProps *b = &inst->props.button;
-    int abs_x = ctx.x + b->x;
-    int abs_y = ctx.y + b->y;
+    int abs_x = ctx.x + inst->layout.x;
+    int abs_y = ctx.y + inst->layout.y;
+    int width = inst->layout.width;
+    int height = inst->layout.height;
 
     bool hovered = input_is_hovered(inst->id);
     bool pressed = input_is_pressed(inst->id);
@@ -311,11 +330,11 @@ static void render_button_instance(ReactInstance *inst, RenderContext ctx)
         visual = mix_color(visual, WHITE, 0.4f);
 
     if (b->border_radius > 0.0f) {
-        Rectangle rect = {abs_x, abs_y, b->width, b->height};
+        Rectangle rect = {abs_x, abs_y, width, height};
         float roundness = border_radius_to_roundness(rect, b->border_radius);
         DrawRectangleRounded(rect, roundness, 8, visual);
     } else {
-        DrawRectangle(abs_x, abs_y, b->width, b->height, visual);
+        DrawRectangle(abs_x, abs_y, width, height, visual);
     }
 
     const int padding = 8;
@@ -371,7 +390,7 @@ static float fit_text(Font font, const char *text, int font_size, float max_widt
 static void render_text_input_instance(ReactInstance *inst, RenderContext ctx)
 {
     TextInputProps *t = &inst->props.text_input;
-    Rectangle rect = {ctx.x + t->x, ctx.y + t->y, t->width, t->height};
+    Rectangle rect = {ctx.x + inst->layout.x, ctx.y + inst->layout.y, inst->layout.width, inst->layout.height};
     float roundness = border_radius_to_roundness(rect, t->border_radius);
 
     if (roundness > 0.0f)
@@ -418,10 +437,9 @@ static void render_image_instance(ReactInstance *inst, RenderContext ctx)
     Texture2D texture = image_registry_get(image->image_name);
     if (!IsTextureValid(texture)) return;
 
-    int abs_x = ctx.x + image->x;
-    int abs_y = ctx.y + image->y;
     Rectangle source = {0.0f, 0.0f, (float)texture.width, (float)texture.height};
-    Rectangle dest = {(float)abs_x, (float)abs_y, (float)image->width, (float)image->height};
+    Rectangle dest = {(float)(ctx.x + inst->layout.x), (float)(ctx.y + inst->layout.y), (float)inst->layout.width,
+                      (float)inst->layout.height};
     DrawTexturePro(texture, source, dest, (Vector2){0.0f, 0.0f}, 0.0f, WHITE);
 }
 
@@ -450,18 +468,19 @@ static void render_scrollbar(Rectangle viewport, int content_height, int offset)
 
 static void render_scroll_instance(ReactInstance *inst, RenderContext ctx)
 {
-    ScrollProps *s = &inst->props.scroll;
-    int abs_x = ctx.x + s->x;
-    int abs_y = ctx.y + s->y;
-    Rectangle viewport = {abs_x, abs_y, s->width, s->height};
+    const StackProps *s = &inst->props.stack;
+    int abs_x = ctx.x + inst->layout.x;
+    int abs_y = ctx.y + inst->layout.y;
+    int width = inst->layout.width;
+    int height = inst->layout.height;
+    Rectangle viewport = {abs_x, abs_y, width, height};
 
     if (s->has_fill) {
-        DrawRectangle(abs_x, abs_y, s->width, s->height, s->fill_color);
+        DrawRectangle(abs_x, abs_y, width, height, s->fill_color);
     }
 
-    int content_height = scroll_content_height(inst);
-    int max_scroll = content_height - s->height;
-    if (max_scroll < 0) max_scroll = 0;
+    int content_height = inst->layout.content_height;
+    int max_scroll = scroll_max_offset(height, content_height);
 
     int offset = scroll_get_offset(inst->id);
     if (offset > max_scroll) {
@@ -469,27 +488,8 @@ static void render_scroll_instance(ReactInstance *inst, RenderContext ctx)
         scroll_set_offset(inst->id, offset);
     }
 
-    int content_x = abs_x + s->padding;
-    int content_y = abs_y + s->padding - offset;
-
-    BeginScissorMode(abs_x, abs_y, s->width, s->height);
-    int flow_y = 0;
-    RenderContext free_ctx = {content_x, content_y, 0};
-    int count = arrlen(inst->children);
-    for (int i = 0; i < count; i++) {
-        ReactInstance *child = inst->children[i];
-        if (!child) continue;
-        int base_y = 0;
-        if (scroll_flow_step(child, s->gap, &flow_y, &base_y)) {
-            RenderContext child_ctx = {content_x, content_y + base_y, 0};
-            render_instance(child, child_ctx);
-        } else {
-            render_instance(child, free_ctx);
-            if (child->type == NT_TEXT) {
-                free_ctx.text_index++;
-            }
-        }
-    }
+    BeginScissorMode(abs_x, abs_y, width, height);
+    render_children(inst, abs_x, abs_y - offset);
     EndScissorMode();
 
     if (max_scroll > 0) {
@@ -520,6 +520,9 @@ static void render_instance(ReactInstance *inst, RenderContext ctx)
         break;
     case NT_SCROLL:
         render_scroll_instance(inst, ctx);
+        break;
+    case NT_STACK:
+        render_stack_instance(inst, ctx);
         break;
     case NT_IMAGE:
         render_image_instance(inst, ctx);

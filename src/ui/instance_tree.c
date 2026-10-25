@@ -5,6 +5,7 @@
 #include "arena.h"
 #include "stb_ds.h"
 #include "instance_tree.h"
+#include "layout.h"
 #include "scroll.h"
 #include "platform/thread.h"
 
@@ -137,8 +138,9 @@ static ReactInstance *copy_instance(Arena *arena, ReactInstance *src)
     case NT_RAW_TEXT:
         dst->props.raw_text = src->props.raw_text ? arena_strdup(arena, src->props.raw_text) : NULL;
         break;
+    case NT_STACK:
     case NT_SCROLL:
-        dst->props.scroll = src->props.scroll;
+        dst->props.stack = src->props.stack;
         break;
     case NT_IMAGE:
         dst->props.image = src->props.image;
@@ -148,55 +150,6 @@ static ReactInstance *copy_instance(Arena *arena, ReactInstance *src)
     }
 
     return dst;
-}
-
-bool scroll_flow_step(const ReactInstance *child, int gap, int *flow_y, int *base_y_out)
-{
-    if (!child) return false;
-
-    int margin_top, height;
-    switch (child->type) {
-    case NT_RECT:
-        margin_top = child->props.rect.y;
-        height = child->props.rect.height;
-        break;
-    case NT_BUTTON:
-        margin_top = child->props.button.y;
-        height = child->props.button.height;
-        break;
-    case NT_TEXT_INPUT:
-        margin_top = child->props.text_input.y;
-        height = child->props.text_input.height;
-        break;
-    case NT_IMAGE:
-        margin_top = child->props.image.y;
-        height = child->props.image.height;
-        break;
-    default:
-        return false;
-    }
-
-    *base_y_out = *flow_y;
-    *flow_y += margin_top + height + gap;
-    return true;
-}
-
-int scroll_content_height(const ReactInstance *scroll)
-{
-    if (!scroll || scroll->type != NT_SCROLL) return 0;
-
-    const ScrollProps *s = &scroll->props.scroll;
-    int flow_y = 0;
-    int base_y = 0;
-    bool any = false;
-
-    int count = arrlen(scroll->children);
-    for (int i = 0; i < count; i++) {
-        if (scroll_flow_step(scroll->children[i], s->gap, &flow_y, &base_y)) any = true;
-    }
-
-    int inner = any ? flow_y - s->gap : 0;
-    return inner + s->padding * 2;
 }
 
 // Recursively copy instance and all children
@@ -253,6 +206,7 @@ bool instance_tree_swap(void)
             arrput(new_snap->root_children, copy);
         }
     }
+    layout_tree(new_snap->root_children);
 
     // Swap under lock
     InstanceSnapshot *old_snap = NULL;
@@ -369,14 +323,9 @@ bool instance_take_focus_request(char out_id[VD_INSTANCE_ID_MAX])
     return requested;
 }
 
-// Bounds of a Button or Text Input, relative to its parent.
-static void control_bounds(const ReactInstance *inst, int *x, int *y, int *width, int *height)
+static bool layout_contains(const ReactInstance *inst, int abs_x, int abs_y, int x, int y)
 {
-    const bool text_input = inst->type == NT_TEXT_INPUT;
-    *x = text_input ? inst->props.text_input.x : inst->props.button.x;
-    *y = text_input ? inst->props.text_input.y : inst->props.button.y;
-    *width = text_input ? inst->props.text_input.width : inst->props.button.width;
-    *height = text_input ? inst->props.text_input.height : inst->props.button.height;
+    return x >= abs_x && x < abs_x + inst->layout.width && y >= abs_y && y < abs_y + inst->layout.height;
 }
 
 // Hit testing
@@ -386,57 +335,28 @@ static const char *hit_test_instance(ReactInstance *inst, int x, int y, int offs
 {
     if (!inst) return NULL;
 
-    if (inst->type == NT_RECT) {
-        RectProps *r = &inst->props.rect;
-        int abs_x = offset_x + r->x;
-        int abs_y = offset_y + r->y;
+    const int abs_x = offset_x + inst->layout.x;
+    const int abs_y = offset_y + inst->layout.y;
+    const bool inside = layout_contains(inst, abs_x, abs_y, x, y);
 
+    switch (inst->type) {
+    case NT_RECT:
+    case NT_STACK: {
         const char *child_hit = hit_test_recursive(inst->children, x, y, abs_x, abs_y);
         if (child_hit) return child_hit;
-
-        if (x >= abs_x && x < abs_x + r->width && y >= abs_y && y < abs_y + r->height) {
-            return inst->id;
-        }
-    } else if (inst->type == NT_BUTTON || inst->type == NT_TEXT_INPUT) {
-        int cx, cy, cw, ch;
-        control_bounds(inst, &cx, &cy, &cw, &ch);
-        int abs_x = offset_x + cx;
-        int abs_y = offset_y + cy;
-
-        if (x >= abs_x && x < abs_x + cw && y >= abs_y && y < abs_y + ch) {
-            return inst->id;
-        }
-    } else if (inst->type == NT_SCROLL) {
-        ScrollProps *s = &inst->props.scroll;
-        int abs_x = offset_x + s->x;
-        int abs_y = offset_y + s->y;
-
-        bool inside = x >= abs_x && x < abs_x + s->width && y >= abs_y && y < abs_y + s->height;
-        if (!inside) return NULL;
-
-        int content_x = abs_x + s->padding;
-        int content_y = abs_y + s->padding - scroll_get_offset(inst->id);
-
-        const char *hit = NULL;
-        int flow_y = 0;
-        int count = arrlen(inst->children);
-        for (int i = 0; i < count; i++) {
-            ReactInstance *child = inst->children[i];
-            if (!child) continue;
-            int base_y = 0;
-            int child_offset_y = content_y;
-            if (scroll_flow_step(child, s->gap, &flow_y, &base_y)) {
-                child_offset_y = content_y + base_y;
-            }
-            const char *child_hit = hit_test_instance(child, x, y, content_x, child_offset_y);
-            if (child_hit) hit = child_hit; /* later children render on top */
-        }
-        if (hit) return hit;
-
-        return inst->id;
+        return inside ? inst->id : NULL;
     }
-
-    return NULL;
+    case NT_BUTTON:
+    case NT_TEXT_INPUT:
+        return inside ? inst->id : NULL;
+    case NT_SCROLL: {
+        if (!inside) return NULL;
+        const char *child_hit = hit_test_recursive(inst->children, x, y, abs_x, abs_y - scroll_get_offset(inst->id));
+        return child_hit ? child_hit : inst->id;
+    }
+    default:
+        return NULL;
+    }
 }
 
 static const char *hit_test_recursive(ReactInstance **children, int x, int y, int offset_x, int offset_y)
@@ -531,45 +451,30 @@ static void collect_focusable_instance(ReactInstance *inst, int offset_x, int of
 {
     if (!inst) return;
 
+    const int abs_x = offset_x + inst->layout.x;
+    const int abs_y = offset_y + inst->layout.y;
+    const int width = inst->layout.width;
+    const int height = inst->layout.height;
+
     if (inst->type == NT_BUTTON || inst->type == NT_TEXT_INPUT) {
-        int x, y, width, height;
-        control_bounds(inst, &x, &y, &width, &height);
-        add_focusable_if_visible(inst->id, offset_x + x, offset_y + y, width, height, has_clip, clip_x, clip_y,
-                                 clip_width, clip_height, out_elems);
-    } else if (inst->type == NT_RECT) {
-        RectProps *r = &inst->props.rect;
-        collect_focusable_recursive(inst->children, offset_x + r->x, offset_y + r->y, has_clip, clip_x, clip_y,
-                                    clip_width, clip_height, out_elems);
+        add_focusable_if_visible(inst->id, abs_x, abs_y, width, height, has_clip, clip_x, clip_y, clip_width,
+                                 clip_height, out_elems);
+    } else if (inst->type == NT_RECT || inst->type == NT_STACK) {
+        collect_focusable_recursive(inst->children, abs_x, abs_y, has_clip, clip_x, clip_y, clip_width, clip_height,
+                                    out_elems);
     } else if (inst->type == NT_SCROLL) {
-        ScrollProps *s = &inst->props.scroll;
-        int abs_x = offset_x + s->x;
-        int abs_y = offset_y + s->y;
-        add_focusable_if_visible(inst->id, abs_x, abs_y, s->width, s->height, has_clip, clip_x, clip_y, clip_width,
+        add_focusable_if_visible(inst->id, abs_x, abs_y, width, height, has_clip, clip_x, clip_y, clip_width,
                                  clip_height, out_elems);
 
         bool child_has_clip = false;
         int child_clip_x = 0, child_clip_y = 0, child_clip_width = 0, child_clip_height = 0;
-        if (!intersect_clip(has_clip, clip_x, clip_y, clip_width, clip_height, abs_x, abs_y, s->width, s->height,
+        if (!intersect_clip(has_clip, clip_x, clip_y, clip_width, clip_height, abs_x, abs_y, width, height,
                             &child_has_clip, &child_clip_x, &child_clip_y, &child_clip_width, &child_clip_height)) {
             return;
         }
 
-        int content_x = abs_x + s->padding;
-        int content_y = abs_y + s->padding - scroll_get_offset(inst->id);
-        int flow_y = 0;
-        int child_count = arrlen(inst->children);
-        for (int child_i = 0; child_i < child_count; child_i++) {
-            ReactInstance *child = inst->children[child_i];
-            if (!child) continue;
-
-            int base_y = 0;
-            int child_offset_y = content_y;
-            if (scroll_flow_step(child, s->gap, &flow_y, &base_y)) {
-                child_offset_y = content_y + base_y;
-            }
-            collect_focusable_instance(child, content_x, child_offset_y, child_has_clip, child_clip_x, child_clip_y,
-                                       child_clip_width, child_clip_height, out_elems);
-        }
+        collect_focusable_recursive(inst->children, abs_x, abs_y - scroll_get_offset(inst->id), child_has_clip,
+                                    child_clip_x, child_clip_y, child_clip_width, child_clip_height, out_elems);
     }
 }
 
@@ -604,8 +509,8 @@ bool instance_scroll_metrics(const char *id, int *viewport_height, int *content_
     if (front_snapshot) {
         ReactInstance *inst = find_front_instance_unlocked(front_snapshot, id);
         if (inst && inst->type == NT_SCROLL) {
-            *viewport_height = inst->props.scroll.height;
-            *content_height = scroll_content_height(inst);
+            *viewport_height = inst->layout.height;
+            *content_height = inst->layout.content_height;
             found = true;
         }
     }
@@ -613,46 +518,32 @@ bool instance_scroll_metrics(const char *id, int *viewport_height, int *content_
     return found;
 }
 
+static ReactInstance *scroll_at_instance(ReactInstance *inst, int x, int y, int offset_x, int offset_y);
+
+// The last child's match wins, since later children are on top.
+static ReactInstance *scroll_at_children(ReactInstance **children, int x, int y, int offset_x, int offset_y)
+{
+    ReactInstance *found = NULL;
+    int count = arrlen(children);
+    for (int i = 0; i < count; i++) {
+        ReactInstance *hit = scroll_at_instance(children[i], x, y, offset_x, offset_y);
+        if (hit) found = hit;
+    }
+    return found;
+}
+
 static ReactInstance *scroll_at_instance(ReactInstance *inst, int x, int y, int offset_x, int offset_y)
 {
     if (!inst) return NULL;
 
-    if (inst->type == NT_RECT) {
-        RectProps *r = &inst->props.rect;
-        ReactInstance *found = NULL;
-        int count = arrlen(inst->children);
-        for (int i = 0; i < count; i++) {
-            ReactInstance *hit = scroll_at_instance(inst->children[i], x, y, offset_x + r->x, offset_y + r->y);
-            if (hit) found = hit;
-        }
-        return found;
-    }
-
-    if (inst->type != NT_SCROLL) return NULL;
-
-    ScrollProps *s = &inst->props.scroll;
-    int abs_x = offset_x + s->x;
-    int abs_y = offset_y + s->y;
-    if (x < abs_x || x >= abs_x + s->width || y < abs_y || y >= abs_y + s->height) return NULL;
+    const int abs_x = offset_x + inst->layout.x;
+    const int abs_y = offset_y + inst->layout.y;
+    if (inst->type == NT_RECT || inst->type == NT_STACK) return scroll_at_children(inst->children, x, y, abs_x, abs_y);
+    if (inst->type != NT_SCROLL || !layout_contains(inst, abs_x, abs_y, x, y)) return NULL;
 
     /* Prefer a nested scroll container under the point. */
-    ReactInstance *found = inst;
-    int content_x = abs_x + s->padding;
-    int content_y = abs_y + s->padding - scroll_get_offset(inst->id);
-    int flow_y = 0;
-    int count = arrlen(inst->children);
-    for (int i = 0; i < count; i++) {
-        ReactInstance *child = inst->children[i];
-        if (!child) continue;
-        int base_y = 0;
-        int child_offset_y = content_y;
-        if (scroll_flow_step(child, s->gap, &flow_y, &base_y)) {
-            child_offset_y = content_y + base_y;
-        }
-        ReactInstance *hit = scroll_at_instance(child, x, y, content_x, child_offset_y);
-        if (hit) found = hit;
-    }
-    return found;
+    ReactInstance *nested = scroll_at_children(inst->children, x, y, abs_x, abs_y - scroll_get_offset(inst->id));
+    return nested ? nested : inst;
 }
 
 bool instance_scroll_for_descendant(const char *id, char out_id[VD_INSTANCE_ID_MAX])
@@ -680,12 +571,7 @@ bool instance_scroll_at(int x, int y, char out_id[VD_INSTANCE_ID_MAX])
     bool found = false;
     vd_mutex_lock(snapshot_mutex);
     if (front_snapshot) {
-        ReactInstance *scroll = NULL;
-        int count = arrlen(front_snapshot->root_children);
-        for (int i = 0; i < count; i++) {
-            ReactInstance *hit = scroll_at_instance(front_snapshot->root_children[i], x, y, 0, 0);
-            if (hit) scroll = hit;
-        }
+        ReactInstance *scroll = scroll_at_children(front_snapshot->root_children, x, y, 0, 0);
         found = scroll && copy_id(out_id, scroll->id);
     }
     vd_mutex_unlock(snapshot_mutex);

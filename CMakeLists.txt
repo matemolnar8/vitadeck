@@ -164,6 +164,7 @@ set(VITADECK_SOURCES
     src/core/util.c
     ${JSLIB_SOURCES}
     src/ui/instance_tree.c
+    src/ui/layout.c
     src/ui/fonts.c
     src/ui/images.c
     src/ui/render.c
@@ -283,6 +284,7 @@ if(NOT DEFINED ENV{VITASDK})
     add_executable(snapshot_swap_harness
       tests/snapshot_swap_harness.c
       src/ui/instance_tree.c
+      src/ui/layout.c
       src/ui/scroll.c
       src/core/arena.c
       ${PLATFORM_SOURCES}
@@ -293,6 +295,7 @@ if(NOT DEFINED ENV{VITASDK})
     add_executable(hit_test_harness
       tests/hit_test_harness.c
       src/ui/instance_tree.c
+      src/ui/layout.c
       src/ui/focus_nav.c
       src/ui/scroll.c
       src/core/arena.c
@@ -301,15 +304,12 @@ if(NOT DEFINED ENV{VITASDK})
     target_link_libraries(hit_test_harness m pthread)
     add_test(NAME hit_test_harness COMMAND hit_test_harness)
 
-    add_executable(scroll_math_harness
-      tests/scroll_math_harness.c
-      src/ui/instance_tree.c
-      src/ui/scroll.c
-      src/core/arena.c
-      ${PLATFORM_SOURCES}
-    )
-    target_link_libraries(scroll_math_harness m pthread)
+    add_executable(scroll_math_harness tests/scroll_math_harness.c src/ui/scroll.c)
+    target_link_libraries(scroll_math_harness m)
     add_test(NAME scroll_math_harness COMMAND scroll_math_harness)
+
+    add_executable(layout_harness tests/layout_harness.c src/ui/layout.c)
+    add_test(NAME layout_harness COMMAND layout_harness)
 
     # Links raylib only because input.c and text_input_host.c also hold the raylib polls; the harness drives the
     # input_apply_* and vd_text_input_apply_keys steps.
@@ -317,6 +317,7 @@ if(NOT DEFINED ENV{VITASDK})
       tests/input_harness.c
       src/ui/input.c
       src/ui/instance_tree.c
+      src/ui/layout.c
       src/ui/focus_nav.c
       src/ui/scroll.c
       src/core/arena.c
@@ -354,6 +355,7 @@ if(NOT DEFINED ENV{VITASDK})
       src/core/event_queue.c
       ${JSLIB_SOURCES}
       src/ui/instance_tree.c
+      src/ui/layout.c
       src/ui/fonts.c
       src/ui/images.c
       src/ui/render.c

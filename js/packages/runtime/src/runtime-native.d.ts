@@ -111,6 +111,23 @@ declare global {
     padding: number,
   ): void;
 
+  function nativeCreateStack(
+    id: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    hasFill: boolean,
+    fillR: number,
+    fillG: number,
+    fillB: number,
+    fillA: number,
+    gap: number,
+    padding: number,
+    direction: number,
+    align: number,
+  ): void;
+
   function nativeCreateImage(id: string, imageName: string, x: number, y: number, width: number, height: number): void;
 
   function nativeCreateRawText(id: string, text: string): void;
@@ -221,6 +238,23 @@ declare global {
     fillA: number,
     gap: number,
     padding: number,
+  ): void;
+
+  function nativeUpdateStack(
+    id: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    hasFill: boolean,
+    fillR: number,
+    fillG: number,
+    fillB: number,
+    fillA: number,
+    gap: number,
+    padding: number,
+    direction: number,
+    align: number,
   ): void;
 
   function nativeUpdateImage(id: string, imageName: string, x: number, y: number, width: number, height: number): void;

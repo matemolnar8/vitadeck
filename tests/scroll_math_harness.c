@@ -1,8 +1,8 @@
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
-#include "ui/instance_tree.h"
 #include "ui/scroll.h"
 
+#include <stdbool.h>
 #include <stdio.h>
 
 static int failures = 0;
@@ -12,38 +12,6 @@ static void expect(bool condition, const char *message)
     if (condition) return;
     fprintf(stderr, "scroll_math_harness: %s\n", message);
     failures++;
-}
-
-static void test_flow_step(void)
-{
-    ReactInstance rect = {.type = NT_RECT, .props.rect = {.y = 3, .height = 20}};
-    ReactInstance button = {.type = NT_BUTTON, .props.button = {.y = 0, .height = 10}};
-    ReactInstance image = {.type = NT_IMAGE, .props.image = {.y = 2, .height = 10}};
-    ReactInstance text = {.type = NT_TEXT, .props.text = {.y = 50}};
-    ReactInstance nested = {.type = NT_SCROLL, .props.scroll = {.y = 50, .height = 50}};
-
-    int flow = 0, base = -1;
-    expect(scroll_flow_step(&rect, 5, &flow, &base) && base == 0 && flow == 28,
-           "a rect is placed at the flow start and advances by margin + height + gap");
-    expect(scroll_flow_step(&button, 5, &flow, &base) && base == 28 && flow == 43, "a button follows the rect");
-    expect(scroll_flow_step(&image, 5, &flow, &base) && base == 43 && flow == 60, "an image is part of the flow");
-    base = -1;
-    expect(!scroll_flow_step(&text, 5, &flow, &base) && base == -1 && flow == 60, "text is not part of the flow");
-    expect(!scroll_flow_step(&nested, 5, &flow, &base) && flow == 60, "a nested scroll is not part of the flow");
-    expect(!scroll_flow_step(NULL, 5, &flow, &base) && flow == 60, "a missing child is skipped");
-
-    ReactInstance scroll = {.type = NT_SCROLL, .props.scroll = {.height = 40, .gap = 5, .padding = 4}};
-    expect(scroll_content_height(&scroll) == 8, "an empty scroll is as tall as its padding");
-    arrput(scroll.children, &rect);
-    arrput(scroll.children, &text);
-    arrput(scroll.children, &button);
-    arrput(scroll.children, &image);
-    // 60 of flow, minus the trailing gap, plus padding on both sides.
-    expect(scroll_content_height(&scroll) == 63, "content height drops the last gap and adds padding");
-    arrfree(scroll.children);
-
-    expect(scroll_content_height(&rect) == 0, "a non-scroll has no content height");
-    expect(scroll_content_height(NULL) == 0, "no instance has no content height");
 }
 
 static void test_max_offset(void)
@@ -94,7 +62,6 @@ static void test_offset_store(void)
 
 int main(void)
 {
-    test_flow_step();
     test_max_offset();
     test_momentum_step();
     test_offset_store();

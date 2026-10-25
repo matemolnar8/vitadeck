@@ -2,6 +2,7 @@
 #define INSTANCE_TREE_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <raylib.h>
 
 // Longest instance id including its terminator; native create calls reject longer ids.
@@ -15,6 +16,7 @@ typedef enum {
     NT_SCROLL = 5,
     NT_IMAGE = 6,
     NT_TEXT_INPUT = 7,
+    NT_STACK = 8,
 } NodeType;
 
 typedef struct {
@@ -67,18 +69,33 @@ typedef struct {
     char *placeholder;
 } TextInputProps;
 
+typedef enum { STACK_COLUMN = 0, STACK_ROW = 1 } StackDirection;
+
+typedef enum { STACK_ALIGN_START = 0, STACK_ALIGN_CENTER = 1, STACK_ALIGN_END = 2 } StackAlign;
+
+// A Stack, and a Scroll, which is a column Stack that scrolls. A width or height of 0 fits the content.
 typedef struct {
     int x, y, width, height;
     bool has_fill;
     Color fill_color;
+    StackDirection direction;
+    StackAlign align;
     int gap;
     int padding;
-} ScrollProps;
+} StackProps;
 
 typedef struct {
     char *image_name;
     int x, y, width, height;
 } ImageProps;
+
+// Bounds relative to the parent's top-left, computed from props by layout_tree on every swap.
+// A Scroll's offset is not part of it: the offset changes without a swap, so readers subtract it.
+typedef struct {
+    int x, y, width, height;
+    // Flowed content height of a Stack or Scroll, including padding; a Scroll's scroll range comes from it.
+    int content_height;
+} InstanceLayout;
 
 typedef struct ReactInstance ReactInstance;
 
@@ -90,22 +107,14 @@ struct ReactInstance {
         TextProps text;
         ButtonProps button;
         TextInputProps text_input;
-        ScrollProps scroll;
+        StackProps stack;
         ImageProps image;
         char *raw_text;
     } props;
+    InstanceLayout layout;
     ReactInstance **children;
     ReactInstance *parent;
 };
-
-// Minimal column layout for scroll containers. Rect, button, text input and image children
-// participate in the flow: each is placed at the current flow position
-// (its own y acts as a top margin) and advances the flow by margin +
-// height + gap. Returns false for children that are not part of the flow.
-bool scroll_flow_step(const ReactInstance *child, int gap, int *flow_y, int *base_y_out);
-
-// Total stacked content height of a scroll container, including padding.
-int scroll_content_height(const ReactInstance *scroll);
 
 // Look up a scroll container in the front snapshot (thread-safe).
 // Returns false when id is not a scroll container.

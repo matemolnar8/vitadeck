@@ -56,8 +56,16 @@ static inline ReactInstance *fixture_scroll(ReactInstance *parent, const char *i
                                             int gap, int padding)
 {
     ReactInstance *inst = fixture_new(parent, NT_SCROLL, id);
-    inst->props.scroll =
-        (ScrollProps){.x = x, .y = y, .width = width, .height = height, .gap = gap, .padding = padding};
+    inst->props.stack = (StackProps){.x = x, .y = y, .width = width, .height = height, .gap = gap, .padding = padding};
+    return inst;
+}
+
+// A fit-content Stack at (x, y).
+static inline ReactInstance *fixture_stack(ReactInstance *parent, const char *id, int x, int y,
+                                           StackDirection direction, int gap)
+{
+    ReactInstance *inst = fixture_new(parent, NT_STACK, id);
+    inst->props.stack = (StackProps){.x = x, .y = y, .direction = direction, .gap = gap};
     return inst;
 }
 
