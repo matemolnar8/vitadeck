@@ -305,6 +305,8 @@ static void render_button_instance(ReactInstance *inst, RenderContext ctx)
     Color visual = b->color;
     if (pressed)
         visual = mix_color(visual, BLACK, 0.5f);
+    else if (b->has_focus_color && input_is_focused(inst->id))
+        visual = b->focus_color;
     else if (hovered)
         visual = mix_color(visual, WHITE, 0.4f);
 

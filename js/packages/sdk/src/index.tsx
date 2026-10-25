@@ -77,9 +77,13 @@ export function Image(props: ImageProps) {
 
 export type ButtonProps = Omit<VitaButtonProps, "key">;
 
-export function Button({ onPress, onPressStart, onPressEnd, ...props }: ButtonProps) {
-  return vitaHost("vita-button", { ...props, onPress, onPressStart, onPressEnd });
+export function Button(props: ButtonProps) {
+  return vitaHost("vita-button", props);
 }
+
+export { usePadButton } from "./pad-buttons";
+export type { PadButton, PadButtonHandlers } from "./pad-buttons";
+export type { FocusProps } from "./vitadeck-host-types";
 
 const runtimeColors = (globalThis as unknown as { Colors: ColorsMap }).Colors;
 export { runtimeColors as Colors, useTheme };

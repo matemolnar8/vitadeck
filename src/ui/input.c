@@ -1,7 +1,9 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <raylib.h>
+#include "input.h"
 #include "instance_tree.h"
 #include "focus_nav.h"
 #include "scroll.h"
@@ -61,21 +63,53 @@ static float scroll_friction_for_dt(float dt)
     return powf(SCROLL_TOUCH_FRICTION_60, dt * SCROLL_REF_FPS);
 }
 
-// Gamepad focus state
+// Focus state
 static char *focused_id = NULL;
 static char *gamepad_down_id = NULL;
 static bool prev_confirm_down = false;
 
-// Push an input event to the queue (called from UI thread)
+// Host Pad Button Mapping. Keep in sync with the Host mappings table in CONTEXT.md.
+static const struct {
+    const char *name;
+    int gamepad_button;
+    int key;
+} pad_buttons[PAD_BUTTON_COUNT] = {
+    [PAD_CIRCLE] = {"circle", GAMEPAD_BUTTON_RIGHT_FACE_RIGHT, KEY_BACKSPACE},
+    [PAD_TRIANGLE] = {"triangle", GAMEPAD_BUTTON_RIGHT_FACE_UP, KEY_T},
+    [PAD_SQUARE] = {"square", GAMEPAD_BUTTON_RIGHT_FACE_LEFT, KEY_S},
+    [PAD_L] = {"l", GAMEPAD_BUTTON_LEFT_TRIGGER_1, KEY_L},
+    [PAD_R] = {"r", GAMEPAD_BUTTON_RIGHT_TRIGGER_1, KEY_R},
+};
+
+// A button held when the Shell hides or the runtime restarts is ignored until released, so the Circle
+// that closes the Shell does not reach the Deck App.
+typedef enum { PAD_STATE_UP, PAD_STATE_DOWN, PAD_STATE_IGNORED } PadState;
+static PadState pad_states[PAD_BUTTON_COUNT];
+static bool pad_ignore_held = false;
+
+static void push_event(EventType type, const char *id, const char *event)
+{
+    InputEvent evt = {.type = type};
+    snprintf(evt.id, sizeof(evt.id), "%s", id);
+    snprintf(evt.event_name, sizeof(evt.event_name), "%s", event);
+    event_queue_push(&evt);
+}
+
 static void push_input_event(const char *id, const char *event)
 {
-    InputEvent evt;
-    evt.type = EVT_INPUT;
-    strncpy(evt.id, id, sizeof(evt.id) - 1);
-    evt.id[sizeof(evt.id) - 1] = '\0';
-    strncpy(evt.event_name, event, sizeof(evt.event_name) - 1);
-    evt.event_name[sizeof(evt.event_name) - 1] = '\0';
-    event_queue_push(&evt);
+    push_event(EVT_INPUT, id, event);
+}
+
+static bool same_id(const char *a, const char *b)
+{
+    if (!a || !b) return a == b;
+    return strcmp(a, b) == 0;
+}
+
+static void replace_id(char **slot, const char *id)
+{
+    free(*slot);
+    *slot = id ? strdup(id) : NULL;
 }
 
 static int scroll_clamp_offset(const char *scroll_id, int offset)
@@ -167,103 +201,89 @@ static bool touch_finish_scroll_gesture(void)
     return true;
 }
 
+static void set_focus(const char *new_id)
+{
+    if (same_id(focused_id, new_id)) return;
+    if (focused_id) push_input_event(focused_id, "blur");
+    replace_id(&focused_id, new_id);
+    if (focused_id) push_input_event(focused_id, "focus");
+}
+
+static void clear_focus(void)
+{
+    set_focus(NULL);
+    replace_id(&gamepad_down_id, NULL);
+}
+
 void input_clear_focus(void)
 {
-    if (focused_id) {
-        push_input_event(focused_id, "mouseleave");
-        free(focused_id);
-        focused_id = NULL;
+    clear_focus();
+    for (int i = 0; i < PAD_BUTTON_COUNT; i++)
+        pad_states[i] = PAD_STATE_UP;
+    pad_ignore_held = true;
+}
+
+void input_ignore_held_pad_buttons(void)
+{
+    pad_ignore_held = true;
+}
+
+void input_apply_mouse(const MouseSample *s)
+{
+    const bool mouse_moved = s->x != prev_mouse_x || s->y != prev_mouse_y;
+    prev_mouse_x = s->x;
+    prev_mouse_y = s->y;
+
+    char top_id_buf[VD_INSTANCE_ID_MAX];
+    const char *top_id = instance_hit_test(s->x, s->y, top_id_buf) ? top_id_buf : NULL;
+    const bool top_is_button = top_id && instance_is_button(top_id);
+
+    if (hovered_id && !instance_exists(hovered_id)) replace_id(&hovered_id, NULL);
+
+    // Hovering a Button gives it Focus; leaving it for empty space keeps Focus.
+    if (mouse_moved && !same_id(hovered_id, top_id)) {
+        replace_id(&hovered_id, top_id);
+        if (top_is_button) set_focus(top_id);
     }
-    if (gamepad_down_id) {
-        free(gamepad_down_id);
-        gamepad_down_id = NULL;
+
+    const bool just_pressed = s->left_down && !prev_is_mouse_down;
+    const bool just_released = !s->left_down && prev_is_mouse_down;
+
+    if (just_pressed) {
+        if (top_is_button)
+            set_focus(top_id);
+        else
+            clear_focus();
+        if (top_id) {
+            replace_id(&mouse_down_id, top_id);
+            push_input_event(mouse_down_id, "pressstart");
+        }
     }
+
+    if (just_released && mouse_down_id) {
+        push_input_event(mouse_down_id, "pressend");
+        if (same_id(mouse_down_id, hovered_id)) push_input_event(mouse_down_id, "press");
+        replace_id(&mouse_down_id, NULL);
+    }
+
+    if (s->wheel != 0.0f) {
+        char scroll_id[VD_INSTANCE_ID_MAX];
+        if (instance_scroll_at(s->x, s->y, scroll_id))
+            scroll_apply_delta(scroll_id, -(int)(s->wheel * SCROLL_WHEEL_STEP));
+    }
+
+    prev_is_mouse_down = s->left_down;
 }
 
 void poll_mouse_input(void)
 {
-    const int x = GetMouseX();
-    const int y = GetMouseY();
-
-    // Track if mouse actually moved
-    const bool mouse_moved = (x != prev_mouse_x || y != prev_mouse_y);
-    prev_mouse_x = x;
-    prev_mouse_y = y;
-
-    char top_id_buf[VD_INSTANCE_ID_MAX];
-    const char *top_id = instance_hit_test(x, y, top_id_buf) ? top_id_buf : NULL;
-
-    if (hovered_id && !instance_exists(hovered_id)) {
-        free(hovered_id);
-        hovered_id = NULL;
-    }
-
-    // Mouse enter/leave (only process if mouse actually moved)
-    if (mouse_moved) {
-        bool hover_changed = false;
-        if ((hovered_id == NULL && top_id != NULL) ||
-            (hovered_id != NULL && (top_id == NULL || strcmp(hovered_id, top_id) != 0))) {
-            hover_changed = true;
-        }
-
-        if (hover_changed) {
-            input_clear_focus();
-            if (hovered_id) {
-                TraceLog(LOG_DEBUG, "mouseleave: %s", hovered_id);
-                push_input_event(hovered_id, "mouseleave");
-                free(hovered_id);
-                hovered_id = NULL;
-            }
-            if (top_id) {
-                hovered_id = strdup(top_id);
-                TraceLog(LOG_DEBUG, "mouseenter: %s", hovered_id);
-                push_input_event(hovered_id, "mouseenter");
-            }
-        }
-    }
-
-    const bool is_mouse_down = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
-    const bool just_pressed = is_mouse_down && !prev_is_mouse_down;
-    const bool just_released = !is_mouse_down && prev_is_mouse_down;
-
-    // Mouse down
-    if (just_pressed) {
-        input_clear_focus();
-        if (top_id) {
-            if (mouse_down_id) {
-                free(mouse_down_id);
-                mouse_down_id = NULL;
-            }
-            mouse_down_id = strdup(top_id);
-            TraceLog(LOG_DEBUG, "mousedown: %s", mouse_down_id);
-            push_input_event(mouse_down_id, "mousedown");
-        }
-    }
-
-    // Mouse up and click
-    if (just_released) {
-        if (mouse_down_id) {
-            TraceLog(LOG_DEBUG, "mouseup: %s", mouse_down_id);
-            push_input_event(mouse_down_id, "mouseup");
-
-            if (hovered_id && strcmp(mouse_down_id, hovered_id) == 0) {
-                TraceLog(LOG_DEBUG, "click: %s", mouse_down_id);
-                push_input_event(mouse_down_id, "click");
-            }
-
-            free(mouse_down_id);
-            mouse_down_id = NULL;
-        }
-    }
-
-    // Mouse wheel scrolls the scroll container under the cursor
-    const float wheel = GetMouseWheelMove();
-    if (wheel != 0.0f) {
-        char scroll_id[VD_INSTANCE_ID_MAX];
-        if (instance_scroll_at(x, y, scroll_id)) scroll_apply_delta(scroll_id, -(int)(wheel * SCROLL_WHEEL_STEP));
-    }
-
-    prev_is_mouse_down = is_mouse_down;
+    const MouseSample sample = {
+        .x = GetMouseX(),
+        .y = GetMouseY(),
+        .left_down = IsMouseButtonDown(MOUSE_BUTTON_LEFT),
+        .wheel = GetMouseWheelMove(),
+    };
+    input_apply_mouse(&sample);
 }
 
 void poll_touch_input(void)
@@ -291,7 +311,7 @@ void poll_touch_input(void)
         touch_hovered_id = NULL;
     }
 
-    // Hover enter/leave while finger is down (suppressed during active scroll drag)
+    // Hover visual while the finger is down (suppressed during active scroll drag)
     if (is_down && !touch_gesture_scrolling) {
         bool hover_changed = false;
         if ((touch_hovered_id == NULL && top_id != NULL) ||
@@ -299,17 +319,7 @@ void poll_touch_input(void)
             hover_changed = true;
         }
 
-        if (hover_changed) {
-            if (touch_hovered_id) {
-                push_input_event(touch_hovered_id, "mouseleave");
-                free(touch_hovered_id);
-                touch_hovered_id = NULL;
-            }
-            if (top_id) {
-                touch_hovered_id = strdup(top_id);
-                push_input_event(touch_hovered_id, "mouseenter");
-            }
-        }
+        if (hover_changed) replace_id(&touch_hovered_id, top_id);
     }
 
     const bool just_pressed = is_down && !prev_touch_down;
@@ -332,16 +342,10 @@ void poll_touch_input(void)
             touch_pending_press = false;
         }
 
-        input_clear_focus();
+        clear_focus();
         if (top_id) {
-            if (touch_down_id) {
-                free(touch_down_id);
-                touch_down_id = NULL;
-            }
-            touch_down_id = strdup(top_id);
-            if (!touch_scroll_viewport) {
-                push_input_event(touch_down_id, "mousedown");
-            }
+            replace_id(&touch_down_id, top_id);
+            if (!touch_scroll_viewport) push_input_event(touch_down_id, "pressstart");
         }
     }
 
@@ -352,16 +356,8 @@ void poll_touch_input(void)
             touch_gesture_scrolling = true;
             touch_pending_press = false;
 
-            if (touch_down_id) {
-                free(touch_down_id);
-                touch_down_id = NULL;
-            }
-
-            if (touch_hovered_id) {
-                push_input_event(touch_hovered_id, "mouseleave");
-                free(touch_hovered_id);
-                touch_hovered_id = NULL;
-            }
+            replace_id(&touch_down_id, NULL);
+            replace_id(&touch_hovered_id, NULL);
         }
 
         if (touch_gesture_scrolling) {
@@ -387,29 +383,13 @@ void poll_touch_input(void)
     if (just_released) {
         if (touch_finish_scroll_gesture()) {
         } else if (touch_down_id) {
-            if (touch_pending_press) {
-                push_input_event(touch_down_id, "mousedown");
-            }
-
-            push_input_event(touch_down_id, "mouseup");
-
-            if (touch_hovered_id && strcmp(touch_down_id, touch_hovered_id) == 0) {
-                push_input_event(touch_down_id, "click");
-            }
+            if (touch_pending_press) push_input_event(touch_down_id, "pressstart");
+            push_input_event(touch_down_id, "pressend");
+            if (same_id(touch_down_id, touch_hovered_id)) push_input_event(touch_down_id, "press");
         }
 
-        if (touch_hovered_id) {
-            push_input_event(touch_hovered_id, "mouseleave");
-        }
-
-        if (touch_down_id) {
-            free(touch_down_id);
-            touch_down_id = NULL;
-        }
-        if (touch_hovered_id) {
-            free(touch_hovered_id);
-            touch_hovered_id = NULL;
-        }
+        replace_id(&touch_down_id, NULL);
+        replace_id(&touch_hovered_id, NULL);
 
         touch_reset_gesture();
     }
@@ -419,20 +399,6 @@ void poll_touch_input(void)
     }
 
     prev_touch_down = is_down;
-}
-
-static void set_focus(const char *new_id)
-{
-    if (focused_id) {
-        if (new_id && strcmp(focused_id, new_id) == 0) return;
-        push_input_event(focused_id, "mouseleave");
-        free(focused_id);
-        focused_id = NULL;
-    }
-    if (new_id) {
-        focused_id = strdup(new_id);
-        push_input_event(focused_id, "mouseenter");
-    }
 }
 
 static char *find_nearest_focusable(NavDirection dir)
@@ -445,83 +411,96 @@ static char *find_nearest_focusable(NavDirection dir)
     return result;
 }
 
-void poll_gamepad_input(void)
+static void apply_pad_buttons(const bool held[PAD_BUTTON_COUNT])
 {
-    // Check if focused element still exists
-    if (focused_id && !instance_exists(focused_id)) {
-        free(focused_id);
-        focused_id = NULL;
+    for (int i = 0; i < PAD_BUTTON_COUNT; i++) {
+        if (pad_ignore_held && held[i] && pad_states[i] == PAD_STATE_UP) pad_states[i] = PAD_STATE_IGNORED;
     }
-    if (gamepad_down_id && !instance_exists(gamepad_down_id)) {
-        free(gamepad_down_id);
-        gamepad_down_id = NULL;
+    pad_ignore_held = false;
+
+    for (int i = 0; i < PAD_BUTTON_COUNT; i++) {
+        if (pad_states[i] == PAD_STATE_UP && held[i]) {
+            pad_states[i] = PAD_STATE_DOWN;
+            push_event(EVT_PAD_BUTTON, pad_buttons[i].name, "pressstart");
+        } else if (pad_states[i] == PAD_STATE_DOWN && !held[i]) {
+            pad_states[i] = PAD_STATE_UP;
+            push_event(EVT_PAD_BUTTON, pad_buttons[i].name, "pressend");
+        } else if (pad_states[i] == PAD_STATE_IGNORED && !held[i]) {
+            pad_states[i] = PAD_STATE_UP;
+        }
     }
+}
 
-    // Read d-pad input (gamepad or keyboard)
-    bool up = false, down = false, left = false, right = false;
-    bool confirm_down = false;
-    float stick_y = 0.0f;
+void input_apply_gamepad(const GamepadSample *s)
+{
+    if (focused_id && !instance_exists(focused_id)) replace_id(&focused_id, NULL);
+    if (gamepad_down_id && !instance_exists(gamepad_down_id)) replace_id(&gamepad_down_id, NULL);
 
-    if (IsGamepadAvailable(0)) {
-        up = IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_UP);
-        down = IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_DOWN);
-        left = IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_LEFT);
-        right = IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_RIGHT);
-        confirm_down = IsGamepadButtonDown(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
-        stick_y = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_Y);
-    }
-
-    // Keyboard fallback
-    up = up || IsKeyPressed(KEY_UP);
-    down = down || IsKeyPressed(KEY_DOWN);
-    left = left || IsKeyPressed(KEY_LEFT);
-    right = right || IsKeyPressed(KEY_RIGHT);
-    confirm_down = confirm_down || IsKeyDown(KEY_ENTER);
+    char requested_id[VD_INSTANCE_ID_MAX];
+    if (instance_take_focus_request(requested_id) && instance_exists(requested_id)) set_focus(requested_id);
 
     int viewport_h = 0, content_h = 0;
     char scroll_id[VD_INSTANCE_ID_MAX];
-    if (focused_id && instance_scroll_for_descendant(focused_id, scroll_id) &&
+    if (fabsf(s->stick_y) > SCROLL_ANALOG_DEADZONE && focused_id &&
+        instance_scroll_for_descendant(focused_id, scroll_id) &&
         instance_scroll_metrics(scroll_id, &viewport_h, &content_h)) {
-        const float dt = input_frame_dt();
-        if (fabsf(stick_y) > SCROLL_ANALOG_DEADZONE) {
-            const float delta = stick_y * SCROLL_ANALOG_SPEED_PX_PER_S * dt;
-            scroll_apply_delta(scroll_id, (int)roundf(delta));
-        }
+        const float delta = s->stick_y * SCROLL_ANALOG_SPEED_PX_PER_S * s->dt;
+        scroll_apply_delta(scroll_id, (int)roundf(delta));
     }
 
-    // Navigation
-    if (up || down || left || right) {
-        NavDirection dir = up ? NAV_UP : down ? NAV_DOWN : left ? NAV_LEFT : NAV_RIGHT;
+    if (s->up || s->down || s->left || s->right) {
+        NavDirection dir = s->up ? NAV_UP : s->down ? NAV_DOWN : s->left ? NAV_LEFT : NAV_RIGHT;
         char *next_id = find_nearest_focusable(dir);
-        if (next_id) {
-            set_focus(next_id);
-            free(next_id);
-        }
+        if (next_id) set_focus(next_id);
+        free(next_id);
     }
 
-    // Activation (Cross/Enter)
-    bool just_pressed = confirm_down && !prev_confirm_down;
-    bool just_released = !confirm_down && prev_confirm_down;
+    const bool just_pressed = s->confirm && !prev_confirm_down;
+    const bool just_released = !s->confirm && prev_confirm_down;
 
     if (just_pressed && focused_id) {
-        if (gamepad_down_id) {
-            free(gamepad_down_id);
-            gamepad_down_id = NULL;
-        }
-        gamepad_down_id = strdup(focused_id);
-        push_input_event(gamepad_down_id, "mousedown");
+        replace_id(&gamepad_down_id, focused_id);
+        push_input_event(gamepad_down_id, "pressstart");
     }
 
     if (just_released && gamepad_down_id) {
-        push_input_event(gamepad_down_id, "mouseup");
-        if (focused_id && strcmp(gamepad_down_id, focused_id) == 0) {
-            push_input_event(gamepad_down_id, "click");
-        }
-        free(gamepad_down_id);
-        gamepad_down_id = NULL;
+        push_input_event(gamepad_down_id, "pressend");
+        if (same_id(gamepad_down_id, focused_id)) push_input_event(gamepad_down_id, "press");
+        replace_id(&gamepad_down_id, NULL);
     }
 
-    prev_confirm_down = confirm_down;
+    prev_confirm_down = s->confirm;
+
+    apply_pad_buttons(s->pad_buttons);
+}
+
+static bool gamepad_pressed(bool available, int button)
+{
+    return available && IsGamepadButtonPressed(0, button);
+}
+
+static bool gamepad_down(bool available, int button)
+{
+    return available && IsGamepadButtonDown(0, button);
+}
+
+void poll_gamepad_input(void)
+{
+    // D-pad moves Focus, Cross presses it; the host keys are listed in CONTEXT.md.
+    const bool pad = IsGamepadAvailable(0);
+    GamepadSample sample = {
+        .up = gamepad_pressed(pad, GAMEPAD_BUTTON_LEFT_FACE_UP) || IsKeyPressed(KEY_UP),
+        .down = gamepad_pressed(pad, GAMEPAD_BUTTON_LEFT_FACE_DOWN) || IsKeyPressed(KEY_DOWN),
+        .left = gamepad_pressed(pad, GAMEPAD_BUTTON_LEFT_FACE_LEFT) || IsKeyPressed(KEY_LEFT),
+        .right = gamepad_pressed(pad, GAMEPAD_BUTTON_LEFT_FACE_RIGHT) || IsKeyPressed(KEY_RIGHT),
+        .confirm = gamepad_down(pad, GAMEPAD_BUTTON_RIGHT_FACE_DOWN) || IsKeyDown(KEY_ENTER),
+        .stick_y = pad ? GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_Y) : 0.0f,
+        .dt = input_frame_dt(),
+    };
+    for (int i = 0; i < PAD_BUTTON_COUNT; i++) {
+        sample.pad_buttons[i] = gamepad_down(pad, pad_buttons[i].gamepad_button) || IsKeyDown(pad_buttons[i].key);
+    }
+    input_apply_gamepad(&sample);
 }
 
 bool input_is_hovered(const char *id)

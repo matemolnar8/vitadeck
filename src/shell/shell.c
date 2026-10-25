@@ -5,6 +5,7 @@
 #include <string.h>
 #include "core/bootstrap.h"
 #include "core/package_library.h"
+#include "ui/input.h"
 
 #define SHELL_INSET 24
 #define SHELL_PADDING (SHELL_INSET + 8)
@@ -182,6 +183,7 @@ static void hide_shell_to_deck(VdShell *shell)
 {
     shell->state = VD_SHELL_HIDDEN;
     clear_remove_confirm(shell);
+    input_ignore_held_pad_buttons();
 }
 
 static void activate_package(VdShell *shell, const char *package_name, bool *request_runtime_restart)

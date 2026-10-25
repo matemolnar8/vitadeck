@@ -62,6 +62,11 @@ declare global {
     textColorG: number,
     textColorB: number,
     textColorA: number,
+    hasFocusColor: boolean,
+    focusColorR: number,
+    focusColorG: number,
+    focusColorB: number,
+    focusColorA: number,
   ): void;
 
   function nativeCreateScroll(
@@ -142,6 +147,11 @@ declare global {
     textColorG: number,
     textColorB: number,
     textColorA: number,
+    hasFocusColor: boolean,
+    focusColorR: number,
+    focusColorG: number,
+    focusColorB: number,
+    focusColorA: number,
   ): void;
 
   function nativeUpdateScroll(
@@ -162,6 +172,8 @@ declare global {
   function nativeUpdateImage(id: string, imageName: string, x: number, y: number, width: number, height: number): void;
 
   function nativeUpdateRawText(id: string, text: string): void;
+
+  function nativeRequestFocus(id: string): void;
 
   function nativeClearContainer(): void;
 

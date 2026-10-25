@@ -74,8 +74,47 @@ static void upload_once(VdUploadServer *server, const char *request, char *respo
         response[0] = '\0';
         return;
     }
+    shutdown(client.client_fd, SHUT_WR);
     handle_upload(&client.arg, NULL);
     client_finish(&client, response, response_size);
+}
+
+static void *run_handle_upload_and_close(void *raw)
+{
+    HandlerArg *arg = raw;
+    handle_upload(arg, NULL);
+    close(arg->fd);
+    return NULL;
+}
+
+// A client that keeps sending a body far bigger than the socket buffer after its upload is rejected: it can only
+// finish sending, and then read the JSON error, if the handler drains instead of closing on it.
+static bool rejected_upload_with_body(VdUploadServer *server, const char *headers, char *response,
+                                      size_t response_size)
+{
+    Client client;
+    if (!client_open(&client, server, headers)) return false;
+    vd_thread *thread = vd_thread_create(run_handle_upload_and_close, &client.arg);
+    if (!thread) return false;
+
+    static char body[1024 * 1024];
+    size_t sent = 0;
+    while (sent < sizeof(body)) {
+        ssize_t n = send(client.client_fd, body + sent, sizeof(body) - sent, VD_MSG_NOSIGNAL);
+        if (n <= 0) break;
+        sent += (size_t)n;
+    }
+    shutdown(client.client_fd, SHUT_WR);
+
+    size_t used = 0;
+    ssize_t n;
+    while (used + 1 < response_size && (n = recv(client.client_fd, response + used, response_size - used - 1, 0)) > 0)
+        used += (size_t)n;
+    response[used] = '\0';
+    vd_thread_join(thread);
+    vd_thread_destroy(thread);
+    close(client.client_fd);
+    return sent == sizeof(body);
 }
 
 static void test_second_upload_is_rejected(VdUploadServer *server)
@@ -104,6 +143,13 @@ static void test_second_upload_is_rejected(VdUploadServer *server)
     expect(!staged_archive_exists(), "the rejected upload writes nothing to staging");
     expect(is_ingesting(server), "the rejected upload leaves the first upload's lock in place");
 
+    char body_headers[256];
+    snprintf(body_headers, sizeof(body_headers),
+             "POST /upload HTTP/1.1\r\nContent-Type: application/zip\r\nContent-Length: %d\r\n\r\n", 1024 * 1024);
+    expect(rejected_upload_with_body(server, body_headers, response, sizeof(response)),
+           "a rejected upload can finish sending its body");
+    expect(strstr(response, "\"code\":\"upload_in_progress\"") != NULL, "a 409 after a body still reaches the client");
+
     send(first.client_fd, "junk", 4, 0);
     vd_thread_join(thread);
     vd_thread_destroy(thread);
@@ -131,6 +177,15 @@ static void test_lock_released_on_every_exit(VdUploadServer *server)
     expect(strstr(response, "HTTP/1.1 413 ") == response, "an oversized upload gets 413");
     expect(!is_ingesting(server), "an oversized upload releases the ingest lock");
 
+    expect(rejected_upload_with_body(server,
+                                     "POST /upload HTTP/1.1\r\n"
+                                     "Content-Type: application/zip\r\n"
+                                     "Content-Length: 99999999\r\n"
+                                     "\r\n",
+                                     response, sizeof(response)),
+           "an oversized upload can keep sending its body");
+    expect(strstr(response, "\"code\":\"upload_too_large\"") != NULL, "a 413 after a body still reaches the client");
+
     upload_once(server,
                 "POST /upload HTTP/1.1\r\n"
                 "Content-Type: text/plain\r\n"
@@ -140,6 +195,25 @@ static void test_lock_released_on_every_exit(VdUploadServer *server)
                 response, sizeof(response));
     expect(strstr(response, "HTTP/1.1 415 ") == response, "a wrong content type gets 415");
     expect(!is_ingesting(server), "a wrong content type releases the ingest lock");
+}
+
+// Writing a reply to a client that already hung up must fail the send, not raise SIGPIPE and kill the process.
+static void test_client_gone_before_reply(VdUploadServer *server)
+{
+    Client client;
+    if (!client_open(&client, server,
+                     "POST /upload HTTP/1.1\r\n"
+                     "Content-Type: text/plain\r\n"
+                     "Content-Length: 4\r\n"
+                     "\r\n"
+                     "junk")) {
+        expect(false, "could not open a socketpair client");
+        return;
+    }
+    close(client.client_fd);
+    handle_upload(&client.arg, NULL);
+    close(client.arg.fd);
+    expect(!is_ingesting(server), "a reply to a gone client releases the ingest lock");
 }
 
 int main(void)
@@ -155,6 +229,7 @@ int main(void)
     upload_server_init(&server);
     test_second_upload_is_rejected(&server);
     test_lock_released_on_every_exit(&server);
+    test_client_gone_before_reply(&server);
     vd_mutex_destroy(server.mutex);
     vd_remove_tree(root);
 

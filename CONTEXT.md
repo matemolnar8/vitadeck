@@ -105,7 +105,7 @@ Deleting a **Deck App Package** from the **Installed Deck App Library** using th
 _Avoid_: Uninstalling VitaDeck, clearing cache, revoking permissions
 
 **System Input**:
-A VitaDeck-reserved input that controls VitaDeck itself instead of the running **Deck App**.
+A VitaDeck-reserved input that controls VitaDeck itself instead of the running **Deck App**. The System Inputs are **Start Input** and Select, which is reserved and does nothing yet.
 _Avoid_: App shortcut, global hotkey, hidden button
 
 **Start Input**:
@@ -117,11 +117,15 @@ The desktop host keyboard key that maps to the Vita `Start` **System Input** (F1
 _Avoid_: Escape, window manager shortcuts, in-app hotkeys
 
 **Host Shell Confirm Mapping**:
-The desktop host keyboard key that maps to Cross confirm in **Shell Face Input** while the **VitaDeck Shell** has focus (Enter).
+The desktop host keyboard key that maps to Cross confirm in **Shell Face Input** while the **VitaDeck Shell** is open (Enter).
 _Avoid_: Mouse click, Deck App **Press**, text field submission in **Deck Apps**
 
+**Host Pad Button Mapping**:
+The desktop host keyboard keys that map to the **Pad Buttons** while a **Deck App** runs: Circle Backspace, Triangle T, Square S, L L, R R (see Host mappings).
+_Avoid_: Keybinding, hotkey, shortcut
+
 **Host Shell Back Mapping**:
-The desktop host keyboard key that maps to Circle back in **Shell Face Input** while the **VitaDeck Shell** has focus (Backspace).
+The desktop host keyboard key that maps to Circle back in **Shell Face Input** while the **VitaDeck Shell** is open (Backspace).
 _Avoid_: Browser back, undo typing in **Deck Apps**, delete file shortcuts
 
 **Runtime Upload Listener**:
@@ -169,7 +173,7 @@ Restarting the Deck App JavaScript runtime with a fresh context after **Runtime 
 _Avoid_: Hot reload, refresh, soft reload
 
 **Deck App Failure Screen**:
-The VitaDeck-painted screen that replaces the **Active Deck App** after it throws an uncaught error (during boot, render, effects, input handlers, or timers), showing the error message, the first lines of its stack, and that **Start Input** opens the **VitaDeck Shell**. A **Deck App Runtime Restart** clears it.
+The VitaDeck-painted screen that replaces the **Active Deck App** after it throws an uncaught error (during boot, render, effects, input handlers, or timers), showing the error message, the first lines of its stack, and that **Start Input** opens the **VitaDeck Shell**. A **Deck App Runtime Restart** clears it. A promise rejection that still has no handler once pending promise callbacks have run counts as an uncaught error, so a `fetch` chain without a `catch` fails the Deck App instead of failing silently.
 _Avoid_: Crash screen, red box, blank screen
 
 **Runtime Upload Archive**:
@@ -227,6 +231,14 @@ _Avoid_: Texture, sprite, bitmap widget
 **Press**:
 The VitaDeck input gesture used by public **Button** callbacks.
 _Avoid_: Click, mouse down, mouse up, hover
+
+**Focus**:
+The one **Deck App** control, if any, that the D-pad moves between and Cross presses. Only **Button** takes Focus today.
+_Avoid_: Selection, hover, highlight, active element
+
+**Pad Button**:
+A Vita button a **Deck App** listens to directly through `usePadButton`: Circle, Triangle, Square, L or R. The D-pad and Cross drive **Focus** instead, and Start and Select are **System Input**.
+_Avoid_: Hotkey, shortcut, raw button, gamepad event
 
 **Host Control**:
 The VitaDeck capability for a **Deck App** to ask a nearby computer on the LAN to run a typed command through the **Host Companion**.
@@ -311,6 +323,11 @@ _Avoid_: localStorage, save file, cache, settings
 - A **Deck App Component** explicitly renders **Screen**.
 - **Button** is the only public component that receives **Press** input. `Scroll` is the only public component that takes scroll input (touch drag, analog stick, mouse wheel); it does not receive **Press**.
 - **Button** exposes press-oriented callbacks: `onPress`, `onPressStart`, and `onPressEnd`.
+- **Button** exposes **Focus** callbacks `onFocus` and `onBlur`; `focusColor` fills it while it has **Focus**, and `autoFocus` gives it **Focus** on mount, the last mounted one winning.
+- At most one control has **Focus**. The D-pad moves it spatially and Cross presses it; a touch press presses directly and clears it.
+- On the desktop host, mouse hover moves **Focus** to the hovered **Button**, and a mouse press focuses the **Button** it presses, so focus styling can be tested without a gamepad. Moving the pointer to empty space keeps **Focus**.
+- **Pad Buttons** reach a **Deck App** only through `usePadButton` and only while the **VitaDeck Shell** is hidden; one held when the Shell hides is ignored until released.
+- Circle is a **Pad Button** in a **Deck App** and back in the **VitaDeck Shell**; on the desktop host both are Backspace.
 - **Runtime Upload** uses a **Runtime Upload Listener** on the Vita and on the desktop host.
 - The **Runtime Upload Listener** starts when the user confirms the **Shell Upload Entry** and runs until **Shell Upload Cancel** or VitaDeck exits, including while the shell is hidden.
 - The **Runtime Upload Listener** listens on all interfaces with default port **8787** and falls forward to following ports until one binds or **10** attempts fail; the **Runtime Upload URL** reflects the bound port when binding succeeds.
@@ -334,12 +351,13 @@ _Avoid_: localStorage, save file, cache, settings
 - **Runtime Upload** successful publishes are **durable**: they survive VitaDeck restarts until **Installed Deck App Removal**; only **Runtime Upload Staging** is temporary.
 - The **VitaDeck Shell** is opened through **System Input** rather than by a **Deck App**.
 - The **VitaDeck Shell** uses **Shell Face Input** conventions separate from **Deck App** **Press** semantics.
-- On the desktop host, **Host Shell Confirm Mapping** and **Host Shell Back Mapping** apply only while the **VitaDeck Shell** has focus.
+- On the desktop host, **Host Shell Confirm Mapping** and **Host Shell Back Mapping** apply only while the **VitaDeck Shell** is open.
 - On the desktop host, a connected gamepad's face buttons drive **Shell Face Input** alongside the keyboard mappings.
 - **Start Input** toggles between the **Deck App** and **VitaDeck Shell**; hiding the shell, by **Start Input** or back, requires an **Active Deck App**.
 - Neither **Start Input** nor back stops the **Runtime Upload Listener**; only **Shell Upload Cancel** does.
 - **Shell Upload Cancel** has no dedicated shortcut; it is the normal confirm on the **Shell Upload Entry**.
 - The Vita `Start` button is a **System Input** reserved for VitaDeck; on the desktop host it uses the **Host Start Mapping** (F1).
+- The Vita `Select` button is a **System Input** reserved for VitaDeck with no behavior and no host mapping yet; releasing it to **Deck Apps** later would not break them, while reserving it later would.
 - The **Shell Home Screen** lists **Deck App Package Version** from each installed **Deck App Package Manifest**, sorted by manifest **`name`** (case-insensitive), then **Deck App Package Name** when **`name`** ties.
 - **Runtime Upload** is offered from the **Shell Home Screen** as a primary action via **Shell Upload Entry**, not as a secondary or **Deck App**-hosted flow.
 - **Installed Deck App Removal** cannot target the **Active Deck App**.
@@ -350,6 +368,25 @@ _Avoid_: localStorage, save file, cache, settings
 - Each **Deck App Package Name** has its own **Deck App Storage**, limited to 1 MiB; a **Deck App** cannot read another's.
 - **Runtime Upload Replacement** keeps the package's **Deck App Storage**; **Installed Deck App Removal** deletes it.
 - **Deck App Storage** is the only filesystem a **Deck App** reaches; no **VitaDeck Runtime API** call takes a file path.
+
+## Host mappings
+
+Every Vita input has a desktop host equivalent, and a connected gamepad works alongside the keyboard. `src/ui/input.c` implements the **Deck App** column and `src/shell/shell.c` the Shell column; change them together with this table.
+
+| Vita | Desktop host | In a **Deck App** | In the **VitaDeck Shell** |
+| --- | --- | --- | --- |
+| D-pad | Arrow keys | Moves **Focus** | Moves between rows and actions |
+| Cross | Enter | Presses the **Button** with **Focus** | Confirm |
+| Circle | Backspace | **Pad Button** `circle` | Back |
+| Triangle | T | **Pad Button** `triangle` | |
+| Square | S | **Pad Button** `square` | |
+| L | L | **Pad Button** `l` | |
+| R | R | **Pad Button** `r` | |
+| Start | F1 | **Start Input**: opens the Shell | **Start Input**: hides the Shell |
+| Select | none | Reserved **System Input** | Reserved **System Input** |
+| Touch press | Mouse press | Presses the **Button** under it; touch clears **Focus**, the mouse focuses that **Button** | |
+| | Mouse hover | Moves **Focus** to the hovered **Button** | |
+| Touch drag, left stick | Mouse wheel | Scrolls a `Scroll`: drag and wheel the one under the pointer, the stick the one holding **Focus** | |
 
 ## Example dialogue
 
@@ -531,7 +568,7 @@ _Avoid_: localStorage, save file, cache, settings
 > **Domain expert:** "No — **Shell Face Input** uses Cross/Circle confirm/back conventions; **Deck Apps** keep **Press** language."
 >
 > **Dev:** "How should **Shell Face Input** work on the desktop host with only a keyboard?"
-> **Domain expert:** "Use **Host Shell Confirm Mapping** on Enter and **Host Shell Back Mapping** on Backspace while the Shell is focused; a connected gamepad's face buttons work too."
+> **Domain expert:** "Use **Host Shell Confirm Mapping** on Enter and **Host Shell Back Mapping** on Backspace while the Shell is open; a connected gamepad's face buttons work too."
 >
 > **Dev:** "Should **Runtime Upload** be a raw HTTP upload only?"
 > **Domain expert:** "No — serve a **Runtime Upload Web UI** at the **Runtime Upload URL** with a file picker and the browser-side success/failure result, backed by the same **Runtime Upload Listener**."
@@ -577,7 +614,9 @@ _Avoid_: localStorage, save file, cache, settings
 - "clickable rect" suggests visual primitives are interactive; resolved: **Press** goes through **Button**, and only `Scroll` takes scroll input.
 - "click" and "mouse" terms are implementation leakage; resolved: public input language is **Press**.
 - "confirm" could mean **Deck App** **Press** or **VitaDeck Shell** confirmation; resolved: **Shell Face Input** uses Cross/Circle conventions in the Shell, while **Deck Apps** use **Press**.
-- "Enter" could mean **Deck App** activation or **Shell Face Input** confirm; resolved: **Host Shell Confirm Mapping** applies only while the **VitaDeck Shell** has focus.
+- "Enter" could mean **Deck App** activation or **Shell Face Input** confirm; resolved: **Host Shell Confirm Mapping** applies only while the **VitaDeck Shell** is open; in a **Deck App** Enter is Cross and presses the **Button** with **Focus**.
+- "focus" could mean the Shell's highlighted row or the **Deck App** control Cross presses; resolved: **Focus** is the **Deck App** term, and the Shell keeps **Shell Face Input** language.
+- "Backspace" could mean Shell back or a **Deck App** input; resolved: it is Circle, so back while the **VitaDeck Shell** is open and the `circle` **Pad Button** while a **Deck App** runs.
 - "Surface" and "viewport" were considered for the root display component; resolved: the public component is **Screen**.
 - "render function" suggests author-controlled bootstrapping; resolved: authors export a **Deck App Component** and VitaDeck bootstraps it.
 - "entry" can mean author source or generated package code; resolved: **Deck App Source Entry** is authored, **Deck App Package Entry** is generated.

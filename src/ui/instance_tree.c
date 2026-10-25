@@ -31,6 +31,11 @@ static InstanceSnapshot *front_snapshot = NULL;
 // Mutex to protect front_snapshot access during swap
 static vd_mutex *snapshot_mutex = NULL;
 
+// autoFocus requests travel with the snapshot so the UI thread sees them once the instance is in the front tree.
+// The back request is JS-thread only; the front request is guarded by snapshot_mutex. "" means none.
+static char back_focus_request[VD_INSTANCE_ID_MAX] = "";
+static char front_focus_request[VD_INSTANCE_ID_MAX] = "";
+
 // Free an instance (shallow, does not free children)
 void instance_back_free(ReactInstance *inst)
 {
@@ -237,6 +242,10 @@ bool instance_tree_swap(void)
     vd_mutex_lock(snapshot_mutex);
     old_snap = front_snapshot;
     front_snapshot = new_snap;
+    if (back_focus_request[0] != '\0') {
+        memcpy(front_focus_request, back_focus_request, sizeof(front_focus_request));
+        back_focus_request[0] = '\0';
+    }
     vd_mutex_unlock(snapshot_mutex);
 
     // Free old snapshot (outside lock, safe because UI no longer references it)
@@ -255,11 +264,13 @@ void instance_tree_clear(void)
     shfree(back_registry);
     back_registry = NULL;
     back_dirty = false;
+    back_focus_request[0] = '\0';
 
     InstanceSnapshot *old_snap = NULL;
     vd_mutex_lock(snapshot_mutex);
     old_snap = front_snapshot;
     front_snapshot = NULL;
+    front_focus_request[0] = '\0';
     vd_mutex_unlock(snapshot_mutex);
     free_snapshot(old_snap);
 }
@@ -295,6 +306,34 @@ bool instance_exists(const char *id)
     bool exists = front_snapshot && find_front_instance_unlocked(front_snapshot, id) != NULL;
     vd_mutex_unlock(snapshot_mutex);
     return exists;
+}
+
+bool instance_is_button(const char *id)
+{
+    if (!id) return false;
+    vd_mutex_lock(snapshot_mutex);
+    ReactInstance *inst = find_front_instance_unlocked(front_snapshot, id);
+    bool is_button = inst && inst->type == NT_BUTTON;
+    vd_mutex_unlock(snapshot_mutex);
+    return is_button;
+}
+
+void instance_back_request_focus(const char *id)
+{
+    snprintf(back_focus_request, sizeof(back_focus_request), "%s", id);
+    back_dirty = true;
+}
+
+bool instance_take_focus_request(char out_id[VD_INSTANCE_ID_MAX])
+{
+    vd_mutex_lock(snapshot_mutex);
+    bool requested = front_focus_request[0] != '\0';
+    if (requested) {
+        memcpy(out_id, front_focus_request, VD_INSTANCE_ID_MAX);
+        front_focus_request[0] = '\0';
+    }
+    vd_mutex_unlock(snapshot_mutex);
+    return requested;
 }
 
 // Hit testing

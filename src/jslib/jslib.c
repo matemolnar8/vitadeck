@@ -34,14 +34,15 @@ static JSValue js_native_eval_active_deck_app_entry(JSContext *ctx, JSValueConst
     return result;
 }
 
-static void call_input_event_from_native(JSContext *ctx, const char *id, const char *event)
+// Calls vitadeck.input[fn_name](a, b), the runtime's entry points for native input.
+static void call_runtime_input(JSContext *ctx, const char *fn_name, const char *a, const char *b)
 {
     JSValue global = JS_GetGlobalObject(ctx);
     JSValue vitadeck = JS_GetPropertyStr(ctx, global, "vitadeck");
     JSValue input = JS_GetPropertyStr(ctx, vitadeck, "input");
-    JSValue fn = JS_GetPropertyStr(ctx, input, "onInputEventFromNative");
+    JSValue fn = JS_GetPropertyStr(ctx, input, fn_name);
 
-    JSValue args[2] = {JS_NewString(ctx, id), JS_NewString(ctx, event)};
+    JSValue args[2] = {JS_NewString(ctx, a), JS_NewString(ctx, b)};
 
     JSValue result = JS_Call(ctx, fn, input, 2, args);
 
@@ -61,10 +62,15 @@ bool process_input_events(JSContext *ctx)
     bool ran = false;
     InputEvent evt;
     while (event_queue_pop(&evt)) {
-        if (evt.type == EVT_INPUT) {
-            call_input_event_from_native(ctx, evt.id, evt.event_name);
-            ran = true;
+        switch (evt.type) {
+        case EVT_INPUT:
+            call_runtime_input(ctx, "onInputEventFromNative", evt.id, evt.event_name);
+            break;
+        case EVT_PAD_BUTTON:
+            call_runtime_input(ctx, "onPadButtonFromNative", evt.id, evt.event_name);
+            break;
         }
+        ran = true;
     }
     return ran;
 }

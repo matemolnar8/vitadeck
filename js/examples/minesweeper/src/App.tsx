@@ -1,4 +1,4 @@
-import { Button, Rect, Screen, Text, insetContent, storage, useTheme } from "@vitadeck/sdk";
+import { Button, Rect, Screen, Text, insetContent, storage, usePadButton, useTheme } from "@vitadeck/sdk";
 import React, { useRef, useState } from "react";
 
 type Cell = {
@@ -139,6 +139,7 @@ export default function MinesweeperDeckApp() {
   const pressTimerIdRef = useRef<number | null>(null);
   const longPressFiredRef = useRef(false);
   const pressedCellRef = useRef<{ r: number; c: number } | null>(null);
+  const [focusedCell, setFocusedCell] = useState<{ r: number; c: number } | null>(null);
 
   let totalFlags = 0;
   for (const row of grid) {
@@ -227,7 +228,19 @@ export default function MinesweeperDeckApp() {
     if (wasPressing && !longPressFiredRef.current) revealCell(r, c);
   };
 
-  const status = gameOver === "won" ? "You win!" : gameOver === "lost" ? "Boom!" : `Flags left: ${flagsLeft}`;
+  usePadButton("square", {
+    onPressStart: () => {
+      if (focusedCell) toggleFlag(focusedCell.r, focusedCell.c);
+    },
+  });
+  usePadButton("triangle", { onPressStart: reset });
+
+  const status =
+    gameOver === "won"
+      ? "You win!"
+      : gameOver === "lost"
+        ? "Boom!"
+        : `Flags left: ${flagsLeft}   Square: flag   Triangle: reset`;
   const headerText = `${status}   Wins: ${wins}`;
 
   return (
@@ -276,6 +289,14 @@ export default function MinesweeperDeckApp() {
                 color={fillColor}
                 textColor={textColor}
                 label={label}
+                focusColor={theme.accent}
+                autoFocus={r === 0 && c === 0}
+                onFocus={() => {
+                  setFocusedCell({ r, c });
+                }}
+                onBlur={() => {
+                  setFocusedCell((current) => (current?.r === r && current.c === c ? null : current));
+                }}
                 onPressStart={() => {
                   onCellPressStart(r, c);
                 }}
