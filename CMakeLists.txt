@@ -246,6 +246,16 @@ if(NOT DEFINED ENV{VITASDK})
     target_link_libraries(event_queue_harness pthread)
     add_test(NAME event_queue_harness COMMAND event_queue_harness)
 
+    add_executable(snapshot_swap_harness
+      tests/snapshot_swap_harness.c
+      src/ui/instance_tree.c
+      src/ui/scroll.c
+      src/core/arena.c
+      ${PLATFORM_SOURCES}
+    )
+    target_link_libraries(snapshot_swap_harness m pthread)
+    add_test(NAME snapshot_swap_harness COMMAND snapshot_swap_harness)
+
     # The native app without main.c, the shell and Runtime Upload, for harnesses that drive the real JS thread.
     set(HOST_RUNTIME_SOURCES
       src/core/arena.c
