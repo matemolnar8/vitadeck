@@ -69,7 +69,7 @@ static char *focused_id = NULL;
 static char *gamepad_down_id = NULL;
 static bool prev_confirm_down = false;
 
-// Host Pad Button Mapping. Keep in sync with the Host mappings table in CONTEXT.md.
+// Keep in sync with the Host mappings table in CONTEXT.md.
 static const struct {
     const char *name;
     int gamepad_button;
