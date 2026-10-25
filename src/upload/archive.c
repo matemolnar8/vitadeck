@@ -29,10 +29,8 @@ static bool read_file(Arena *arena, const char *path, unsigned char **out_data, 
 {
     FILE *f = fopen(path, "rb");
     if (!f) return false;
-    fseek(f, 0, SEEK_END);
-    long len = ftell(f);
-    rewind(f);
-    if (len < 0 || len > VD_UPLOAD_MAX_BYTES) {
+    long len = fseek(f, 0, SEEK_END) == 0 ? ftell(f) : -1;
+    if (len < 0 || len > VD_UPLOAD_MAX_BYTES || fseek(f, 0, SEEK_SET) != 0) {
         fclose(f);
         return false;
     }

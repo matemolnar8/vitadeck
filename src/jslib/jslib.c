@@ -1,6 +1,7 @@
 #include "jslib_internal.h"
 #include "core/event_queue.h"
 #include "core/package_library.h"
+#include "core/util.h"
 
 static JSValue js_get_time(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
@@ -8,25 +9,6 @@ static JSValue js_get_time(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     (void)argc;
     (void)argv;
     return JS_NewFloat64(ctx, GetTime());
-}
-
-static char *jslib_read_file(const char *filename, size_t *out_len)
-{
-    FILE *f = fopen(filename, "rb");
-    if (!f) return NULL;
-    fseek(f, 0, SEEK_END);
-    long len = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    char *buf = malloc(len + 1);
-    if (!buf) {
-        fclose(f);
-        return NULL;
-    }
-    fread(buf, 1, len, f);
-    buf[len] = '\0';
-    fclose(f);
-    if (out_len) *out_len = len;
-    return buf;
 }
 
 static JSValue js_native_read_text_file(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -38,7 +20,7 @@ static JSValue js_native_read_text_file(JSContext *ctx, JSValueConst this_val, i
     if (!filename) return JS_EXCEPTION;
 
     size_t len = 0;
-    char *contents = jslib_read_file(filename, &len);
+    char *contents = vd_read_file(filename, &len);
     if (!contents) {
         JS_FreeCString(ctx, filename);
         return JS_ThrowReferenceError(ctx, "Could not read file");
@@ -59,7 +41,7 @@ static JSValue js_native_eval_file(JSContext *ctx, JSValueConst this_val, int ar
     if (!filename) return JS_EXCEPTION;
 
     size_t len = 0;
-    char *code = jslib_read_file(filename, &len);
+    char *code = vd_read_file(filename, &len);
     if (!code) {
         JS_FreeCString(ctx, filename);
         return JS_ThrowReferenceError(ctx, "Could not read file");

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include "quickjs.h"
 #include "core/event_queue.h"
+#include "core/util.h"
 #include "jslib/jslib.h"
 #include "platform/thread.h"
 #include "ui/input.h"
@@ -41,25 +42,6 @@ static void drain_microtasks(JSRuntime *rt)
     }
 }
 
-static char *read_file(const char *filename, size_t *out_len)
-{
-    FILE *f = fopen(filename, "rb");
-    if (!f) return NULL;
-    fseek(f, 0, SEEK_END);
-    long len = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    char *buf = malloc((size_t)len + 1);
-    if (!buf) {
-        fclose(f);
-        return NULL;
-    }
-    fread(buf, 1, (size_t)len, f);
-    buf[len] = '\0';
-    fclose(f);
-    if (out_len) *out_len = (size_t)len;
-    return buf;
-}
-
 static void *js_thread_func(void *arg)
 {
     VdJsRuntime *runtime = arg;
@@ -85,7 +67,7 @@ static void *js_thread_func(void *arg)
     register_js_lib(ctx);
 
     size_t len = 0;
-    char *code = read_file("js/runtime.js", &len);
+    char *code = vd_read_file("js/runtime.js", &len);
     if (!code) {
         TraceLog(LOG_ERROR, "Could not load runtime.js.");
         js_runtime_fail(runtime, "Could not load runtime.js.", NULL);

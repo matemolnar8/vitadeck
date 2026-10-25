@@ -38,9 +38,9 @@ bool vd_is_dir(const char *path)
 bool vd_mkdir_p(const char *path)
 {
     char tmp[VD_PATH_MAX];
-    snprintf(tmp, sizeof(tmp), "%s", path);
-    size_t len = strlen(tmp);
-    if (len == 0) return false;
+    size_t len = strlen(path);
+    if (len == 0 || len >= sizeof(tmp)) return false;
+    memcpy(tmp, path, len + 1);
     if (tmp[len - 1] == '/') tmp[len - 1] = '\0';
 
     for (char *p = tmp + 1; *p; p++) {
@@ -55,7 +55,9 @@ bool vd_mkdir_p(const char *path)
 bool vd_mkdir_parent(const char *path)
 {
     char parent[VD_PATH_MAX];
-    snprintf(parent, sizeof(parent), "%s", path);
+    size_t len = strlen(path);
+    if (len >= sizeof(parent)) return false;
+    memcpy(parent, path, len + 1);
     char *slash = strrchr(parent, '/');
     if (!slash) return true;
     *slash = '\0';
@@ -86,24 +88,23 @@ char *vd_read_file(const char *path, size_t *out_len)
 {
     FILE *f = fopen(path, "rb");
     if (!f) return NULL;
-    if (fseek(f, 0, SEEK_END) != 0) {
+    long len = fseek(f, 0, SEEK_END) == 0 ? ftell(f) : -1;
+    if (len < 0 || fseek(f, 0, SEEK_SET) != 0) {
         fclose(f);
         return NULL;
     }
-    long len = ftell(f);
-    if (len < 0) {
-        fclose(f);
-        return NULL;
-    }
-    rewind(f);
     char *buffer = malloc((size_t)len + 1);
     if (!buffer) {
         fclose(f);
         return NULL;
     }
     size_t read_len = fread(buffer, 1, (size_t)len, f);
-    buffer[read_len] = '\0';
     fclose(f);
+    if (read_len != (size_t)len) {
+        free(buffer);
+        return NULL;
+    }
+    buffer[len] = '\0';
     if (out_len) *out_len = read_len;
     return buffer;
 }
