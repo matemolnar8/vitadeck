@@ -322,7 +322,7 @@ static bool rasterise_emoji(const VdGlyphFont *font, int size, const unsigned ch
     return true;
 }
 
-bool glyph_cache_get_emoji(const VdGlyphFont *font, int size, const VdEmojiSequence *sequence, VdGlyph *glyph)
+static bool find_emoji(const VdGlyphFont *font, int size, const VdEmojiSequence *sequence, VdGlyph *glyph)
 {
     for (int length = sequence->length; length > 0; length--) {
         if (sequence->codepoints[length - 1] == ZWJ) continue;
@@ -363,6 +363,20 @@ bool glyph_cache_get_emoji(const VdGlyphFont *font, int size, const VdEmojiSeque
         return true;
     }
     return false;
+}
+
+static bool has_glyph(const VdGlyphFont *font, uint32_t codepoint)
+{
+    if (stbtt_FindGlyphIndex(&font->info, (int)codepoint) != 0) return true;
+    return g_fallback && stbtt_FindGlyphIndex(&g_fallback->info, (int)codepoint) != 0;
+}
+
+VdGlyph glyph_cache_get_emoji(const VdGlyphFont *font, int size, const VdEmojiSequence *sequence)
+{
+    VdGlyph glyph;
+    if (find_emoji(font, size, sequence, &glyph)) return glyph;
+    uint32_t first = sequence->codepoints[0];
+    return glyph_cache_get(font, size, has_glyph(font, first) ? first : VD_EMOJI_FALLBACK);
 }
 
 void glyph_cache_begin_frame(void)

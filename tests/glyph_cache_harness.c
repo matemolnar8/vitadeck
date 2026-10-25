@@ -283,9 +283,8 @@ static void test_emoji(const VdGlyphFont *full)
     const int size = 24;
 
     VdEmojiSequence controller = cluster_of("\xf0\x9f\x8e\xae");
-    VdGlyph emoji = {0};
-    expect(glyph_cache_get_emoji(full, size, &controller, &emoji), "an emoji with an image resolves");
-    expect(emoji.color && emoji.page == 0, "an emoji is a colour glyph in an atlas page");
+    VdGlyph emoji = glyph_cache_get_emoji(full, size, &controller);
+    expect(emoji.color && emoji.page == 0, "an emoji with an image is a colour glyph in an atlas page");
     expect(emoji.width == size && emoji.height == size && emoji.advance == (float)size,
            "an emoji is a Font Size square");
     expect(emoji.offset_y == -(int)roundf(glyph_font_metrics(full, size).ascent), "an emoji sits at the ascent");
@@ -302,40 +301,85 @@ static void test_emoji(const VdGlyphFont *full)
     }
 
     int loads = emoji_loads;
-    VdGlyph again = {0};
-    glyph_cache_get_emoji(full, size, &controller, &again);
+    VdGlyph again = glyph_cache_get_emoji(full, size, &controller);
     expect(same_glyph(emoji, again) && emoji_loads == loads, "a cached emoji does not load again");
-    VdGlyph large = {0};
-    glyph_cache_get_emoji(full, size * 2, &controller, &large);
+    VdGlyph large = glyph_cache_get_emoji(full, size * 2, &controller);
     expect(large.width == size * 2 && !same_glyph(emoji, large), "another size is another emoji");
 
     VdEmojiSequence heart = cluster_of("\xe2\x9d\xa4\xef\xb8\x8f");
-    VdGlyph red_heart = {0};
-    expect(glyph_cache_get_emoji(full, size, &heart, &red_heart) && red_heart.color,
-           "a symbol with U+FE0F resolves to its emoji image");
+    expect(glyph_cache_get_emoji(full, size, &heart).color, "a symbol with U+FE0F resolves to its emoji image");
 
     VdEmojiSequence family = cluster_of("\xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x91\xa7");
     VdEmojiSequence man = cluster_of("\xf0\x9f\x91\xa8");
-    VdGlyph from_family = {0}, from_man = {0};
     loads = emoji_loads;
-    expect(glyph_cache_get_emoji(full, size, &family, &from_family), "a ZWJ sequence without an image resolves");
+    VdGlyph from_family = glyph_cache_get_emoji(full, size, &family);
+    expect(from_family.color, "a ZWJ sequence without an image resolves");
     expect(emoji_loads - loads == 3 && emoji_last_length == 1,
            "a ZWJ sequence tries itself and each shorter prefix that ends on an emoji");
-    glyph_cache_get_emoji(full, size, &man, &from_man);
-    expect(same_glyph(from_family, from_man), "a ZWJ sequence without an image draws as its first emoji");
+    expect(same_glyph(from_family, glyph_cache_get_emoji(full, size, &man)), "a ZWJ sequence without an image draws as its first emoji");
 
     VdEmojiSequence missing = cluster_of("\xf0\x9f\x99\x82");
-    VdGlyph none = {0};
-    expect(!glyph_cache_get_emoji(full, size, &missing, &none), "an emoji without an image does not resolve");
+    VdGlyph fallback = glyph_cache_get(full, size, VD_EMOJI_FALLBACK);
+    expect(same_glyph(glyph_cache_get_emoji(full, size, &missing), fallback),
+           "an emoji without an image no font has draws the fallback glyph");
     loads = emoji_loads;
-    expect(!glyph_cache_get_emoji(full, size, &missing, &none) && emoji_loads == loads,
+    expect(same_glyph(glyph_cache_get_emoji(full, size, &missing), fallback) && emoji_loads == loads,
            "a missing image is remembered");
+    VdEmojiSequence keycap = cluster_of("1\xef\xb8\x8f\xe2\x83\xa3");
+    expect(same_glyph(glyph_cache_get_emoji(full, size, &keycap), glyph_cache_get(full, size, '1')),
+           "an emoji without an image draws its first codepoint when a font has it");
 
     glyph_cache_set_emoji_loader(NULL);
     glyph_cache_reset();
-    FILE *asset = fopen(VD_SOURCE_DIR "/assets/emoji/1f3ae.png", "rb");
-    expect(asset != NULL, "Twemoji images ship under assets/emoji, named without U+FE0F");
+#ifdef VD_TWEMOJI_DOWNLOADED
+    FILE *asset = fopen(VD_SOURCE_DIR "/assets/emoji/1f3f3-200d-1f308.png", "rb");
+    expect(asset != NULL, "the Twemoji download names images without U+FE0F");
     if (asset) fclose(asset);
+#endif
+}
+
+static int missing_loads = 0;
+
+static unsigned char *missing_emoji_loader(const VdEmojiSequence *sequence, int *width, int *height)
+{
+    (void)sequence;
+    (void)width;
+    (void)height;
+    missing_loads++;
+    return NULL;
+}
+
+// assets/emoji without images, as after a failed Twemoji download.
+static void test_emoji_without_assets(const VdGlyphFont *full)
+{
+    glyph_cache_reset();
+    glyph_cache_set_emoji_loader(missing_emoji_loader);
+    const int size = 24;
+    VdGlyph fallback = glyph_cache_get(full, size, VD_EMOJI_FALLBACK);
+    expect(fallback.page >= 0 && fallback.width > 0 && !fallback.color, "the fallback glyph is a font glyph");
+
+    const char *texts[] = {
+        "\xf0\x9f\x8e\xae",
+        "\xf0\x9f\x91\x8d\xf0\x9f\x8f\xbd",
+        "\xf0\x9f\x87\xad\xf0\x9f\x87\xba",
+        "\xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x91\xa7",
+    };
+    int first_frame_loads = 0;
+    for (int frame = 0; frame < 3; frame++) {
+        glyph_cache_begin_frame();
+        for (size_t i = 0; i < sizeof(texts) / sizeof(texts[0]); i++) {
+            VdEmojiSequence sequence = cluster_of(texts[i]);
+            expect(same_glyph(glyph_cache_get_emoji(full, size, &sequence), fallback),
+                   "an emoji cluster without its image draws one fallback glyph");
+        }
+        if (frame == 0) first_frame_loads = missing_loads;
+    }
+    expect(first_frame_loads > 0 && missing_loads == first_frame_loads, "missing images load once, not every frame");
+
+    VdEmojiSequence heart = cluster_of("\xe2\x9d\xa4\xef\xb8\x8f");
+    expect(same_glyph(glyph_cache_get_emoji(full, size, &heart), glyph_cache_get(full, size, 0x2764)),
+           "a symbol with U+FE0F and no image draws the font's symbol");
+    glyph_cache_set_emoji_loader(NULL);
 }
 
 static void test_pages(const VdGlyphFont *full)
@@ -393,6 +437,7 @@ int main(void)
         test_fallback_chain(full, ascii);
         test_hungarian(full);
         test_emoji(full);
+        test_emoji_without_assets(full);
         test_pages(full);
     }
 

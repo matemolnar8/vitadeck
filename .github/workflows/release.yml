@@ -1,0 +1,89 @@
+# Releases are cut by hand and nothing here creates tags: bump `version` in
+# js/packages/sdk/package.json in a PR, merge it, then push the matching tag
+# (`git tag 0.6.0 && git push origin 0.6.0`). See docs/releasing.md.
+name: Release
+
+on:
+  push:
+    tags: ["[0-9]+.[0-9]+.[0-9]+"]
+
+permissions: {}
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Tag matches SDK version
+        run: |
+          version="$(node -p 'require("./js/packages/sdk/package.json").version')"
+          if [[ "$GITHUB_REF_NAME" != "$version" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match js/packages/sdk/package.json version $version"
+            exit 1
+          fi
+
+  vpk:
+    needs: check-version
+    uses: ./.github/workflows/vita-build.yml
+    with:
+      version: ${{ github.ref_name }}
+    permissions:
+      contents: read
+      actions: write
+
+  publish:
+    needs: vpk
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: js/package.json
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+          cache: pnpm
+          cache-dependency-path: js/pnpm-lock.yaml
+
+      # Trusted Publishing needs npm 11.5.1 or later
+      - name: Update npm
+        run: npm install -g npm@latest
+
+      - name: Install JS dependencies
+        run: pnpm --dir js install --frozen-lockfile
+
+      - name: Build JS
+        run: pnpm --dir js build
+
+      # pnpm pack resolves `catalog:` versions; npm publish authenticates over OIDC
+      - name: Publish @vitadeck/sdk
+        working-directory: js/packages/sdk
+        run: |
+          pnpm pack --pack-destination "$RUNNER_TEMP/sdk"
+          npm publish "$RUNNER_TEMP"/sdk/*.tgz --provenance --access public
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: vitadeck-vpk-${{ github.sha }}
+          path: ${{ runner.temp }}/vpk
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags=()
+          if [[ "$GITHUB_REF_NAME" == 0.* ]]; then
+            flags+=(--prerelease)
+          fi
+          gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP/vpk/vitadeck.vpk" \
+            --verify-tag --generate-notes "${flags[@]}"

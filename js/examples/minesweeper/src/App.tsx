@@ -1,4 +1,4 @@
-import { Button, Rect, Screen, Text, insetContent, usePadButton, useTheme } from "@vitadeck/sdk";
+import { Button, Rect, Screen, Text, insetContent, storage, usePadButton, useTheme } from "@vitadeck/sdk";
 import React, { useRef, useState } from "react";
 
 type Cell = {
@@ -135,6 +135,7 @@ export default function MinesweeperDeckApp() {
   const [grid, setGrid] = useState<Grid>(() => makeEmptyGrid(gridSize.rows, gridSize.cols));
   const [minesPlaced, setMinesPlaced] = useState(false);
   const [gameOver, setGameOver] = useState<null | "lost" | "won">(null);
+  const [wins, setWins] = useState(() => Number(storage.getItem("wins") ?? 0));
   const pressTimerIdRef = useRef<number | null>(null);
   const longPressFiredRef = useRef(false);
   const pressedCellRef = useRef<{ r: number; c: number } | null>(null);
@@ -174,7 +175,11 @@ export default function MinesweeperDeckApp() {
         }
       }
     }
-    if (allSafeRevealed) setGameOver("won");
+    if (allSafeRevealed) {
+      setGameOver("won");
+      setWins(wins + 1);
+      storage.setItem("wins", String(wins + 1));
+    }
     setGrid(current);
   };
 
@@ -230,12 +235,13 @@ export default function MinesweeperDeckApp() {
   });
   usePadButton("triangle", { onPressStart: reset });
 
-  const headerText =
+  const status =
     gameOver === "won"
       ? "You win!"
       : gameOver === "lost"
         ? "Boom!"
         : `Flags left: ${flagsLeft}   Square: flag   Triangle: reset`;
+  const headerText = `${status}   Wins: ${wins}`;
 
   return (
     <Screen>

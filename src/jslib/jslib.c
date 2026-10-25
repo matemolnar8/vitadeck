@@ -1,6 +1,7 @@
 #include "jslib_internal.h"
 #include "core/event_queue.h"
 #include "core/package_library.h"
+#include "core/package_manifest.h"
 #include "core/util.h"
 
 static JSValue js_get_time(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -11,56 +12,26 @@ static JSValue js_get_time(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     return JS_NewFloat64(ctx, GetTime());
 }
 
-static JSValue js_native_read_text_file(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
-{
-    (void)this_val;
-    if (argc < 1) return JS_ThrowTypeError(ctx, "nativeReadTextFile requires a path");
-
-    const char *filename = JS_ToCString(ctx, argv[0]);
-    if (!filename) return JS_EXCEPTION;
-
-    size_t len = 0;
-    char *contents = vd_read_file(filename, &len);
-    if (!contents) {
-        JS_FreeCString(ctx, filename);
-        return JS_ThrowReferenceError(ctx, "Could not read file");
-    }
-
-    JSValue result = JS_NewStringLen(ctx, contents, len);
-    free(contents);
-    JS_FreeCString(ctx, filename);
-    return result;
-}
-
-static JSValue js_native_eval_file(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
-{
-    (void)this_val;
-    if (argc < 1) return JS_ThrowTypeError(ctx, "nativeEvalFile requires a path");
-
-    const char *filename = JS_ToCString(ctx, argv[0]);
-    if (!filename) return JS_EXCEPTION;
-
-    size_t len = 0;
-    char *code = vd_read_file(filename, &len);
-    if (!code) {
-        JS_FreeCString(ctx, filename);
-        return JS_ThrowReferenceError(ctx, "Could not read file");
-    }
-
-    JSValue result = JS_Eval(ctx, code, len, filename, JS_EVAL_TYPE_GLOBAL);
-    free(code);
-    JS_FreeCString(ctx, filename);
-    return result;
-}
-
-static JSValue js_native_get_active_deck_app_path(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+// Evaluates the Active Deck App's Package Entry; its manifest was validated before the runtime started.
+static JSValue js_native_eval_active_deck_app_entry(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
     (void)argc;
     (void)argv;
-    char path[VD_PATH_MAX];
-    package_library_active_package_path(path, sizeof(path));
-    return JS_NewString(ctx, path);
+    char package_path[VD_PATH_MAX];
+    char entry_path[VD_PATH_MAX];
+    package_library_active_package_path(package_path, sizeof(package_path));
+    if (package_path[0] == '\0' || !vd_join_path(entry_path, sizeof(entry_path), package_path, VD_PACKAGE_ENTRY)) {
+        return JS_ThrowReferenceError(ctx, "No Active Deck App");
+    }
+
+    size_t len = 0;
+    char *code = vd_read_file(entry_path, &len);
+    if (!code) return JS_ThrowReferenceError(ctx, "Could not read Deck App Package Entry");
+
+    JSValue result = JS_Eval(ctx, code, len, entry_path, JS_EVAL_TYPE_GLOBAL);
+    free(code);
+    return result;
 }
 
 // Calls vitadeck.input[fn_name](a, b), the runtime's entry points for native input.
@@ -116,9 +87,8 @@ void register_js_lib(JSContext *ctx)
     register_js_timeout(ctx);
     register_js_fetch(ctx);
     register_instance_tree(ctx);
+    register_js_storage(ctx);
 
     js_set_global_function(ctx, "getTime", js_get_time, 0);
-    js_set_global_function(ctx, "nativeReadTextFile", js_native_read_text_file, 1);
-    js_set_global_function(ctx, "nativeEvalFile", js_native_eval_file, 1);
-    js_set_global_function(ctx, "nativeGetActiveDeckAppPath", js_native_get_active_deck_app_path, 0);
+    js_set_global_function(ctx, "nativeEvalActiveDeckAppEntry", js_native_eval_active_deck_app_entry, 0);
 }

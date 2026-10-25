@@ -1,6 +1,8 @@
+import { watch } from "node:fs";
 import { access, copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import babel from "@rollup/plugin-babel";
 import { zipSync } from "fflate";
@@ -374,8 +376,9 @@ async function copyScaffoldDir(templateRoot: string, targetRoot: string, slug: s
 }
 
 type BuildOptions = { noZip?: boolean; dev?: boolean };
+type BuildOutput = { packageDir: string; archivePath?: string };
 
-async function build(projectRoot = process.cwd(), options: BuildOptions = {}): Promise<void> {
+async function build(projectRoot: string, options: BuildOptions = {}): Promise<BuildOutput> {
   const config = await readConfig(projectRoot);
   validateDisplayName(config.name, "vitadeck.config.json");
   await validateReact(projectRoot);
@@ -448,43 +451,261 @@ globalThis.vitadeckPackage.register(DeckApp);
   await writeFile(path.join(packageDir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
   await rm(generatedEntry, { force: true });
 
-  console.log(`Built ${path.relative(projectRoot, packageDir)}`);
-  if (!options.noZip) {
-    await writeRuntimeUploadArchive(packageDir, archivePath);
-    console.log(`Wrote ${path.relative(projectRoot, archivePath)}`);
+  if (options.noZip) return { packageDir };
+  await writeRuntimeUploadArchive(packageDir, archivePath);
+  return { packageDir, archivePath };
+}
+
+const DEFAULT_UPLOAD_PORT = "8787";
+const WATCH_QUIET_MS = 150;
+const BUSY_RETRY_MS = 500;
+const UPLOAD_TIMEOUT_MS = 30_000;
+const WATCH_IGNORED_DIRS = ["node_modules", ".vitadeck", ".git"];
+
+type UploadReply = { ok: true; packageName: string; version: string } | { ok: false; code: string; message: string };
+type UploadAttempt = { kind: "reply"; status: number; reply: UploadReply } | { kind: "busy" };
+
+function parseRuntimeUploadUrl(raw: string): URL {
+  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//iu.test(raw) ? raw : `http://${raw}`;
+  let url: URL;
+  try {
+    url = new URL(withScheme);
+  } catch (error) {
+    throw new Error(`Invalid Runtime Upload URL: ${raw}`, { cause: error });
+  }
+  if (url.protocol !== "http:") throw new Error(`Runtime Upload URL must use http://, got ${raw}`);
+  if (url.port === "") url.port = DEFAULT_UPLOAD_PORT;
+  return new URL("/upload", url);
+}
+
+function parseUploadReply(status: number, body: string): UploadReply {
+  try {
+    const json = requireObject(JSON.parse(body), "reply");
+    if (json.ok === true && typeof json.packageName === "string" && typeof json.version === "string") {
+      return { ok: true, packageName: json.packageName, version: json.version };
+    }
+    if (json.ok === false && typeof json.code === "string" && typeof json.message === "string") {
+      return { ok: false, code: json.code, message: json.message };
+    }
+  } catch {
+    // Not a Runtime Upload HTTP Contract reply; report the raw body below.
+  }
+  return { ok: false, code: "unexpected_reply", message: body.trim() || `HTTP ${status} with an empty body` };
+}
+
+function errorCode(error: unknown): string | undefined {
+  for (let current = error; current instanceof Error; current = current.cause) {
+    if ("code" in current && typeof current.code === "string") return current.code;
+    if (current instanceof AggregateError) return errorCode(current.errors[0]);
+  }
+  return undefined;
+}
+
+async function postArchive(uploadUrl: URL, archive: Uint8Array, signal: AbortSignal): Promise<UploadAttempt> {
+  let response: Response;
+  try {
+    response = await fetch(uploadUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/zip" },
+      body: archive,
+      signal: AbortSignal.any([signal, AbortSignal.timeout(UPLOAD_TIMEOUT_MS)]),
+    });
+  } catch (error) {
+    if (signal.aborted) throw error;
+    const code = errorCode(error);
+    if (code === "ECONNREFUSED") {
+      throw new Error(`Nothing is listening at ${uploadUrl.origin}. Open the VitaDeck Shell and confirm Upload.`, {
+        cause: error,
+      });
+    }
+    // The listener may close the socket on a rejected upload without reading the body (#79).
+    if (code === "ECONNRESET" || code === "EPIPE" || code === "UND_ERR_SOCKET") return { kind: "busy" };
+    if (error instanceof DOMException && error.name === "TimeoutError") {
+      throw new Error(`No reply from ${uploadUrl.origin} within ${UPLOAD_TIMEOUT_MS / 1000}s.`, { cause: error });
+    }
+    const reason = code ?? (error instanceof Error ? error.message : String(error));
+    throw new Error(`Could not reach ${uploadUrl.origin} (${reason}).`, { cause: error });
+  }
+  let body = "";
+  try {
+    body = await response.text();
+  } catch {
+    // Reply cut short; fall through to the status code alone.
+  }
+  if (response.status === 409) return { kind: "busy" };
+  return { kind: "reply", status: response.status, reply: parseUploadReply(response.status, body) };
+}
+
+async function uploadArchive(uploadUrl: URL, archive: Uint8Array, signal: AbortSignal): Promise<string> {
+  let attempt = await postArchive(uploadUrl, archive, signal);
+  if (attempt.kind === "busy") {
+    await delay(BUSY_RETRY_MS, undefined, { signal });
+    attempt = await postArchive(uploadUrl, archive, signal);
+  }
+  if (attempt.kind === "busy") return "busy: another Runtime Upload is in progress, retrying on the next change";
+  const { status, reply } = attempt;
+  return reply.ok ? `installed ${reply.packageName} ${reply.version}` : `${status} ${reply.code}: ${reply.message}`;
+}
+
+function logCycle(line: string): void {
+  console.log(`[${new Date().toLocaleTimeString("en-GB")}] ${line}`);
+}
+
+async function dev(projectRoot: string, rawUrl: string): Promise<void> {
+  const uploadUrl = parseRuntimeUploadUrl(rawUrl);
+  const session = new AbortController();
+  let outDirRel: string | undefined;
+  let running = false;
+  let pending = false;
+  let quietTimer: NodeJS.Timeout | undefined;
+
+  async function cycle(): Promise<void> {
+    running = true;
+    try {
+      // Known before build() writes into it, so the build's own output does not retrigger the watcher.
+      outDirRel = path.relative(projectRoot, path.resolve(projectRoot, (await readConfig(projectRoot)).outDir));
+      const output = await build(projectRoot, { dev: true });
+      if (!output.archivePath) throw new Error("Build did not write a Runtime Upload Archive.");
+      logCycle(await uploadArchive(uploadUrl, await readFile(output.archivePath), session.signal));
+    } catch (error) {
+      if (!session.signal.aborted) logCycle(error instanceof Error ? error.message : String(error));
+    } finally {
+      running = false;
+    }
+    if (pending && !session.signal.aborted) {
+      pending = false;
+      await cycle();
+    }
+  }
+
+  function isIgnored(filename: string): boolean {
+    const ignored = outDirRel === undefined ? WATCH_IGNORED_DIRS : [...WATCH_IGNORED_DIRS, outDirRel];
+    return ignored.some((dir) => filename === dir || filename.startsWith(`${dir}${path.sep}`));
+  }
+
+  const watcher = watch(projectRoot, { recursive: true, signal: session.signal }, (_event, filename) => {
+    if (filename !== null && isIgnored(filename)) return;
+    clearTimeout(quietTimer);
+    quietTimer = setTimeout(() => {
+      if (running) pending = true;
+      else void cycle();
+    }, WATCH_QUIET_MS);
+  });
+  let watchError: Error | undefined;
+  watcher.on("error", (error) => {
+    watchError = error;
+    session.abort();
+  });
+
+  const stopped = new Promise<void>((resolve) => {
+    session.signal.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(quietTimer);
+        resolve();
+      },
+      { once: true },
+    );
+  });
+  const stop = (): void => {
+    session.abort();
+  };
+  process.once("SIGINT", stop);
+  process.once("SIGTERM", stop);
+
+  console.log(`Watching ${projectRoot}, uploading to ${uploadUrl.href} (Ctrl-C to stop)`);
+  void cycle();
+  await stopped;
+  if (watchError) throw new Error(`Watching ${projectRoot} failed: ${watchError.message}`, { cause: watchError });
+}
+
+async function isNonEmptyDir(dir: string): Promise<boolean> {
+  try {
+    return (await readdir(dir)).length > 0;
+  } catch (error) {
+    if (errorCode(error) === "ENOENT") return false;
+    throw error;
   }
 }
 
-async function create(projectName: string): Promise<void> {
+async function create(projectName: string, options: { force: boolean }): Promise<void> {
   const targetDir = path.resolve(process.cwd(), projectName);
   const slug = packageNameFor(projectName).replace(/\.vdapp$/u, "");
   const templateRoot = fileURLToPath(new URL("./templates/scaffold", import.meta.url));
+  if (!options.force && (await isNonEmptyDir(targetDir))) {
+    throw new Error(`${targetDir} is not empty. Pick another name or pass --force to write into it.`);
+  }
   await mkdir(targetDir, { recursive: true });
   await copyScaffoldDir(templateRoot, targetDir, slug);
   console.log(`Created ${targetDir}`);
 }
 
+const USAGE = `Usage: vitadeck <command> [flags]
+
+Commands:
+  build                     Build the Deck App Package and .vdapp.zip (default command)
+    --no-zip                Skip the .vdapp.zip archive
+    --dev                   Bundle with NODE_ENV=development
+  dev <runtime-upload-url>  Watch, rebuild with --dev and upload to a running VitaDeck
+  create <project-name>     Scaffold a new Deck App project
+    --force                 Write into a non-empty directory
+
+Flags:
+  --help, -h                Show this help
+  --version, -v             Print the SDK version`;
+
+const COMMAND_FLAGS = {
+  build: ["--no-zip", "--dev"],
+  dev: [],
+  create: ["--force"],
+} as const satisfies Record<string, readonly string[]>;
+
+type Command = keyof typeof COMMAND_FLAGS;
+
+function isCommand(value: string): value is Command {
+  return Object.hasOwn(COMMAND_FLAGS, value);
+}
+
+async function sdkVersion(): Promise<string> {
+  const packagePath = fileURLToPath(new URL("../package.json", import.meta.url));
+  return requireString(requireObject(await readJson(packagePath), packagePath).version, "version", packagePath);
+}
+
 async function main(): Promise<void> {
   const rawArgs = process.argv.slice(2);
-  const flags = new Set(rawArgs.filter((a) => a.startsWith("--")));
-  const positional = rawArgs.filter((a) => !a.startsWith("--"));
-  const knownFlags = new Set(["--no-zip", "--dev"]);
-  const unknownFlags = [...flags].filter((f) => !knownFlags.has(f));
-  if (unknownFlags.length > 0) {
-    throw new Error(`Unknown flag(s): ${unknownFlags.join(", ")}`);
+  if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
+    console.log(USAGE);
+    return;
   }
-  const [command, arg] = positional;
+  if (rawArgs.includes("--version") || rawArgs.includes("-v")) {
+    console.log(await sdkVersion());
+    return;
+  }
+  const flags = new Set(rawArgs.filter((a) => a.startsWith("-")));
+  const [command = "build", arg] = rawArgs.filter((a) => !a.startsWith("-"));
+  if (!isCommand(command)) throw new Error(`Unknown command: ${command}\n\n${USAGE}`);
+  const knownFlags: readonly string[] = COMMAND_FLAGS[command];
+  const unknownFlags = [...flags].filter((f) => !knownFlags.includes(f));
+  if (unknownFlags.length > 0) throw new Error(`Unknown flag(s) for ${command}: ${unknownFlags.join(", ")}`);
 
-  if (command === undefined || command === "build") {
-    await build(process.cwd(), { noZip: flags.has("--no-zip"), dev: flags.has("--dev") });
-    return;
+  const projectRoot = process.cwd();
+  switch (command) {
+    case "build": {
+      const output = await build(projectRoot, { noZip: flags.has("--no-zip"), dev: flags.has("--dev") });
+      console.log(`Built ${path.relative(projectRoot, output.packageDir)}`);
+      if (output.archivePath) console.log(`Wrote ${path.relative(projectRoot, output.archivePath)}`);
+      return;
+    }
+    case "dev": {
+      if (!arg) throw new Error("Usage: vitadeck dev <runtime-upload-url>");
+      await dev(projectRoot, arg);
+      return;
+    }
+    case "create": {
+      if (!arg) throw new Error("Usage: vitadeck create <project-name>");
+      await create(arg, { force: flags.has("--force") });
+    }
   }
-  if (command === "create") {
-    if (!arg) throw new Error("Usage: vitadeck create <project-name>");
-    await create(arg);
-    return;
-  }
-  throw new Error(`Unknown command: ${command}`);
 }
 
 try {

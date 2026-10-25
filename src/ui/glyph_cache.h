@@ -12,6 +12,7 @@
 #define VD_GLYPH_ATLAS_PAGE_MAX 4
 
 #define VD_UTF8_REPLACEMENT 0xfffd
+#define VD_EMOJI_FALLBACK VD_UTF8_REPLACEMENT
 
 // The longest Twemoji sequence, a couple kissing with skin tones, has 9 codepoints once U+FE0F is left out.
 #define VD_EMOJI_SEQUENCE_MAX 10
@@ -66,9 +67,10 @@ void glyph_cache_set_fallback(const VdGlyphFont *font);
 void glyph_cache_set_fallback_loader(VdGlyphFontLoader loader);
 VdGlyph glyph_cache_get(const VdGlyphFont *font, int size, uint32_t codepoint);
 void glyph_cache_set_emoji_loader(VdEmojiLoader loader);
-// The emoji for the longest prefix of sequence that has an image, as a Font Size square on the font's line; false
-// when no prefix has one. A ZWJ sequence without its own image so draws as its first emoji.
-bool glyph_cache_get_emoji(const VdGlyphFont *font, int size, const VdEmojiSequence *sequence, VdGlyph *glyph);
+// The emoji for the longest prefix of sequence that has an image, as a Font Size square on the font's line, so a ZWJ
+// sequence without its own image draws as its first emoji. With no image, as when assets/emoji is missing, the first
+// codepoint's glyph from the font or the fallback, else VD_EMOJI_FALLBACK's. Missing images are not loaded again.
+VdGlyph glyph_cache_get_emoji(const VdGlyphFont *font, int size, const VdEmojiSequence *sequence);
 void glyph_cache_begin_frame(void);
 // Drops every glyph and page.
 void glyph_cache_reset(void);

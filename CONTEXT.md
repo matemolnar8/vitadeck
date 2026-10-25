@@ -49,7 +49,7 @@ The generated JavaScript file inside a **Deck App Package** that registers the c
 _Avoid_: User entry, source entry, main runtime
 
 **Deck App Font**:
-A named font file included in a **Deck App Package** and declared by the **Deck App Package Manifest** for author code to reference. Characters a TrueType or OpenType **Deck App Font** lacks render from the **Runtime Default Font**, then the **Runtime Fallback Font**; `.fnt` and `.bdf` fonts do not fall back. Emoji in text drawn with a TrueType or OpenType font render as colour Twemoji images that ship with VitaDeck, not from any font; `.fnt` and `.bdf` fonts draw no emoji.
+A named font file included in a **Deck App Package** and declared by the **Deck App Package Manifest** for author code to reference. Characters a TrueType or OpenType **Deck App Font** lacks render from the **Runtime Default Font**, then the **Runtime Fallback Font**; `.fnt` and `.bdf` fonts do not fall back. Emoji in text drawn with a TrueType or OpenType font render as colour Twemoji images that ship with VitaDeck, not from any font; an emoji without an image, as in a build that could not download them, draws its first character from those fonts, or `U+FFFD` when none has it. `.fnt` and `.bdf` fonts draw no emoji.
 _Avoid_: Raw font path, system font, hardcoded font
 
 **Deck App Image**:
@@ -177,7 +177,7 @@ Restarting the Deck App JavaScript runtime with a fresh context after **Runtime 
 _Avoid_: Hot reload, refresh, soft reload
 
 **Deck App Failure Screen**:
-The VitaDeck-painted screen that replaces the **Active Deck App** after it throws an uncaught error (during boot, render, effects, input handlers, or timers), showing the error message, the first lines of its stack, and that **Start Input** opens the **VitaDeck Shell**. A **Deck App Runtime Restart** clears it.
+The VitaDeck-painted screen that replaces the **Active Deck App** after it throws an uncaught error (during boot, render, effects, input handlers, or timers), showing the error message, the first lines of its stack, and that **Start Input** opens the **VitaDeck Shell**. A **Deck App Runtime Restart** clears it. A promise rejection that still has no handler once pending promise callbacks have run counts as an uncaught error, so a `fetch` chain without a `catch` fails the Deck App instead of failing silently.
 _Avoid_: Crash screen, red box, blank screen
 
 **Runtime Upload Archive**:
@@ -263,6 +263,10 @@ _Avoid_: Host Control Companion, desktop app, daemon, host build
 **Host Control Link**:
 The step where the **Host Companion**, given the address shown in the **VitaDeck Shell**, tells VitaDeck where to send **Host Control** commands. VitaDeck keeps that address until a newer link replaces it or the user forgets it. It exchanges addresses, not credentials.
 _Avoid_: Pairing, Upload Pairing, session, typing the computer's address on the Vita
+
+**Deck App Storage**:
+The string key-value store a **Deck App** keeps across **Deck App Runtime Restarts** and VitaDeck restarts, through `storage` in the **VitaDeck Runtime API**.
+_Avoid_: localStorage, save file, cache, settings
 
 ## Relationships
 
@@ -379,6 +383,9 @@ _Avoid_: Pairing, Upload Pairing, session, typing the computer's address on the 
 - **Host Control Link** starts from the **VitaDeck Shell** and does not use the **Runtime Upload Listener**.
 - **Host Control** results use the same `ok` / `code` / `message` JSON shape as **Runtime Upload POST**.
 - **Host Control Link** is not **Upload Pairing**; initial **Host Control** trusts the local network like initial **Runtime Upload**.
+- Each **Deck App Package Name** has its own **Deck App Storage**, limited to 1 MiB; a **Deck App** cannot read another's.
+- **Runtime Upload Replacement** keeps the package's **Deck App Storage**; **Installed Deck App Removal** deletes it.
+- **Deck App Storage** is the only filesystem a **Deck App** reaches; no **VitaDeck Runtime API** call takes a file path.
 
 ## Host mappings
 
