@@ -242,6 +242,10 @@ if(NOT DEFINED ENV{VITASDK})
     target_link_libraries(upload_parsing_harness ZLIB::ZLIB)
     add_test(NAME upload_parsing_harness COMMAND upload_parsing_harness)
 
+    add_executable(event_queue_harness tests/event_queue_harness.c src/core/event_queue.c ${PLATFORM_SOURCES})
+    target_link_libraries(event_queue_harness pthread)
+    add_test(NAME event_queue_harness COMMAND event_queue_harness)
+
     # The native app without main.c, the shell and Runtime Upload, for harnesses that drive the real JS thread.
     set(HOST_RUNTIME_SOURCES
       src/core/arena.c
@@ -257,7 +261,7 @@ if(NOT DEFINED ENV{VITASDK})
       src/ui/images.c
       src/ui/render.c
       src/ui/input.c
-      src/ui/scroll.c
+        src/ui/scroll.c
       src/platform/thread_posix.c
     )
     add_executable(js_limits_harness tests/js_limits_harness.c ${HOST_RUNTIME_SOURCES})
