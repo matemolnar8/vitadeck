@@ -268,6 +268,16 @@ if(NOT DEFINED ENV{VITASDK})
     target_link_libraries(hit_test_harness m pthread)
     add_test(NAME hit_test_harness COMMAND hit_test_harness)
 
+    add_executable(scroll_math_harness
+      tests/scroll_math_harness.c
+      src/ui/instance_tree.c
+      src/ui/scroll.c
+      src/core/arena.c
+      ${PLATFORM_SOURCES}
+    )
+    target_link_libraries(scroll_math_harness m pthread)
+    add_test(NAME scroll_math_harness COMMAND scroll_math_harness)
+
     # The native app without main.c, the shell and Runtime Upload, for harnesses that drive the real JS thread.
     set(HOST_RUNTIME_SOURCES
       src/core/arena.c

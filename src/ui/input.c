@@ -82,8 +82,7 @@ static int scroll_clamp_offset(const char *scroll_id, int offset)
 {
     int viewport_h = 0, content_h = 0;
     if (!instance_scroll_metrics(scroll_id, &viewport_h, &content_h)) return offset;
-    int max_scroll = content_h - viewport_h;
-    if (max_scroll < 0) max_scroll = 0;
+    int max_scroll = scroll_max_offset(viewport_h, content_h);
     if (offset < 0) offset = 0;
     if (offset > max_scroll) offset = max_scroll;
     return offset;
@@ -139,19 +138,8 @@ static void touch_apply_momentum(void)
         return;
     }
 
-    int max_scroll = content_h - viewport_h;
-    if (max_scroll < 0) max_scroll = 0;
-
     int offset = scroll_get_offset(touch_momentum_scroll_id);
-    int next = offset + (int)roundf(touch_velocity_y * dt);
-    if (next <= 0) {
-        next = 0;
-        touch_velocity_y = 0.0f;
-    } else if (next >= max_scroll) {
-        next = max_scroll;
-        touch_velocity_y = 0.0f;
-    }
-
+    int next = scroll_momentum_step(offset, scroll_max_offset(viewport_h, content_h), &touch_velocity_y, dt);
     scroll_set_offset(touch_momentum_scroll_id, next);
     touch_velocity_y *= scroll_friction_for_dt(dt);
 
