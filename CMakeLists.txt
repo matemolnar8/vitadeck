@@ -227,7 +227,7 @@ if(NOT DEFINED ENV{VITASDK})
 endif()
 
 add_custom_target(js_build
-  COMMAND pnpm build:prod
+  COMMAND pnpm build
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/js
   COMMENT "Building JavaScript with pnpm"
   VERBATIM
@@ -242,9 +242,9 @@ add_custom_target(js_copy
 
 add_custom_target(js
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/js
-  COMMAND pnpm build:prod
+  COMMAND pnpm build
   COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${PROJECT_NAME}
-  COMMENT "Build JS bundle (pnpm build:prod) then native ${PROJECT_NAME}"
+  COMMENT "Build JS bundle (pnpm build) then native ${PROJECT_NAME}"
   VERBATIM
 )
 
