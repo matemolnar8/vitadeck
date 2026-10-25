@@ -69,7 +69,7 @@ VdGlyph glyph_cache_get(const VdGlyphFont *font, int size, uint32_t codepoint);
 void glyph_cache_set_emoji_loader(VdEmojiLoader loader);
 // The emoji for the longest prefix of sequence that has an image, as a Font Size square on the font's line, so a ZWJ
 // sequence without its own image draws as its first emoji. With no image, as when assets/emoji is missing, the first
-// codepoint's glyph from the font or the fallback, else VD_EMOJI_FALLBACK's. Missing images are not loaded again.
+// codepoint's glyph from the font or a fallback, else VD_EMOJI_FALLBACK's. Missing images are not loaded again.
 VdGlyph glyph_cache_get_emoji(const VdGlyphFont *font, int size, const VdEmojiSequence *sequence);
 void glyph_cache_begin_frame(void);
 // Drops every glyph and page.

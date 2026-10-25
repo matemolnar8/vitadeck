@@ -365,10 +365,12 @@ static bool find_emoji(const VdGlyphFont *font, int size, const VdEmojiSequence 
     return false;
 }
 
+// Asks the same fonts, in the same order, as glyph_cache_get.
 static bool has_glyph(const VdGlyphFont *font, uint32_t codepoint)
 {
-    if (stbtt_FindGlyphIndex(&font->info, (int)codepoint) != 0) return true;
-    return g_fallback && stbtt_FindGlyphIndex(&g_fallback->info, (int)codepoint) != 0;
+    const VdGlyphFont *source = NULL;
+    return find_glyph(font, codepoint, &source) != 0 || find_glyph(g_fallback, codepoint, &source) != 0 ||
+           find_glyph(last_fallback(), codepoint, &source) != 0;
 }
 
 VdGlyph glyph_cache_get_emoji(const VdGlyphFont *font, int size, const VdEmojiSequence *sequence)

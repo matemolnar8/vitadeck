@@ -109,15 +109,20 @@ static VdGlyphFont *load_fallback_font(void)
     return g_fallback_font;
 }
 
-bool font_registry_init(char *error, size_t error_size)
+// A build that could not download the Runtime Default Font draws it with raylib's built-in font.
+void font_registry_init(void)
 {
-    if (g_default_loaded) return true;
-    if (!load_font_file(VD_DEFAULT_FONT_PATH, &g_default_font, error, error_size)) return false;
+    if (g_default_loaded) return;
+    g_default_font.outline = glyph_font_load(VD_DEFAULT_FONT_PATH);
+    if (!g_default_font.outline) {
+        TraceLog(LOG_WARNING, "FONT: Could not load the Runtime Default Font from %s; using raylib's built-in font",
+                 VD_DEFAULT_FONT_PATH);
+        g_default_font.bitmap = GetFontDefault();
+    }
     glyph_cache_set_fallback(g_default_font.outline);
     glyph_cache_set_fallback_loader(load_fallback_font);
     glyph_cache_set_emoji_loader(load_emoji_image);
     g_default_loaded = true;
-    return true;
 }
 
 bool font_registry_load_package(const char *package_path, const VdPackageManifest *manifest, char *error,
