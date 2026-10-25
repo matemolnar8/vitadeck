@@ -9,6 +9,9 @@
 #include "arena.h"
 #include "platform/thread.h"
 
+// Larger bodies are rejected so a Deck App cannot exhaust Vita memory with one response.
+#define FETCH_MAX_BODY_BYTES (4 * 1024 * 1024)
+
 typedef struct {
     char *items;
     size_t count;
@@ -32,6 +35,7 @@ typedef struct {
     long status;
 
     bool failed;
+    bool body_too_large;
     char error[CURL_ERROR_SIZE];
 
     bool done;
@@ -53,6 +57,10 @@ static size_t fetch_write_cb(char *ptr, size_t size, size_t nmemb, void *userdat
 {
     FetchRequest *req = userdata;
     size_t total = size * nmemb;
+    if (total > FETCH_MAX_BODY_BYTES - req->resp_body.count) {
+        req->body_too_large = true;
+        return 0;
+    }
     buffer_append(&req->response_body, &req->resp_body, ptr, total);
     return total;
 }
@@ -109,7 +117,11 @@ static void *fetch_worker(void *arg)
         }
 
         CURLcode res = curl_easy_perform(curl);
-        if (res != CURLE_OK) {
+        if (req->body_too_large) {
+            req->failed = true;
+            snprintf(req->error, sizeof(req->error), "fetch response body exceeds the %d MiB limit",
+                     FETCH_MAX_BODY_BYTES / (1024 * 1024));
+        } else if (res != CURLE_OK) {
             req->failed = true;
             if (req->error[0] == '\0') {
                 snprintf(req->error, sizeof(req->error), "%s", curl_easy_strerror(res));

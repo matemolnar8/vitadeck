@@ -14,6 +14,12 @@
 
 // Longest idle wait between JS thread polls; bounds input latency well under a 60 FPS frame.
 #define JS_IDLE_SLEEP_MAX_MS 4
+// Stack left below QuickJS's limit for the native frames under the deepest JS call
+// (QuickJS internals, jslib functions, TraceLog), so deep recursion throws instead of crashing.
+#define JS_STACK_HEADROOM (64 * 1024)
+// A Vita app gets roughly 256 MB of main memory, shared with raylib/vitaGL, fonts, images and curl.
+// A quarter of it is ample for a React Deck App and stops a runaway one from starving the host.
+#define JS_MEMORY_LIMIT (64 * 1024 * 1024)
 
 static int run_function(JSContext *ctx, const char *func_name)
 {
@@ -69,6 +75,8 @@ static void *js_thread_func(void *arg)
         js_runtime_fail(runtime, "Could not initialize QuickJS runtime.", NULL);
         return NULL;
     }
+    JS_SetMemoryLimit(rt, JS_MEMORY_LIMIT);
+    JS_SetMaxStackSize(rt, VD_THREAD_STACK_SIZE - JS_STACK_HEADROOM);
 
     ctx = JS_NewContext(rt);
     if (!ctx) {

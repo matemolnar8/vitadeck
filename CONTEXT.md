@@ -244,6 +244,7 @@ _Avoid_: Pairing, Upload Pairing, session, typing the computer's address on the 
 
 - A **Deck App** is rendered by the VitaDeck runtime.
 - A **Deck App** is authored against the **VitaDeck Runtime API**.
+- The **VitaDeck Runtime API** `fetch` rejects a response whose body exceeds 4 MiB.
 - A **Deck App** owns the full **Render Surface** in the MVP.
 - A **Deck App Source Entry** is bundled at build time for the MVP.
 - A **Deck App Source Entry** default-exports one **Deck App Component**.

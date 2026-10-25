@@ -242,8 +242,8 @@ if(NOT DEFINED ENV{VITASDK})
     target_link_libraries(upload_parsing_harness ZLIB::ZLIB)
     add_test(NAME upload_parsing_harness COMMAND upload_parsing_harness)
 
-    set(SMOKE_HARNESS_SOURCES
-      tests/smoke_harness.c
+    # The native app without main.c, the shell and Runtime Upload, for harnesses that drive the real JS thread.
+    set(HOST_RUNTIME_SOURCES
       src/core/arena.c
       src/core/bootstrap.c
       src/core/js_runtime.c
@@ -260,7 +260,17 @@ if(NOT DEFINED ENV{VITASDK})
       src/ui/scroll.c
       src/platform/thread_posix.c
     )
-    add_executable(smoke_harness ${SMOKE_HARNESS_SOURCES})
+    add_executable(js_limits_harness tests/js_limits_harness.c ${HOST_RUNTIME_SOURCES})
+    target_link_libraries(js_limits_harness ${VITADECK_LIBRARIES})
+    add_test(NAME js_limits_harness COMMAND js_limits_harness)
+
+    # Same checks on the Vita JS thread stack, to prove the QuickJS stack headroom fits it.
+    add_executable(js_limits_vita_stack_harness tests/js_limits_harness.c ${HOST_RUNTIME_SOURCES})
+    target_compile_definitions(js_limits_vita_stack_harness PRIVATE VD_THREAD_STACK_SIZE=VD_VITA_THREAD_STACK_SIZE)
+    target_link_libraries(js_limits_vita_stack_harness ${VITADECK_LIBRARIES})
+    add_test(NAME js_limits_vita_stack_harness COMMAND js_limits_vita_stack_harness)
+
+    add_executable(smoke_harness tests/smoke_harness.c ${HOST_RUNTIME_SOURCES})
     target_link_libraries(smoke_harness ${VITADECK_LIBRARIES})
     add_dependencies(smoke_harness js_copy)
     add_test(

@@ -18,7 +18,15 @@ vd_thread *vd_thread_create(void *(*func)(void *), void *arg)
 {
     vd_thread *t = malloc(sizeof(vd_thread));
     if (!t) return NULL;
-    if (pthread_create(&t->handle, NULL, func, arg) != 0) {
+    pthread_attr_t attr;
+    if (pthread_attr_init(&attr) != 0) {
+        free(t);
+        return NULL;
+    }
+    int rc = pthread_attr_setstacksize(&attr, VD_THREAD_STACK_SIZE);
+    if (rc == 0) rc = pthread_create(&t->handle, &attr, func, arg);
+    pthread_attr_destroy(&attr);
+    if (rc != 0) {
         free(t);
         return NULL;
     }
