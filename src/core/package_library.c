@@ -250,7 +250,12 @@ bool package_library_publish_package(const char *source_path, const char *packag
     char destination[VD_PATH_MAX];
     char backup[VD_PATH_MAX];
     vd_join_path(destination, sizeof(destination), g_installed_root, package_name);
-    snprintf(backup, sizeof(backup), "%s.replacing", destination);
+    // backup is destination plus a suffix, so it fitting means destination fits too.
+    int backup_len = snprintf(backup, sizeof(backup), "%s.replacing", destination);
+    if (backup_len < 0 || (size_t)backup_len >= sizeof(backup)) {
+        vd_set_error(error, error_size, "Deck App Package path is too long.");
+        return false;
+    }
     vd_remove_tree(backup);
 
     vd_mutex_lock(g_mutex);
