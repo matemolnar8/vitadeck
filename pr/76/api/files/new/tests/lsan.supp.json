@@ -1,1 +1,0 @@
-{"path":"tests/lsan.supp","ref":"4d6d7c5a7816464240a173bb7185dcb1c8090429","side":"new","content":"# Mesa llvmpipe (Docker smoke under Xvfb) keeps JIT allocations alive past exit.\nleak:libLLVM\n# Mesa/GLX driver init inside raylib's window creation; no VitaDeck code runs below this frame.\nleak:glfwCreateWindow\n","language":"plaintext"}
