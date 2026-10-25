@@ -12,7 +12,8 @@
 
 static bool load_active_package_assets(VdBootstrap *bootstrap, char *error, size_t error_size)
 {
-    const char *package_path = package_library_has_active_deck_app() ? package_library_active_package_path() : "";
+    char package_path[VD_PATH_MAX] = "";
+    if (package_library_has_active_deck_app()) package_library_active_package_path(package_path, sizeof(package_path));
     if (!font_registry_load_package(package_path, error, error_size)) {
         bootstrap->js_runtime.failed = true;
         image_registry_load_package("", NULL, 0);
