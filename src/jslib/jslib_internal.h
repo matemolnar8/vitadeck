@@ -24,5 +24,6 @@ void register_js_colors(JSContext *ctx);
 void register_js_timeout(JSContext *ctx);
 void register_js_fetch(JSContext *ctx);
 void register_instance_tree(JSContext *ctx);
+void register_js_storage(JSContext *ctx);
 
 #endif /* JSLIB_INTERNAL_H */

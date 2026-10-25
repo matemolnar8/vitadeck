@@ -40,9 +40,20 @@ else()
 endif()
 
 set(VITA_APP_NAME "VitaDeck")
-set(PSVITAIP "192.168.1.177" CACHE STRING "PSVita IP (for FTP access)")
+set(PSVITAIP "$ENV{PSVITAIP}")
 set(VITA_TITLEID  "PGRI00001")
-set(VITA_VERSION  "01.00")
+set(VITADECK_VERSION "" CACHE STRING "Release version X.Y.Z; the VPK gets XX.YY (patch dropped)")
+set(VITA_VERSION "01.00")
+if(VITADECK_VERSION)
+  if(NOT VITADECK_VERSION MATCHES "^([0-9][0-9]?)\\.([0-9][0-9]?)\\.[0-9]+$")
+    message(FATAL_ERROR "VITADECK_VERSION must be X.Y.Z with X and Y below 100, got '${VITADECK_VERSION}'")
+  endif()
+  set(vita_major "${CMAKE_MATCH_1}")
+  set(vita_minor "${CMAKE_MATCH_2}")
+  string(REGEX REPLACE "^([0-9])$" "0\\1" vita_major "${vita_major}")
+  string(REGEX REPLACE "^([0-9])$" "0\\1" vita_minor "${vita_minor}")
+  set(VITA_VERSION "${vita_major}.${vita_minor}")
+endif()
 set(VITA_MKSFOEX_FLAGS "${VITA_MKSFOEX_FLAGS} -d PARENTAL_LEVEL=1")
 set(VITA_MKSFOEX_FLAGS "${VITA_MKSFOEX_FLAGS} -d ATTRIBUTE2=12")
 
@@ -105,6 +116,8 @@ set(QUICKJS_SOURCES
     vendor/quickjs/cutils.c
     vendor/quickjs/dtoa.c
 )
+file(STRINGS vendor/quickjs/VERSION QUICKJS_VERSION LIMIT_COUNT 1)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS vendor/quickjs/VERSION)
 add_library(quickjs STATIC ${QUICKJS_SOURCES})
 target_compile_options(quickjs PRIVATE -w)
 if(VITADECK_SANITIZE)
@@ -112,7 +125,7 @@ if(VITADECK_SANITIZE)
   target_compile_options(quickjs PRIVATE -fno-sanitize=undefined)
 endif()
 target_compile_definitions(quickjs PRIVATE
-    CONFIG_VERSION="2024-01-13"
+    CONFIG_VERSION="${QUICKJS_VERSION}"
     $<$<NOT:$<BOOL:$ENV{VITASDK}>>:_GNU_SOURCE>
 )
 if(DEFINED ENV{VITASDK})
@@ -137,12 +150,14 @@ set(JSLIB_SOURCES
     src/jslib/log.c
     src/jslib/fetch.c
     src/jslib/error.c
+    src/jslib/storage.c
 )
 
 set(VITADECK_SOURCES
     src/main.c
     src/core/arena.c
     src/core/bootstrap.c
+    src/core/deck_app_storage.c
     src/core/js_runtime.c
     src/core/package_manifest.c
     src/core/package_library.c
@@ -230,6 +245,7 @@ if(NOT DEFINED ENV{VITASDK})
 
     add_executable(package_library_harness
       tests/package_library_harness.c
+      src/core/deck_app_storage.c
       src/core/package_library.c
       src/core/package_manifest.c
       src/core/util.c
@@ -242,6 +258,7 @@ if(NOT DEFINED ENV{VITASDK})
       src/upload/archive.c
       src/upload/http_parse.c
       src/core/arena.c
+      src/core/deck_app_storage.c
       src/core/package_library.c
       src/core/package_manifest.c
       src/core/util.c
@@ -250,8 +267,20 @@ if(NOT DEFINED ENV{VITASDK})
     target_link_libraries(upload_parsing_harness ZLIB::ZLIB)
     add_test(NAME upload_parsing_harness COMMAND upload_parsing_harness)
 
+    add_executable(storage_harness
+      tests/storage_harness.c
+      src/jslib/storage.c
+      src/core/deck_app_storage.c
+      src/core/package_library.c
+      src/core/package_manifest.c
+      src/core/util.c
+      ${PLATFORM_SOURCES}
+    )
+    target_link_libraries(storage_harness quickjs m pthread)
+    add_test(NAME storage_harness COMMAND storage_harness)
+
     add_executable(event_queue_harness tests/event_queue_harness.c src/core/event_queue.c ${PLATFORM_SOURCES})
-    target_link_libraries(event_queue_harness pthread)
+    target_link_libraries(event_queue_harness pthread ${RAYLIB_LIBRARIES})
     add_test(NAME event_queue_harness COMMAND event_queue_harness)
 
     add_executable(snapshot_swap_harness
@@ -312,6 +341,7 @@ if(NOT DEFINED ENV{VITASDK})
       src/upload/archive.c
       src/upload/http_parse.c
       src/core/arena.c
+      src/core/deck_app_storage.c
       src/core/package_library.c
       src/core/package_manifest.c
       src/core/util.c
@@ -326,6 +356,7 @@ if(NOT DEFINED ENV{VITASDK})
       src/core/bootstrap.c
       src/core/js_runtime.c
       src/core/package_manifest.c
+      src/core/deck_app_storage.c
       src/core/package_library.c
       src/core/util.c
       src/core/event_queue.c
@@ -416,6 +447,16 @@ if(DEFINED ENV{VITASDK})
       FILE assets/fonts/DejaVuSans-LICENSE.txt assets/fonts/DejaVuSans-LICENSE.txt
   )
 
+  if(PSVITAIP)
+    add_custom_target(require_psvitaip)
+  else()
+    add_custom_target(require_psvitaip
+      COMMAND ${CMAKE_COMMAND} -E echo "PSVITAIP is unset: export PSVITAIP=<Vita IP> and re-run cmake"
+      COMMAND ${CMAKE_COMMAND} -E false
+      VERBATIM
+    )
+  endif()
+
   # Create an explicit `upload_vpk` target to upload the VPK file to Vita's download folder
   add_custom_target(upload_vpk
     DEPENDS ${PROJECT_NAME}.vpk-vpk
@@ -425,6 +466,7 @@ if(DEFINED ENV{VITASDK})
     COMMENT "Upload VPK file to Vita download folder"
     VERBATIM
   )
+  add_dependencies(upload_vpk require_psvitaip)
 
   # Create an explicit `upload_vita` target so uploads only run when requested.
   add_custom_target(upload_vita
@@ -447,6 +489,7 @@ if(DEFINED ENV{VITASDK})
     COMMENT "Upload built files to Vita and launch"
     VERBATIM
   )
+  add_dependencies(upload_vita require_psvitaip)
 
   # Add a convenience target `run` that depends on upload_vita so `make run` will
   # build, upload, and launch the app on the Vita.

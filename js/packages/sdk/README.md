@@ -21,6 +21,8 @@ pnpm and Bun work the same (`pnpm add`, `bun add`).
 npx @vitadeck/sdk create <project-name>
 ```
 
+`create` refuses a directory that already has files in it; pass `--force` to scaffold into it anyway. `npx @vitadeck/sdk --help` lists every command and flag.
+
 ## Project configuration
 
 `vitadeck.config.json` at the project root:
@@ -61,6 +63,23 @@ Add `/// <reference types="@vitadeck/sdk/deck-app-env" />` in a `.d.ts` file (th
 
 Each build writes `.vitadeck/font-names.d.ts` and `.vitadeck/image-names.d.ts`, which add your declared names to `VitaDeckFontMap` and `VitaDeckImageMap`. After that, `font` and `image` props only accept declared names. Before the first build, `font` only accepts `"default"` and `image` accepts any string, so build once after adding assets. The folder is regenerated on every build; you can gitignore it.
 
+## Storage
+
+`storage` keeps string key-value pairs for your Deck App across restarts. Store anything richer with `JSON.stringify`.
+
+```tsx
+import { storage } from "@vitadeck/sdk";
+
+const [best, setBest] = useState(() => Number(storage.getItem("best") ?? 0));
+function finish(score: number) {
+  if (score <= best) return;
+  setBest(score);
+  storage.setItem("best", String(score));
+}
+```
+
+`getItem(key)` returns `null` for a missing key. `setItem` and `removeItem` return once the change is on disk. Each Deck App gets 1 MiB; a `setItem` that would go past it throws a `RangeError` and keeps the previous value. Reinstalling the Deck App over Runtime Upload keeps its storage; removing it in the VitaDeck Shell deletes it.
+
 ## Build
 
 From the root of a Deck App (with `vitadeck.config.json`):
@@ -70,6 +89,23 @@ npx @vitadeck/sdk build
 ```
 
 `npx @vitadeck/sdk` with no subcommand runs **build**. Use `npx @vitadeck/sdk build --no-zip` to skip the `.zip` archive. Builds bundle your app with `NODE_ENV=production`; pass `--dev` (`npx @vitadeck/sdk build --dev`) for a development build.
+
+## Develop on a Vita
+
+Open the VitaDeck Shell on the Vita (or the desktop host), confirm **Upload**, and copy the Runtime Upload URL it shows. Then, from the Deck App root:
+
+```bash
+npx @vitadeck/sdk dev http://192.168.1.50:8787/
+```
+
+`dev` builds like `build --dev`, uploads the `.vdapp.zip`, then rebuilds and uploads again every time you save. The scheme and port are optional (`192.168.1.50` means `http://192.168.1.50:8787/`). Each upload prints one line:
+
+```text
+[14:02:11] installed my-deck-app.vdapp 1.2.0
+[14:02:40] 422 invalid_package: manifest.json is missing "entry"
+```
+
+Activate the Deck App once in the Shell. After that, each upload replaces the Active Deck App and restarts it with fresh state (a restart, not hot reload). Build errors are printed and watching continues; Ctrl-C stops. "Nothing is listening" means Upload is not open in the Shell or the address is wrong.
 
 ## Layout
 

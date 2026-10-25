@@ -275,7 +275,7 @@ bool package_manifest_read(const char *package_path, const char *package_name, V
     }
 
     if (!saw_schema_version || !saw_name || !saw_version || !saw_entry || schema_version != 1 ||
-        strcmp(out_manifest->entry, "app.js") != 0 || !valid_semverish(out_manifest->version)) {
+        strcmp(out_manifest->entry, VD_PACKAGE_ENTRY) != 0 || !valid_semverish(out_manifest->version)) {
         vd_set_error(error, error_size, "Deck App Package Manifest is invalid.");
         free(jimp.string);
         free(manifest_json);

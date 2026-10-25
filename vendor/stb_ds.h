@@ -939,15 +939,10 @@ static stbds_hash_index *stbds_make_hash_index(size_t slot_count, stbds_hash_ind
     // reuse old seed so we can reuse old hashes so below "copy out old data" doesn't do any hashing
     t->seed = ot->seed;
   } else {
-    size_t a,b,temp;
     memset(&t->string, 0, sizeof(t->string));
+    // VitaDeck: upstream advances the global seed with an LCG here, an unsynchronized write from every
+    // thread that creates a hash map (#78). Tables keep their own seed, so a shared one is enough.
     t->seed = stbds_hash_seed;
-    // LCG
-    // in 32-bit, a =          2147001325   b =  715136305
-    // in 64-bit, a = 2862933555777941757   b = 3037000493
-    stbds_load_32_or_64(a,temp, 2147001325, 0x27bb2ee6, 0x87b0b0fd);
-    stbds_load_32_or_64(b,temp,  715136305,          0, 0xb504f32d);
-    stbds_hash_seed = stbds_hash_seed  * a + b;
   }
 
   {
