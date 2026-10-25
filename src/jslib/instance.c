@@ -272,72 +272,93 @@ static JSValue native_update_text_input(JSContext *ctx, JSValueConst this_val, i
     return JS_UNDEFINED;
 }
 
-static void read_scroll_props(JSContext *ctx, ScrollProps *scroll, JSValueConst *argv)
+#define SCROLL_ARGC 12
+#define STACK_ARGC 14
+
+// Scroll and Stack share their first SCROLL_ARGC arguments; a Scroll is always a start-aligned column.
+static void read_stack_props(JSContext *ctx, StackProps *stack, NodeType type, JSValueConst *argv)
 {
     int32_t tmp;
     JS_ToInt32(ctx, &tmp, argv[1]);
-    scroll->x = tmp;
+    stack->x = tmp;
     JS_ToInt32(ctx, &tmp, argv[2]);
-    scroll->y = tmp;
+    stack->y = tmp;
     JS_ToInt32(ctx, &tmp, argv[3]);
-    scroll->width = tmp;
+    stack->width = tmp;
     JS_ToInt32(ctx, &tmp, argv[4]);
-    scroll->height = tmp;
-    scroll->has_fill = JS_ToBool(ctx, argv[5]);
-    if (scroll->has_fill) {
-        int32_t r, g, b, a;
-        JS_ToInt32(ctx, &r, argv[6]);
-        JS_ToInt32(ctx, &g, argv[7]);
-        JS_ToInt32(ctx, &b, argv[8]);
-        JS_ToInt32(ctx, &a, argv[9]);
-        scroll->fill_color = (Color){r, g, b, a};
-    }
+    stack->height = tmp;
+    stack->has_fill = JS_ToBool(ctx, argv[5]);
+    if (stack->has_fill) stack->fill_color = read_color(ctx, argv + 6);
     JS_ToInt32(ctx, &tmp, argv[10]);
-    scroll->gap = tmp;
+    stack->gap = tmp;
     JS_ToInt32(ctx, &tmp, argv[11]);
-    scroll->padding = tmp;
+    stack->padding = tmp;
+    stack->direction = STACK_COLUMN;
+    stack->align = STACK_ALIGN_START;
+    if (type == NT_SCROLL) return;
+    JS_ToInt32(ctx, &tmp, argv[12]);
+    stack->direction = tmp == STACK_ROW ? STACK_ROW : STACK_COLUMN;
+    JS_ToInt32(ctx, &tmp, argv[13]);
+    stack->align = tmp == STACK_ALIGN_CENTER ? STACK_ALIGN_CENTER
+                   : tmp == STACK_ALIGN_END  ? STACK_ALIGN_END
+                                             : STACK_ALIGN_START;
 }
 
-static JSValue native_create_scroll(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue create_stack(JSContext *ctx, int argc, JSValueConst *argv, NodeType type, int min_argc)
 {
-    (void)this_val;
     instance_back_mark_dirty();
-    if (argc < 12) return JS_UNDEFINED;
+    if (argc < min_argc) return JS_UNDEFINED;
 
     const char *id = to_new_instance_id(ctx, argv[0]);
     if (!id) return JS_UNDEFINED;
 
     ReactInstance *inst = calloc(1, sizeof(ReactInstance));
     inst->id = strdup(id);
-    inst->type = NT_SCROLL;
-    read_scroll_props(ctx, &inst->props.scroll, argv);
-    inst->children = NULL;
-    inst->parent = NULL;
+    inst->type = type;
+    read_stack_props(ctx, &inst->props.stack, type, argv);
 
     instance_back_put(inst);
     JS_FreeCString(ctx, id);
     return JS_UNDEFINED;
 }
 
-static JSValue native_update_scroll(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue update_stack(JSContext *ctx, int argc, JSValueConst *argv, NodeType type, int min_argc)
 {
-    (void)this_val;
     instance_back_mark_dirty();
-    if (argc < 12) return JS_UNDEFINED;
+    if (argc < min_argc) return JS_UNDEFINED;
 
     const char *id = JS_ToCString(ctx, argv[0]);
     if (!id) return JS_UNDEFINED;
 
     ReactInstance *inst = instance_back_find(id);
-    if (!inst || inst->type != NT_SCROLL) {
-        JS_FreeCString(ctx, id);
-        return JS_UNDEFINED;
-    }
-
-    read_scroll_props(ctx, &inst->props.scroll, argv);
+    if (inst && inst->type == type) read_stack_props(ctx, &inst->props.stack, type, argv);
 
     JS_FreeCString(ctx, id);
     return JS_UNDEFINED;
+}
+
+static JSValue native_create_scroll(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    return create_stack(ctx, argc, argv, NT_SCROLL, SCROLL_ARGC);
+}
+
+static JSValue native_update_scroll(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    return update_stack(ctx, argc, argv, NT_SCROLL, SCROLL_ARGC);
+}
+
+static JSValue native_create_stack(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    return create_stack(ctx, argc, argv, NT_STACK, STACK_ARGC);
+}
+
+static JSValue native_update_stack(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    return update_stack(ctx, argc, argv, NT_STACK, STACK_ARGC);
 }
 
 static void read_image_props(JSContext *ctx, ImageProps *image, JSValueConst *argv, const char *image_name)
@@ -775,7 +796,8 @@ void register_instance_tree(JSContext *ctx)
     js_set_global_function(ctx, "nativeCreateText", native_create_text, 15);
     js_set_global_function(ctx, "nativeCreateButton", native_create_button, 21);
     js_set_global_function(ctx, "nativeCreateTextInput", native_create_text_input, TEXT_INPUT_ARGC);
-    js_set_global_function(ctx, "nativeCreateScroll", native_create_scroll, 12);
+    js_set_global_function(ctx, "nativeCreateScroll", native_create_scroll, SCROLL_ARGC);
+    js_set_global_function(ctx, "nativeCreateStack", native_create_stack, STACK_ARGC);
     js_set_global_function(ctx, "nativeCreateImage", native_create_image, 6);
     js_set_global_function(ctx, "nativeCreateRawText", native_create_raw_text, 2);
     js_set_global_function(ctx, "nativeAppendChild", native_append_child, 2);
@@ -786,7 +808,8 @@ void register_instance_tree(JSContext *ctx)
     js_set_global_function(ctx, "nativeUpdateText", native_update_text, 15);
     js_set_global_function(ctx, "nativeUpdateButton", native_update_button, 21);
     js_set_global_function(ctx, "nativeUpdateTextInput", native_update_text_input, TEXT_INPUT_ARGC);
-    js_set_global_function(ctx, "nativeUpdateScroll", native_update_scroll, 12);
+    js_set_global_function(ctx, "nativeUpdateScroll", native_update_scroll, SCROLL_ARGC);
+    js_set_global_function(ctx, "nativeUpdateStack", native_update_stack, STACK_ARGC);
     js_set_global_function(ctx, "nativeUpdateImage", native_update_image, 6);
     js_set_global_function(ctx, "nativeUpdateRawText", native_update_raw_text, 2);
     js_set_global_function(ctx, "nativeRequestFocus", native_request_focus, 1);
