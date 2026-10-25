@@ -82,7 +82,14 @@ run_vita() {
     docker info >/dev/null 2>&1 || die "Docker daemon not running; start Docker Desktop and rerun scripts/agent-check.sh full."
 
     step "Build Vita target"
-    docker-compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"
+    if docker compose version >/dev/null 2>&1; then
+        compose="docker compose"
+    elif command -v docker-compose >/dev/null 2>&1; then
+        compose="docker-compose"
+    else
+        die "Neither docker compose nor docker-compose is available."
+    fi
+    $compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"
 }
 
 case "${1:-fast}" in
