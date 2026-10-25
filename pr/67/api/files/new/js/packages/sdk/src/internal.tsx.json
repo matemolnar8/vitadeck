@@ -1,0 +1,1 @@
+{"path":"js/packages/sdk/src/internal.tsx","ref":"1f5d95410d4b49d25bbb16ce1fe7c806178b8bb4","side":"new","content":"export { ThemeProvider } from \"./theme\";\nexport type { DeckAppPackageManifest } from \"./package-manifest\";\n","language":"tsx"}
