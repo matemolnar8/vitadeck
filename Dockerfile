@@ -44,7 +44,7 @@ CMD ["bash"]
 
 # Upstream ships VITASDK; recent prebuilt toolchains need glibc >= 2.36 while the
 # image base is still Ubuntu 22.04. Final stage is Ubuntu 24.04 so arm-vita-eabi-gcc runs.
-FROM --platform=linux/amd64 gnuton/vitasdk-docker AS vitasdk-base
+FROM --platform=linux/amd64 gnuton/vitasdk-docker@sha256:93f81ba3721f5fd78ff8ec99793e1ef3668519d8e0bd52ea799e20753b6df07d AS vitasdk-base
 
 FROM --platform=linux/amd64 ubuntu:24.04
 
@@ -86,16 +86,17 @@ RUN HAVE_GLSL_SUPPORT=1 make -j"$(nproc)" install
 
 # SDL
 WORKDIR /build
-RUN git clone --depth=1 https://github.com/Northfear/SDL.git
+RUN git clone https://github.com/Northfear/SDL.git \
+    && git -C SDL checkout f99bb638f7eb256fa812e9da15d4e295a170640c
 WORKDIR /build/SDL
-RUN git checkout vitagl
 RUN cmake -S. -Bbuild -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_TOOLCHAIN_FILE=${VITASDK}/share/vita.toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DVIDEO_VITA_VGL=ON
 RUN cmake --build build -- -j$(nproc)
 RUN cmake --install build
 
 # raylib
 WORKDIR /build
-RUN git clone --depth=1 https://github.com/Rinnegatamante/raylib-5.5-vita.git
+RUN git clone https://github.com/Rinnegatamante/raylib-5.5-vita.git \
+    && git -C raylib-5.5-vita checkout 5a5deb4dde2b794f47d85fef5f0ffd4d3dfd44f1
 WORKDIR /build/raylib-5.5-vita/src
 # TraceLog() on VITA uses sceClib*; vitasdk declares them in psp2/kernel/clib.h (GCC errors without it).
 RUN awk '/^#include "utils.h"$$/ { print; print ""; print "#if defined(PLATFORM_VITA)"; print "#include <psp2/kernel/clib.h>"; print "#endif"; next } 1' utils.c > utils.c.tmp && mv utils.c.tmp utils.c

@@ -173,7 +173,7 @@ Restarting the Deck App JavaScript runtime with a fresh context after **Runtime 
 _Avoid_: Hot reload, refresh, soft reload
 
 **Deck App Failure Screen**:
-The VitaDeck-painted screen that replaces the **Active Deck App** after it throws an uncaught error (during boot, render, effects, input handlers, or timers), showing the error message, the first lines of its stack, and that **Start Input** opens the **VitaDeck Shell**. A **Deck App Runtime Restart** clears it.
+The VitaDeck-painted screen that replaces the **Active Deck App** after it throws an uncaught error (during boot, render, effects, input handlers, or timers), showing the error message, the first lines of its stack, and that **Start Input** opens the **VitaDeck Shell**. A **Deck App Runtime Restart** clears it. A promise rejection that still has no handler once pending promise callbacks have run counts as an uncaught error, so a `fetch` chain without a `catch` fails the Deck App instead of failing silently.
 _Avoid_: Crash screen, red box, blank screen
 
 **Runtime Upload Archive**:
