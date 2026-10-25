@@ -233,7 +233,7 @@ A visual-only **VitaDeck Runtime API** component for drawing a **Deck App Image*
 _Avoid_: Texture, sprite, bitmap widget
 
 **Stack**:
-The **VitaDeck Runtime API** component that places its children one after another in a column or a row, with gap, padding and cross-axis alignment, sized to its content unless given a size. `Scroll` is a column Stack whose content scrolls inside a fixed viewport.
+The **VitaDeck Runtime API** component that places its children one after another in a column or a row, with gap, padding and cross-axis alignment, sized to its content unless given a size. `Scroll` is a column Stack whose content scrolls inside a fixed viewport. A Stack without a fill takes no hits itself, so a tap between its children reaches what is behind it; a filled Stack takes hits like a Rect.
 _Avoid_: Flexbox, flex container, layout box, list
 
 **Press**:
@@ -302,8 +302,9 @@ _Avoid_: localStorage, save file, cache, settings
 - A **Deck App Package** is invalid when a declared **Deck App Image** is missing or uses an unsupported image file format.
 - VitaDeck loads declared **Deck App Images** when a **Deck App Package** starts, before rendering the **Deck App**.
 - **Image** is a visual-only component; it receives neither **Press** nor scroll input.
-- A **Stack** lays out **Button**, **Text Input**, **Image**, Rect and nested **Stack** children; Text and `Scroll` children keep their own `x`/`y`. A laid-out child's coordinate along the flow is a margin before it, the other an offset from its aligned position.
-- A **Stack** is visual-only like **Image**; D-pad **Focus** navigation and hit testing use the positions it computes.
+- A **Stack** lays out **Button**, **Text Input**, **Image**, Rect, `Scroll` and nested **Stack** children; Text children keep their own `x`/`y`. A laid-out child's coordinate along the flow is a margin before it, the other an offset from its aligned position.
+- A `Scroll` in a **Stack** takes its stated size along the flow; as the last child without one it fills the rest of a **Stack** that states its size.
+- A **Stack** is visual-only like **Image**; D-pad **Focus** navigation and hit testing use the positions it computes. Without a fill it is hit-transparent.
 - `Scroll` lays out its children exactly like a column **Stack** and adds scroll input on top.
 - Deck App authors export a **Deck App Component**; they do not call VitaDeck registration APIs directly.
 - A **Deck App Source Entry** may use normal TypeScript and ES module syntax; the **VitaDeck SDK** compiles it into the **Deck App Package Entry**.
