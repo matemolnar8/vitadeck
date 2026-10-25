@@ -10,6 +10,13 @@ project(vitadeck)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+option(VITADECK_WERROR "Treat compiler warnings as errors (CI only; newer compilers add warnings)" OFF)
+
+add_compile_options(-Wall -Wextra)
+if(VITADECK_WERROR)
+  add_compile_options(-Werror)
+endif()
+
 if(DEFINED ENV{VITASDK})
   message(STATUS "VITA is ON")
   include("${VITASDK}/share/vita.cmake" REQUIRED)
@@ -61,8 +68,11 @@ if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/quickjs/quickjs.c")
 endif()
 
 # Set up include directories
-set(VITADECK_INCLUDE_DIRS src vendor vendor/quickjs)
-list(APPEND VITADECK_INCLUDE_DIRS ${OPENSSL_INCLUDE_DIR})
+set(VITADECK_INCLUDE_DIRS src)
+# Third-party headers are not ours to fix; SYSTEM (-isystem) keeps their warnings
+# out of our builds. System libcurl (e.g. macOS SDK) lives under usr/include, where
+# -I would also make Clang diagnose libc headers.
+set(VITADECK_SYSTEM_INCLUDE_DIRS vendor vendor/quickjs ${OPENSSL_INCLUDE_DIR} ${CURL_INCLUDE_DIRS})
 
 if(DEFINED ENV{VITASDK})
   list(APPEND VITADECK_INCLUDE_DIRS
@@ -70,14 +80,12 @@ if(DEFINED ENV{VITASDK})
     $ENV{VITASDK}/arm-vita-eabi/include/SDL2
   )
 else()
-  list(APPEND VITADECK_INCLUDE_DIRS ${RAYLIB_INCLUDE_DIRS})
+  list(APPEND VITADECK_SYSTEM_INCLUDE_DIRS ${RAYLIB_INCLUDE_DIRS})
   list(APPEND VITADECK_LIBRARY_DIRS ${RAYLIB_LIBRARY_DIRS})
 endif()
 
 include_directories(${VITADECK_INCLUDE_DIRS})
-# System libcurl (e.g. macOS SDK) lives under usr/include; -I there makes Clang
-# diagnose SDK headers. SYSTEM uses -isystem so libc headers stay quiet.
-include_directories(SYSTEM ${CURL_INCLUDE_DIRS})
+include_directories(SYSTEM ${VITADECK_SYSTEM_INCLUDE_DIRS})
 link_directories(${VITADECK_LIBRARY_DIRS})
 
 # QuickJS
@@ -89,6 +97,7 @@ set(QUICKJS_SOURCES
     vendor/quickjs/dtoa.c
 )
 add_library(quickjs STATIC ${QUICKJS_SOURCES})
+target_compile_options(quickjs PRIVATE -w)
 target_compile_definitions(quickjs PRIVATE
     CONFIG_VERSION="2024-01-13"
     $<$<NOT:$<BOOL:$ENV{VITASDK}>>:_GNU_SOURCE>

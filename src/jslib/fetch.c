@@ -308,7 +308,7 @@ bool run_fetch(JSContext *ctx)
     }
     vd_mutex_unlock(fetch_mutex);
 
-    for (size_t i = 0; i < arrlen(finished); i++) {
+    for (ptrdiff_t i = 0; i < arrlen(finished); i++) {
         FetchRequest *req = finished[i];
         vd_thread_join(req->thread);
         vd_thread_destroy(req->thread);
@@ -323,7 +323,7 @@ bool run_fetch(JSContext *ctx)
 void fetch_shutdown(JSContext *ctx)
 {
     if (!fetch_pending) return;
-    for (size_t i = 0; i < arrlen(fetch_pending); i++) {
+    for (ptrdiff_t i = 0; i < arrlen(fetch_pending); i++) {
         FetchRequest *req = fetch_pending[i];
         vd_thread_join(req->thread);
         vd_thread_destroy(req->thread);

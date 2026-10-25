@@ -18,6 +18,7 @@ struct vd_mutex {
 
 static int vita_thread_entry(SceSize args, void *argp)
 {
+    (void)args;
     vd_thread *t = *(vd_thread **)argp;
     t->func(t->arg);
     return 0;

@@ -76,8 +76,7 @@ static void text_layout_add_line(TextLayout *layout, const char *line, Font font
 {
     if (layout->count >= TEXT_LAYOUT_MAX_LINES) return;
 
-    strncpy(layout->lines[layout->count], line, TEXT_LAYOUT_MAX_LINE_CHARS - 1);
-    layout->lines[layout->count][TEXT_LAYOUT_MAX_LINE_CHARS - 1] = '\0';
+    snprintf(layout->lines[layout->count], TEXT_LAYOUT_MAX_LINE_CHARS, "%s", line);
 
     int line_width = measure_text_width(font, layout->lines[layout->count], font_size);
     if (line_width > layout->block_width) layout->block_width = line_width;
@@ -140,17 +139,17 @@ static void text_layout_wrap_word(const char *paragraph, Font font, int font_siz
 
         char candidate[TEXT_LAYOUT_MAX_LINE_CHARS] = {0};
         if (current_len == 0) {
-            strncpy(candidate, word, sizeof(candidate) - 1);
+            snprintf(candidate, sizeof(candidate), "%s", word);
         } else {
             snprintf(candidate, sizeof(candidate), "%s %s", current, word);
         }
 
         if (measure_text_width(font, candidate, font_size) <= max_width) {
-            strncpy(current, candidate, sizeof(current) - 1);
+            snprintf(current, sizeof(current), "%s", candidate);
             current_len = (int)strlen(current);
         } else {
             if (current_len > 0) text_layout_add_line(layout, current, font, font_size);
-            strncpy(current, word, sizeof(current) - 1);
+            snprintf(current, sizeof(current), "%s", word);
             current_len = word_len;
         }
     }

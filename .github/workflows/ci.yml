@@ -80,6 +80,7 @@ jobs:
             exit 1
           fi
           cmake -S . -B out \
+            -DVITADECK_WERROR=ON \
             -DCMAKE_C_COMPILER_LAUNCHER="$CCACHE" \
             -DCMAKE_CXX_COMPILER_LAUNCHER="$CCACHE"
           cmake --build out --parallel "$(sysctl -n hw.logicalcpu)"

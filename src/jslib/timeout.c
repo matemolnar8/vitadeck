@@ -94,7 +94,7 @@ bool run_timeouts(JSContext *ctx)
         }
     }
 
-    for (size_t j = 0; j < arrlen(expired_ids); j++) {
+    for (ptrdiff_t j = 0; j < arrlen(expired_ids); j++) {
         unsigned int id = expired_ids[j];
         int idx = hmgeti(timeout_hm, id);
         if (idx < 0) continue;
