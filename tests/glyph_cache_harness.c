@@ -213,9 +213,8 @@ static void test_emoji(const VdGlyphFont *full)
     const int size = 24;
 
     VdEmojiSequence controller = cluster_of("\xf0\x9f\x8e\xae");
-    VdGlyph emoji = {0};
-    expect(glyph_cache_get_emoji(full, size, &controller, &emoji), "an emoji with an image resolves");
-    expect(emoji.color && emoji.page == 0, "an emoji is a colour glyph in an atlas page");
+    VdGlyph emoji = glyph_cache_get_emoji(full, size, &controller);
+    expect(emoji.color && emoji.page == 0, "an emoji with an image is a colour glyph in an atlas page");
     expect(emoji.width == size && emoji.height == size && emoji.advance == (float)size,
            "an emoji is a Font Size square");
     expect(emoji.offset_y == -(int)roundf(glyph_font_metrics(full, size).ascent), "an emoji sits at the ascent");
@@ -232,34 +231,33 @@ static void test_emoji(const VdGlyphFont *full)
     }
 
     int loads = emoji_loads;
-    VdGlyph again = {0};
-    glyph_cache_get_emoji(full, size, &controller, &again);
+    VdGlyph again = glyph_cache_get_emoji(full, size, &controller);
     expect(same_glyph(emoji, again) && emoji_loads == loads, "a cached emoji does not load again");
-    VdGlyph large = {0};
-    glyph_cache_get_emoji(full, size * 2, &controller, &large);
+    VdGlyph large = glyph_cache_get_emoji(full, size * 2, &controller);
     expect(large.width == size * 2 && !same_glyph(emoji, large), "another size is another emoji");
 
     VdEmojiSequence heart = cluster_of("\xe2\x9d\xa4\xef\xb8\x8f");
-    VdGlyph red_heart = {0};
-    expect(glyph_cache_get_emoji(full, size, &heart, &red_heart) && red_heart.color,
-           "a symbol with U+FE0F resolves to its emoji image");
+    expect(glyph_cache_get_emoji(full, size, &heart).color, "a symbol with U+FE0F resolves to its emoji image");
 
     VdEmojiSequence family = cluster_of("\xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x91\xa7");
     VdEmojiSequence man = cluster_of("\xf0\x9f\x91\xa8");
-    VdGlyph from_family = {0}, from_man = {0};
     loads = emoji_loads;
-    expect(glyph_cache_get_emoji(full, size, &family, &from_family), "a ZWJ sequence without an image resolves");
+    VdGlyph from_family = glyph_cache_get_emoji(full, size, &family);
+    expect(from_family.color, "a ZWJ sequence without an image resolves");
     expect(emoji_loads - loads == 3 && emoji_last_length == 1,
            "a ZWJ sequence tries itself and each shorter prefix that ends on an emoji");
-    glyph_cache_get_emoji(full, size, &man, &from_man);
-    expect(same_glyph(from_family, from_man), "a ZWJ sequence without an image draws as its first emoji");
+    expect(same_glyph(from_family, glyph_cache_get_emoji(full, size, &man)), "a ZWJ sequence without an image draws as its first emoji");
 
     VdEmojiSequence missing = cluster_of("\xf0\x9f\x99\x82");
-    VdGlyph none = {0};
-    expect(!glyph_cache_get_emoji(full, size, &missing, &none), "an emoji without an image does not resolve");
+    VdGlyph fallback = glyph_cache_get(full, size, VD_EMOJI_FALLBACK);
+    expect(same_glyph(glyph_cache_get_emoji(full, size, &missing), fallback),
+           "an emoji without an image no font has draws the fallback glyph");
     loads = emoji_loads;
-    expect(!glyph_cache_get_emoji(full, size, &missing, &none) && emoji_loads == loads,
+    expect(same_glyph(glyph_cache_get_emoji(full, size, &missing), fallback) && emoji_loads == loads,
            "a missing image is remembered");
+    VdEmojiSequence keycap = cluster_of("1\xef\xb8\x8f\xe2\x83\xa3");
+    expect(same_glyph(glyph_cache_get_emoji(full, size, &keycap), glyph_cache_get(full, size, '1')),
+           "an emoji without an image draws its first codepoint when a font has it");
 
     glyph_cache_set_emoji_loader(NULL);
     glyph_cache_reset();

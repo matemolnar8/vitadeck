@@ -54,16 +54,17 @@ typedef struct {
     uint32_t codepoint;
 } Cluster;
 
-// A colour emoji, or one codepoint.
+// An emoji, or one codepoint.
 static Cluster next_cluster(const VdFont *font, const char *text, int font_size)
 {
     Cluster cluster = {0};
     VdEmojiSequence sequence;
     if (font->outline) {
         int length = vd_emoji_cluster(text, &sequence);
-        if (length > 0 && glyph_cache_get_emoji(font->outline, font_size, &sequence, &cluster.glyph)) {
+        if (length > 0) {
             cluster.length = length;
             cluster.emoji = true;
+            cluster.glyph = glyph_cache_get_emoji(font->outline, font_size, &sequence);
             return cluster;
         }
     }
