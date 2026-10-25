@@ -1,20 +1,13 @@
+// Author-visible globals come from the SDK; this file adds the runtime-only contract with the C host.
+/// <reference types="@vitadeck/sdk/deck-app-env" />
 import type * as VitaDeckSdk from "@vitadeck/sdk";
 import type { ColorsMap } from "@vitadeck/sdk/types";
 import * as React from "react";
 import type * as ReactCompilerRuntime from "react-compiler-runtime";
 
 declare global {
-  function getTime(): number;
-
   var Colors: ColorsMap;
 
-  var console: {
-    log: (...args: unknown[]) => void;
-    debug: (...args: unknown[]) => void;
-    error: (...args: unknown[]) => void;
-  };
-  function setInterval(callback: () => void, delay: number): number;
-  function clearInterval(id: number): void;
   function nativeCreateRect(
     id: string,
     x: number,
@@ -187,22 +180,6 @@ declare global {
     statusText: string;
     headers: Record<string, string>;
     body: string;
-  }>;
-
-  function fetch(
-    url: string,
-    init?: {
-      method?: string;
-      headers?: Record<string, string> | Array<[string, string]>;
-      body?: string;
-    },
-  ): Promise<{
-    status: number;
-    ok: boolean;
-    statusText: string;
-    headers: Record<string, string>;
-    text(): Promise<string>;
-    json<T = unknown>(): Promise<T>;
   }>;
 
   var React: typeof React;
