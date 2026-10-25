@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 5cbf7dacf365fc2a6999c53b263160e1c53db5d8` and `git rev-parse --verify 56d626854fbd0253c445545cf51d4e49db77d014` in this repository.
+   Run `git rev-parse --verify 5cbf7dacf365fc2a6999c53b263160e1c53db5d8` and `git rev-parse --verify 4d6d7c5a7816464240a173bb7185dcb1c8090429` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,16 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  5cbf7dacf365fc2a6999c53b263160e1c53db5d8
 
-head               56d626854fbd0253c445545cf51d4e49db77d014
+head               4d6d7c5a7816464240a173bb7185dcb1c8090429
 
-Named refs at pin: origin/perf/dirty-flag-and-caches ... build/warnings-sanitizers-js-limits
+Named refs at pin: origin/perf/dirty-flag-and-caches ... origin/build/warnings-sanitizers-js-limits
 
 Read the diff:
 
-git diff --find-renames 5cbf7dacf365fc2a6999c53b263160e1c53db5d8 56d626854fbd0253c445545cf51d4e49db77d014
+git diff --find-renames 5cbf7dacf365fc2a6999c53b263160e1c53db5d8 4d6d7c5a7816464240a173bb7185dcb1c8090429
 
 Commits:
+- 4d6d7c5 ci(smoke): suppress Mesa leak in GLX window init under LSan
 - 56d6268 fix(core): bound QuickJS stack and memory, cap fetch bodies
 - 5138cb3 build: add VITADECK_SANITIZE and a sanitized CTest CI step
 - 7a1546d build: enable -Wall -Wextra and a VITADECK_WERROR option
