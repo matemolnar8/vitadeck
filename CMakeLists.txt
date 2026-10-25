@@ -414,6 +414,8 @@ if(DEFINED ENV{VITASDK})
       FILE js/dist/runtime/runtime.js js/runtime.js
       FILE assets/fonts/DejaVuSans.ttf assets/fonts/DejaVuSans.ttf
       FILE assets/fonts/DejaVuSans-LICENSE.txt assets/fonts/DejaVuSans-LICENSE.txt
+      FILE assets/fonts/DroidSansFallbackFull.ttf assets/fonts/DroidSansFallbackFull.ttf
+      FILE assets/fonts/DroidSansFallbackFull-LICENSE.txt assets/fonts/DroidSansFallbackFull-LICENSE.txt
       FILE assets/emoji assets/emoji
   )
 
@@ -441,6 +443,8 @@ if(DEFINED ENV{VITASDK})
     COMMAND curl -T ${CMAKE_SOURCE_DIR}/js/dist/runtime/runtime.js ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/js/runtime.js
     COMMAND echo "Sending ${VITA_TITLEID}/assets/fonts/DejaVuSans.ttf to vita"
     COMMAND curl --ftp-create-dirs -T ${CMAKE_SOURCE_DIR}/assets/fonts/DejaVuSans.ttf ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/assets/fonts/DejaVuSans.ttf
+    COMMAND echo "Sending ${VITA_TITLEID}/assets/fonts/DroidSansFallbackFull.ttf to vita"
+    COMMAND curl --ftp-create-dirs -T ${CMAKE_SOURCE_DIR}/assets/fonts/DroidSansFallbackFull.ttf ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/assets/fonts/DroidSansFallbackFull.ttf
     # Launch the app
     COMMAND echo "Launching ${VITA_TITLEID}"
     COMMAND echo launch ${VITA_TITLEID} | nc ${PSVITAIP} 1338
