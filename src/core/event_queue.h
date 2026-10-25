@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-typedef enum { EVT_INPUT, EVT_SHUTDOWN } EventType;
+typedef enum { EVT_INPUT } EventType;
 
 typedef struct {
     EventType type;

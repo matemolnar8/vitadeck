@@ -159,10 +159,8 @@ static void clear_remove_confirm(VdShell *shell)
 
 static bool start_upload_server(VdShell *shell)
 {
-    shell->bind_error[0] = '\0';
     char error[256];
     if (!upload_server_start(&shell->upload_server, error, sizeof(error))) {
-        snprintf(shell->bind_error, sizeof(shell->bind_error), "%s", error);
         snprintf(shell->message, sizeof(shell->message), "%s", error);
         return false;
     }
@@ -174,7 +172,6 @@ static void toggle_upload_server(VdShell *shell)
 {
     if (upload_server_is_running(&shell->upload_server)) {
         upload_server_stop(&shell->upload_server);
-        shell->bind_error[0] = '\0';
         snprintf(shell->message, sizeof(shell->message), "Upload server stopped.");
         return;
     }

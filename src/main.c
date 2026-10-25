@@ -1,5 +1,4 @@
 #include <raylib.h>
-#include <stdio.h>
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
 #include "core/bootstrap.h"
@@ -81,12 +80,6 @@ int main(int argc, char *argv[])
         ClearBackground(BLACK);
         bootstrap_draw_deck_canvas(&bootstrap);
         shell_render(&shell);
-        DrawFPS(VD_SCREEN_WIDTH - 100, 10);
-
-        for (int i = 0; i < GetTouchPointCount(); i++) {
-            Vector2 position = GetTouchPosition(i);
-            DrawCircle(position.x, position.y, 10, RED);
-        }
         EndDrawing();
     }
 

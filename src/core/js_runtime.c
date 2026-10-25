@@ -151,12 +151,6 @@ void js_runtime_stop(VdJsRuntime *runtime)
     event_queue_clear();
 }
 
-bool js_runtime_restart(VdJsRuntime *runtime)
-{
-    js_runtime_stop(runtime);
-    return js_runtime_start(runtime);
-}
-
 bool js_runtime_is_ready(const VdJsRuntime *runtime)
 {
     return runtime->ready;
