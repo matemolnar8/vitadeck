@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 781ac177fafe6b24c3ec78dd6dc9549eaff15a89` and `git rev-parse --verify 005abbd672770ef8f10dec20a6a5c37c61282cd8` in this repository.
+   Run `git rev-parse --verify 5f198a8e3549afcc5c075a4abfc8c75df9d3d7b5` and `git rev-parse --verify cd5c2fe1bbe4968dc8f987f23161d8369f2b2f0c` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -22,17 +22,19 @@ When no question follows this paste, explain this change.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  781ac177fafe6b24c3ec78dd6dc9549eaff15a89
+base (merge-base)  5f198a8e3549afcc5c075a4abfc8c75df9d3d7b5
 
-head               005abbd672770ef8f10dec20a6a5c37c61282cd8
+head               cd5c2fe1bbe4968dc8f987f23161d8369f2b2f0c
 
-Named refs at pin: 781ac177fafe6b24c3ec78dd6dc9549eaff15a89 ... chore/upgrade-pnpm-js-deps
+Named refs at pin: origin/main ... chore/upgrade-pnpm-js-deps
 
 Read the diff:
 
-git diff --find-renames 781ac177fafe6b24c3ec78dd6dc9549eaff15a89 005abbd672770ef8f10dec20a6a5c37c61282cd8
+git diff --find-renames 5f198a8e3549afcc5c075a4abfc8c75df9d3d7b5 cd5c2fe1bbe4968dc8f987f23161d8369f2b2f0c
 
 Commits:
+- cd5c2fe fix(demo): satisfy oxlint 1.89 effect-dependency rule; refresh failure golden
+- cb6841d Merge remote-tracking branch 'origin/main' into chore/upgrade-pnpm-js-deps
 - 005abbd chore(js): stay on Babel 7
 - 49e3d7c chore(js): Node 24, Babel 8, latest oxlint/oxfmt
 - 97038f3 chore(js): upgrade pnpm to 12.15.0 and dependencies within major
@@ -51,7 +53,7 @@ Machines with pnpm 12 fail `pnpm --dir js build` with `ERR_PNPM_BAD_PM_VERSION` 
 
 The what (small):
 
-The JS toolchain moves to pnpm 12.15.0 and Node 24, and the catalog takes the latest oxlint, oxfmt and tsgolint plus in-range bumps, with React and Babel staying on their current majors.
+The JS toolchain moves to pnpm 12.15.0 and Node 24, the catalog takes the latest oxlint, oxfmt and tsgolint plus in-range bumps with React and Babel on their current majors, and the code the new lint rules flag is fixed.
 
 ## Review concerns
 
@@ -66,3 +68,12 @@ The JS toolchain moves to pnpm 12.15.0 and Node 24, and the catalog takes the la
 The catalog bumps oxlint, oxlint-tsgolint, oxfmt, `@types/node`, `@types/react`, rolldown and tsx, and the three files oxlint now flags drop a redundant cast or move a `setState` out of an effect.
 
 [groups/deps.md](groups/deps.md)
+
+### 03 Demo app effects and the failure golden (`demo-lint`)
+
+`TimersSection`'s hide timer reads the `toast` it hides, `FetchSection`'s retry calls `requestRepo()` from the press handler, and the failure-screen golden picks up the stack locations those bundles now produce.
+
+Depends on:
+- 02 Catalog bumps and the new lint findings (`deps`)
+
+[groups/demo-lint.md](groups/demo-lint.md)
