@@ -91,7 +91,7 @@ typedef struct {
     int x, y, width, height;
 } ImageProps;
 
-// Bounds relative to the parent's top-left, computed from props by layout_tree on every swap.
+// Bounds relative to the parent's top-left, computed from props by layout_tree once per swap, on its first read.
 // A Scroll's offset is not part of it: the offset changes without a swap, so readers subtract it.
 typedef struct {
     int x, y, width, height;

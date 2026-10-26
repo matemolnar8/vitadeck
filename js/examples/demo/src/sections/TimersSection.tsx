@@ -56,7 +56,7 @@ export function TimersSection() {
         <Label width={200} fontSize={44} font="mono" color={theme.success}>
           {now.clock}
         </Label>
-        <Label width={420} fontSize={14} lines={2} color={theme.outline}>
+        <Label width={420} fontSize={14} wrap color={theme.outline}>
           {`setInterval ticks every second. getTime() says VitaDeck opened its window ${now.uptime.toFixed(0)} s ago.`}
         </Label>
       </Stack>

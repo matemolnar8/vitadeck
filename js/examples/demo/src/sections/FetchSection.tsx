@@ -63,7 +63,7 @@ export function FetchSection() {
           <Label fontSize={22} color={theme.success}>
             {request.repo.full_name}
           </Label>
-          <Label lines={2}>{request.repo.description ?? "No description"}</Label>
+          <Label wrap>{request.repo.description ?? "No description"}</Label>
           <Label>{`★ ${request.repo.stargazers_count} stars · ${request.repo.open_issues_count} open issues`}</Label>
         </Stack>
       )}

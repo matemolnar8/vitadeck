@@ -1,8 +1,10 @@
 #include "text.h"
 
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 #include "glyph_cache.h"
+#include "stb_ds.h"
 
 // raylib's DrawTextEx put 1px between glyphs; keeping it keeps every layout's text widths.
 #define TEXT_SPACING 1.0f
@@ -146,5 +148,161 @@ void text_draw(const VdFont *font, const char *text, Vector2 position, int font_
             DrawRectangleLines((int)at.x, (int)at.y, glyph.width, glyph.height, color);
         }
         pen += glyph.advance + TEXT_SPACING;
+    }
+}
+
+#define TEXT_SOURCE_MAX 4096
+
+// UI thread only, like every glyph cache read; one Text is built at a time.
+static TextLines g_lines;
+
+int text_props_font_size(const TextProps *text)
+{
+    return text->font_size > 0 ? text->font_size : VD_TEXT_FONT_SIZE_DEFAULT;
+}
+
+int text_props_line_height(const TextProps *text)
+{
+    if (text->line_height > 0) return text->line_height;
+    return text_line_height(font_registry_get(text->font_name), text_props_font_size(text)) + 4;
+}
+
+static int measure_width(const VdFont *font, const char *text, int font_size)
+{
+    return (int)(text_measure(font, text, font_size) + 0.5f);
+}
+
+static void add_line(TextLines *lines, const char *line, const VdFont *font, int font_size)
+{
+    if (lines->count >= TEXT_LAYOUT_MAX_LINES) return;
+
+    snprintf(lines->lines[lines->count], TEXT_LAYOUT_MAX_LINE_CHARS, "%s", line);
+    int width = measure_width(font, lines->lines[lines->count], font_size);
+    lines->widths[lines->count] = width;
+    if (width > lines->width) lines->width = width;
+    lines->count++;
+}
+
+static void wrap_words(const char *paragraph, const VdFont *font, int font_size, int max_width, TextLines *lines)
+{
+    const char *cursor = paragraph;
+    char current[TEXT_LAYOUT_MAX_LINE_CHARS] = {0};
+    int current_len = 0;
+
+    while (*cursor != '\0') {
+        while (*cursor == ' ')
+            cursor++;
+        if (*cursor == '\0') break;
+
+        const char *word_start = cursor;
+        while (*cursor != '\0' && *cursor != ' ')
+            cursor++;
+        int word_len = (int)(cursor - word_start);
+
+        char word[TEXT_LAYOUT_MAX_LINE_CHARS] = {0};
+        if (word_len >= TEXT_LAYOUT_MAX_LINE_CHARS) word_len = TEXT_LAYOUT_MAX_LINE_CHARS - 1;
+        memcpy(word, word_start, (size_t)word_len);
+        word[word_len] = '\0';
+
+        int word_width = measure_width(font, word, font_size);
+        if (word_width > max_width) {
+            if (current_len > 0) {
+                add_line(lines, current, font, font_size);
+                current[0] = '\0';
+                current_len = 0;
+            }
+
+            // Chunks hold whole clusters, and at least one even when it alone is too wide.
+            int chunk_start = 0;
+            while (chunk_start < word_len) {
+                int length = 0;
+                text_cluster_width(font, word + chunk_start, font_size, &length);
+                int chunk_end = chunk_start + length;
+                while (chunk_end < word_len) {
+                    text_cluster_width(font, word + chunk_end, font_size, &length);
+                    char probe[TEXT_LAYOUT_MAX_LINE_CHARS] = {0};
+                    memcpy(probe, word + chunk_start, (size_t)(chunk_end + length - chunk_start));
+                    if (measure_width(font, probe, font_size) > max_width) break;
+                    chunk_end += length;
+                }
+
+                char chunk[TEXT_LAYOUT_MAX_LINE_CHARS] = {0};
+                int chunk_len = chunk_end - chunk_start;
+                memcpy(chunk, word + chunk_start, (size_t)chunk_len);
+                add_line(lines, chunk, font, font_size);
+                chunk_start = chunk_end;
+            }
+            continue;
+        }
+
+        char candidate[TEXT_LAYOUT_MAX_LINE_CHARS] = {0};
+        if (current_len == 0) {
+            snprintf(candidate, sizeof(candidate), "%s", word);
+        } else {
+            snprintf(candidate, sizeof(candidate), "%s %s", current, word);
+        }
+
+        if (measure_width(font, candidate, font_size) <= max_width) {
+            snprintf(current, sizeof(current), "%s", candidate);
+            current_len = (int)strlen(current);
+        } else {
+            if (current_len > 0) add_line(lines, current, font, font_size);
+            snprintf(current, sizeof(current), "%s", word);
+            current_len = word_len;
+        }
+    }
+
+    if (current_len > 0 || lines->count == 0) add_line(lines, current, font, font_size);
+}
+
+const TextLines *text_lines(const ReactInstance *text)
+{
+    const TextProps *t = &text->props.text;
+    TextLines *lines = &g_lines;
+    lines->count = 0;
+    lines->width = 0;
+
+    char source[TEXT_SOURCE_MAX] = {0};
+    for (ptrdiff_t i = 0; i < arrlen(text->children); i++) {
+        const ReactInstance *child = text->children[i];
+        if (child && child->type == NT_RAW_TEXT && child->props.raw_text) {
+            strncat(source, child->props.raw_text, sizeof(source) - strlen(source) - 1);
+        }
+    }
+
+    int font_size = text_props_font_size(t);
+    const VdFont *font = font_registry_get(t->font_name);
+    const bool wrap = t->width > 0 && t->wrap == TEXT_WRAP_WORD;
+
+    const char *start = source;
+    for (const char *p = source;; p++) {
+        if (*p != '\n' && *p != '\0') continue;
+        char line[TEXT_LAYOUT_MAX_LINE_CHARS] = {0};
+        int len = (int)(p - start);
+        if (len >= TEXT_LAYOUT_MAX_LINE_CHARS) len = TEXT_LAYOUT_MAX_LINE_CHARS - 1;
+        memcpy(line, start, (size_t)len);
+        if (wrap && len > 0) {
+            wrap_words(line, font, font_size, t->width, lines);
+        } else {
+            add_line(lines, line, font, font_size);
+        }
+        if (*p == '\0') break;
+        start = p + 1;
+    }
+
+    if (t->width > lines->width) lines->width = t->width;
+    return lines;
+}
+
+int text_align_offset(int box_width, int line_width, TextAlign align)
+{
+    if (box_width <= 0) return 0;
+    switch (align) {
+    case TEXT_ALIGN_CENTER:
+        return (box_width - line_width) / 2;
+    case TEXT_ALIGN_RIGHT:
+        return box_width - line_width;
+    default:
+        return 0;
     }
 }

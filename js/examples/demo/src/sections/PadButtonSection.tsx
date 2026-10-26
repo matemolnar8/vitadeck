@@ -73,7 +73,7 @@ export function PadButtonSection() {
         />
         <Label width={600}>{`Square (S) toggles this lamp: ${lampOn ? "on" : "off"}`}</Label>
       </Stack>
-      <Label fontSize={14} lines={3} color={theme.outline}>
+      <Label fontSize={14} wrap color={theme.outline}>
         L and R (keys L and R) switch sections: App.tsx listens to them with usePadButton too, so every subscriber of a
         button hears it. Start (F1) opens the VitaDeck Shell and Select is reserved; neither reaches a Deck App.
       </Label>
