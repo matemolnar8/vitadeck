@@ -8,7 +8,7 @@ export default function App() {
   return (
     <Screen>
       <Rect x={x} y={y} width={width} height={height} color={theme.surface}>
-        <Text fontSize={28} color={theme.text}>
+        <Text x={8} y={8} fontSize={28} color={theme.text}>
           Hello from vitadeck-scaffold-template
         </Text>
       </Rect>

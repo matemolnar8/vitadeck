@@ -47,7 +47,8 @@ export function Rect(props: RectProps) {
 export type TextProps = Omit<VitaTextProps, "key">;
 
 export function Text(props: TextProps) {
-  return vitaHost("vita-text", props);
+  const { theme } = useTheme();
+  return vitaHost("vita-text", { ...props, color: props.color ?? theme.text });
 }
 
 export type StackProps = Omit<VitaStackProps, "key">;
@@ -104,8 +105,8 @@ export function TextInput(props: TextInputProps) {
 }
 
 export { usePadButton } from "./pad-buttons";
-export type { PadButton, PadButtonHandlers } from "./pad-buttons";
-export type { FocusProps } from "./vitadeck-host-types";
+export type { PadButton, PadButtonHandlers, PadButtonPhase } from "./pad-buttons";
+export type { FocusProps, StackAlign, StackDirection, TextAlign, TextWrap } from "./vitadeck-host-types";
 
 const runtimeColors = (globalThis as unknown as { Colors: ColorsMap }).Colors;
 export { runtimeColors as Colors, useTheme };

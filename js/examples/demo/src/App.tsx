@@ -70,6 +70,7 @@ export default function DemoDeckApp() {
                 width={NAV_WIDTH}
                 height={31}
                 label={section.name}
+                align="left"
                 fontSize={16}
                 color={index === current ? theme.accent : theme.buttonBackground}
                 focusColor={index === current ? theme.accent : theme.outline}
