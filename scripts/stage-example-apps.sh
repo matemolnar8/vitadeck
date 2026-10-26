@@ -2,10 +2,10 @@
 set -euo pipefail
 
 SOURCE_DIR="${1:?source directory (repo root) required}"
-BUILD_DIR="${2:?build directory required}"
+DATA_ROOT="${2:?data root required, e.g. <build>/vitadeck-data}"
 
 EXAMPLES_DIR="$SOURCE_DIR/js/examples"
-DEST="$BUILD_DIR/vitadeck-data/installed-deck-apps"
+DEST="$DATA_ROOT/installed-deck-apps"
 
 if [[ ! -d "$EXAMPLES_DIR" ]]; then
   echo "Examples directory missing: $EXAMPLES_DIR" >&2

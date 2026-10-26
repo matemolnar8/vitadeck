@@ -29,7 +29,7 @@ When this file speaks:
 - `js/examples/` - example Deck Apps; `smoke` is the CI smoke fixture
 - `tests/` - CTest harnesses (`smoke_harness.c`, `package_manifest_harness.c`, `package_library_harness.c`, `timer_reload_harness.c`, `upload_parsing_harness.c`) and golden screenshots
 - `vendor/quickjs` - git submodule; `docker-compose.yml` + `Dockerfile` - Vitasdk and Linux smoke images
-- `.agents/skills/` - repo skills (`vitadeck-build`, `vitadeck-smoke`, `vitadeck-manual-testing`, `vitadeck-vdapp-upload`, `vitadeck-deck-app-init`) plus `comprehende` installed from `matemolnar8/comprehende` via the `skills` CLI (`skills-lock.json`) and `pages`, a repo-owned skill with its own publish script. `.claude/skills` symlinks here. Published via `npx skills add matemolnar8/vitadeck`.
+- `.agents/skills/` - repo skills (`vitadeck-build`, `vitadeck-emulator`, `vitadeck-smoke`, `vitadeck-manual-testing`, `vitadeck-vdapp-upload`, `vitadeck-deck-app-init`) plus `comprehende` installed from `matemolnar8/comprehende` via the `skills` CLI (`skills-lock.json`) and `pages`, a repo-owned skill with its own publish script. `.claude/skills` symlinks here. Published via `npx skills add matemolnar8/vitadeck`.
 
 ## Setup
 
@@ -39,6 +39,7 @@ When this file speaks:
 - Vita build and Linux smoke run in Docker. Start Docker Desktop first.
 - The first CMake configure downloads the pinned runtime fonts and Twemoji images ([cmake/fonts.cmake](cmake/fonts.cmake), [cmake/twemoji.cmake](cmake/twemoji.cmake)) into the gitignored `assets/fonts/` and `assets/emoji/`; offline it warns, builds anyway with fallbacks (raylib's built-in font, missing-glyph boxes for CJK and Korean, a fallback glyph for emoji), and the next configure retries.
 - Uploading a Vita build (`upload_vita`, `upload_vpk`, `run`) reads the Vita's IP from `PSVITAIP` when CMake configures, e.g. `export PSVITAIP=192.168.1.177`.
+- Without the device, `scripts/vita3k.sh` builds the VPK and runs it in the [Vita3K](https://vita3k.org) emulator (macOS, Windows via Git Bash, Linux) with the example Deck Apps installed. New machine setup (Vita3K, Sony's shader compiler) and controls: [the `vitadeck-emulator` skill](.agents/skills/vitadeck-emulator/SKILL.md). Start is Enter in Vita3K, not F1.
 - Releases: [docs/releasing.md](docs/releasing.md).
 
 ## Footguns
