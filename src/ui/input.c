@@ -82,8 +82,8 @@ static const struct {
     [PAD_R] = {"r", GAMEPAD_BUTTON_RIGHT_TRIGGER_1, KEY_R},
 };
 
-// A button held when the Shell hides or the runtime restarts is ignored until released, so the Circle
-// that closes the Shell does not reach the Deck App.
+// A button held when the Shell hides is ignored until released, so the Circle that closes the Shell does not reach
+// the Deck App. One held when the runtime starts otherwise presses on its first sample.
 typedef enum { PAD_STATE_UP, PAD_STATE_DOWN, PAD_STATE_IGNORED } PadState;
 static PadState pad_states[PAD_BUTTON_COUNT];
 static bool pad_ignore_held = false;
@@ -299,7 +299,6 @@ void input_clear_focus(void)
     clear_focus();
     for (int i = 0; i < PAD_BUTTON_COUNT; i++)
         pad_states[i] = PAD_STATE_UP;
-    pad_ignore_held = true;
 }
 
 void input_ignore_held_pad_buttons(void)

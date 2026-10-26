@@ -92,7 +92,7 @@ _Avoid_: Selection, hover, highlight, active element
 **Press**: The input gesture behind **Button** and **Text Input** callbacks.
 _Avoid_: Click, mouse down, mouse up, hover
 
-**Pad Button**: A Vita button a **Deck App** reads directly through `usePadButton`: Circle, Triangle, Square, L or R. Delivered only while the Shell is hidden; one held when the Shell hides is ignored until released.
+**Pad Button**: A Vita button a **Deck App** reads directly through `usePadButton`: Circle, Triangle, Square, L or R. Delivered only while the Shell is hidden; one held when the Shell hides is ignored until released, and one held when a **Deck App** starts otherwise presses on its first frame.
 _Avoid_: Hotkey, shortcut, raw button, gamepad event
 
 **Shell Face Input**: Face-button conventions inside the **VitaDeck Shell**: Cross confirms, Circle backs out (cancels a pending removal, otherwise hides the Shell). A connected gamepad works alongside the host keyboard.

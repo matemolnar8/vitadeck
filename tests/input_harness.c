@@ -177,8 +177,18 @@ static void test_pad_buttons(void)
 
     input_clear_focus();
     pad(PAD_CIRCLE, true);
+    pad(PAD_CIRCLE, true);
     pad(PAD_CIRCLE, false);
-    expect_events("", "a runtime restart forgets held Pad Buttons without ending them");
+    expect_events("pad:circle:pressstart pad:circle:pressend",
+                  "a button held through a runtime start presses once, without ending the old press");
+
+    pad(PAD_SQUARE, true);
+    drain();
+    input_ignore_held_pad_buttons();
+    input_clear_focus();
+    pad(PAD_SQUARE, true);
+    pad(PAD_SQUARE, false);
+    expect_events("", "a button held when the Shell hides to restart the runtime stays ignored");
 
     gamepad((GamepadSample){.confirm = true});
     gamepad((GamepadSample){.up = true, .down = true});
