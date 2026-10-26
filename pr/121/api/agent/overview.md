@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 781ac177fafe6b24c3ec78dd6dc9549eaff15a89` and `git rev-parse --verify 97038f30a2ec905d7c5a64084b981d6bfc03b82c` in this repository.
+   Run `git rev-parse --verify 781ac177fafe6b24c3ec78dd6dc9549eaff15a89` and `git rev-parse --verify 49e3d7cc896384082f20e925674c8237418bfa6f` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,19 +24,21 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  781ac177fafe6b24c3ec78dd6dc9549eaff15a89
 
-head               97038f30a2ec905d7c5a64084b981d6bfc03b82c
+head               49e3d7cc896384082f20e925674c8237418bfa6f
 
 Named refs at pin: 781ac177fafe6b24c3ec78dd6dc9549eaff15a89 ... chore/upgrade-pnpm-js-deps
 
 Read the diff:
 
-git diff --find-renames 781ac177fafe6b24c3ec78dd6dc9549eaff15a89 97038f30a2ec905d7c5a64084b981d6bfc03b82c
+git diff --find-renames 781ac177fafe6b24c3ec78dd6dc9549eaff15a89 49e3d7cc896384082f20e925674c8237418bfa6f
 
 Commits:
+- 49e3d7c chore(js): Node 24, Babel 8, latest oxlint/oxfmt
 - 97038f3 chore(js): upgrade pnpm to 12.15.0 and dependencies within major
 
 Sources:
 - transcript Claude Code session · Oct 26 Máté asks to move packageManager to the latest pnpm, adapt config to pnpm 11/12 defaults, keep Docker/CI pins in sync, bump deps within their major, and list skipped majors in the PR.
+- transcript Claude Code session · Oct 26, follow-up Máté asks for Node 24 (latest LTS), latest oxlint and oxfmt, Node 24 types, Babel 8 if it can be made to work, and React kept on 18 because React 19 needs a reconciler rewrite.
 
 The title:
 
@@ -46,20 +48,29 @@ The why:
 
 Machines with pnpm 12 fail `pnpm --dir js build` with `ERR_PNPM_BAD_PM_VERSION` because `packageManager` pins pnpm 10.28.2 [per the request](source:t1).
 
-The what (small):
+The what (medium):
 
-The JS workspace moves from pnpm 10.28.2 to pnpm 12.15.0, and five catalog pins move to their latest version inside the current semver range.
+The JS toolchain moves to pnpm 12.15.0 and Node 24, the catalog takes the latest oxlint, oxfmt, tsgolint, Babel 8 and in-range bumps while React stays on 18, and a local rolldown plugin replaces `@rollup/plugin-babel`.
 
 ## Review concerns
 
-### 01 pnpm 12 and its new defaults (`pnpm`)
+### 01 pnpm 12 and Node 24 (`toolchain`)
 
-`packageManager` and the Dockerfile's `corepack prepare` both pin pnpm 12.15.0, and `allowBuilds: { esbuild: false }` in `pnpm-workspace.yaml` keeps the install from failing on esbuild's postinstall.
+`packageManager` and the Dockerfile pin pnpm 12.15.0, `.nvmrc` says 24 and CI reads it through `node-version-file`, and `allowBuilds: { esbuild: false }` keeps pnpm 12's strict build check from failing the install.
 
-[groups/pnpm.md](groups/pnpm.md)
+[groups/toolchain.md](groups/toolchain.md)
 
-### 02 Catalog bumps within the current major (`deps`)
+### 02 Babel 8 through a local rolldown plugin (`babel`)
 
-The catalog in `pnpm-workspace.yaml` bumps `@types/node`, `@types/react`, `oxlint`, `rolldown` and `tsx`, and the scaffold template's `@types/react` pin follows the catalog.
+`babel()` in `sdk/cli/babel.ts` runs `transformAsync` with the presets pinned to Babel 7 output, and both the CLI's `vitadeck build` and the runtime's `rolldown.config.js` call it instead of `@rollup/plugin-babel`.
+
+Depends on:
+- 01 pnpm 12 and Node 24 (`toolchain`)
+
+[groups/babel.md](groups/babel.md)
+
+### 03 Catalog bumps and the new lint findings (`deps`)
+
+The catalog bumps oxlint, oxlint-tsgolint, oxfmt, `@types/node`, `@types/react`, rolldown and tsx, and the three files oxlint now flags drop a redundant cast or move a `setState` out of an effect.
 
 [groups/deps.md](groups/deps.md)

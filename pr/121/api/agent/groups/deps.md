@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 781ac177fafe6b24c3ec78dd6dc9549eaff15a89` and `git rev-parse --verify 97038f30a2ec905d7c5a64084b981d6bfc03b82c` in this repository.
+   Run `git rev-parse --verify 781ac177fafe6b24c3ec78dd6dc9549eaff15a89` and `git rev-parse --verify 49e3d7cc896384082f20e925674c8237418bfa6f` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 781ac177fafe6b24c3ec78dd6dc9549eaff15a89 97038f30a2ec905d7c5a64084b981d6bfc03b82c -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 781ac177fafe6b24c3ec78dd6dc9549eaff15a89 49e3d7cc896384082f20e925674c8237418bfa6f -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,28 +25,34 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  781ac177fafe6b24c3ec78dd6dc9549eaff15a89
 
-head               97038f30a2ec905d7c5a64084b981d6bfc03b82c
+head               49e3d7cc896384082f20e925674c8237418bfa6f
 
 Named refs at pin: 781ac177fafe6b24c3ec78dd6dc9549eaff15a89 ... chore/upgrade-pnpm-js-deps
 
 Read the diff:
 
-git diff --find-renames 781ac177fafe6b24c3ec78dd6dc9549eaff15a89 97038f30a2ec905d7c5a64084b981d6bfc03b82c
+git diff --find-renames 781ac177fafe6b24c3ec78dd6dc9549eaff15a89 49e3d7cc896384082f20e925674c8237418bfa6f
 
-Review concern 02 of 02: Catalog bumps within the current major (`deps`)
+Review concern 03 of 03: Catalog bumps and the new lint findings (`deps`)
 
 The why:
 
-The request asks for the latest non-breaking version of each workspace dependency [per the request](source:t1).
+The requests ask for in-range bumps [per the request](source:t1) and the latest oxlint, oxfmt and Node types [per the follow-up](source:t2); oxlint 1.89 with tsgolint 7 reports three new errors.
 
 The what:
 
-The catalog in `pnpm-workspace.yaml` bumps `@types/node`, `@types/react`, `oxlint`, `rolldown` and `tsx`, and the scaffold template's `@types/react` pin follows the catalog.
+The catalog bumps oxlint, oxlint-tsgolint, oxfmt, `@types/node`, `@types/react`, rolldown and tsx, and the three files oxlint now flags drop a redundant cast or move a `setState` out of an effect.
 
 Look for:
+- In the timers example, the Start and Cancel handlers now set the status text; Cancel only shows "Cancelled" while a timeout is pending, as the effect did before.
 - `rolldown` goes from `1.0.0-rc.18` to `1.2.15`; it is a runtime dependency of `@vitadeck/sdk`, so authors' `vitadeck build` bundles with it too.
-- `oxlint` stops at `1.72.0` because 1.73+ needs `oxlint-tsgolint` 0.24+ or 7.x, outside the pinned `0.23.0` range.
 
 Hunk refs for this concern:
 - js/pnpm-workspace.yaml
 - js/packages/sdk/cli/templates/scaffold/package.json
+- js/examples/timers/src/App.tsx@32+32
+- js/examples/timers/src/App.tsx@41+40
+- js/examples/timers/src/App.tsx@80+78
+- js/examples/timers/src/App.tsx@91+90
+- js/packages/runtime/src/main.tsx
+- js/packages/sdk/src/host-elements.tsx
