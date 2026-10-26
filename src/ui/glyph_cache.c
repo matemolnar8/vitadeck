@@ -14,6 +14,7 @@
 #define GLYPH_PADDING 1
 
 #define ZWJ 0x200d
+#define VS15 0xfe0e
 #define VS16 0xfe0f
 #define KEYCAP 0x20e3
 
@@ -62,9 +63,17 @@ static int g_page_count = 0;
 static int g_current_page = -1;
 static unsigned g_frame = 1;
 static int g_rasterised = 0;
+static int g_overflowed = 0;
 static const VdGlyphFont *g_fallback = NULL;
-static VdGlyphFontLoader g_fallback_loader = NULL;
-static const VdGlyphFont *g_last_fallback = NULL;
+
+typedef struct {
+    VdLazyFont lazy;
+    bool tried;
+    const VdGlyphFont *font;
+} LazySlot;
+
+static LazySlot g_lazy[VD_LAZY_FONT_MAX];
+static int g_lazy_count = 0;
 
 static uint32_t read_u32(const unsigned char *bytes)
 {
@@ -105,7 +114,9 @@ void glyph_font_free(VdGlyphFont *font)
 {
     if (!font) return;
     if (g_fallback == font) g_fallback = NULL;
-    if (g_last_fallback == font) g_last_fallback = NULL;
+    for (int i = 0; i < g_lazy_count; i++) {
+        if (g_lazy[i].font == font) g_lazy[i].font = NULL;
+    }
     free(font->data);
     free(font);
 }
@@ -123,19 +134,34 @@ void glyph_cache_set_fallback(const VdGlyphFont *font)
     g_fallback = font;
 }
 
-void glyph_cache_set_fallback_loader(VdGlyphFontLoader loader)
+void glyph_cache_set_lazy_fonts(const VdLazyFont *fonts, int count)
 {
-    g_fallback_loader = loader;
-    g_last_fallback = NULL;
+    memset(g_lazy, 0, sizeof(g_lazy));
+    g_lazy_count = count < VD_LAZY_FONT_MAX ? count : VD_LAZY_FONT_MAX;
+    for (int i = 0; i < g_lazy_count; i++) {
+        g_lazy[i].lazy = fonts[i];
+    }
 }
 
-static const VdGlyphFont *last_fallback(void)
+static bool in_range(uint32_t codepoint, uint32_t first, uint32_t last)
 {
-    if (g_fallback_loader) {
-        g_last_fallback = g_fallback_loader();
-        g_fallback_loader = NULL;
-    }
-    return g_last_fallback;
+    return codepoint >= first && codepoint <= last;
+}
+
+bool vd_in_hangul_blocks(uint32_t codepoint)
+{
+    return in_range(codepoint, 0x1100, 0x11ff) || in_range(codepoint, 0x3130, 0x318f) ||
+           in_range(codepoint, 0xa960, 0xa97f) || in_range(codepoint, 0xac00, 0xd7ff) ||
+           in_range(codepoint, 0xffa0, 0xffdf);
+}
+
+// Hangul syllables are left out: Droid Sans Fallback Full has 3 of the 11,172, so Korean text would open it for
+// nothing and mix two faces in a word.
+bool vd_in_cjk_blocks(uint32_t codepoint)
+{
+    return in_range(codepoint, 0x1100, 0x11ff) || in_range(codepoint, 0x2e80, 0x9fff) ||
+           in_range(codepoint, 0xf900, 0xfaff) || in_range(codepoint, 0xfe30, 0xfe4f) ||
+           in_range(codepoint, 0xff00, 0xffef) || in_range(codepoint, 0x20000, 0x323af);
 }
 
 // The font's glyph index for codepoint, setting source to the font when it has one; 0 when it has none.
@@ -143,6 +169,23 @@ static int find_glyph(const VdGlyphFont *font, uint32_t codepoint, const VdGlyph
 {
     int index = font ? stbtt_FindGlyphIndex(&font->info, (int)codepoint) : 0;
     if (index != 0) *source = font;
+    return index;
+}
+
+// The glyph index from the first font in the chain that has codepoint, setting source to it; 0 when none has it.
+static int resolve_glyph(const VdGlyphFont *font, uint32_t codepoint, const VdGlyphFont **source)
+{
+    int index = find_glyph(font, codepoint, source);
+    if (index == 0) index = find_glyph(g_fallback, codepoint, source);
+    for (int i = 0; index == 0 && i < g_lazy_count; i++) {
+        LazySlot *slot = &g_lazy[i];
+        if (!slot->lazy.covers(codepoint)) continue;
+        if (!slot->tried) {
+            slot->font = slot->lazy.load();
+            slot->tried = true;
+        }
+        index = find_glyph(slot->font, codepoint, source);
+    }
     return index;
 }
 
@@ -205,11 +248,20 @@ static int atlas_allocate(int width, int height, int *x, int *y)
     return page_place(&g_pages[index], width, height, x, y) ? index : -1;
 }
 
+// A fallback glyph takes the requested font's em size: scaling each font to the Font Size by its own line height
+// would draw a font with taller line metrics, like Noto Sans KR, smaller than the text around it.
+static float glyph_scale(const VdGlyphFont *font, const VdGlyphFont *source, int size)
+{
+    float scale = stbtt_ScaleForPixelHeight(&font->info, (float)size);
+    if (source == font) return scale;
+    float em = scale / stbtt_ScaleForMappingEmToPixels(&font->info, 1.0f);
+    return stbtt_ScaleForMappingEmToPixels(&source->info, em);
+}
+
 // Returns false when the glyph has pixels but no room, so the caller retries on a later frame.
-static bool rasterise(const VdGlyphFont *font, int glyph_index, int size, VdGlyph *out)
+static bool rasterise(const VdGlyphFont *font, int glyph_index, float scale, VdGlyph *out)
 {
     const stbtt_fontinfo *info = &font->info;
-    float scale = stbtt_ScaleForPixelHeight(info, (float)size);
     int advance = 0, left_bearing = 0;
     stbtt_GetGlyphHMetrics(info, glyph_index, &advance, &left_bearing);
     *out = (VdGlyph){.page = -1, .advance = advance * scale};
@@ -223,7 +275,11 @@ static bool rasterise(const VdGlyphFont *font, int glyph_index, int size, VdGlyp
     int x = 0, y = 0;
     int page = atlas_allocate(width, height, &x, &y);
     unsigned char *coverage = page >= 0 ? malloc((size_t)width * (size_t)height) : NULL;
-    if (!coverage) return false;
+    if (!coverage) {
+        *out = (VdGlyph){-1, 0, 0, width, height, x0, y0, out->advance, false};
+        g_overflowed++;
+        return false;
+    }
     stbtt_MakeGlyphBitmap(info, coverage, width, height, width, scale, scale, glyph_index);
 
     unsigned char *pixels = g_pages[page].pixels;
@@ -242,6 +298,8 @@ static bool rasterise(const VdGlyphFont *font, int glyph_index, int size, VdGlyp
     return true;
 }
 
+static bool find_emoji(const VdGlyphFont *font, int size, const VdEmojiSequence *sequence, VdGlyph *glyph);
+
 VdGlyph glyph_cache_get(const VdGlyphFont *font, int size, uint32_t codepoint)
 {
     GlyphKey key;
@@ -258,12 +316,12 @@ VdGlyph glyph_cache_get(const VdGlyphFont *font, int size, uint32_t codepoint)
     }
 
     const VdGlyphFont *source = font;
-    int glyph_index = find_glyph(font, codepoint, &source);
-    if (glyph_index == 0) glyph_index = find_glyph(g_fallback, codepoint, &source);
-    if (glyph_index == 0) glyph_index = find_glyph(last_fallback(), codepoint, &source);
+    int glyph_index = resolve_glyph(font, codepoint, &source);
 
     VdGlyph glyph;
-    if (rasterise(source, glyph_index, size, &glyph)) {
+    VdEmojiSequence alone = {{codepoint}, 1};
+    if (glyph_index == 0 && find_emoji(font, size, &alone, &glyph)) return glyph;
+    if (rasterise(source, glyph_index, glyph_scale(font, source, size), &glyph)) {
         hmput(g_glyphs, key, glyph);
         g_rasterised++;
     }
@@ -283,7 +341,12 @@ static bool rasterise_emoji(const VdGlyphFont *font, int size, const unsigned ch
     *out = (VdGlyph){.page = -1, .offset_y = -(int)roundf(ascent), .advance = (float)size, .color = true};
     int x = 0, y = 0;
     int page = atlas_allocate(size, size, &x, &y);
-    if (page < 0) return false;
+    if (page < 0) {
+        out->width = out->height = size;
+        out->color = false;
+        g_overflowed++;
+        return false;
+    }
 
     unsigned char *pixels = g_pages[page].pixels;
     for (int row = 0; row < size; row++) {
@@ -365,25 +428,19 @@ static bool find_emoji(const VdGlyphFont *font, int size, const VdEmojiSequence 
     return false;
 }
 
-// Asks the same fonts, in the same order, as glyph_cache_get.
-static bool has_glyph(const VdGlyphFont *font, uint32_t codepoint)
-{
-    const VdGlyphFont *source = NULL;
-    return find_glyph(font, codepoint, &source) != 0 || find_glyph(g_fallback, codepoint, &source) != 0 ||
-           find_glyph(last_fallback(), codepoint, &source) != 0;
-}
-
 VdGlyph glyph_cache_get_emoji(const VdGlyphFont *font, int size, const VdEmojiSequence *sequence)
 {
     VdGlyph glyph;
     if (find_emoji(font, size, sequence, &glyph)) return glyph;
     uint32_t first = sequence->codepoints[0];
-    return glyph_cache_get(font, size, has_glyph(font, first) ? first : VD_EMOJI_FALLBACK);
+    const VdGlyphFont *source = NULL;
+    return glyph_cache_get(font, size, resolve_glyph(font, first, &source) != 0 ? first : VD_EMOJI_FALLBACK);
 }
 
 void glyph_cache_begin_frame(void)
 {
     g_frame++;
+    g_overflowed = 0;
 }
 
 void glyph_cache_reset(void)
@@ -397,6 +454,7 @@ void glyph_cache_reset(void)
     hmfree(g_glyphs);
     hmfree(g_emoji);
     g_rasterised = 0;
+    g_overflowed = 0;
 }
 
 const unsigned char *glyph_cache_take_dirty_page(int page)
@@ -408,7 +466,7 @@ const unsigned char *glyph_cache_take_dirty_page(int page)
 
 VdGlyphCacheStats glyph_cache_stats(void)
 {
-    return (VdGlyphCacheStats){g_page_count, (int)hmlen(g_glyphs), g_rasterised};
+    return (VdGlyphCacheStats){g_page_count, (int)hmlen(g_glyphs), g_rasterised, g_overflowed};
 }
 
 uint32_t vd_utf8_next(const char *text, int *length)
@@ -447,6 +505,25 @@ uint32_t vd_utf8_next(const char *text, int *length)
     return codepoint;
 }
 
+// Emoji_Presentation below U+1F000, from Unicode's emoji-data.txt: these draw as emoji without U+FE0F.
+static const uint32_t EMOJI_PRESENTATION[][2] = {
+    {0x231a, 0x231b}, {0x23e9, 0x23ec}, {0x23f0, 0x23f0}, {0x23f3, 0x23f3}, {0x25fd, 0x25fe}, {0x2614, 0x2615},
+    {0x2648, 0x2653}, {0x267f, 0x267f}, {0x2693, 0x2693}, {0x26a1, 0x26a1}, {0x26aa, 0x26ab}, {0x26bd, 0x26be},
+    {0x26c4, 0x26c5}, {0x26ce, 0x26ce}, {0x26d4, 0x26d4}, {0x26ea, 0x26ea}, {0x26f2, 0x26f3}, {0x26f5, 0x26f5},
+    {0x26fa, 0x26fa}, {0x26fd, 0x26fd}, {0x2705, 0x2705}, {0x270a, 0x270b}, {0x2728, 0x2728}, {0x274c, 0x274c},
+    {0x274e, 0x274e}, {0x2753, 0x2755}, {0x2757, 0x2757}, {0x2795, 0x2797}, {0x27b0, 0x27b0}, {0x27bf, 0x27bf},
+    {0x2b1b, 0x2b1c}, {0x2b50, 0x2b50}, {0x2b55, 0x2b55},
+};
+
+static bool emoji_by_default(uint32_t codepoint)
+{
+    if (codepoint >= 0x1f000) return true;
+    for (size_t i = 0; i < sizeof(EMOJI_PRESENTATION) / sizeof(EMOJI_PRESENTATION[0]); i++) {
+        if (in_range(codepoint, EMOJI_PRESENTATION[i][0], EMOJI_PRESENTATION[i][1])) return true;
+    }
+    return false;
+}
+
 static bool is_regional_indicator(uint32_t codepoint)
 {
     return codepoint >= 0x1f1e6 && codepoint <= 0x1f1ff;
@@ -470,7 +547,7 @@ int vd_emoji_cluster(const char *text, VdEmojiSequence *sequence)
     uint32_t first = vd_utf8_next(text, &bytes);
     int next_length = 0;
     uint32_t next = text[bytes] != '\0' ? vd_utf8_next(text + bytes, &next_length) : 0;
-    if (first < 0x1f000 && next != VS16 && next != KEYCAP) return 0;
+    if (next == VS15 || (!emoji_by_default(first) && next != VS16 && next != KEYCAP)) return 0;
 
     memset(sequence, 0, sizeof(*sequence));
     append(sequence, first);

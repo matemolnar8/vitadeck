@@ -291,7 +291,7 @@ importers:
         specifier: 'catalog:'
         version: 7.0.2
 
-  examples/minesweeper:
+  examples/demo:
     dependencies:
       '@vitadeck/sdk':
         specifier: workspace:*
@@ -307,7 +307,7 @@ importers:
         specifier: 'catalog:'
         version: 7.0.2
 
-  examples/smoke:
+  examples/minesweeper:
     dependencies:
       '@vitadeck/sdk':
         specifier: workspace:*

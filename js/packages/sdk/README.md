@@ -46,7 +46,7 @@ npx @vitadeck/sdk create <project-name>
 
 Reference assets by name, never by path: `<Text font="title" …>`, `<Button font="title" fontSize={24} …>`, `<Image image="logo" …>`.
 
-Text, Button and TextInput take any `fontSize` in pixels, and text is UTF-8. Without `font` they use the runtime's DejaVu Sans. Characters a `.ttf` or `.otf` font lacks render in DejaVu Sans, then in Droid Sans Fallback Full (Chinese and Japanese, not Korean); a character none of them has renders as a box. `.fnt` and `.bdf` fonts have no fallback.
+Text, Button and TextInput take any `fontSize` in pixels, and text is UTF-8. Without `font` they use the runtime's DejaVu Sans. Characters a `.ttf` or `.otf` font lacks render in DejaVu Sans, then in Droid Sans Fallback Full (Chinese and Japanese) or Noto Sans KR (Korean); a character none of them has renders as a box. `.fnt` and `.bdf` fonts have no fallback.
 
 Emoji render in colour, sized to `fontSize`, from the [Twemoji](https://github.com/jdecked/twemoji) images (CC-BY 4.0) that ship with VitaDeck. Single emoji, emoji with `U+FE0F`, skin tones, flags and keycaps work. A ZWJ sequence Twemoji has no image for draws as its first emoji, and a symbol such as `❤` without `U+FE0F` stays a font glyph. `.fnt` and `.bdf` fonts draw no emoji.
 
@@ -109,9 +109,15 @@ npx @vitadeck/sdk dev http://192.168.1.50:8787/
 
 Activate the Deck App once in the Shell. After that, each upload replaces the Active Deck App and restarts it with fresh state (a restart, not hot reload). Build errors are printed and watching continues; Ctrl-C stops. "Nothing is listening" means Upload is not open in the Shell or the address is wrong.
 
+## Text
+
+`<Text>` draws in the theme's `text` colour at `fontSize` 20, at `x`/`y` 0 inside its parent, unless you pass `color`, `fontSize`, `x` or `y`. Give it a `width` to `align` it (`"left"`, `"center"`, `"right"`) or to `wrap="word"`.
+
+A `Button` label is centred vertically and, unless `align` says `"left"` or `"right"`, horizontally; `fontSize` defaults to 20 there too.
+
 ## Layout
 
-`Stack` places its `Rect`, `Button`, `TextInput`, `Image` and `Stack` children one after another, so you don't compute every `x` and `y` yourself.
+`Stack` places its children one after another, so you don't compute every `x` and `y` yourself.
 
 ```tsx
 import { Button, Image, Stack } from "@vitadeck/sdk";
@@ -127,9 +133,20 @@ import { Button, Image, Stack } from "@vitadeck/sdk";
 
 - `direction` is `"column"` (default) or `"row"`; `gap` and `padding` are pixels; `align` (`"start"`, `"center"`, `"end"`) places children across the other axis.
 - Without `width` or `height` a `Stack` fits its content. `color` fills it.
+- A `Stack` without `color` takes no hits itself: a tap between its children reaches whatever is behind it. With `color` it behaves like a `Rect`.
 - `x` and `y` default to 0. On a child in a `Stack`, the one along the flow is a margin before the child and the other an offset from its aligned position.
-- `Text` is not laid out: wrap it in a `Rect`. A `Scroll` inside a `Stack` keeps its own `x`/`y` too.
+- `Text` flows in a `Stack` like any child, as wide as its widest line (or its `width`) and one `lineHeight` per line tall. In a `Rect`, each `Text` instead sits one line below its `y` for every `Text` before it.
 - `Scroll` lays out its children as a column `Stack` and scrolls them with touch drag, the left stick or the mouse wheel.
+- A `Scroll` flows in a `Stack` like any child. Give it a `height` in a column (`width` in a row), or make it the last child and leave that out: it fills the rest of a `Stack` that has one.
+
+```tsx
+<Stack x={20} y={20} width={920} height={504} gap={12}>
+  <Rect width={920} height={60} color={theme.surface} />
+  <Scroll width={920} gap={8} padding={10}>
+    {rows}
+  </Scroll>
+</Stack>
+```
 
 ## Focus and pad buttons
 

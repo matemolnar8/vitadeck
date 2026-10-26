@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,6 +20,7 @@ typedef struct {
     Arena arena;
     InstanceEntry *registry;
     ReactInstance **root_children;
+    bool laid_out;
 } InstanceSnapshot;
 
 // Back buffer: JS thread writes here (single-threaded access)
@@ -209,7 +211,6 @@ bool instance_tree_swap(void)
             arrput(new_snap->root_children, copy);
         }
     }
-    layout_tree(new_snap->root_children);
 
     // Swap under lock
     InstanceSnapshot *old_snap = NULL;
@@ -259,9 +260,20 @@ void instance_tree_render_unlock(void)
     vd_mutex_unlock(snapshot_mutex);
 }
 
+// Layout measures text through the glyph cache, which belongs to the UI thread, so a snapshot is laid out by its
+// first reader of layout, under snapshot_mutex, rather than by the JS thread that publishes it.
+static InstanceSnapshot *laid_out_front(void)
+{
+    if (front_snapshot && !front_snapshot->laid_out) {
+        layout_tree(front_snapshot->root_children);
+        front_snapshot->laid_out = true;
+    }
+    return front_snapshot;
+}
+
 ReactInstance **instance_get_root_children(void)
 {
-    return front_snapshot ? front_snapshot->root_children : NULL;
+    return laid_out_front() ? front_snapshot->root_children : NULL;
 }
 
 // For hit testing, find in front buffer (UI thread) - must be called under lock
@@ -347,7 +359,9 @@ static const char *hit_test_instance(ReactInstance *inst, int x, int y, int offs
     case NT_STACK: {
         const char *child_hit = hit_test_recursive(inst->children, x, y, abs_x, abs_y);
         if (child_hit) return child_hit;
-        return inside ? inst->id : NULL;
+        // A Stack without a fill is only layout, so points between its children fall through to what is behind.
+        const bool transparent = inst->type == NT_STACK && !inst->props.stack.has_fill;
+        return inside && !transparent ? inst->id : NULL;
     }
     case NT_BUTTON:
     case NT_TEXT_INPUT:
@@ -387,7 +401,7 @@ bool instance_hit_test(int x, int y, char out_id[VD_INSTANCE_ID_MAX])
 {
     bool hit = false;
     vd_mutex_lock(snapshot_mutex);
-    if (front_snapshot) hit = copy_id(out_id, hit_test_recursive(front_snapshot->root_children, x, y, 0, 0));
+    if (laid_out_front()) hit = copy_id(out_id, hit_test_recursive(front_snapshot->root_children, x, y, 0, 0));
     vd_mutex_unlock(snapshot_mutex);
     return hit;
 }
@@ -433,24 +447,38 @@ static bool intersect_clip(bool has_a, int ax, int ay, int aw, int ah, int bx, i
     return *out_w > 0 && *out_h > 0;
 }
 
+static bool subtree_contains_id(const ReactInstance *inst, const char *id)
+{
+    if (!inst || !id) return false;
+    if (inst->id && strcmp(inst->id, id) == 0) return true;
+    int count = arrlen(inst->children);
+    for (int i = 0; i < count; i++) {
+        if (subtree_contains_id(inst->children[i], id)) return true;
+    }
+    return false;
+}
+
 static void collect_focusable_instance(ReactInstance *inst, int offset_x, int offset_y, bool has_clip, int clip_x,
-                                       int clip_y, int clip_width, int clip_height, FocusableElement **out_elems);
+                                       int clip_y, int clip_width, int clip_height, const char *focused_id,
+                                       FocusableElement **out_elems);
 
 // Focusable element collection for gamepad navigation
 static void collect_focusable_recursive(ReactInstance **children, int offset_x, int offset_y, bool has_clip, int clip_x,
-                                        int clip_y, int clip_width, int clip_height, FocusableElement **out_elems)
+                                        int clip_y, int clip_width, int clip_height, const char *focused_id,
+                                        FocusableElement **out_elems)
 {
     if (!children) return;
     int count = arrlen(children);
 
     for (int i = 0; i < count; i++) {
         collect_focusable_instance(children[i], offset_x, offset_y, has_clip, clip_x, clip_y, clip_width, clip_height,
-                                   out_elems);
+                                   focused_id, out_elems);
     }
 }
 
 static void collect_focusable_instance(ReactInstance *inst, int offset_x, int offset_y, bool has_clip, int clip_x,
-                                       int clip_y, int clip_width, int clip_height, FocusableElement **out_elems)
+                                       int clip_y, int clip_width, int clip_height, const char *focused_id,
+                                       FocusableElement **out_elems)
 {
     if (!inst) return;
 
@@ -464,35 +492,47 @@ static void collect_focusable_instance(ReactInstance *inst, int offset_x, int of
                                  clip_height, out_elems);
     } else if (inst->type == NT_RECT || inst->type == NT_STACK) {
         collect_focusable_recursive(inst->children, abs_x, abs_y, has_clip, clip_x, clip_y, clip_width, clip_height,
-                                    out_elems);
+                                    focused_id, out_elems);
     } else if (inst->type == NT_SCROLL) {
         add_focusable_if_visible(inst->id, abs_x, abs_y, width, height, has_clip, clip_x, clip_y, clip_width,
                                  clip_height, out_elems);
 
+        // Only when Focus is inside this Scroll does scrolled-out content stay a candidate, so the D-pad can
+        // reach it and scroll it into view; then only what overflows the Scroll's width is clipped. Otherwise
+        // the viewport clips, so hidden rows never compete with controls outside the Scroll.
+        const bool contains_focus = subtree_contains_id(inst, focused_id);
+        const int rect_y = contains_focus ? INT_MIN / 4 : abs_y;
+        const int rect_height = contains_focus ? INT_MAX / 2 : height;
         bool child_has_clip = false;
         int child_clip_x = 0, child_clip_y = 0, child_clip_width = 0, child_clip_height = 0;
-        if (!intersect_clip(has_clip, clip_x, clip_y, clip_width, clip_height, abs_x, abs_y, width, height,
+        if (!intersect_clip(has_clip, clip_x, clip_y, clip_width, clip_height, abs_x, rect_y, width, rect_height,
                             &child_has_clip, &child_clip_x, &child_clip_y, &child_clip_width, &child_clip_height)) {
             return;
         }
 
         collect_focusable_recursive(inst->children, abs_x, abs_y - scroll_get_offset(inst->id), child_has_clip,
-                                    child_clip_x, child_clip_y, child_clip_width, child_clip_height, out_elems);
+                                    child_clip_x, child_clip_y, child_clip_width, child_clip_height, focused_id,
+                                    out_elems);
     }
 }
 
-FocusableElement *get_focusable_elements(int *count)
+FocusableElement *get_focusable_elements_for(const char *focused_id, int *count)
 {
     FocusableElement *elems = NULL;
 
     vd_mutex_lock(snapshot_mutex);
-    if (front_snapshot) {
-        collect_focusable_recursive(front_snapshot->root_children, 0, 0, false, 0, 0, 0, 0, &elems);
+    if (laid_out_front()) {
+        collect_focusable_recursive(front_snapshot->root_children, 0, 0, false, 0, 0, 0, 0, focused_id, &elems);
     }
     vd_mutex_unlock(snapshot_mutex);
 
     *count = arrlen(elems);
     return elems;
+}
+
+FocusableElement *get_focusable_elements(int *count)
+{
+    return get_focusable_elements_for(NULL, count);
 }
 
 void free_focusable_elements(FocusableElement *elems, int count)
@@ -509,7 +549,7 @@ bool instance_scroll_metrics(const char *id, int *viewport_height, int *content_
 
     bool found = false;
     vd_mutex_lock(snapshot_mutex);
-    if (front_snapshot) {
+    if (laid_out_front()) {
         ReactInstance *inst = find_front_instance_unlocked(front_snapshot, id);
         if (inst && inst->type == NT_SCROLL) {
             *viewport_height = inst->layout.height;
@@ -569,11 +609,38 @@ bool instance_scroll_for_descendant(const char *id, char out_id[VD_INSTANCE_ID_M
     return found;
 }
 
+void instance_scroll_into_view(const char *id)
+{
+    vd_mutex_lock(snapshot_mutex);
+    const ReactInstance *inst = find_front_instance_unlocked(laid_out_front(), id);
+    if (inst) {
+        const int height = inst->layout.height;
+        // inst's top relative to the current ancestor; inside a Scroll, after that Scroll's offset.
+        int top = 0;
+        for (const ReactInstance *child = inst; child->parent; child = child->parent) {
+            const ReactInstance *scroll = child->parent;
+            top += child->layout.y;
+            if (scroll->type != NT_SCROLL) continue;
+
+            const int viewport = scroll->layout.height;
+            int offset = scroll_get_offset(scroll->id);
+            if (top + height > offset + viewport) offset = top + height - viewport;
+            if (top < offset) offset = top;
+            const int max_offset = scroll_max_offset(viewport, scroll->layout.content_height);
+            if (offset > max_offset) offset = max_offset;
+            if (offset < 0) offset = 0;
+            scroll_set_offset(scroll->id, offset);
+            top -= offset;
+        }
+    }
+    vd_mutex_unlock(snapshot_mutex);
+}
+
 bool instance_scroll_at(int x, int y, char out_id[VD_INSTANCE_ID_MAX])
 {
     bool found = false;
     vd_mutex_lock(snapshot_mutex);
-    if (front_snapshot) {
+    if (laid_out_front()) {
         ReactInstance *scroll = scroll_at_children(front_snapshot->root_children, x, y, 0, 0);
         found = scroll && copy_id(out_id, scroll->id);
     }

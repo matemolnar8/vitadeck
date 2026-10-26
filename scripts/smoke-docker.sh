@@ -17,7 +17,7 @@ usage: scripts/smoke-docker.sh [test|ctest|update-golden|shell]
 
 test          Build and run the Linux smoke test.
 ctest         Build every host target and run all CTest harnesses, smoke included.
-update-golden Build and refresh tests/fixtures/smoke_golden.Linux.png.
+update-golden Build and refresh the goldens in tests/fixtures/golden/Linux.
 shell         Open a shell in the smoke Docker image.
 
 Environment:
@@ -48,7 +48,7 @@ run_inside() {
   step "Install JS dependencies"
   pnpm --dir js install "${pnpm_args[@]}"
 
-  step "Build JS runtime and smoke app"
+  step "Build JS runtime and Deck Apps"
   pnpm --dir js build
 
   step "Configure host smoke build"
@@ -82,7 +82,7 @@ run_inside() {
   esac
 
   if [[ -n "${LOCAL_UID:-}" && -n "${LOCAL_GID:-}" ]]; then
-    chown -R "$LOCAL_UID:$LOCAL_GID" "$BUILD_DIR" js/dist js/examples/smoke/dist assets/.downloads assets/emoji assets/fonts tests/fixtures/smoke_golden.Linux.png 2>/dev/null || true
+    chown -R "$LOCAL_UID:$LOCAL_GID" "$BUILD_DIR" js/dist js/examples/*/dist assets/.downloads assets/emoji assets/fonts tests/fixtures/golden 2>/dev/null || true
   fi
 }
 

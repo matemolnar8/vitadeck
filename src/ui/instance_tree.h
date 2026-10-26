@@ -54,6 +54,7 @@ typedef struct {
     float border_radius;
     bool has_focus_color;
     Color focus_color;
+    TextAlign align;
 } ButtonProps;
 
 typedef struct {
@@ -90,7 +91,7 @@ typedef struct {
     int x, y, width, height;
 } ImageProps;
 
-// Bounds relative to the parent's top-left, computed from props by layout_tree on every swap.
+// Bounds relative to the parent's top-left, computed from props by layout_tree once per swap, on its first read.
 // A Scroll's offset is not part of it: the offset changes without a swap, so readers subtract it.
 typedef struct {
     int x, y, width, height;
@@ -124,6 +125,10 @@ bool instance_scroll_metrics(const char *id, int *viewport_height, int *content_
 // Nearest scroll container containing this instance, or the instance itself if it is a scroll.
 // Copies its id into out_id and returns true, or returns false when there is none.
 bool instance_scroll_for_descendant(const char *id, char out_id[VD_INSTANCE_ID_MAX]);
+
+// Scrolls every Scroll containing id, innermost first, by the least that shows id's whole layout bounds, clamped
+// to the content. UI thread only, like the offsets.
+void instance_scroll_into_view(const char *id);
 
 // Deepest scroll container whose viewport contains (x, y).
 // Copies its id into out_id and returns true, or returns false when there is none.
@@ -165,6 +170,9 @@ typedef struct {
 } FocusableElement;
 
 FocusableElement *get_focusable_elements(int *count);
+// Like get_focusable_elements, but a Scroll's scrolled-out descendants stay candidates only when focused_id is
+// inside that Scroll, so the D-pad can reach them from within and hidden rows never compete outside it.
+FocusableElement *get_focusable_elements_for(const char *focused_id, int *count);
 void free_focusable_elements(FocusableElement *elems, int count);
 
 // Back-buffer operations (called from JS thread only)

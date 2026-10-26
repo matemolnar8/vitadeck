@@ -5,10 +5,11 @@ BUILD_DIR="$(cd "${1:?build directory required}" && pwd)"
 shift
 SOURCE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 FIXTURE="$BUILD_DIR/smoke-fixture"
-VDAPP_SRC="$SOURCE_DIR/js/examples/smoke/dist/smoke.vdapp"
+VDAPP_NAME="vitadeck-demo.vdapp"
+VDAPP_SRC="$SOURCE_DIR/js/examples/demo/dist/$VDAPP_NAME"
 UNAME="$(uname -s)"
-GOLDEN="$SOURCE_DIR/tests/fixtures/smoke_golden.${UNAME}.png"
-OUTPUT="$BUILD_DIR/smoke_screenshot.png"
+GOLDEN_DIR="$SOURCE_DIR/tests/fixtures/golden/${UNAME}"
+OUTPUT_DIR="$BUILD_DIR/smoke-screenshots"
 UPDATE_GOLDEN=0
 
 while [[ $# -gt 0 ]]; do
@@ -33,20 +34,22 @@ if [[ ! -d "$VDAPP_SRC" ]]; then
   exit 1
 fi
 
-rm -rf "$FIXTURE"
-mkdir -p "$FIXTURE/installed-deck-apps"
-cp -R "$VDAPP_SRC" "$FIXTURE/installed-deck-apps/smoke.vdapp"
-printf '%s' "smoke.vdapp" >"$FIXTURE/active-package.txt"
+rm -rf "$FIXTURE" "$OUTPUT_DIR"
+mkdir -p "$FIXTURE/installed-deck-apps" "$OUTPUT_DIR"
+INSTALLED="$FIXTURE/installed-deck-apps/$VDAPP_NAME"
+cp -R "$VDAPP_SRC" "$INSTALLED"
+cat "$SOURCE_DIR/tests/fixtures/demo_stubs.js" "$VDAPP_SRC/app.js" >"$INSTALLED/app.js"
+printf '%s' "$VDAPP_NAME" >"$FIXTURE/active-package.txt"
 
+# Relative, so the stack trace on the Failure Screen golden does not depend on the build directory.
 cd "$BUILD_DIR"
-export VITADECK_DATA_ROOT="$FIXTURE"
+export VITADECK_DATA_ROOT="smoke-fixture"
 
-HARNESS=(./smoke_harness --golden "$GOLDEN" --output "$OUTPUT")
-if [[ "$UPDATE_GOLDEN" -eq 1 ]]; then
-  echo "smoke: updating golden image for ${UNAME} at ${GOLDEN}"
-  HARNESS+=(--update-golden)
-elif [[ ! -f "$GOLDEN" ]]; then
-  echo "smoke: bootstrapping golden image for ${UNAME} at ${GOLDEN}"
+HARNESS=(./smoke_harness --golden-dir "$GOLDEN_DIR" --output-dir "$OUTPUT_DIR")
+if [[ "$UPDATE_GOLDEN" -eq 1 || ! -d "$GOLDEN_DIR" ]]; then
+  echo "smoke: writing golden images for ${UNAME} to ${GOLDEN_DIR}"
+  rm -rf "$GOLDEN_DIR"
+  mkdir -p "$GOLDEN_DIR"
   HARNESS+=(--update-golden)
 fi
 

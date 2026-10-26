@@ -1,0 +1,11 @@
+{
+  "name": "VitaDeck Demo",
+  "entry": "./src/App.tsx",
+  "outDir": "./dist",
+  "fonts": {
+    "mono": "./assets/fonts/DejaVuSansMono.ttf"
+  },
+  "images": {
+    "logo": "./assets/images/logo.png"
+  }
+}

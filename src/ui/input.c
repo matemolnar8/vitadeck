@@ -69,7 +69,7 @@ static char *focused_id = NULL;
 static char *gamepad_down_id = NULL;
 static bool prev_confirm_down = false;
 
-// Host Pad Button Mapping. Keep in sync with the Host mappings table in CONTEXT.md.
+// Keep in sync with the Host mappings table in CONTEXT.md.
 static const struct {
     const char *name;
     int gamepad_button;
@@ -82,8 +82,8 @@ static const struct {
     [PAD_R] = {"r", GAMEPAD_BUTTON_RIGHT_TRIGGER_1, KEY_R},
 };
 
-// A button held when the Shell hides or the runtime restarts is ignored until released, so the Circle
-// that closes the Shell does not reach the Deck App.
+// A button held when the Shell hides is ignored until released, so the Circle that closes the Shell does not reach
+// the Deck App. One held when the runtime starts otherwise presses on its first sample.
 typedef enum { PAD_STATE_UP, PAD_STATE_DOWN, PAD_STATE_IGNORED } PadState;
 static PadState pad_states[PAD_BUTTON_COUNT];
 static bool pad_ignore_held = false;
@@ -220,6 +220,15 @@ static void set_focus(const char *new_id)
     if (focused_id) push_input_event(focused_id, "focus");
 }
 
+// Focus from the D-pad or autoFocus scrolls into view; touch momentum stops so it does not carry the control back
+// out. Mouse Focus does not, or the content would slide under the pointer and hover the next control.
+static void set_focus_into_view(const char *new_id)
+{
+    set_focus(new_id);
+    touch_stop_momentum();
+    instance_scroll_into_view(focused_id);
+}
+
 static void clear_focus(void)
 {
     set_focus(NULL);
@@ -295,7 +304,6 @@ void input_clear_focus(void)
     clear_focus();
     for (int i = 0; i < PAD_BUTTON_COUNT; i++)
         pad_states[i] = PAD_STATE_UP;
-    pad_ignore_held = true;
 }
 
 void input_ignore_held_pad_buttons(void)
@@ -479,7 +487,7 @@ void poll_touch_input(void)
 static char *find_nearest_focusable(NavDirection dir)
 {
     int elem_count = 0;
-    FocusableElement *elems = get_focusable_elements(&elem_count);
+    FocusableElement *elems = get_focusable_elements_for(focused_id, &elem_count);
     int pick = focus_nav_pick(elems, elem_count, focused_id, dir);
     char *result = pick >= 0 ? strdup(elems[pick].id) : NULL;
     free_focusable_elements(elems, elem_count);
@@ -512,7 +520,7 @@ void input_apply_gamepad(const GamepadSample *s)
     if (gamepad_down_id && !instance_exists(gamepad_down_id)) replace_id(&gamepad_down_id, NULL);
 
     char requested_id[VD_INSTANCE_ID_MAX];
-    if (instance_take_focus_request(requested_id) && instance_exists(requested_id)) set_focus(requested_id);
+    if (instance_take_focus_request(requested_id) && instance_exists(requested_id)) set_focus_into_view(requested_id);
 
     int viewport_h = 0, content_h = 0;
     char scroll_id[VD_INSTANCE_ID_MAX];
@@ -526,7 +534,7 @@ void input_apply_gamepad(const GamepadSample *s)
     if (s->up || s->down || s->left || s->right) {
         NavDirection dir = s->up ? NAV_UP : s->down ? NAV_DOWN : s->left ? NAV_LEFT : NAV_RIGHT;
         char *next_id = find_nearest_focusable(dir);
-        if (next_id) set_focus(next_id);
+        if (next_id) set_focus_into_view(next_id);
         free(next_id);
     }
 

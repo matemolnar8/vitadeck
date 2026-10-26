@@ -47,16 +47,18 @@ export function Rect(props: RectProps) {
 export type TextProps = Omit<VitaTextProps, "key">;
 
 export function Text(props: TextProps) {
-  return vitaHost("vita-text", props);
+  const { theme } = useTheme();
+  return vitaHost("vita-text", { ...props, color: props.color ?? theme.text });
 }
 
 export type StackProps = Omit<VitaStackProps, "key">;
 
 /**
- * Lays out its Rect, Button, TextInput, Image and Stack children one after another along `direction`, `gap` pixels
- * apart inside `padding`, and places each across the other axis by `align`. A child's own `x`/`y` is a margin before
- * it along the flow and an offset across it. Text and Scroll children are not laid out; they keep their own `x`/`y`
- * inside the padding. Without `width` or `height`, the Stack fits its content.
+ * Lays out its children one after another along `direction`, `gap` pixels apart inside `padding`, and places each
+ * across the other axis by `align`. A child's own `x`/`y` is a margin before it along the flow and an offset across it.
+ * A Text is as wide as its widest line, or its `width`, and one `lineHeight` per line tall. Without `width` or
+ * `height`, the Stack fits its content. A last-child Scroll without a size
+ * along the flow fills the rest of a Stack that has one. Without `color`, taps between children pass through.
  */
 export function Stack(props: StackProps) {
   return vitaHost("vita-stack", props);
@@ -103,8 +105,8 @@ export function TextInput(props: TextInputProps) {
 }
 
 export { usePadButton } from "./pad-buttons";
-export type { PadButton, PadButtonHandlers } from "./pad-buttons";
-export type { FocusProps } from "./vitadeck-host-types";
+export type { PadButton, PadButtonHandlers, PadButtonPhase } from "./pad-buttons";
+export type { FocusProps, StackAlign, StackDirection, TextAlign, TextWrap } from "./vitadeck-host-types";
 
 const runtimeColors = (globalThis as unknown as { Colors: ColorsMap }).Colors;
 export { runtimeColors as Colors, useTheme };

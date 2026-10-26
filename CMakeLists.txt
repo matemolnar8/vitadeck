@@ -240,6 +240,9 @@ target_link_libraries(${PROJECT_NAME} ${VITADECK_LIBRARIES})
 if(NOT DEFINED ENV{VITASDK})
   include(CTest)
   if(BUILD_TESTING)
+    # Layout measures Text through the glyph cache.
+    set(LAYOUT_SOURCES src/ui/layout.c src/ui/text.c src/ui/fonts.c src/ui/glyph_cache.c src/core/util.c)
+
     add_executable(timer_reload_harness tests/timer_reload_harness.c src/jslib/timeout.c src/jslib/error.c)
     target_link_libraries(timer_reload_harness quickjs m ${RAYLIB_LIBRARIES})
     add_test(NAME timer_reload_harness COMMAND timer_reload_harness)
@@ -290,32 +293,34 @@ if(NOT DEFINED ENV{VITASDK})
     add_executable(snapshot_swap_harness
       tests/snapshot_swap_harness.c
       src/ui/instance_tree.c
-      src/ui/layout.c
+      ${LAYOUT_SOURCES}
       src/ui/scroll.c
       src/core/arena.c
       ${PLATFORM_SOURCES}
     )
-    target_link_libraries(snapshot_swap_harness m pthread)
+    target_link_libraries(snapshot_swap_harness m pthread ${RAYLIB_LIBRARIES})
     add_test(NAME snapshot_swap_harness COMMAND snapshot_swap_harness)
 
     add_executable(hit_test_harness
       tests/hit_test_harness.c
       src/ui/instance_tree.c
-      src/ui/layout.c
+      ${LAYOUT_SOURCES}
       src/ui/focus_nav.c
       src/ui/scroll.c
       src/core/arena.c
       ${PLATFORM_SOURCES}
     )
-    target_link_libraries(hit_test_harness m pthread)
+    target_link_libraries(hit_test_harness m pthread ${RAYLIB_LIBRARIES})
     add_test(NAME hit_test_harness COMMAND hit_test_harness)
 
     add_executable(scroll_math_harness tests/scroll_math_harness.c src/ui/scroll.c)
     target_link_libraries(scroll_math_harness m)
     add_test(NAME scroll_math_harness COMMAND scroll_math_harness)
 
-    add_executable(layout_harness tests/layout_harness.c src/ui/layout.c)
-    add_test(NAME layout_harness COMMAND layout_harness)
+    add_executable(layout_harness tests/layout_harness.c ${LAYOUT_SOURCES})
+    target_link_libraries(layout_harness m ${RAYLIB_LIBRARIES})
+    # The Runtime Default Font loads from assets/fonts, relative to the working directory.
+    add_test(NAME layout_harness COMMAND layout_harness WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
     add_executable(glyph_cache_harness tests/glyph_cache_harness.c src/ui/glyph_cache.c src/core/util.c)
     target_compile_definitions(glyph_cache_harness PRIVATE VD_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
@@ -325,13 +330,13 @@ if(NOT DEFINED ENV{VITASDK})
     target_link_libraries(glyph_cache_harness m)
     add_test(NAME glyph_cache_harness COMMAND glyph_cache_harness)
 
-    # Links raylib only because input.c and text_input_host.c also hold the raylib polls; the harness drives the
-    # input_apply_* and vd_text_input_apply_keys steps.
+    # Links raylib because input.c and text_input_host.c also hold the raylib polls, and layout's text measurement
+    # reaches it; the harness drives the input_apply_* and vd_text_input_apply_keys steps.
     add_executable(input_harness
       tests/input_harness.c
       src/ui/input.c
       src/ui/instance_tree.c
-      src/ui/layout.c
+      ${LAYOUT_SOURCES}
       src/ui/focus_nav.c
       src/ui/scroll.c
       src/core/arena.c
@@ -463,6 +468,7 @@ if(DEFINED ENV{VITASDK})
       ${vpk_fonts}
       FILE assets/fonts/DejaVuSans-LICENSE.txt assets/fonts/DejaVuSans-LICENSE.txt
       FILE assets/fonts/DroidSansFallbackFull-LICENSE.txt assets/fonts/DroidSansFallbackFull-LICENSE.txt
+      FILE assets/fonts/NotoSansKR-LICENSE.txt assets/fonts/NotoSansKR-LICENSE.txt
       FILE assets/emoji assets/emoji
   )
 
@@ -487,9 +493,32 @@ if(DEFINED ENV{VITASDK})
   )
   add_dependencies(upload_vpk require_psvitaip)
 
+  # Emoji images go up in one curl run over one FTP connection, and only again when they change; the stamp is
+  # per Vita IP. Delete it to force a re-upload, e.g. after the app was removed from the Vita.
+  file(GLOB upload_emoji_files ${CMAKE_SOURCE_DIR}/assets/emoji/*.png)
+  set(upload_emoji_stamp "")
+  if(upload_emoji_files)
+    set(upload_emoji_stamp ${CMAKE_BINARY_DIR}/upload_emoji-${PSVITAIP}.stamp)
+    list(LENGTH upload_emoji_files upload_emoji_count)
+    set(upload_emoji_config "ftp-create-dirs\nsilent\nshow-error\nwrite-out = \"\\r  %{urlnum}/${upload_emoji_count}\"\n")
+    foreach(file IN LISTS upload_emoji_files)
+      get_filename_component(name ${file} NAME)
+      string(APPEND upload_emoji_config "upload-file = \"${file}\"\nurl = \"ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/assets/emoji/${name}\"\n")
+    endforeach()
+    file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/upload_emoji.curl CONTENT "${upload_emoji_config}")
+    add_custom_command(OUTPUT ${upload_emoji_stamp}
+      COMMAND echo "Sending ${upload_emoji_count} emoji images to ${VITA_TITLEID}/assets/emoji (a few minutes)"
+      COMMAND curl -K ${CMAKE_BINARY_DIR}/upload_emoji.curl
+      COMMAND echo ""
+      COMMAND ${CMAKE_COMMAND} -E touch ${upload_emoji_stamp}
+      DEPENDS ${CMAKE_BINARY_DIR}/upload_emoji.curl ${upload_emoji_files}
+      VERBATIM
+    )
+  endif()
+
   # Create an explicit `upload_vita` target so uploads only run when requested.
   add_custom_target(upload_vita
-    DEPENDS ${PROJECT_NAME}.vpk-vpk
+    DEPENDS ${PROJECT_NAME}.vpk-vpk ${upload_emoji_stamp}
     # Destroy running apps
     COMMAND echo "Destroy running apps"
     COMMAND echo destroy | nc ${PSVITAIP} 1338

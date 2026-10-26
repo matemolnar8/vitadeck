@@ -2,6 +2,7 @@
 #include "instance_fixture.h"
 #include "core/event_queue.h"
 #include "ui/input.h"
+#include "ui/scroll.h"
 
 #include <raylib.h>
 #include <stdio.h>
@@ -176,8 +177,18 @@ static void test_pad_buttons(void)
 
     input_clear_focus();
     pad(PAD_CIRCLE, true);
+    pad(PAD_CIRCLE, true);
     pad(PAD_CIRCLE, false);
-    expect_events("", "a runtime restart forgets held Pad Buttons without ending them");
+    expect_events("pad:circle:pressstart pad:circle:pressend",
+                  "a button held through a runtime start presses once, without ending the old press");
+
+    pad(PAD_SQUARE, true);
+    drain();
+    input_ignore_held_pad_buttons();
+    input_clear_focus();
+    pad(PAD_SQUARE, true);
+    pad(PAD_SQUARE, false);
+    expect_events("", "a button held when the Shell hides to restart the runtime stays ignored");
 
     gamepad((GamepadSample){.confirm = true});
     gamepad((GamepadSample){.up = true, .down = true});
@@ -216,6 +227,231 @@ static void test_auto_focus(void)
     expect(!input_is_focused("a"), "Focus on a removed instance is gone");
 
     instance_tree_clear();
+}
+
+static void expect_offset(const char *scroll_id, int want, const char *message)
+{
+    const int got = scroll_get_offset(scroll_id);
+    if (got != want) {
+        fprintf(stderr, "input_harness: %s offset %d, want %d\n", scroll_id, got, want);
+        expect(false, message);
+    }
+}
+
+static void request_focus(const char *id)
+{
+    instance_back_request_focus(id);
+    fixture_publish();
+    gamepad((GamepadSample){0});
+}
+
+static void down(void)
+{
+    gamepad((GamepadSample){.down = true});
+}
+
+static void up(void)
+{
+    gamepad((GamepadSample){.up = true});
+}
+
+// Scroll S 300x120 with gap 10: s0..s3 are 40 high at content y 0, 50, 100 and 150, so the offset goes up to 70.
+// The Scrolls here are wider than their buttons so that the D-pad, which can focus a Scroll too, prefers the buttons.
+static void test_focus_scrolls_into_view(void)
+{
+    ReactInstance *s = fixture_scroll(NULL, "S", 0, 0, 300, 120, 10, 0);
+    fixture_button(s, "s0", 0, 0, 100, 40);
+    fixture_button(s, "s1", 0, 0, 100, 40);
+    fixture_button(s, "s2", 0, 0, 100, 40);
+    fixture_button(s, "s3", 0, 0, 100, 40);
+    fixture_publish();
+    reset();
+
+    request_focus("s0");
+    down();
+    expect_events("focus:s0 blur:s0 focus:s1", "the D-pad moves to the visible s1");
+    expect_offset("S", 0, "a visible control keeps the offset");
+    down();
+    expect_events("blur:s1 focus:s2", "the D-pad moves to the partly hidden s2");
+    expect_offset("S", 20, "the D-pad scrolls just enough to show s2's bottom edge");
+    down();
+    expect_events("blur:s2 focus:s3", "the D-pad reaches the fully hidden s3");
+    expect_offset("S", 70, "the D-pad scrolls s3 into view");
+    down();
+    expect_events("", "Down at the end of the Scroll keeps Focus");
+    up();
+    expect_events("blur:s3 focus:s2", "the D-pad moves back up");
+    expect_offset("S", 70, "moving back to a visible control keeps the offset");
+    up();
+    up();
+    expect_events("blur:s2 focus:s1 blur:s1 focus:s0", "the D-pad walks back to s0");
+    expect_offset("S", 0, "the D-pad scrolls just enough to show s0's top edge");
+
+    down();
+    down();
+    drain();
+    mouse(10, 5, false);
+    expect_events("blur:s2 focus:s0", "hovering the partly hidden s0 focuses it");
+    expect_offset("S", 20, "hover does not scroll, so the content stays under the pointer");
+
+    instance_tree_clear();
+    scroll_reset();
+}
+
+// Scroll T 300x80 holds t0..t3, 40 high each: t0 and t1 fill the viewport exactly and t2, t3 are fully hidden.
+static void test_focus_reaches_tiled_rows(void)
+{
+    ReactInstance *t = fixture_scroll(NULL, "T", 0, 0, 300, 80, 0, 0);
+    fixture_button(t, "t0", 0, 0, 100, 40);
+    fixture_button(t, "t1", 0, 0, 100, 40);
+    fixture_button(t, "t2", 0, 0, 100, 40);
+    fixture_button(t, "t3", 0, 0, 100, 40);
+    fixture_publish();
+    reset();
+
+    request_focus("t0");
+    down();
+    drain();
+    expect_offset("T", 0, "t1 is already visible");
+    down();
+    expect_events("blur:t1 focus:t2", "Down from the last visible row reaches the hidden t2");
+    expect_offset("T", 40, "t2 scrolls into view");
+    down();
+    expect_events("blur:t2 focus:t3", "Down again reaches t3");
+    expect_offset("T", 80, "t3 scrolls into view");
+    up();
+    up();
+    expect_events("blur:t3 focus:t2 blur:t2 focus:t1", "Up walks back to t1");
+    expect_offset("T", 40, "t1 scrolls back into view");
+    up();
+    expect_events("blur:t1 focus:t0", "Up reaches t0");
+    expect_offset("T", 0, "t0 scrolls back into view");
+
+    instance_tree_clear();
+    scroll_reset();
+}
+
+// A column Stack holds Scroll U (150x80, u0..u3 40 high each) and, 10 below it, Button below. Hidden rows of U lie
+// over below's position, so the D-pad must prefer the nearer row and only then leave the Scroll.
+static void test_focus_leaves_scroll(void)
+{
+    ReactInstance *stack = fixture_stack(NULL, "C", 0, 0, STACK_COLUMN, 10);
+    ReactInstance *u = fixture_scroll(stack, "U", 0, 0, 150, 80, 0, 0);
+    fixture_button(u, "u0", 0, 0, 100, 40);
+    fixture_button(u, "u1", 0, 0, 100, 40);
+    fixture_button(u, "u2", 0, 0, 100, 40);
+    fixture_button(u, "u3", 0, 0, 100, 40);
+    fixture_button(stack, "below", 0, 0, 100, 40);
+    fixture_publish();
+    reset();
+
+    request_focus("u1");
+    drain();
+    down();
+    expect_events("blur:u1 focus:u2", "the hidden u2 is nearer than the Button below the Scroll");
+    down();
+    expect_events("blur:u2 focus:u3", "the hidden u3 is nearer too");
+    expect_offset("U", 80, "u3 scrolls into view");
+    down();
+    expect_events("blur:u3 focus:below", "Down from the last row leaves the Scroll");
+    expect_offset("U", 80, "leaving the Scroll keeps its offset");
+    up();
+    expect_events("blur:below focus:u3", "Up comes back to the nearest row");
+
+    instance_tree_clear();
+    scroll_reset();
+}
+
+// Same Stack as test_focus_leaves_scroll, at offset 0: hidden u2 and u3 lie below Button below, so Down from
+// below must not jump to them; Up enters at the last visible row instead.
+static void test_focus_outside_scroll_below(void)
+{
+    ReactInstance *stack = fixture_stack(NULL, "C", 0, 0, STACK_COLUMN, 10);
+    ReactInstance *u = fixture_scroll(stack, "U", 0, 0, 150, 80, 0, 0);
+    fixture_button(u, "u0", 0, 0, 100, 40);
+    fixture_button(u, "u1", 0, 0, 100, 40);
+    fixture_button(u, "u2", 0, 0, 100, 40);
+    fixture_button(u, "u3", 0, 0, 100, 40);
+    fixture_button(stack, "below", 0, 0, 100, 40);
+    fixture_publish();
+    reset();
+
+    request_focus("below");
+    drain();
+    down();
+    expect_events("", "Down from the Button below a Scroll does not jump to a hidden row");
+    expect_offset("U", 0, "the Scroll does not move when Down finds nothing below");
+    expect(input_is_focused("below"), "Focus stays on the Button below the Scroll");
+    up();
+    expect_events("blur:below focus:u1", "Up from below enters at the last visible row");
+    expect_offset("U", 0, "entering at a visible row keeps the offset");
+
+    instance_tree_clear();
+    scroll_reset();
+}
+
+// Header Button over Scroll L (300x160, r0..r9 40 high each) in a column Stack, scrolled to the bottom
+// (offset 240): r6 is the first visible row. Up from the header finds nothing; Down enters at r6 without
+// shifting the list.
+static void test_focus_outside_scroll_header(void)
+{
+    ReactInstance *stack = fixture_stack(NULL, "H", 0, 0, STACK_COLUMN, 0);
+    fixture_button(stack, "header", 0, 0, 100, 40);
+    ReactInstance *l = fixture_scroll(stack, "L", 0, 0, 300, 160, 0, 0);
+    fixture_button(l, "r0", 0, 0, 100, 40);
+    fixture_button(l, "r1", 0, 0, 100, 40);
+    fixture_button(l, "r2", 0, 0, 100, 40);
+    fixture_button(l, "r3", 0, 0, 100, 40);
+    fixture_button(l, "r4", 0, 0, 100, 40);
+    fixture_button(l, "r5", 0, 0, 100, 40);
+    fixture_button(l, "r6", 0, 0, 100, 40);
+    fixture_button(l, "r7", 0, 0, 100, 40);
+    fixture_button(l, "r8", 0, 0, 100, 40);
+    fixture_button(l, "r9", 0, 0, 100, 40);
+    fixture_publish();
+    reset();
+
+    scroll_set_offset("L", 240);
+    request_focus("header");
+    drain();
+    expect_offset("L", 240, "focusing the header keeps the list scrolled to the bottom");
+    up();
+    expect_events("", "Up from the header above a scrolled list is a no-op");
+    expect_offset("L", 240, "the no-op Up keeps the offset");
+    expect(input_is_focused("header"), "Focus stays on the header");
+    down();
+    expect_events("blur:header focus:r6", "Down from the header enters at the first visible row");
+    expect_offset("L", 240, "entering at the first visible row does not shift the list");
+
+    instance_tree_clear();
+    scroll_reset();
+}
+
+// Scroll O 100x100 flows o0 (80 high), Scroll I (60 high) and o1 (40 high), so its offset goes up to 80.
+// I holds i0..i3, 40 high each, so its offset goes up to 100.
+static void test_nested_scrolls_into_view(void)
+{
+    ReactInstance *o = fixture_scroll(NULL, "O", 0, 0, 100, 100, 0, 0);
+    fixture_button(o, "o0", 0, 0, 100, 80);
+    ReactInstance *i = fixture_scroll(o, "I", 0, 0, 100, 60, 0, 0);
+    fixture_button(i, "i0", 0, 0, 100, 40);
+    fixture_button(i, "i1", 0, 0, 100, 40);
+    fixture_button(i, "i2", 0, 0, 100, 40);
+    fixture_button(i, "i3", 0, 0, 100, 40);
+    fixture_button(o, "o1", 0, 0, 100, 40);
+    fixture_publish();
+    reset();
+
+    request_focus("i2");
+    expect_offset("I", 60, "the inner Scroll shows i2 first");
+    expect_offset("O", 40, "then the outer Scroll shows where i2 ended up");
+
+    request_focus("o0");
+    expect_offset("O", 0, "the outer Scroll scrolls back for o0");
+    expect_offset("I", 60, "a Scroll that does not contain the focused control keeps its offset");
+
+    instance_tree_clear();
+    scroll_reset();
 }
 
 // One frame of host keyboard editing: typed UTF-8, then Backspace, Enter or Escape.
@@ -385,6 +621,12 @@ int main(void)
     test_press();
     test_pad_buttons();
     test_auto_focus();
+    test_focus_scrolls_into_view();
+    test_focus_reaches_tiled_rows();
+    test_focus_leaves_scroll();
+    test_focus_outside_scroll_below();
+    test_focus_outside_scroll_header();
+    test_nested_scrolls_into_view();
     test_text_input_editing();
     test_text_input_ends();
     test_text_input_limits();

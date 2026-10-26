@@ -9,11 +9,15 @@ export type TextWrap = "none" | "word";
 
 export type VitaTextProps = WithKey<{
   children: TextChild | TextChild[];
+  /** Defaults to the theme's `text` colour. */
   color?: Color;
   border?: boolean;
   font?: FontName;
+  /** Defaults to 20. */
   fontSize?: number;
+  /** Defaults to 0. */
   x?: number;
+  /** Defaults to 0. */
   y?: number;
   width?: number;
   align?: TextAlign;
@@ -72,6 +76,8 @@ export type VitaButtonProps = WithKey<
       font?: FontName;
       /** Defaults to 20. */
       fontSize?: number;
+      /** Horizontal placement of the label; it is always centred vertically. Defaults to `"center"`. */
+      align?: TextAlign;
       onPress?: () => void;
       onPressStart?: () => void;
       onPressEnd?: () => void;
@@ -99,19 +105,27 @@ export type VitaTextInputProps = WithKey<
     }
 >;
 
-export type VitaScrollProps = WithKey<{
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  /** Optional background fill. */
-  color?: Color;
-  /** Vertical gap in pixels between stacked children. */
-  gap?: number;
-  /** Inner padding in pixels around the stacked content. */
-  padding?: number;
-  children?: ReactNode | ReactNode[];
-}>;
+export type VitaScrollProps = WithKey<
+  Position & {
+    /**
+     * Viewport width. Defaults to the content width plus padding; as the last child of a row `Stack` with a
+     * `width`, to the rest of that width.
+     */
+    width?: number;
+    /**
+     * Viewport height. Defaults to the content height plus padding, which leaves nothing to scroll; as the last
+     * child of a column `Stack` with a `height`, to the rest of that height.
+     */
+    height?: number;
+    /** Optional background fill. */
+    color?: Color;
+    /** Vertical gap in pixels between stacked children. */
+    gap?: number;
+    /** Inner padding in pixels around the stacked content. */
+    padding?: number;
+    children?: ReactNode | ReactNode[];
+  }
+>;
 
 export type StackDirection = "column" | "row";
 export type StackAlign = "start" | "center" | "end";
@@ -130,7 +144,7 @@ export type VitaStackProps = WithKey<
     padding?: number;
     /** Cross-axis placement of each child. Defaults to `"start"`. */
     align?: StackAlign;
-    /** Optional background fill. */
+    /** Optional background fill. Without it the Stack itself takes no hits: a tap between its children reaches what is behind. */
     color?: Color;
     children?: ReactNode | ReactNode[];
   }

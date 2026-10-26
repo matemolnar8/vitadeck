@@ -146,10 +146,10 @@ jobs:
         # ASan + UBSan over every CTest harness, smoke included; reuses the image built above
         run: VITADECK_SMOKE_NO_BUILD=1 VITADECK_SANITIZE=address,undefined scripts/smoke-docker.sh ctest
 
-      - name: Upload smoke screenshot
+      - name: Upload smoke screenshots
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: smoke-screenshot
-          path: out-smoke/smoke_screenshot.png
+          name: smoke-screenshots
+          path: out-smoke/smoke-screenshots
           if-no-files-found: ignore
