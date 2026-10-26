@@ -32,7 +32,7 @@ export function StackSection() {
           <Rect width={28} height={28} y={12} color={theme.success} borderRadius={14} />
           <Rect width={28} height={28} color={theme.success} borderRadius={14} />
         </Stack>
-        <Label width={250} fontSize={13} lines={3} color={theme.outline}>
+        <Label width={250} fontSize={13} wrap color={theme.outline}>
           A row holding a column and another row. The middle dot has y=12: across the flow, x/y offset a child.
         </Label>
       </Stack>

@@ -85,7 +85,7 @@ export function ButtonSection() {
           {...focusHint("Labels are UTF-8 text, emoji included.")}
         />
       </Stack>
-      <Label fontSize={16} color={theme.warning} lines={2}>
+      <Label fontSize={16} color={theme.warning} wrap>
         {hint}
       </Label>
     </Section>

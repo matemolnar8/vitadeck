@@ -112,13 +112,16 @@ _Avoid_: Surface, viewport, canvas
 **Button**: The component that receives **Press** (`onPress`, `onPressStart`, `onPressEnd`) and **Focus** (`onFocus`, `onBlur`, `focusColor`, `autoFocus`).
 _Avoid_: Pressable rect, clickable shape
 
+**Text**: The component drawing UTF-8 text in lines, broken at newlines and, with a `width` and `wrap="word"`, between words. It is as wide as its widest line, or its `width` when wider, and one `lineHeight` per line tall, so a **Stack** flows it like any child. In a Rect, each Text sits one of its own line heights below its `y` for every Text before it.
+_Avoid_: Label, string, text node
+
 **Text Input**: The `TextInput` component for one line of text. A **Press** starts an edit, in the Vita keyboard dialog or in place on the host; `onChange` fires once with the final text on confirm, nothing on cancel. No other Deck App input is delivered during an edit; opening the Shell cancels it.
 _Avoid_: Text field, text box, IME, keyboard input
 
 **Image**: A visual-only component drawing a **Deck App Image**. It takes no input.
 _Avoid_: Texture, sprite, bitmap widget
 
-**Stack**: A visual-only component placing children in a column or row with gap, padding and cross-axis alignment, sized to content unless given a size. Without `color` it is hit-transparent, so a tap between children reaches what is behind it; with `color` it takes hits like a Rect. `Scroll` is a column Stack whose content scrolls in a fixed viewport; it is the only component taking scroll input. In a Stack it flows like any child: it takes its stated size along the flow, or, as the last child without one, fills the rest of a Stack that states its size.
+**Stack**: A visual-only component placing children, **Text** included, in a column or row with gap, padding and cross-axis alignment, sized to content unless given a size. Without `color` it is hit-transparent, so a tap between children reaches what is behind it; with `color` it takes hits like a Rect. `Scroll` is a column Stack whose content scrolls in a fixed viewport; it is the only component taking scroll input. In a Stack it flows like any child: it takes its stated size along the flow, or, as the last child without one, fills the rest of a Stack that states its size.
 _Avoid_: Flexbox, flex container, layout box, list
 
 ## Shell

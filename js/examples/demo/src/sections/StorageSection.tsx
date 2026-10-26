@@ -52,7 +52,7 @@ export function StorageSection() {
       </Stack>
       <Label fontSize={20}>{`${COUNTER_KEY} = ${counter}`}</Label>
       <Label fontSize={20}>{`${NAME_KEY} = ${name === null ? "null" : JSON.stringify(name)}`}</Label>
-      <Label fontSize={14} lines={2} color={theme.outline}>
+      <Label fontSize={14} wrap color={theme.outline}>
         To see it persist, press +1 a few times, open the Shell with Start (F1), activate another Deck App, then
         VitaDeck Demo again and come back here.
       </Label>

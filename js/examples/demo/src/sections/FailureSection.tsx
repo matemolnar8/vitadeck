@@ -20,7 +20,7 @@ export function FailureSection() {
           throw new Error("Thrown on purpose by the VitaDeck Demo");
         }}
       />
-      <Label fontSize={16} lines={3} color={theme.warning}>
+      <Label fontSize={16} wrap color={theme.warning}>
         To recover, press Start (F1 on the desktop) to open the VitaDeck Shell, activate another Deck App, then VitaDeck
         Demo again. That Deck App Runtime Restart clears the Failure Screen; Storage keeps its values.
       </Label>
