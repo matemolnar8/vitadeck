@@ -54,6 +54,23 @@ void vd_sleep_ms(int ms)
     nanosleep(&ts, NULL);
 }
 
+static uint64_t clock_us(clockid_t clock)
+{
+    struct timespec ts;
+    clock_gettime(clock, &ts);
+    return (uint64_t)ts.tv_sec * 1000000u + (uint64_t)ts.tv_nsec / 1000u;
+}
+
+uint64_t vd_now_us(void)
+{
+    return clock_us(CLOCK_MONOTONIC);
+}
+
+uint64_t vd_thread_cpu_us(void)
+{
+    return clock_us(CLOCK_THREAD_CPUTIME_ID);
+}
+
 vd_mutex *vd_mutex_create(void)
 {
     vd_mutex *m = malloc(sizeof(vd_mutex));

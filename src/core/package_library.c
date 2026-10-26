@@ -217,9 +217,9 @@ void package_library_active_package_path(char *out, size_t out_size)
     copy_locked(out, out_size, g_active_path);
 }
 
-static bool set_active_locked(const char *package_name, char *error, size_t error_size)
+static bool set_active_locked(const char *package_name, bool persist, char *error, size_t error_size)
 {
-    if (!write_active_state(package_name)) {
+    if (persist && !write_active_state(package_name)) {
         vd_set_error(error, error_size, "Could not persist Active Deck App.");
         return false;
     }
@@ -228,7 +228,7 @@ static bool set_active_locked(const char *package_name, char *error, size_t erro
     return true;
 }
 
-bool package_library_set_active(const char *package_name, char *error, size_t error_size)
+static bool set_active(const char *package_name, bool persist, char *error, size_t error_size)
 {
     if (!vd_safe_package_name(package_name)) {
         vd_set_error(error, error_size, "Invalid Active Deck App package name.");
@@ -238,9 +238,19 @@ bool package_library_set_active(const char *package_name, char *error, size_t er
     vd_join_path(path, sizeof(path), g_installed_root, package_name);
     vd_mutex_lock(g_mutex);
     bool ok = read_package_info(path, package_name, NULL, error, error_size) &&
-              set_active_locked(package_name, error, error_size);
+              set_active_locked(package_name, persist, error, error_size);
     vd_mutex_unlock(g_mutex);
     return ok;
+}
+
+bool package_library_set_active(const char *package_name, char *error, size_t error_size)
+{
+    return set_active(package_name, true, error, error_size);
+}
+
+bool package_library_set_active_transient(const char *package_name, char *error, size_t error_size)
+{
+    return set_active(package_name, false, error, error_size);
 }
 
 bool package_library_remove(const char *package_name, char *error, size_t error_size)
@@ -304,7 +314,7 @@ bool package_library_publish_package(const char *source_path, const char *packag
         return false;
     }
 
-    bool ok = g_active_name[0] != '\0' || set_active_locked(package_name, error, error_size);
+    bool ok = g_active_name[0] != '\0' || set_active_locked(package_name, true, error, error_size);
     if (replaced_active) *replaced_active = strcmp(package_name, g_active_name) == 0;
     vd_mutex_unlock(g_mutex);
 

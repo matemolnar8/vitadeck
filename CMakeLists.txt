@@ -160,6 +160,7 @@ set(JSLIB_SOURCES
 set(VITADECK_SOURCES
     src/main.c
     src/core/arena.c
+    src/core/bench.c
     src/core/bootstrap.c
     src/core/deck_app_storage.c
     src/core/js_runtime.c
@@ -365,6 +366,7 @@ if(NOT DEFINED ENV{VITASDK})
     # The native app without main.c, the shell and Runtime Upload, for harnesses that drive the real JS thread.
     set(HOST_RUNTIME_SOURCES
       src/core/arena.c
+      src/core/bench.c
       src/core/bootstrap.c
       src/core/js_runtime.c
       src/core/package_manifest.c

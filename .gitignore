@@ -4,6 +4,7 @@ out
 out-vita
 out-smoke
 out-sanitize
+out-bench
 .ccache
 
 module/*.suprx

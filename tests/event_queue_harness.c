@@ -58,7 +58,10 @@ static void test_fifo_and_wraparound(void)
     snprintf(long_evt.event_name, sizeof(long_evt.event_name), "mouseenter");
     event_queue_push(&long_evt);
     InputEvent out;
-    expect(event_queue_pop(&out) && memcmp(&out, &long_evt, sizeof(out)) == 0, "event round-trips byte for byte");
+    expect(event_queue_pop(&out), "event pops");
+    expect(out.queued_us != 0, "push stamps the queue time");
+    long_evt.queued_us = out.queued_us;
+    expect(memcmp(&out, &long_evt, sizeof(out)) == 0, "event round-trips byte for byte");
 }
 
 // The queue drops the newest event when full and only logs it; push has no return value to report it.

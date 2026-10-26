@@ -3,6 +3,7 @@
 #include <string.h>
 #include <raylib.h>
 #include "stb_ds.h"
+#include "core/bench.h"
 #include "fonts.h"
 #include "glyph_cache.h"
 #include "images.h"
@@ -385,12 +386,14 @@ void render_draw_list(void)
     ReactInstance **root = instance_get_root_children();
     RenderContext ctx = {0, 0};
     int count = arrlen(root);
+    bench_frame_mark(VD_BENCH_FRAME_LAYOUT);
 
     text_begin_frame();
     for (int i = 0; i < count; i++) {
         cache_glyphs(root[i]);
     }
     text_upload_pages();
+    bench_frame_mark(VD_BENCH_FRAME_GLYPHS);
 
     for (int i = 0; i < count; i++) {
         if (root[i]) {
@@ -398,4 +401,5 @@ void render_draw_list(void)
         }
     }
     instance_tree_render_unlock();
+    bench_frame_mark(VD_BENCH_FRAME_DRAW);
 }

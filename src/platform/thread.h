@@ -1,6 +1,8 @@
 #ifndef VD_THREAD_H
 #define VD_THREAD_H
 
+#include <stdint.h>
+
 // Stack of every vd_thread, the JS thread included; QuickJS's stack limit is derived from it.
 // Overridable so a host harness can run on the Vita stack size.
 #define VD_VITA_THREAD_STACK_SIZE (256 * 1024)
@@ -21,6 +23,10 @@ void vd_thread_join(vd_thread *t);
 void vd_thread_destroy(vd_thread *t);
 void vd_thread_yield(void);
 void vd_sleep_ms(int ms);
+
+// Microseconds on a monotonic clock, and CPU time the calling thread has used.
+uint64_t vd_now_us(void);
+uint64_t vd_thread_cpu_us(void);
 
 // Mutex
 vd_mutex *vd_mutex_create(void);

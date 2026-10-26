@@ -20,16 +20,16 @@ When this file speaks:
 
 ## Where code lives
 
-- `src/core/` - bootstrap, QuickJS runtime, event queue, package library and manifest parsing (vendored `vendor/jimp/jimp.h`, see ADR 0003)
+- `src/core/` - bootstrap, QuickJS runtime, event queue, package library and manifest parsing (vendored `vendor/jimp/jimp.h`, see ADR 0003), Benchmark Mode (`bench.c`, see ADR 0005)
 - `src/jslib/` - native functions exposed to JS: instances, timers, fetch, log, colors
 - `src/ui/` - instance tree, rendering, fonts, images, input, scroll
 - `src/shell/` - VitaDeck Shell; `src/upload/` - Runtime Upload listener; `src/platform/` - threads (POSIX vs Vita)
 - `js/packages/sdk/` - `@vitadeck/sdk`: author-facing components, theme, types, and the `vitadeck` CLI (`cli/`, scaffold under `cli/templates/`)
 - `js/packages/runtime/` - the React reconciler bundle the host embeds
 - `js/examples/` - example Deck Apps; the smoke test screenshots every section of `demo`
-- `tests/` - CTest harnesses (`smoke_harness.c`, `package_manifest_harness.c`, `package_library_harness.c`, `timer_reload_harness.c`, `upload_parsing_harness.c`) and golden screenshots (`fixtures/golden/`)
+- `tests/` - CTest harnesses (`smoke_harness.c`, `package_manifest_harness.c`, `package_library_harness.c`, `timer_reload_harness.c`, `upload_parsing_harness.c`), golden screenshots (`fixtures/golden/`), and benchmark baselines (`bench/baselines/`)
 - `vendor/quickjs` - git submodule; `docker-compose.yml` + `Dockerfile` - Vitasdk and Linux smoke images
-- `.agents/skills/` - repo skills (`vitadeck-build`, `vitadeck-emulator`, `vitadeck-smoke`, `vitadeck-manual-testing`, `vitadeck-vdapp-upload`, `vitadeck-deck-app-init`) plus `comprehende` installed from `matemolnar8/comprehende` via the `skills` CLI (`skills-lock.json`) and `pages`, a repo-owned skill with its own publish script. `.claude/skills` symlinks here. Published via `npx skills add matemolnar8/vitadeck`.
+- `.agents/skills/` - repo skills (`vitadeck-build`, `vitadeck-emulator`, `vitadeck-smoke`, `vitadeck-bench`, `vitadeck-manual-testing`, `vitadeck-vdapp-upload`, `vitadeck-deck-app-init`) plus `comprehende` installed from `matemolnar8/comprehende` via the `skills` CLI (`skills-lock.json`) and `pages`, a repo-owned skill with its own publish script. `.claude/skills` symlinks here. Published via `npx skills add matemolnar8/vitadeck`.
 
 ## Setup
 
@@ -73,6 +73,7 @@ Individual commands: `pnpm --dir js tsc`, `pnpm --dir js test:cli`, `pnpm --dir 
 
 - C under `src/` follows `.clang-format`; run `cmake -S . -B out` so `out/compile_commands.json` exists for clangd.
 - Write React for the React Compiler: pure renders, Rules of Hooks, accurate effect deps, no manual `useMemo`/`useCallback`/`memo`.
+- For a change that could affect performance (rendering, the reconciler, the JS thread loop), run `scripts/bench.sh vita3k` and compare against the baseline; see the `vitadeck-bench` skill.
 - For a UI change, do one pass in the real host window (load the `vitadeck-manual-testing` skill). Ask before testing on Vita hardware; it is Máté's device.
 
 ## Pull requests

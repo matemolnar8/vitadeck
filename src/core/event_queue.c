@@ -42,6 +42,7 @@ void event_queue_push(const InputEvent *evt)
     bool full = queue.count == QUEUE_CAPACITY;
     if (!full) {
         memcpy(&queue.events[queue.tail], evt, sizeof(InputEvent));
+        queue.events[queue.tail].queued_us = vd_now_us();
         queue.tail = (queue.tail + 1) % QUEUE_CAPACITY;
         queue.count++;
     } else {

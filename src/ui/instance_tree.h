@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <raylib.h>
 
 // Longest instance id including its terminator; native create calls reject longer ids.
@@ -177,6 +178,8 @@ void free_focusable_elements(FocusableElement *elems, int count);
 
 // Back-buffer operations (called from JS thread only)
 void instance_back_mark_dirty(void);
+// Native mutation calls so far; each one marks the back buffer dirty.
+uint32_t instance_back_mutation_count(void);
 ReactInstance *instance_back_find(const char *id);
 void instance_back_put(ReactInstance *inst);
 void instance_back_del(const char *id);

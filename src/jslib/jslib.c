@@ -1,8 +1,10 @@
 #include "jslib_internal.h"
+#include "core/bench.h"
 #include "core/event_queue.h"
 #include "core/package_library.h"
 #include "core/package_manifest.h"
 #include "core/util.h"
+#include "platform/thread.h"
 
 static JSValue js_get_time(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
@@ -10,6 +12,22 @@ static JSValue js_get_time(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     (void)argc;
     (void)argv;
     return JS_NewFloat64(ctx, GetTime());
+}
+
+static JSValue js_native_bench_active(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+    return JS_NewBool(ctx, bench_active());
+}
+
+// The reconciler brackets each React commit with this, false at prepareForCommit and true at resetAfterCommit.
+static JSValue js_native_bench_commit(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    bench_commit(argc > 0 && JS_ToBool(ctx, argv[0]));
+    return JS_UNDEFINED;
 }
 
 // Evaluates the Active Deck App's Package Entry; its manifest was validated before the runtime started.
@@ -62,6 +80,7 @@ bool process_input_events(JSContext *ctx)
     bool ran = false;
     InputEvent evt;
     while (event_queue_pop(&evt)) {
+        const uint64_t started_us = vd_now_us();
         switch (evt.type) {
         case EVT_INPUT:
             call_runtime_input(ctx, "onInputEventFromNative", evt.id, evt.event_name);
@@ -74,6 +93,7 @@ bool process_input_events(JSContext *ctx)
             break;
         }
         free(evt.text);
+        bench_js_input_handled(JS_GetRuntime(ctx), evt.queued_us, started_us);
         ran = true;
     }
     return ran;
@@ -91,4 +111,6 @@ void register_js_lib(JSContext *ctx)
 
     js_set_global_function(ctx, "getTime", js_get_time, 0);
     js_set_global_function(ctx, "nativeEvalActiveDeckAppEntry", js_native_eval_active_deck_app_entry, 0);
+    js_set_global_function(ctx, "nativeBenchActive", js_native_bench_active, 0);
+    js_set_global_function(ctx, "nativeBenchCommit", js_native_bench_commit, 1);
 }

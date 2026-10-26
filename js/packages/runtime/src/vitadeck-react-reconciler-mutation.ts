@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import Reconciler, { type HostConfig } from "react-reconciler";
 import { DefaultEventPriority } from "react-reconciler/constants";
 import { registerHandlers, unregisterHandlers, updateHandlers, type EventHandlers } from "./input";
-import { instrumentHostConfig, ReconcilerMetrics } from "./reconciler-metrics";
 import { exhaustiveGuard } from "./utils";
 
 const generateRandomSegment = () => Math.random().toString(36).slice(2, 15);
@@ -384,7 +383,9 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
   }
 };
 
-const rawHostConfig = {
+const benchActive = nativeBenchActive();
+
+const hostConfig = {
   noTimeout: -1,
   isPrimaryRenderer: true,
   supportsMutation: true,
@@ -399,11 +400,13 @@ const rawHostConfig = {
 
   prepareForCommit: (..._args) => {
     logReconcilerFunction("prepareForCommit");
+    if (benchActive) nativeBenchCommit(false);
     return null;
   },
 
   resetAfterCommit: (_container: Container) => {
     logReconcilerFunction("resetAfterCommit");
+    if (benchActive) nativeBenchCommit(true);
   },
 
   getChildHostContext: (..._args) => {
@@ -547,8 +550,6 @@ const rawHostConfig = {
   },
 } satisfies VitadeckHostConfig;
 
-const metrics = new ReconcilerMetrics("reconciler");
-const hostConfig = instrumentHostConfig(rawHostConfig, metrics, "reconciler");
 const reconciler = Reconciler(hostConfig);
 
 const container: Container = {};
@@ -563,12 +564,4 @@ function onRecoverableError(error: unknown) {
 export function render(element: ReactNode): void {
   root ??= reconciler.createContainer(container, 0, null, true, null, "vitadeck_", onRecoverableError, null);
   reconciler.updateContainer(element, root as Parameters<typeof reconciler.updateContainer>[1]);
-}
-
-export function getMetrics(): ReconcilerMetrics {
-  return metrics;
-}
-
-export function resetMetrics(): void {
-  metrics.reset();
 }
