@@ -1,6 +1,6 @@
 import path from "node:path";
-import babel from "@rollup/plugin-babel";
 import { defineConfig } from "rolldown";
+import { babel } from "../sdk/cli/babel.ts";
 
 const isProd = process.env.NODE_ENV !== "development";
 
@@ -26,12 +26,5 @@ export default defineConfig({
       "process.env.NODE_ENV": JSON.stringify(isProd ? "production" : "development"),
     },
   },
-  plugins: [
-    babel({
-      babelHelpers: "bundled",
-      extensions: [".ts", ".tsx", ".js", ".jsx"],
-      presets: ["@babel/preset-react", ["@babel/preset-typescript", { isTSX: true, allExtensions: true }]],
-      plugins: [["babel-plugin-react-compiler", { target: "18" }]],
-    }),
-  ],
+  plugins: [babel()],
 });

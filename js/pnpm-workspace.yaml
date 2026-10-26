@@ -4,17 +4,17 @@ packages:
   - "examples/*"
 
 catalog:
-  "@babel/preset-react": 7.29.7
-  "@babel/preset-typescript": 7.29.7
-  "@rollup/plugin-babel": 7.1.0
-  "@types/node": 25.9.9
+  "@babel/core": 8.0.9
+  "@babel/preset-react": 8.0.1
+  "@babel/preset-typescript": 8.0.7
+  "@types/node": 24.19.2
   "@types/react": 18.3.31
   "@types/react-reconciler": 0.28.9
   "babel-plugin-react-compiler": 1.0.0
   "fflate": 0.8.3
-  "oxfmt": 0.55.0
-  "oxlint": 1.72.0
-  "oxlint-tsgolint": 0.23.0
+  "oxfmt": 0.74.0
+  "oxlint": 1.89.0
+  "oxlint-tsgolint": 7.0.2005
   "react": 18.3.1
   "react-compiler-runtime": 1.0.0
   "react-reconciler": 0.29.2

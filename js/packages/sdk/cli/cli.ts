@@ -4,10 +4,10 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
-import babel from "@rollup/plugin-babel";
 import { zipSync } from "fflate";
 import { rolldown } from "rolldown";
 import type { DeckAppPackageManifest } from "../src/package-manifest";
+import { babel } from "./babel";
 
 type DeckAppConfig = {
   name: string;
@@ -416,14 +416,7 @@ globalThis.vitadeckPackage.register(DeckApp);
         "process.env.NODE_ENV": JSON.stringify(options.dev ? "development" : "production"),
       },
     },
-    plugins: [
-      babel({
-        babelHelpers: "bundled",
-        extensions: [".ts", ".tsx", ".js", ".jsx"],
-        presets: ["@babel/preset-react", ["@babel/preset-typescript", { isTSX: true, allExtensions: true }]],
-        plugins: [["babel-plugin-react-compiler", { target: "18" }]],
-      }),
-    ],
+    plugins: [babel()],
   });
 
   await bundle.write({

@@ -8,10 +8,6 @@ export default defineConfig({
     banner: "#!/usr/bin/env node\n",
   },
   platform: "node",
-  external: (id) =>
-    id === "rolldown" ||
-    id === "@rollup/plugin-babel" ||
-    id === "babel-plugin-react-compiler" ||
-    id.startsWith("@babel/"),
+  external: (id) => id === "rolldown" || id === "babel-plugin-react-compiler" || id.startsWith("@babel/"),
   tsconfig: false,
 });

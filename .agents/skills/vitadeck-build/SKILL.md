@@ -11,7 +11,7 @@ metadata:
 
 **JavaScript workspace** (run before native builds; CMake copies `js/dist/runtime` into `<build>/js/`):
 
-- Node.js 22+ (Rolldown uses Node 22+ APIs)
+- Node.js 24.16+ (`.nvmrc`)
 - Dependencies once: `pnpm --dir js install`
 - Produce runtime bundle and example `.vdapp` packages: `pnpm --dir js build` → writes `js/dist/runtime/runtime.js` and `js/examples/*/dist/*.vdapp`
 - Typecheck: `pnpm --dir js tsc`; lint/format: `pnpm --dir js lint` / `pnpm --dir js format`

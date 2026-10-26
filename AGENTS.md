@@ -33,7 +33,7 @@ When this file speaks:
 
 ## Setup
 
-- Node.js 22+ and pnpm (pinned by `packageManager` in `js/package.json`). `pnpm --dir js install` once. Corepack before 0.35 (bundled with Node before 22.23.3) cannot launch pnpm 11+ and fails with `Cannot find module .../bin/pnpm.cjs`; update Node or `npm i -g corepack@latest`.
+- Node.js 24.16+ (`.nvmrc`; `fnm use` picks it up) and pnpm (pinned by `packageManager` in `js/package.json`). `pnpm --dir js install` once. Older Node bundles a corepack that cannot launch pnpm 11+ and fails with `Cannot find module .../bin/pnpm.cjs`.
 - `git submodule update --init --recursive` if `vendor/quickjs/quickjs.c` is missing.
 - Host build needs CMake, raylib 5.5, curl, OpenSSL, zlib (`brew install raylib` on macOS; raylib + OpenGL/X11 dev packages on Linux). On Linux/GCC configure with `CC=gcc CXX=g++ cmake -S . -B out -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group"`.
 - Vita build and Linux smoke run in Docker. Start Docker Desktop first.

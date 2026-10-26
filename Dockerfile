@@ -24,7 +24,7 @@ RUN apt-get update \
         pkg-config \
         xvfb \
         zlib1g-dev \
-    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && corepack enable \
     && corepack prepare pnpm@12.15.0 --activate \
