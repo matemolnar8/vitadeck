@@ -145,8 +145,9 @@ static void publish(const char *package_name)
     char path[VD_PATH_MAX];
     vd_join_path(staged, sizeof(staged), package_library_staging_root(), package_name);
     vd_join_path(path, sizeof(path), staged, "manifest.json");
-    bool written = vd_mkdir_p(staged) &&
-                   vd_write_text_file(path, "{\"schemaVersion\":1,\"name\":\"App\",\"version\":\"1.0.0\",\"entry\":\"app.js\"}");
+    bool written =
+        vd_mkdir_p(staged) &&
+        vd_write_text_file(path, "{\"schemaVersion\":1,\"name\":\"App\",\"version\":\"1.0.0\",\"entry\":\"app.js\"}");
     vd_join_path(path, sizeof(path), staged, "app.js");
     written = written && vd_write_text_file(path, "globalThis.vitadeckPackage.register(() => null);\n");
     char error[256] = "";
