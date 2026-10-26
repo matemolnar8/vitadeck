@@ -552,8 +552,8 @@ static bool draws_image(const VdGlyphFont *font, int size, const char *text, con
     return glyph.color && bytes == (int)strlen(text) && file_loader_found == sequence->length;
 }
 
-// Every Twemoji image, written with U+FE0F after each symbol below U+1F000 as fully qualified text has it, draws as
-// itself; a single codepoint does without U+FE0F too, from the font that lacks it.
+// Every Twemoji image, written with U+FE0F after each base that no skin tone follows, draws as itself; a single
+// codepoint does without U+FE0F too, from the font that lacks it.
 static void test_twemoji_files(const VdGlyphFont *ascii)
 {
     DIR *dir = opendir(EMOJI_DIR);
@@ -599,7 +599,6 @@ static void test_twemoji_files(const VdGlyphFont *ascii)
             bool component = codepoint == 0x200d || codepoint == 0x20e3 ||
                              (codepoint >= 0x1f1e6 && codepoint <= 0x1f1ff) ||
                              (codepoint >= 0x1f3fb && codepoint <= 0x1f3ff) || codepoint >= 0xe0000;
-            // Fully qualified text has U+FE0F after each emoji, but not between an emoji and its skin tone.
             if (!component && !(next >= 0x1f3fb && next <= 0x1f3ff)) used = append_utf8(text, used, 0xfe0f);
         }
         if (!draws_image(ascii, 4, text, &sequence)) {
