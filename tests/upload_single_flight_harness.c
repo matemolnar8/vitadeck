@@ -89,8 +89,7 @@ static void *run_handle_upload_and_close(void *raw)
 
 // A client that keeps sending a body far bigger than the socket buffer after its upload is rejected: it can only
 // finish sending, and then read the JSON error, if the handler drains instead of closing on it.
-static bool rejected_upload_with_body(VdUploadServer *server, const char *headers, char *response,
-                                      size_t response_size)
+static bool rejected_upload_with_body(VdUploadServer *server, const char *headers, char *response, size_t response_size)
 {
     Client client;
     if (!client_open(&client, server, headers)) return false;

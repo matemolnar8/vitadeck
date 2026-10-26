@@ -318,7 +318,7 @@ if(NOT DEFINED ENV{VITASDK})
     target_link_libraries(scroll_math_harness m)
     add_test(NAME scroll_math_harness COMMAND scroll_math_harness)
 
-    add_executable(layout_harness tests/layout_harness.c ${LAYOUT_SOURCES})
+    add_executable(layout_harness tests/layout_harness.c ${LAYOUT_SOURCES} src/core/arena.c)
     target_link_libraries(layout_harness m ${RAYLIB_LIBRARIES})
     # The Runtime Default Font loads from assets/fonts, relative to the working directory.
     add_test(NAME layout_harness COMMAND layout_harness WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
@@ -362,6 +362,23 @@ if(NOT DEFINED ENV{VITASDK})
     )
     target_link_libraries(upload_single_flight_harness ZLIB::ZLIB pthread)
     add_test(NAME upload_single_flight_harness COMMAND upload_single_flight_harness)
+
+    # Links raylib only because shell.c also renders; the harness drives shell_apply_system_input.
+    add_executable(shell_input_harness
+      tests/shell_input_harness.c
+      src/shell/shell.c
+      src/upload/http_server.c
+      src/upload/archive.c
+      src/upload/http_parse.c
+      src/core/arena.c
+      src/core/deck_app_storage.c
+      src/core/package_library.c
+      src/core/package_manifest.c
+      src/core/util.c
+      ${PLATFORM_SOURCES}
+    )
+    target_link_libraries(shell_input_harness ZLIB::ZLIB pthread ${RAYLIB_LIBRARIES})
+    add_test(NAME shell_input_harness COMMAND shell_input_harness)
 
     # The native app without main.c, the shell and Runtime Upload, for harnesses that drive the real JS thread.
     set(HOST_RUNTIME_SOURCES
@@ -563,6 +580,7 @@ else()
   add_custom_target(run
     DEPENDS ${PROJECT_NAME} stage_examples
     VERBATIM
+    COMMAND ${CMAKE_SOURCE_DIR}/scripts/check-macos-display.sh
     COMMAND ${CMAKE_BINARY_DIR}/${PROJECT_NAME}
   )
 endif()

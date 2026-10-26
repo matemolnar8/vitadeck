@@ -8,9 +8,11 @@
 // Colour emoji share the pages, resampled to a Font Size square.
 // When every page is full, the least recently used one is cleared; one used this frame is never cleared, so a glyph
 // that finds no room waits for a later frame and draws as a missing-glyph box until then.
+// Every page starts with an opaque white square at (0, 0), so shapes can draw from the same texture as text.
 #define VD_GLYPH_ATLAS_PAGE_SIZE 1024
 #define VD_GLYPH_ATLAS_PAGE_BYTES (VD_GLYPH_ATLAS_PAGE_SIZE * VD_GLYPH_ATLAS_PAGE_SIZE * 4)
 #define VD_GLYPH_ATLAS_PAGE_MAX 4
+#define VD_GLYPH_ATLAS_WHITE_SIZE 4
 
 #define VD_UTF8_REPLACEMENT 0xfffd
 #define VD_EMOJI_FALLBACK VD_UTF8_REPLACEMENT
@@ -99,9 +101,9 @@ VdGlyphCacheStats glyph_cache_stats(void);
 // Malformed UTF-8 decodes one byte at a time as VD_UTF8_REPLACEMENT.
 uint32_t vd_utf8_next(const char *text, int *length);
 // The bytes of the emoji cluster at text, with its codepoints in sequence, or 0 when text does not start one. A
-// cluster starts at a codepoint from U+1F000 up, an emoji-style symbol like U+2728, or one followed by U+FE0F or a
-// keycap mark; U+FE0E after it keeps it text. It takes skin tones, tags, a second regional indicator and ZWJ-joined
-// codepoints.
+// cluster starts at an Emoji_Presentation codepoint like U+2728 or U+1F3AE, or one followed by U+FE0F, a keycap
+// mark or a skin tone; U+FE0E after it keeps it text. It takes skin tones, tags, a second regional indicator and
+// ZWJ-joined codepoints.
 int vd_emoji_cluster(const char *text, VdEmojiSequence *sequence);
 
 #endif /* GLYPH_CACHE_H */

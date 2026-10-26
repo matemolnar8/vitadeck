@@ -139,7 +139,7 @@ export default function MinesweeperDeckApp() {
   const pressTimerIdRef = useRef<number | null>(null);
   const longPressFiredRef = useRef(false);
   const pressedCellRef = useRef<{ r: number; c: number } | null>(null);
-  const [focusedCell, setFocusedCell] = useState<{ r: number; c: number } | null>(null);
+  const focusedCellRef = useRef<{ r: number; c: number } | null>(null);
 
   let totalFlags = 0;
   for (const row of grid) {
@@ -230,7 +230,8 @@ export default function MinesweeperDeckApp() {
 
   usePadButton("square", {
     onPressStart: () => {
-      if (focusedCell) toggleFlag(focusedCell.r, focusedCell.c);
+      const focused = focusedCellRef.current;
+      if (focused) toggleFlag(focused.r, focused.c);
     },
   });
   usePadButton("triangle", { onPressStart: reset });
@@ -292,10 +293,11 @@ export default function MinesweeperDeckApp() {
                 focusColor={theme.accent}
                 autoFocus={r === 0 && c === 0}
                 onFocus={() => {
-                  setFocusedCell({ r, c });
+                  focusedCellRef.current = { r, c };
                 }}
                 onBlur={() => {
-                  setFocusedCell((current) => (current?.r === r && current.c === c ? null : current));
+                  const focused = focusedCellRef.current;
+                  if (focused?.r === r && focused.c === c) focusedCellRef.current = null;
                 }}
                 onPressStart={() => {
                   onCellPressStart(r, c);

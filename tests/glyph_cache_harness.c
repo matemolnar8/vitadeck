@@ -45,6 +45,17 @@ static bool same_shape(VdGlyph a, VdGlyph b)
            a.advance == b.advance;
 }
 
+static bool has_white_square(const unsigned char *pixels)
+{
+    for (int row = 0; pixels && row < VD_GLYPH_ATLAS_WHITE_SIZE; row++) {
+        for (int col = 0; col < VD_GLYPH_ATLAS_WHITE_SIZE; col++) {
+            const unsigned char *pixel = pixels + ((size_t)row * VD_GLYPH_ATLAS_PAGE_SIZE + (size_t)col) * 4;
+            if (pixel[0] != 255 || pixel[1] != 255 || pixel[2] != 255 || pixel[3] != 255) return false;
+        }
+    }
+    return pixels != NULL;
+}
+
 static void test_utf8(void)
 {
     expect_utf8("A", 'A', 1, "ASCII decodes as itself");
@@ -97,6 +108,8 @@ static void test_hits_and_sizes(const VdGlyphFont *font)
         }
     }
     expect(covered, "the glyph's rect holds coverage");
+    expect(has_white_square(pixels), "a page starts with an opaque white square for shapes");
+    expect(a.x > VD_GLYPH_ATLAS_WHITE_SIZE || a.y > VD_GLYPH_ATLAS_WHITE_SIZE, "glyphs leave the white square alone");
 
     VdGlyphFontMetrics metrics = glyph_font_metrics(font, 30);
     expect(fabsf(metrics.ascent + metrics.descent - 30.0f) < 0.01f, "ascent plus descent is the Font Size");
@@ -269,7 +282,8 @@ static void test_korean(const VdGlyphFont *full, const VdGlyphFont *ascii)
 
     fallback_loads = korean_loads = 0;
     glyph_cache_set_fallback(full);
-    const VdLazyFont lazy[] = {{counting_fallback_loader, vd_in_cjk_blocks}, {counting_korean_loader, vd_in_hangul_blocks}};
+    const VdLazyFont lazy[] = {{counting_fallback_loader, vd_in_cjk_blocks},
+                               {counting_korean_loader, vd_in_hangul_blocks}};
     glyph_cache_set_lazy_fonts(lazy, 2);
 
     glyph_cache_get(ascii, 30, private_use);
@@ -317,8 +331,8 @@ static void test_hungarian(const VdGlyphFont *full)
     glyph_cache_reset();
     glyph_cache_set_fallback(NULL);
     VdGlyph notdef = glyph_cache_get(full, 22, 0x65e5);
-    const uint32_t letters[] = {0xc1, 0xe1, 0xc9, 0xe9, 0xcd, 0xed, 0xd3, 0xf3, 0xd6, 0xf6,
-                                0x150, 0x151, 0xda, 0xfa, 0xdc, 0xfc, 0x170, 0x171};
+    const uint32_t letters[] = {0xc1, 0xe1,  0xc9,  0xe9, 0xcd, 0xed, 0xd3, 0xf3,  0xd6,
+                                0xf6, 0x150, 0x151, 0xda, 0xfa, 0xdc, 0xfc, 0x170, 0x171};
     for (size_t i = 0; i < sizeof(letters) / sizeof(letters[0]); i++) {
         VdGlyph glyph = glyph_cache_get(full, 22, letters[i]);
         if (glyph.width > 0 && !same_shape(glyph, notdef)) continue;
@@ -361,6 +375,15 @@ static void test_emoji_clusters(void)
     expect_cluster("\xe2\x9c\xa8!", 3, (const uint32_t[]){0x2728}, 1, "an emoji-style symbol needs no U+FE0F");
     expect_cluster("\xe2\x9c\xa8\xef\xb8\x8e", 0, NULL, 0, "U+FE0E keeps an emoji-style symbol text");
     expect_cluster("\xe2\x86\x92", 0, NULL, 0, "an arrow is not an emoji");
+    expect_cluster("\xf0\x9f\x80\x80", 0, NULL, 0, "a Mahjong tile is not an emoji");
+    expect_cluster("\xf0\x9f\x80\x84", 4, (const uint32_t[]){0x1f004}, 1, "the red dragon tile is an emoji");
+    expect_cluster("\xf0\x9f\x85\xb0", 0, NULL, 0, "a text-style symbol above U+1F000 is not an emoji");
+    expect_cluster("\xf0\x9f\x85\xb0\xef\xb8\x8f", 7, (const uint32_t[]){0x1f170}, 1,
+                   "U+FE0F makes a symbol above U+1F000 an emoji");
+    expect_cluster("\xf0\x9f\x95\xb5\xf0\x9f\x8f\xbb", 8, (const uint32_t[]){0x1f575, 0x1f3fb}, 2,
+                   "a skin tone makes a text-style symbol an emoji");
+    expect_cluster("\xe2\x98\x9d\xf0\x9f\x8f\xbd", 7, (const uint32_t[]){0x261d, 0x1f3fd}, 2,
+                   "a skin tone makes a text-style symbol below U+1F000 an emoji");
 }
 
 // Pretends assets/emoji holds 1f3ae, 2764, 2728 and 1f468: 8x8 images, opaque red inside a transparent border.
@@ -428,7 +451,8 @@ static void test_emoji(const VdGlyphFont *font)
     expect(from_family.color, "a ZWJ sequence without an image resolves");
     expect(emoji_loads - loads == 3 && emoji_last_length == 1,
            "a ZWJ sequence tries itself and each shorter prefix that ends on an emoji");
-    expect(same_glyph(from_family, glyph_cache_get_emoji(font, size, &man)), "a ZWJ sequence without an image draws as its first emoji");
+    expect(same_glyph(from_family, glyph_cache_get_emoji(font, size, &man)),
+           "a ZWJ sequence without an image draws as its first emoji");
 
     VdEmojiSequence missing = cluster_of("\xf0\x9f\x99\x82");
     VdGlyph fallback = glyph_cache_get(font, size, VD_EMOJI_FALLBACK);
@@ -541,8 +565,8 @@ static bool draws_image(const VdGlyphFont *font, int size, const char *text, con
     return glyph.color && bytes == (int)strlen(text) && file_loader_found == sequence->length;
 }
 
-// Every Twemoji image, written with U+FE0F after each symbol below U+1F000 as fully qualified text has it, draws as
-// itself; a single codepoint does without U+FE0F too, from the font that lacks it.
+// Every Twemoji image, written with U+FE0F after each base that no skin tone follows, draws as itself; a single
+// codepoint does without U+FE0F too, from the font that lacks it.
 static void test_twemoji_files(const VdGlyphFont *ascii)
 {
     DIR *dir = opendir(EMOJI_DIR);
@@ -584,7 +608,11 @@ static void test_twemoji_files(const VdGlyphFont *ascii)
         for (int i = 0; i < sequence.length; i++) {
             uint32_t codepoint = sequence.codepoints[i];
             used = append_utf8(text, used, codepoint);
-            if (codepoint < 0x1f000 && codepoint != 0x200d && codepoint != 0x20e3) used = append_utf8(text, used, 0xfe0f);
+            uint32_t next = i + 1 < sequence.length ? sequence.codepoints[i + 1] : 0;
+            bool component = codepoint == 0x200d || codepoint == 0x20e3 ||
+                             (codepoint >= 0x1f1e6 && codepoint <= 0x1f1ff) ||
+                             (codepoint >= 0x1f3fb && codepoint <= 0x1f3ff) || codepoint >= 0xe0000;
+            if (!component && !(next >= 0x1f3fb && next <= 0x1f3ff)) used = append_utf8(text, used, 0xfe0f);
         }
         if (!draws_image(ascii, 4, text, &sequence)) {
             fprintf(stderr, "glyph_cache_harness: %s\n", entry->d_name);
@@ -611,7 +639,8 @@ static void test_twemoji_files(const VdGlyphFont *ascii)
             {"\xe2\x9c\xa8", {{0x2728}, 1}, "sparkles draws its image"},
             {"\xe2\x9d\xa4\xef\xb8\x8f", {{0x2764}, 1}, "a heart with U+FE0F draws its image"},
             {"\xf0\x9f\x8e\xae", {{0x1f3ae}, 1}, "a video game controller draws its image"},
-            {"\xf0\x9f\x8f\xb3\xef\xb8\x8f\xe2\x80\x8d\xf0\x9f\x8c\x88", {{0x1f3f3, 0x200d, 0x1f308}, 3},
+            {"\xf0\x9f\x8f\xb3\xef\xb8\x8f\xe2\x80\x8d\xf0\x9f\x8c\x88",
+             {{0x1f3f3, 0x200d, 0x1f308}, 3},
              "a rainbow flag ZWJ sequence draws its own image"},
         };
         for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
@@ -701,6 +730,7 @@ static void test_pages(const VdGlyphFont *full)
     glyph_cache_begin_frame();
     VdGlyph placed = glyph_cache_get(full, size, refused);
     expect(placed.page == 0, "a later frame clears the least recently used page");
+    expect(has_white_square(glyph_cache_take_dirty_page(0)), "a cleared page keeps its white square");
     expect(glyph_cache_stats().pages == VD_GLYPH_ATLAS_PAGE_MAX, "clearing a page keeps the cap");
     expect(glyph_cache_stats().glyphs < glyphs_before, "clearing a page drops its glyphs");
 
