@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 781ac177fafe6b24c3ec78dd6dc9549eaff15a89` and `git rev-parse --verify f51a30c0b95cc848c7d61f96228f74cebaf580e1` in this repository.
+   Run `git rev-parse --verify e8f42a8e8117edf39ed40bcb14474eb1cc655439` and `git rev-parse --verify aacbaa4a6afbf91001dd2e499f830d2dc47df3ea` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -22,17 +22,18 @@ When no question follows this paste, explain this change.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  781ac177fafe6b24c3ec78dd6dc9549eaff15a89
+base (merge-base)  e8f42a8e8117edf39ed40bcb14474eb1cc655439
 
-head               f51a30c0b95cc848c7d61f96228f74cebaf580e1
+head               aacbaa4a6afbf91001dd2e499f830d2dc47df3ea
 
-Named refs at pin: 781ac177fafe6b24c3ec78dd6dc9549eaff15a89 ... f51a30c
+Named refs at pin: e8f42a8e8117edf39ed40bcb14474eb1cc655439 ... aacbaa4
 
 Read the diff:
 
-git diff --find-renames 781ac177fafe6b24c3ec78dd6dc9549eaff15a89 f51a30c0b95cc848c7d61f96228f74cebaf580e1
+git diff --find-renames e8f42a8e8117edf39ed40bcb14474eb1cc655439 aacbaa4a6afbf91001dd2e499f830d2dc47df3ea
 
 Commits:
+- aacbaa4 Merge origin/main into fix/glyph-atlas-eviction-and-korean
 - f51a30c feat(fonts): Korean fallback; lazy fonts open only for their Unicode blocks
 - 0e7a0e7 fix(ui): glyphs with no atlas room draw a box and warn once
 
