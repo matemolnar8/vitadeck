@@ -47,7 +47,8 @@ export function Rect(props: RectProps) {
 export type TextProps = Omit<VitaTextProps, "key">;
 
 export function Text(props: TextProps) {
-  return vitaHost("vita-text", props);
+  const { theme } = useTheme();
+  return vitaHost("vita-text", { ...props, color: props.color ?? theme.text });
 }
 
 export type StackProps = Omit<VitaStackProps, "key">;

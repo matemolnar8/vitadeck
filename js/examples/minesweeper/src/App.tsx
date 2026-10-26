@@ -254,7 +254,7 @@ export default function MinesweeperDeckApp() {
         borderRadius={0}
       >
         <Rect x={0} y={0} width={playfield.w} height={headerHeight} color={theme.navBackground}>
-          <Text fontSize={24} color={theme.navText}>
+          <Text x={8} y={8} fontSize={24} color={theme.navText}>
             {headerText}
           </Text>
           <Button

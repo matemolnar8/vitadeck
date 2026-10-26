@@ -71,7 +71,7 @@ export default function TimersDeckApp() {
     <Screen>
       <Stack x={insetX} y={insetY} gap={stackGap}>
         <Rect width={cw} height={rowH} color={theme.surface} borderRadius={6}>
-          <Text fontSize={24} color={theme.text}>
+          <Text x={8} y={8} fontSize={24} color={theme.text}>
             setTimeout demo: {timeoutMsg}
           </Text>
           <Stack x={20} y={50} direction="row" gap={10}>
@@ -101,7 +101,7 @@ export default function TimersDeckApp() {
         </Rect>
 
         <Rect width={cw} height={rowH} color={theme.surfaceAlt} borderRadius={6}>
-          <Text fontSize={24} color={theme.text}>
+          <Text x={8} y={8} fontSize={24} color={theme.text}>
             setInterval demo: ticks = {ticks}
           </Text>
           <Stack x={20} y={50} direction="row" gap={10}>
@@ -131,10 +131,10 @@ export default function TimersDeckApp() {
         </Rect>
 
         <Rect width={cw} height={rowH} color={theme.surface} borderRadius={6}>
-          <Text fontSize={24} color={theme.text}>
+          <Text x={8} y={8} fontSize={24} color={theme.text}>
             Promise vs setTimeout: {asyncResult || "…"}
           </Text>
-          <Text fontSize={18} color={theme.outline}>
+          <Text x={8} y={8} fontSize={18} color={theme.outline}>
             Timeout at 1s, promise at 2s — final text should be from the promise
           </Text>
         </Rect>

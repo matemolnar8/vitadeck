@@ -9,11 +9,15 @@ export type TextWrap = "none" | "word";
 
 export type VitaTextProps = WithKey<{
   children: TextChild | TextChild[];
+  /** Defaults to the theme's `text` colour. */
   color?: Color;
   border?: boolean;
   font?: FontName;
+  /** Defaults to 20. */
   fontSize?: number;
+  /** Defaults to 0. */
   x?: number;
+  /** Defaults to 0. */
   y?: number;
   width?: number;
   align?: TextAlign;

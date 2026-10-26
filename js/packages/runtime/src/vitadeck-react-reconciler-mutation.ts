@@ -92,7 +92,7 @@ const textWrapToNative = (wrap: PropsByType["vita-text"]["wrap"]): number => {
 };
 
 const textLayoutArgs = (p: PropsByType["vita-text"]) =>
-  [p.x ?? 8, p.y ?? 8, p.width ?? 0, p.lineHeight ?? 0, textAlignToNative(p.align), textWrapToNative(p.wrap)] as const;
+  [p.x ?? 0, p.y ?? 0, p.width ?? 0, p.lineHeight ?? 0, textAlignToNative(p.align), textWrapToNative(p.wrap)] as const;
 
 const textInputArgs = (p: PropsByType["vita-text-input"]) => {
   const color = p.color ?? Colors.RAYWHITE;
@@ -180,7 +180,7 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
     nativeCreateText(
       id,
       p.font ?? "default",
-      p.fontSize ?? 30,
+      p.fontSize ?? 20,
       hasColor,
       r,
       g,
@@ -302,7 +302,7 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
     nativeUpdateText(
       id,
       p.font ?? "default",
-      p.fontSize ?? 30,
+      p.fontSize ?? 20,
       hasColor,
       r,
       g,
