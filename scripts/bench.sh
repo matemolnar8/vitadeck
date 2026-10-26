@@ -18,7 +18,7 @@ vita3k   The VPK in the Vita3K emulator (see the vitadeck-emulator skill).
 vita     The VPK on the Vita at $PSVITAIP, through VitaShell's FTP (1337) and vitacompanion (1338).
 
 --no-build          Run the existing build.
---update-baseline   Also copy the results to tests/bench/baselines/<target>.
+--update-baseline   Also copy the results to tests/bench/baselines/<target>; needs every scenario to run and pass.
 
 Environment:
   PSVITAIP                 Vita IP, for vita
@@ -57,6 +57,9 @@ for arg in "$@"; do
     *) SCENARIOS+=("$arg") ;;
   esac
 done
+
+# A baseline holds every scenario, so it is only replaced by a full run.
+((UPDATE_BASELINE == 0 || ${#SCENARIOS[@]} == 0)) || die "--update-baseline needs a run of every scenario."
 
 RUN_DIR="$ROOT_DIR/out-bench/$TARGET-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$RUN_DIR"
@@ -199,6 +202,7 @@ pnpm --dir "$ROOT_DIR/js" --silent bench:report "$RUN_DIR" "$BASELINE" | tee "$R
 echo "Results: $RUN_DIR"
 
 if ((UPDATE_BASELINE)); then
+  ! grep -q '"error"' "$RUN_DIR/result.json" || die "A scenario failed, so $BASELINE is unchanged."
   mkdir -p "$BASELINE"
   cp "$RUN_DIR/result.json" "$RUN_DIR/meta.json" "$BASELINE/"
   echo "Updated $BASELINE"
