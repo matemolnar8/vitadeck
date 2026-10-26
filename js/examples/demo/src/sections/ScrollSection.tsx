@@ -15,7 +15,6 @@ export function ScrollSection() {
       title="Scroll"
       blurb="A column Stack with a fixed viewport. Drag it, flick the left stick while a Button inside has Focus, or use the mouse wheel; it keeps gliding with momentum."
     >
-      {/* A Stack does not lay out a Scroll, so a Rect of the same size holds its place. */}
       <Rect width={CONTENT_WIDTH} height={VIEWPORT_HEIGHT}>
         <Scroll x={0} y={0} width={CONTENT_WIDTH} height={VIEWPORT_HEIGHT} gap={6} padding={12} color={theme.surface}>
           <Button
