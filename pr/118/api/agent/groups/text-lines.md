@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 3e933a90f2ad45d2abbbbfac04a7b9a987bbad47` and `git rev-parse --verify 109d347e5c7b68a18469c3a8cfffda8db7e201c1` in this repository.
+   Run `git rev-parse --verify 81705ef32a1e4968734146a11cbd9567880f5f7e` and `git rev-parse --verify 6afe270d3820e867d31a904d54495e96f4218c2d` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 3e933a90f2ad45d2abbbbfac04a7b9a987bbad47 109d347e5c7b68a18469c3a8cfffda8db7e201c1 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 81705ef32a1e4968734146a11cbd9567880f5f7e 6afe270d3820e867d31a904d54495e96f4218c2d -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -23,15 +23,15 @@ When no question follows this paste, explain this review concern.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  3e933a90f2ad45d2abbbbfac04a7b9a987bbad47
+base (merge-base)  81705ef32a1e4968734146a11cbd9567880f5f7e
 
-head               109d347e5c7b68a18469c3a8cfffda8db7e201c1
+head               6afe270d3820e867d31a904d54495e96f4218c2d
 
-Named refs at pin: 3e933a90f2ad45d2abbbbfac04a7b9a987bbad47 ... 109d347e5c7b68a18469c3a8cfffda8db7e201c1
+Named refs at pin: 81705ef32a1e4968734146a11cbd9567880f5f7e ... 6afe270d3820e867d31a904d54495e96f4218c2d
 
 Read the diff:
 
-git diff --find-renames 3e933a90f2ad45d2abbbbfac04a7b9a987bbad47 109d347e5c7b68a18469c3a8cfffda8db7e201c1
+git diff --find-renames 81705ef32a1e4968734146a11cbd9567880f5f7e 6afe270d3820e867d31a904d54495e96f4218c2d
 
 Review concern 01 of 05: One line breaker for layout and render (`text-lines`)
 
@@ -41,12 +41,13 @@ Layout must size a Text with the measurement the renderer draws with ([brief](so
 
 The what:
 
-`text_lines()` in `text.c` takes over the joining, wrapping and widths that `render.c` built per frame, and `render_text_instance` now draws its result at `inst->layout`.
+`text_lines()` in `text.c` takes over the joining, wrapping and widths that `render.c` built per frame, and `render_text_instance` now draws its result at `inst->layout`, aligning each line with `text_align_offset` inside `TextLines.width`.
 
 Look for:
 - Subtle: `text_lines()` returns one static `TextLines`, overwritten by the next call; both callers, `own_bounds` and `render_text_instance`, read it before calling again.
 - `render_children` no longer counts `text_index`, so render draws every Text at `layout.y`; the per-Text line offset now comes from `layout.c`.
 - The merge with #113 replaces its `measure_text_width` call in `render_button_instance` with `text_measure` rounded the same way, because this branch removed that helper from `render.c`.
+- `render_text_instance` aligns inside `lines->width`, the width layout gives the Text, not `Text.width`, which resolves [Codex](source:s4): a centred 200 px unwrapped line in `width={100}` now starts at its slot's x instead of 50 px left of it. Lines narrower than `width` align as before.
 
 Hunk refs for this concern:
 - src/ui/text.c

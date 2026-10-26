@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 3e933a90f2ad45d2abbbbfac04a7b9a987bbad47` and `git rev-parse --verify 109d347e5c7b68a18469c3a8cfffda8db7e201c1` in this repository.
+   Run `git rev-parse --verify 81705ef32a1e4968734146a11cbd9567880f5f7e` and `git rev-parse --verify 6afe270d3820e867d31a904d54495e96f4218c2d` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -22,17 +22,19 @@ When no question follows this paste, explain this change.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  3e933a90f2ad45d2abbbbfac04a7b9a987bbad47
+base (merge-base)  81705ef32a1e4968734146a11cbd9567880f5f7e
 
-head               109d347e5c7b68a18469c3a8cfffda8db7e201c1
+head               6afe270d3820e867d31a904d54495e96f4218c2d
 
-Named refs at pin: 3e933a90f2ad45d2abbbbfac04a7b9a987bbad47 ... 109d347e5c7b68a18469c3a8cfffda8db7e201c1
+Named refs at pin: 81705ef32a1e4968734146a11cbd9567880f5f7e ... 6afe270d3820e867d31a904d54495e96f4218c2d
 
 Read the diff:
 
-git diff --find-renames 3e933a90f2ad45d2abbbbfac04a7b9a987bbad47 109d347e5c7b68a18469c3a8cfffda8db7e201c1
+git diff --find-renames 81705ef32a1e4968734146a11cbd9567880f5f7e 6afe270d3820e867d31a904d54495e96f4218c2d
 
 Commits:
+- 6afe270 fix(render): align Text lines inside their laid-out width
+- 29659a8 Merge remote-tracking branch 'origin/main' into stack-text-align-fix
 - 109d347 fix(render): measure centred Button labels with text_measure after merging main
 - cf372ab Merge remote-tracking branch 'origin/main' into t3/stack-lays-out-text-1
 - 3d85b50 feat(layout): Stack flows Text using measured size
@@ -61,13 +63,12 @@ A `Text` gets a measured layout size from the same line breaker the renderer dra
 Look for:
 - The brief asked for the demo's behaviour to stay identical ([brief](source:s3)); under Fetch's "No description" the stars line now sits one line higher, because `Label` no longer reserves two lines.
 - The brief scoped `instance_tree.*` to Text bounds ([brief](source:s3)); this PR also moves `layout_tree` out of `instance_tree_swap` onto the first UI-thread reader, because the glyph cache is not safe to use from the JS thread.
-- Not done: [Codex](source:s4) asks that an over-width centred or right-aligned Text align by its measured width; `own_bounds` reports the widest line while `render_text_instance` still aligns inside `Text.width`, so such a line starts left of its laid-out box.
 
 ## Review concerns
 
 ### 01 One line breaker for layout and render (`text-lines`)
 
-`text_lines()` in `text.c` takes over the joining, wrapping and widths that `render.c` built per frame, and `render_text_instance` now draws its result at `inst->layout`.
+`text_lines()` in `text.c` takes over the joining, wrapping and widths that `render.c` built per frame, and `render_text_instance` now draws its result at `inst->layout`, aligning each line with `text_align_offset` inside `TextLines.width`.
 
 [groups/text-lines.md](groups/text-lines.md)
 
