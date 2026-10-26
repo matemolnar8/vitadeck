@@ -39,9 +39,10 @@ static int shell_text_baseline_y(int row_top, int font_h)
     return row_top + (SHELL_ROW_H - font_h) / 2;
 }
 
-static void shell_draw_footer_hint(void)
+static void shell_draw_footer_hint(bool restart_focused)
 {
-    DrawText("Start / F1 · Confirm · Back", SHELL_PADDING, SHELL_FOOTER_Y, SHELL_FONT_CAPTION, GRAY);
+    const char *hint = restart_focused ? "Start / F1 · Confirm: restart · Back" : "Start / F1 · Confirm · Back";
+    DrawText(hint, SHELL_PADDING, SHELL_FOOTER_Y, SHELL_FONT_CAPTION, GRAY);
 }
 
 static bool start_pressed(void)
@@ -186,11 +187,12 @@ static void hide_shell_to_deck(VdShell *shell)
     input_ignore_held_pad_buttons();
 }
 
-static void activate_package(VdShell *shell, const char *package_name, bool *request_runtime_restart)
+static void activate_package(VdShell *shell, const VdPackageInfo *pkg, bool *request_runtime_restart)
 {
     char error[256];
-    if (package_library_set_active(package_name, error, sizeof(error))) {
-        snprintf(shell->message, sizeof(shell->message), "Activated %s.", package_name);
+    if (package_library_set_active(pkg->package_name, error, sizeof(error))) {
+        snprintf(shell->message, sizeof(shell->message), "%s %s.", pkg->is_active ? "Restarted" : "Activated",
+                 pkg->package_name);
         hide_shell_to_deck(shell);
         *request_runtime_restart = true;
     } else {
@@ -322,7 +324,7 @@ void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart)
 
     const VdPackageInfo *pkg = &packages[shell->focus_row];
     if (shell->focus_col == 0) {
-        if (!pkg->is_active) activate_package(shell, pkg->package_name, request_runtime_restart);
+        activate_package(shell, pkg, request_runtime_restart);
         return;
     }
 
@@ -431,6 +433,7 @@ void shell_render(VdShell *shell)
         row_top += SHELL_OVERFLOW_ROW_STEP;
     }
 
+    bool restart_focused = false;
     int end_row = shell->scroll_row;
     for (int row = shell->scroll_row; row < row_count; row++) {
         bool row_focus = row == shell->focus_row && shell->remove_confirm_package[0] == '\0';
@@ -466,6 +469,7 @@ void shell_render(VdShell *shell)
             Color name_color = pkg->is_active ? GREEN : RAYWHITE;
             DrawText(name_line, SHELL_NAME_X + SHELL_SPACE_MD, text_y, SHELL_FONT_BODY, name_color);
             draw_tick_cell(SHELL_TICK_CX, row_top, pkg->is_active, row_focus, shell->focus_col == 0);
+            if (row_focus && shell->focus_col == 0 && pkg->is_active) restart_focused = true;
             draw_x_cell(SHELL_X_CX, row_top, row_focus, shell->focus_col == 1);
         }
         row_top += band_h + SHELL_SPACE_SM;
@@ -487,5 +491,5 @@ void shell_render(VdShell *shell)
         int msg_y = SHELL_FOOTER_Y - SHELL_SPACE_MD - SHELL_FONT_BODY;
         DrawText(shell->message, SHELL_PADDING, msg_y, SHELL_FONT_BODY, YELLOW);
     }
-    shell_draw_footer_hint();
+    shell_draw_footer_hint(restart_focused);
 }
