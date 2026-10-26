@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 18cbdfd92000926c9c4fd53c3e0f22a076f8b6d5` and `git rev-parse --verify 76eef5b1bd42f8b9e1039d96814122116bccd798` in this repository.
+   Run `git rev-parse --verify ecada964bdfdcc6151885f0d2aac72c339057b98` and `git rev-parse --verify 978568cb5b3b89bc65e656c665ead432947b05c6` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 18cbdfd92000926c9c4fd53c3e0f22a076f8b6d5 76eef5b1bd42f8b9e1039d96814122116bccd798 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames ecada964bdfdcc6151885f0d2aac72c339057b98 978568cb5b3b89bc65e656c665ead432947b05c6 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -23,15 +23,15 @@ When no question follows this paste, explain this review concern.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  18cbdfd92000926c9c4fd53c3e0f22a076f8b6d5
+base (merge-base)  ecada964bdfdcc6151885f0d2aac72c339057b98
 
-head               76eef5b1bd42f8b9e1039d96814122116bccd798
+head               978568cb5b3b89bc65e656c665ead432947b05c6
 
-Named refs at pin: 18cbdfd ... feat/scroll-in-stack
+Named refs at pin: ecada964bdfdcc6151885f0d2aac72c339057b98 ... HEAD
 
 Read the diff:
 
-git diff --find-renames 18cbdfd92000926c9c4fd53c3e0f22a076f8b6d5 76eef5b1bd42f8b9e1039d96814122116bccd798
+git diff --find-renames ecada964bdfdcc6151885f0d2aac72c339057b98 978568cb5b3b89bc65e656c665ead432947b05c6
 
 Review concern 03 of 04: SDK contract and docs (`sdk`)
 
