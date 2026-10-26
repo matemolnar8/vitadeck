@@ -18,8 +18,8 @@ static void expect(bool condition, const char *message)
 static void write_package(const char *package_path, const char *display_name)
 {
     char manifest[256];
-    snprintf(manifest, sizeof(manifest), "{\"schemaVersion\":1,\"name\":\"%s\",\"version\":\"1.0.0\",\"entry\":\"app.js\"}",
-             display_name);
+    snprintf(manifest, sizeof(manifest),
+             "{\"schemaVersion\":1,\"name\":\"%s\",\"version\":\"1.0.0\",\"entry\":\"app.js\"}", display_name);
     char path[VD_PATH_MAX];
     vd_join_path(path, sizeof(path), package_path, "manifest.json");
     if (!vd_mkdir_p(package_path) || !vd_write_text_file(path, manifest)) expect(false, "could not write manifest");

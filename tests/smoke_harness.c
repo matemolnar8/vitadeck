@@ -61,7 +61,8 @@ static void draw_frame(const VdBootstrap *bootstrap, GamepadSample sample)
 static void settle(const VdBootstrap *bootstrap)
 {
     double deadline = GetTime() + SETTLE_SEC;
-    while (GetTime() < deadline) draw_frame(bootstrap, (GamepadSample){0});
+    while (GetTime() < deadline)
+        draw_frame(bootstrap, (GamepadSample){0});
 }
 
 static bool wait_for_text(const VdBootstrap *bootstrap, const char *text)
@@ -101,8 +102,8 @@ static bool images_match(Image actual, const char *golden_path)
         return false;
     }
     if (actual.width != golden.width || actual.height != golden.height) {
-        fprintf(stderr, "smoke_harness: %s size mismatch (%dx%d vs %dx%d)\n", golden_path, actual.width,
-                actual.height, golden.width, golden.height);
+        fprintf(stderr, "smoke_harness: %s size mismatch (%dx%d vs %dx%d)\n", golden_path, actual.width, actual.height,
+                golden.width, golden.height);
         UnloadImage(golden);
         return false;
     }
