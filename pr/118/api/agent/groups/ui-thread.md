@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 21f616e174d3a9beedead96ee8bb6df07b9b2bca` and `git rev-parse --verify 3d85b50f63380f9a26549115361a6f2b959e778c` in this repository.
+   Run `git rev-parse --verify 3e933a90f2ad45d2abbbbfac04a7b9a987bbad47` and `git rev-parse --verify 109d347e5c7b68a18469c3a8cfffda8db7e201c1` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 21f616e174d3a9beedead96ee8bb6df07b9b2bca 3d85b50f63380f9a26549115361a6f2b959e778c -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 3e933a90f2ad45d2abbbbfac04a7b9a987bbad47 109d347e5c7b68a18469c3a8cfffda8db7e201c1 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -23,15 +23,15 @@ When no question follows this paste, explain this review concern.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  21f616e174d3a9beedead96ee8bb6df07b9b2bca
+base (merge-base)  3e933a90f2ad45d2abbbbfac04a7b9a987bbad47
 
-head               3d85b50f63380f9a26549115361a6f2b959e778c
+head               109d347e5c7b68a18469c3a8cfffda8db7e201c1
 
-Named refs at pin: 21f616e174d3a9beedead96ee8bb6df07b9b2bca ... feat/stack-lays-out-text
+Named refs at pin: 3e933a90f2ad45d2abbbbfac04a7b9a987bbad47 ... 109d347e5c7b68a18469c3a8cfffda8db7e201c1
 
 Read the diff:
 
-git diff --find-renames 21f616e174d3a9beedead96ee8bb6df07b9b2bca 3d85b50f63380f9a26549115361a6f2b959e778c
+git diff --find-renames 3e933a90f2ad45d2abbbbfac04a7b9a987bbad47 109d347e5c7b68a18469c3a8cfffda8db7e201c1
 
 Review concern 03 of 05: Lay out on the UI thread (`ui-thread`)
 

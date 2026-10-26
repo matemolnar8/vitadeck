@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 21f616e174d3a9beedead96ee8bb6df07b9b2bca` and `git rev-parse --verify 3d85b50f63380f9a26549115361a6f2b959e778c` in this repository.
+   Run `git rev-parse --verify 3e933a90f2ad45d2abbbbfac04a7b9a987bbad47` and `git rev-parse --verify 109d347e5c7b68a18469c3a8cfffda8db7e201c1` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -22,17 +22,19 @@ When no question follows this paste, explain this change.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  21f616e174d3a9beedead96ee8bb6df07b9b2bca
+base (merge-base)  3e933a90f2ad45d2abbbbfac04a7b9a987bbad47
 
-head               3d85b50f63380f9a26549115361a6f2b959e778c
+head               109d347e5c7b68a18469c3a8cfffda8db7e201c1
 
-Named refs at pin: 21f616e174d3a9beedead96ee8bb6df07b9b2bca ... feat/stack-lays-out-text
+Named refs at pin: 3e933a90f2ad45d2abbbbfac04a7b9a987bbad47 ... 109d347e5c7b68a18469c3a8cfffda8db7e201c1
 
 Read the diff:
 
-git diff --find-renames 21f616e174d3a9beedead96ee8bb6df07b9b2bca 3d85b50f63380f9a26549115361a6f2b959e778c
+git diff --find-renames 3e933a90f2ad45d2abbbbfac04a7b9a987bbad47 109d347e5c7b68a18469c3a8cfffda8db7e201c1
 
 Commits:
+- 109d347 fix(render): measure centred Button labels with text_measure after merging main
+- cf372ab Merge remote-tracking branch 'origin/main' into t3/stack-lays-out-text-1
 - 3d85b50 feat(layout): Stack flows Text using measured size
 
 Sources:
@@ -41,6 +43,8 @@ Sources:
 - pr PR #118 Measured Text, layout on the UI thread, Rect stacking kept and documented, demo Label without its Rect.
   https://github.com/matemolnar8/vitadeck/pull/118
 - transcript Orchestrator brief · Oct 26 Measure in layout.c with the renderer's measurement, keep or remove Rect stacking without changing the smoke golden, extend tests, simplify the demo with identical behaviour.
+- pr-comment chatgpt-codex-connector on PR #118
+  https://github.com/matemolnar8/vitadeck/pull/118#discussion_r4373361349
 
 The title:
 
@@ -57,6 +61,7 @@ A `Text` gets a measured layout size from the same line breaker the renderer dra
 Look for:
 - The brief asked for the demo's behaviour to stay identical ([brief](source:s3)); under Fetch's "No description" the stars line now sits one line higher, because `Label` no longer reserves two lines.
 - The brief scoped `instance_tree.*` to Text bounds ([brief](source:s3)); this PR also moves `layout_tree` out of `instance_tree_swap` onto the first UI-thread reader, because the glyph cache is not safe to use from the JS thread.
+- Not done: [Codex](source:s4) asks that an over-width centred or right-aligned Text align by its measured width; `own_bounds` reports the widest line while `render_text_instance` still aligns inside `Text.width`, so such a line starts left of its laid-out box.
 
 ## Review concerns
 
@@ -86,7 +91,7 @@ Depends on:
 
 ### 04 Demo Label without its wrapper Rect (`demo`)
 
-`Label` in `ui.tsx` renders a bare `Text`, and each section's `lines={n}` becomes `wrap` because the Text now measures its own height.
+`Label` in `ui.tsx` renders a bare `Text`, each section's `lines={n}` becomes `wrap` because the Text now measures its own height, and `ScrollSection` drops a comment that #98 made untrue.
 
 Depends on:
 - 02 Text takes its slot in a Stack (`layout`)
