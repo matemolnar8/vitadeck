@@ -383,6 +383,8 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
   }
 };
 
+const benchActive = nativeBenchActive();
+
 const hostConfig = {
   noTimeout: -1,
   isPrimaryRenderer: true,
@@ -398,13 +400,13 @@ const hostConfig = {
 
   prepareForCommit: (..._args) => {
     logReconcilerFunction("prepareForCommit");
-    nativeBenchCommit(false);
+    if (benchActive) nativeBenchCommit(false);
     return null;
   },
 
   resetAfterCommit: (_container: Container) => {
     logReconcilerFunction("resetAfterCommit");
-    nativeBenchCommit(true);
+    if (benchActive) nativeBenchCommit(true);
   },
 
   getChildHostContext: (..._args) => {

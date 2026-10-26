@@ -270,7 +270,9 @@ declare global {
   function nativeClearContainer(): void;
 
   function nativeEvalActiveDeckAppEntry(): void;
-  // Times a React commit in Benchmark Mode: false when it starts, true when it ends. Returns at once otherwise.
+  // Whether this launch is a Benchmark Mode run; it does not change while VitaDeck runs.
+  function nativeBenchActive(): boolean;
+  // Times a React commit in Benchmark Mode: false when it starts, true when it ends.
   function nativeBenchCommit(ended: boolean): void;
   // Called by `storage` in @vitadeck/sdk.
   function nativeReadDeckAppStorage(): string;

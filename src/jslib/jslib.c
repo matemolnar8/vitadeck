@@ -14,6 +14,14 @@ static JSValue js_get_time(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     return JS_NewFloat64(ctx, GetTime());
 }
 
+static JSValue js_native_bench_active(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+    return JS_NewBool(ctx, bench_active());
+}
+
 // The reconciler brackets each React commit with this, false at prepareForCommit and true at resetAfterCommit.
 static JSValue js_native_bench_commit(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
@@ -103,5 +111,6 @@ void register_js_lib(JSContext *ctx)
 
     js_set_global_function(ctx, "getTime", js_get_time, 0);
     js_set_global_function(ctx, "nativeEvalActiveDeckAppEntry", js_native_eval_active_deck_app_entry, 0);
+    js_set_global_function(ctx, "nativeBenchActive", js_native_bench_active, 0);
     js_set_global_function(ctx, "nativeBenchCommit", js_native_bench_commit, 1);
 }
