@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 3f9ba8c6b32fb89565efa153fadd4a1a876396ee` and `git rev-parse --verify 33b2ca703b09bf38890ad2ab3d952fdc75edd9b5` in this repository.
+   Run `git rev-parse --verify 3616d7cdbc3d10cb1a6e56fc68ebd4a1cbddb98e` and `git rev-parse --verify 9cf3bfdd0d86573d2ee442f914c142a8bfc74f4d` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -22,17 +22,18 @@ When no question follows this paste, explain this change.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  3f9ba8c6b32fb89565efa153fadd4a1a876396ee
+base (merge-base)  3616d7cdbc3d10cb1a6e56fc68ebd4a1cbddb98e
 
-head               33b2ca703b09bf38890ad2ab3d952fdc75edd9b5
+head               9cf3bfdd0d86573d2ee442f914c142a8bfc74f4d
 
-Named refs at pin: 3f9ba8c6b32fb89565efa153fadd4a1a876396ee ... t3/tech-debt-117
+Named refs at pin: 3616d7cdbc3d10cb1a6e56fc68ebd4a1cbddb98e ... t3/tech-debt-117
 
 Read the diff:
 
-git diff --find-renames 3f9ba8c6b32fb89565efa153fadd4a1a876396ee 33b2ca703b09bf38890ad2ab3d952fdc75edd9b5
+git diff --find-renames 3616d7cdbc3d10cb1a6e56fc68ebd4a1cbddb98e 9cf3bfdd0d86573d2ee442f914c142a8bfc74f4d
 
 Commits:
+- 9cf3bfd Merge remote-tracking branch 'origin/main' into t3/tech-debt-117
 - 33b2ca7 fix(shell): free the upload server mutex on shutdown
 - 5a358ab test(shell): drive Shell input headless and clear its message on hide
 
