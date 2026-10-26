@@ -62,9 +62,17 @@ static int g_page_count = 0;
 static int g_current_page = -1;
 static unsigned g_frame = 1;
 static int g_rasterised = 0;
+static int g_overflowed = 0;
 static const VdGlyphFont *g_fallback = NULL;
-static VdGlyphFontLoader g_fallback_loader = NULL;
-static const VdGlyphFont *g_last_fallback = NULL;
+
+typedef struct {
+    VdLazyFont lazy;
+    bool tried;
+    const VdGlyphFont *font;
+} LazySlot;
+
+static LazySlot g_lazy[VD_LAZY_FONT_MAX];
+static int g_lazy_count = 0;
 
 static uint32_t read_u32(const unsigned char *bytes)
 {
@@ -105,7 +113,9 @@ void glyph_font_free(VdGlyphFont *font)
 {
     if (!font) return;
     if (g_fallback == font) g_fallback = NULL;
-    if (g_last_fallback == font) g_last_fallback = NULL;
+    for (int i = 0; i < g_lazy_count; i++) {
+        if (g_lazy[i].font == font) g_lazy[i].font = NULL;
+    }
     free(font->data);
     free(font);
 }
@@ -123,19 +133,34 @@ void glyph_cache_set_fallback(const VdGlyphFont *font)
     g_fallback = font;
 }
 
-void glyph_cache_set_fallback_loader(VdGlyphFontLoader loader)
+void glyph_cache_set_lazy_fonts(const VdLazyFont *fonts, int count)
 {
-    g_fallback_loader = loader;
-    g_last_fallback = NULL;
+    memset(g_lazy, 0, sizeof(g_lazy));
+    g_lazy_count = count < VD_LAZY_FONT_MAX ? count : VD_LAZY_FONT_MAX;
+    for (int i = 0; i < g_lazy_count; i++) {
+        g_lazy[i].lazy = fonts[i];
+    }
 }
 
-static const VdGlyphFont *last_fallback(void)
+static bool in_range(uint32_t codepoint, uint32_t first, uint32_t last)
 {
-    if (g_fallback_loader) {
-        g_last_fallback = g_fallback_loader();
-        g_fallback_loader = NULL;
-    }
-    return g_last_fallback;
+    return codepoint >= first && codepoint <= last;
+}
+
+bool vd_in_hangul_blocks(uint32_t codepoint)
+{
+    return in_range(codepoint, 0x1100, 0x11ff) || in_range(codepoint, 0x3130, 0x318f) ||
+           in_range(codepoint, 0xa960, 0xa97f) || in_range(codepoint, 0xac00, 0xd7ff) ||
+           in_range(codepoint, 0xffa0, 0xffdf);
+}
+
+// Hangul syllables are left out: Droid Sans Fallback Full has 3 of the 11,172, so Korean text would open it for
+// nothing and mix two faces in a word.
+bool vd_in_cjk_blocks(uint32_t codepoint)
+{
+    return in_range(codepoint, 0x1100, 0x11ff) || in_range(codepoint, 0x2e80, 0x9fff) ||
+           in_range(codepoint, 0xf900, 0xfaff) || in_range(codepoint, 0xfe30, 0xfe4f) ||
+           in_range(codepoint, 0xff00, 0xffef) || in_range(codepoint, 0x20000, 0x323af);
 }
 
 // The font's glyph index for codepoint, setting source to the font when it has one; 0 when it has none.
@@ -143,6 +168,23 @@ static int find_glyph(const VdGlyphFont *font, uint32_t codepoint, const VdGlyph
 {
     int index = font ? stbtt_FindGlyphIndex(&font->info, (int)codepoint) : 0;
     if (index != 0) *source = font;
+    return index;
+}
+
+// The glyph index from the first font in the chain that has codepoint, setting source to it; 0 when none has it.
+static int resolve_glyph(const VdGlyphFont *font, uint32_t codepoint, const VdGlyphFont **source)
+{
+    int index = find_glyph(font, codepoint, source);
+    if (index == 0) index = find_glyph(g_fallback, codepoint, source);
+    for (int i = 0; index == 0 && i < g_lazy_count; i++) {
+        LazySlot *slot = &g_lazy[i];
+        if (!slot->lazy.covers(codepoint)) continue;
+        if (!slot->tried) {
+            slot->font = slot->lazy.load();
+            slot->tried = true;
+        }
+        index = find_glyph(slot->font, codepoint, source);
+    }
     return index;
 }
 
@@ -205,11 +247,20 @@ static int atlas_allocate(int width, int height, int *x, int *y)
     return page_place(&g_pages[index], width, height, x, y) ? index : -1;
 }
 
+// A fallback glyph takes the requested font's em size: scaling each font to the Font Size by its own line height
+// would draw a font with taller line metrics, like Noto Sans KR, smaller than the text around it.
+static float glyph_scale(const VdGlyphFont *font, const VdGlyphFont *source, int size)
+{
+    float scale = stbtt_ScaleForPixelHeight(&font->info, (float)size);
+    if (source == font) return scale;
+    float em = scale / stbtt_ScaleForMappingEmToPixels(&font->info, 1.0f);
+    return stbtt_ScaleForMappingEmToPixels(&source->info, em);
+}
+
 // Returns false when the glyph has pixels but no room, so the caller retries on a later frame.
-static bool rasterise(const VdGlyphFont *font, int glyph_index, int size, VdGlyph *out)
+static bool rasterise(const VdGlyphFont *font, int glyph_index, float scale, VdGlyph *out)
 {
     const stbtt_fontinfo *info = &font->info;
-    float scale = stbtt_ScaleForPixelHeight(info, (float)size);
     int advance = 0, left_bearing = 0;
     stbtt_GetGlyphHMetrics(info, glyph_index, &advance, &left_bearing);
     *out = (VdGlyph){.page = -1, .advance = advance * scale};
@@ -223,7 +274,11 @@ static bool rasterise(const VdGlyphFont *font, int glyph_index, int size, VdGlyp
     int x = 0, y = 0;
     int page = atlas_allocate(width, height, &x, &y);
     unsigned char *coverage = page >= 0 ? malloc((size_t)width * (size_t)height) : NULL;
-    if (!coverage) return false;
+    if (!coverage) {
+        *out = (VdGlyph){-1, 0, 0, width, height, x0, y0, out->advance, false};
+        g_overflowed++;
+        return false;
+    }
     stbtt_MakeGlyphBitmap(info, coverage, width, height, width, scale, scale, glyph_index);
 
     unsigned char *pixels = g_pages[page].pixels;
@@ -258,12 +313,10 @@ VdGlyph glyph_cache_get(const VdGlyphFont *font, int size, uint32_t codepoint)
     }
 
     const VdGlyphFont *source = font;
-    int glyph_index = find_glyph(font, codepoint, &source);
-    if (glyph_index == 0) glyph_index = find_glyph(g_fallback, codepoint, &source);
-    if (glyph_index == 0) glyph_index = find_glyph(last_fallback(), codepoint, &source);
+    int glyph_index = resolve_glyph(font, codepoint, &source);
 
     VdGlyph glyph;
-    if (rasterise(source, glyph_index, size, &glyph)) {
+    if (rasterise(source, glyph_index, glyph_scale(font, source, size), &glyph)) {
         hmput(g_glyphs, key, glyph);
         g_rasterised++;
     }
@@ -283,7 +336,12 @@ static bool rasterise_emoji(const VdGlyphFont *font, int size, const unsigned ch
     *out = (VdGlyph){.page = -1, .offset_y = -(int)roundf(ascent), .advance = (float)size, .color = true};
     int x = 0, y = 0;
     int page = atlas_allocate(size, size, &x, &y);
-    if (page < 0) return false;
+    if (page < 0) {
+        out->width = out->height = size;
+        out->color = false;
+        g_overflowed++;
+        return false;
+    }
 
     unsigned char *pixels = g_pages[page].pixels;
     for (int row = 0; row < size; row++) {
@@ -365,25 +423,19 @@ static bool find_emoji(const VdGlyphFont *font, int size, const VdEmojiSequence 
     return false;
 }
 
-// Asks the same fonts, in the same order, as glyph_cache_get.
-static bool has_glyph(const VdGlyphFont *font, uint32_t codepoint)
-{
-    const VdGlyphFont *source = NULL;
-    return find_glyph(font, codepoint, &source) != 0 || find_glyph(g_fallback, codepoint, &source) != 0 ||
-           find_glyph(last_fallback(), codepoint, &source) != 0;
-}
-
 VdGlyph glyph_cache_get_emoji(const VdGlyphFont *font, int size, const VdEmojiSequence *sequence)
 {
     VdGlyph glyph;
     if (find_emoji(font, size, sequence, &glyph)) return glyph;
     uint32_t first = sequence->codepoints[0];
-    return glyph_cache_get(font, size, has_glyph(font, first) ? first : VD_EMOJI_FALLBACK);
+    const VdGlyphFont *source = NULL;
+    return glyph_cache_get(font, size, resolve_glyph(font, first, &source) != 0 ? first : VD_EMOJI_FALLBACK);
 }
 
 void glyph_cache_begin_frame(void)
 {
     g_frame++;
+    g_overflowed = 0;
 }
 
 void glyph_cache_reset(void)
@@ -397,6 +449,7 @@ void glyph_cache_reset(void)
     hmfree(g_glyphs);
     hmfree(g_emoji);
     g_rasterised = 0;
+    g_overflowed = 0;
 }
 
 const unsigned char *glyph_cache_take_dirty_page(int page)
@@ -408,7 +461,7 @@ const unsigned char *glyph_cache_take_dirty_page(int page)
 
 VdGlyphCacheStats glyph_cache_stats(void)
 {
-    return (VdGlyphCacheStats){g_page_count, (int)hmlen(g_glyphs), g_rasterised};
+    return (VdGlyphCacheStats){g_page_count, (int)hmlen(g_glyphs), g_rasterised, g_overflowed};
 }
 
 uint32_t vd_utf8_next(const char *text, int *length)

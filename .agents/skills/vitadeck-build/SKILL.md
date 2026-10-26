@@ -90,7 +90,7 @@ Run **JS build**, then the host quick start, then the Vita quick start. Fix comp
 
 ## Notes
 
-- Configure downloads the pinned DejaVu Sans, Droid Sans Fallback Full and Twemoji releases once into the gitignored `assets/fonts/` and `assets/emoji/` (`cmake/fonts.cmake`, `cmake/twemoji.cmake`, SHA-256 checked by `cmake/fetch_asset.cmake`); host and VPK builds both ship them. Offline it warns and builds with fallbacks: raylib's built-in font for the Runtime Default Font, missing-glyph boxes for CJK, a fallback glyph for emoji. The next configure retries.
+- Configure downloads the pinned DejaVu Sans, Droid Sans Fallback Full, Noto Sans KR and Twemoji releases once into the gitignored `assets/fonts/` and `assets/emoji/` (`cmake/fonts.cmake`, `cmake/twemoji.cmake`, SHA-256 checked by `cmake/fetch_asset.cmake`); host and VPK builds both ship them. Offline it warns and builds with fallbacks: raylib's built-in font for the Runtime Default Font, missing-glyph boxes for CJK and Korean, a fallback glyph for emoji. The next configure retries.
 - In the container, `VITASDK` is set by the image; the project picks the Vita toolchain when that env var is present.
 - Host builds use `out/`; Vita builds use `out-vita/` on the **host** filesystem (bind-mounted from the container).
 - Host only: `cmake --build out --target stage_examples` copies every built `js/examples/*/dist/*.vdapp` into `out/vitadeck-data/installed-deck-apps`; `cmake --build out --target run` builds, stages, and launches `out/vitadeck`.

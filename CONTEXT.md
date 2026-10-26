@@ -40,7 +40,7 @@ _Avoid_: User entry, source entry, main runtime
 **Package Registration Hook**: The internal global convention between a **Deck App Package Entry** and the **VitaDeck Runtime Bundle**. Not an author API, not a security boundary.
 _Avoid_: Public SDK API, security boundary, author API
 
-**Deck App Font**: A font file shipped in a package and declared in the manifest; author code references it by declared name. Missing glyphs in a TrueType or OpenType font fall back to the **Runtime Default Font**, then the **Runtime Fallback Font**; `.fnt` and `.bdf` fonts never fall back and draw no emoji. Emoji render as the bundled Twemoji images, not from any font.
+**Deck App Font**: A font file shipped in a package and declared in the manifest; author code references it by declared name. Missing glyphs in a TrueType or OpenType font fall back to the **Runtime Default Font**, then a **Runtime Fallback Font**; `.fnt` and `.bdf` fonts never fall back and draw no emoji. Emoji render as the bundled Twemoji images, not from any font.
 _Avoid_: Raw font path, system font, hardcoded font
 
 **Deck App Image**: An image file shipped in a package and declared in the manifest; author code references it by declared name.
@@ -49,8 +49,8 @@ _Avoid_: Raw image path, texture path, sprite sheet path
 **Runtime Default Font**: VitaDeck's bundled DejaVu Sans, used when no font is requested and as the first fallback. A build that could not download it uses raylib's built-in font.
 _Avoid_: Built-in Raylib font, implicit app font, serif default
 
-**Runtime Fallback Font**: VitaDeck's bundled Droid Sans Fallback Full for CJK characters no other font has, loaded on first use. Covers Chinese ideographs and Japanese kana, not Hangul.
-_Avoid_: System font, Noto fallback, CJK default font
+**Runtime Fallback Font**: One of VitaDeck's bundled fonts for characters no earlier font has: Droid Sans Fallback Full for Chinese ideographs and Japanese kana, then Noto Sans KR for Hangul. Each loads the first time a character from its Unicode blocks is drawn; a character no font has draws the missing-glyph box.
+_Avoid_: System font, CJK default font
 
 **Font Size**: Text height in raw pixels, as requested by author code.
 _Avoid_: Text scale, named text size, point size
