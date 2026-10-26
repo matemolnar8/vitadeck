@@ -1,0 +1,1 @@
+{"path":"js/examples/smoke/tsconfig.json","ref":"02d88881c71ebf1091332268ecbcd587dddafb01","side":"old","content":"{\n  \"extends\": \"@vitadeck/sdk/tsconfig\",\n  \"include\": [\"src\", \".vitadeck/**/*.d.ts\"]\n}\n","language":"json"}
