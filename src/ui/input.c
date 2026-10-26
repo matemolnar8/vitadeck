@@ -225,7 +225,6 @@ static void set_focus(const char *new_id)
 static void set_focus_into_view(const char *new_id)
 {
     set_focus(new_id);
-    if (!focused_id) return;
     touch_stop_momentum();
     instance_scroll_into_view(focused_id);
 }
@@ -488,7 +487,7 @@ void poll_touch_input(void)
 static char *find_nearest_focusable(NavDirection dir)
 {
     int elem_count = 0;
-    FocusableElement *elems = get_focusable_elements(&elem_count);
+    FocusableElement *elems = get_focusable_elements_for(focused_id, &elem_count);
     int pick = focus_nav_pick(elems, elem_count, focused_id, dir);
     char *result = pick >= 0 ? strdup(elems[pick].id) : NULL;
     free_focusable_elements(elems, elem_count);

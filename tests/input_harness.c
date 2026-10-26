@@ -362,6 +362,71 @@ static void test_focus_leaves_scroll(void)
     scroll_reset();
 }
 
+// Same Stack as test_focus_leaves_scroll, at offset 0: hidden u2 and u3 lie below Button below, so Down from
+// below must not jump to them; Up enters at the last visible row instead.
+static void test_focus_outside_scroll_below(void)
+{
+    ReactInstance *stack = fixture_stack(NULL, "C", 0, 0, STACK_COLUMN, 10);
+    ReactInstance *u = fixture_scroll(stack, "U", 0, 0, 150, 80, 0, 0);
+    fixture_button(u, "u0", 0, 0, 100, 40);
+    fixture_button(u, "u1", 0, 0, 100, 40);
+    fixture_button(u, "u2", 0, 0, 100, 40);
+    fixture_button(u, "u3", 0, 0, 100, 40);
+    fixture_button(stack, "below", 0, 0, 100, 40);
+    fixture_publish();
+    reset();
+
+    request_focus("below");
+    drain();
+    down();
+    expect_events("", "Down from the Button below a Scroll does not jump to a hidden row");
+    expect_offset("U", 0, "the Scroll does not move when Down finds nothing below");
+    expect(input_is_focused("below"), "Focus stays on the Button below the Scroll");
+    up();
+    expect_events("blur:below focus:u1", "Up from below enters at the last visible row");
+    expect_offset("U", 0, "entering at a visible row keeps the offset");
+
+    instance_tree_clear();
+    scroll_reset();
+}
+
+// Header Button over Scroll L (300x160, r0..r9 40 high each) in a column Stack, scrolled to the bottom
+// (offset 240): r6 is the first visible row. Up from the header finds nothing; Down enters at r6 without
+// shifting the list.
+static void test_focus_outside_scroll_header(void)
+{
+    ReactInstance *stack = fixture_stack(NULL, "H", 0, 0, STACK_COLUMN, 0);
+    fixture_button(stack, "header", 0, 0, 100, 40);
+    ReactInstance *l = fixture_scroll(stack, "L", 0, 0, 300, 160, 0, 0);
+    fixture_button(l, "r0", 0, 0, 100, 40);
+    fixture_button(l, "r1", 0, 0, 100, 40);
+    fixture_button(l, "r2", 0, 0, 100, 40);
+    fixture_button(l, "r3", 0, 0, 100, 40);
+    fixture_button(l, "r4", 0, 0, 100, 40);
+    fixture_button(l, "r5", 0, 0, 100, 40);
+    fixture_button(l, "r6", 0, 0, 100, 40);
+    fixture_button(l, "r7", 0, 0, 100, 40);
+    fixture_button(l, "r8", 0, 0, 100, 40);
+    fixture_button(l, "r9", 0, 0, 100, 40);
+    fixture_publish();
+    reset();
+
+    scroll_set_offset("L", 240);
+    request_focus("header");
+    drain();
+    expect_offset("L", 240, "focusing the header keeps the list scrolled to the bottom");
+    up();
+    expect_events("", "Up from the header above a scrolled list is a no-op");
+    expect_offset("L", 240, "the no-op Up keeps the offset");
+    expect(input_is_focused("header"), "Focus stays on the header");
+    down();
+    expect_events("blur:header focus:r6", "Down from the header enters at the first visible row");
+    expect_offset("L", 240, "entering at the first visible row does not shift the list");
+
+    instance_tree_clear();
+    scroll_reset();
+}
+
 // Scroll O 100x100 flows o0 (80 high), Scroll I (60 high) and o1 (40 high), so its offset goes up to 80.
 // I holds i0..i3, 40 high each, so its offset goes up to 100.
 static void test_nested_scrolls_into_view(void)
@@ -559,6 +624,8 @@ int main(void)
     test_focus_scrolls_into_view();
     test_focus_reaches_tiled_rows();
     test_focus_leaves_scroll();
+    test_focus_outside_scroll_below();
+    test_focus_outside_scroll_header();
     test_nested_scrolls_into_view();
     test_text_input_editing();
     test_text_input_ends();

@@ -170,6 +170,9 @@ typedef struct {
 } FocusableElement;
 
 FocusableElement *get_focusable_elements(int *count);
+// Like get_focusable_elements, but a Scroll's scrolled-out descendants stay candidates only when focused_id is
+// inside that Scroll, so the D-pad can reach them from within and hidden rows never compete outside it.
+FocusableElement *get_focusable_elements_for(const char *focused_id, int *count);
 void free_focusable_elements(FocusableElement *elems, int count);
 
 // Back-buffer operations (called from JS thread only)
