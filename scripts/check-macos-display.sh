@@ -8,7 +8,7 @@ set -euo pipefail
 root=$(ioreg -n Root -d1)
 asleep=$(osascript -l JavaScript -e 'ObjC.import("CoreGraphics"); $.CGDisplayIsAsleep($.CGMainDisplayID())' 2>/dev/null || true)
 if [[ "$asleep" == 1 || "$asleep" == true ]] ||
-  grep -Eq '"IOConsoleLocked" = Yes|"CGSSessionScreenIsLocked"=Yes' <<<"$root"; then
+  grep -Eq '"IOConsoleLocked" = Yes|CGSSessionScreenIsLocked"=Yes' <<<"$root"; then
   echo "macOS display is asleep or the screen is locked; unlock it or use the Linux Docker path" >&2
   exit 1
 fi
