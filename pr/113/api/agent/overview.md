@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify ecada964bdfdcc6151885f0d2aac72c339057b98` and `git rev-parse --verify c45708bc4894acd44d9184265a1624cda104eeb5` in this repository.
+   Run `git rev-parse --verify 27683e0ceec2ca0ab7c185c2e97d4f79787f16f3` and `git rev-parse --verify 584319b0ab9f68fd731e2c56c4aef5fe85ed0a34` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -22,17 +22,20 @@ When no question follows this paste, explain this change.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  ecada964bdfdcc6151885f0d2aac72c339057b98
+base (merge-base)  27683e0ceec2ca0ab7c185c2e97d4f79787f16f3
 
-head               c45708bc4894acd44d9184265a1624cda104eeb5
+head               584319b0ab9f68fd731e2c56c4aef5fe85ed0a34
 
-Named refs at pin: ecada964bdfdcc6151885f0d2aac72c339057b98 ... HEAD
+Named refs at pin: 27683e0ceec2ca0ab7c185c2e97d4f79787f16f3 ... 584319b0ab9f68fd731e2c56c4aef5fe85ed0a34
 
 Read the diff:
 
-git diff --find-renames ecada964bdfdcc6151885f0d2aac72c339057b98 c45708bc4894acd44d9184265a1624cda104eeb5
+git diff --find-renames 27683e0ceec2ca0ab7c185c2e97d4f79787f16f3 584319b0ab9f68fd731e2c56c4aef5fe85ed0a34
 
 Commits:
+- 584319b test(smoke): refresh Linux golden for rounded Button label width
+- 3349b0b fix(ui): round Button label width like other text measurements
+- c8bfa92 Merge origin/main into fix/dx-text-defaults-exports-button-align
 - c45708b feat(sdk): Button align prop; labels centre vertically and default to centred
 - 513b673 fix(sdk): Text defaults to the theme text colour, fontSize 20 and x/y 0
 - f36bfdc feat(sdk): export TextAlign, TextWrap, StackAlign, StackDirection and PadButtonPhase
@@ -79,7 +82,7 @@ The SDK `Text` component fills `color` from `useTheme()`, while the reconciler a
 
 ### 03 Examples keep their Text offset (`text-call-sites`)
 
-Each `Text` without `x`/`y` in minesweeper, timers and the scaffold template gains `x={8} y={8}`; smoke already passes every prop, so its golden does not move for this part.
+Each `Text` without `x`/`y` in minesweeper, timers (including the tick-log placeholder inside the `Scroll` from #98) and the scaffold template gains `x={8} y={8}`; smoke already passes every prop, so its golden does not move for this part.
 
 Depends on:
 - 02 Text defaults (`text-defaults`)
@@ -88,7 +91,7 @@ Depends on:
 
 ### 04 Button align end to end (`button-align`)
 
-`VitaButtonProps.align` flows through the reconciler as argument 22 of `nativeCreateButton`/`nativeUpdateButton` into `ButtonProps.align`, and `render_button_instance` places the label with `text_layout_line_x` and centres it on `text_line_height`.
+`VitaButtonProps.align` flows through the reconciler as argument 22 of `nativeCreateButton`/`nativeUpdateButton` into `ButtonProps.align`, and `render_button_instance` measures the label with the rounding `measure_text_width`, places it with `text_layout_line_x` and centres it on `text_line_height`.
 
 [groups/button-align.md](groups/button-align.md)
 

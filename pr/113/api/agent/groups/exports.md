@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify ecada964bdfdcc6151885f0d2aac72c339057b98` and `git rev-parse --verify c45708bc4894acd44d9184265a1624cda104eeb5` in this repository.
+   Run `git rev-parse --verify 27683e0ceec2ca0ab7c185c2e97d4f79787f16f3` and `git rev-parse --verify 584319b0ab9f68fd731e2c56c4aef5fe85ed0a34` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames ecada964bdfdcc6151885f0d2aac72c339057b98 c45708bc4894acd44d9184265a1624cda104eeb5 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 27683e0ceec2ca0ab7c185c2e97d4f79787f16f3 584319b0ab9f68fd731e2c56c4aef5fe85ed0a34 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -23,15 +23,15 @@ When no question follows this paste, explain this review concern.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  ecada964bdfdcc6151885f0d2aac72c339057b98
+base (merge-base)  27683e0ceec2ca0ab7c185c2e97d4f79787f16f3
 
-head               c45708bc4894acd44d9184265a1624cda104eeb5
+head               584319b0ab9f68fd731e2c56c4aef5fe85ed0a34
 
-Named refs at pin: ecada964bdfdcc6151885f0d2aac72c339057b98 ... HEAD
+Named refs at pin: 27683e0ceec2ca0ab7c185c2e97d4f79787f16f3 ... 584319b0ab9f68fd731e2c56c4aef5fe85ed0a34
 
 Read the diff:
 
-git diff --find-renames ecada964bdfdcc6151885f0d2aac72c339057b98 c45708bc4894acd44d9184265a1624cda104eeb5
+git diff --find-renames 27683e0ceec2ca0ab7c185c2e97d4f79787f16f3 584319b0ab9f68fd731e2c56c4aef5fe85ed0a34
 
 Review concern 01 of 05: Export prop types (`exports`)
 
@@ -46,4 +46,4 @@ The what:
 The SDK index re-exports `PadButtonPhase` from `pad-buttons` and `StackAlign`, `StackDirection`, `TextAlign`, `TextWrap` from the host prop types.
 
 Hunk refs for this concern:
-- js/packages/sdk/src/index.tsx@103+104
+- js/packages/sdk/src/index.tsx@104+105
