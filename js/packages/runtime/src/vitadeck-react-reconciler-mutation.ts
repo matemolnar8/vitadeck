@@ -399,11 +399,13 @@ const rawHostConfig = {
 
   prepareForCommit: (..._args) => {
     logReconcilerFunction("prepareForCommit");
+    nativeBenchCommit(false);
     return null;
   },
 
   resetAfterCommit: (_container: Container) => {
     logReconcilerFunction("resetAfterCommit");
+    nativeBenchCommit(true);
   },
 
   getChildHostContext: (..._args) => {

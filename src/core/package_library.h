@@ -30,6 +30,8 @@ int package_library_list(VdPackageInfo *items, int max_items);
 // Rescans the installed packages on the next list, for changes made outside the library.
 void package_library_refresh(void);
 bool package_library_set_active(const char *package_name, char *error, size_t error_size);
+// Same, but only until exit: the persisted Active Deck App is left alone. For Benchmark Mode.
+bool package_library_set_active_transient(const char *package_name, char *error, size_t error_size);
 // Also deletes the package's Deck App Storage.
 bool package_library_remove(const char *package_name, char *error, size_t error_size);
 bool package_library_validate_package(const char *package_path, const char *package_name, VdPackageInfo *out_info,

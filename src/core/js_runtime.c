@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include "quickjs.h"
 #include "stb_ds.h"
+#include "core/bench.h"
 #include "core/event_queue.h"
 #include "core/util.h"
 #include "jslib/jslib.h"
@@ -103,6 +104,7 @@ static void *js_thread_func(void *arg)
     JSContext *ctx = NULL;
     JSValue *pending_rejections = NULL;
     void *result = NULL;
+    bench_js_thread_start();
 
     rt = JS_NewRuntime();
     if (!rt) {
@@ -146,14 +148,23 @@ static void *js_thread_func(void *arg)
 
     drain_microtasks(ctx, &pending_rejections);
     instance_tree_swap();
+    bench_js_ready();
     runtime->ready = true;
 
     while (!runtime->stop_requested && !runtime->failed && !event_queue_is_shutdown()) {
+        bench_js_iteration_begin();
         bool busy = process_input_events(ctx);
+        bench_js_mark(VD_BENCH_JS_INPUT);
         busy |= run_timeouts(ctx);
+        bench_js_mark(VD_BENCH_JS_TIMERS);
         busy |= run_fetch(ctx);
+        bench_js_mark(VD_BENCH_JS_FETCH);
         drain_microtasks(ctx, &pending_rejections);
-        busy |= instance_tree_swap();
+        bench_js_mark(VD_BENCH_JS_MICROTASKS);
+        const bool swapped = instance_tree_swap();
+        bench_js_mark(VD_BENCH_JS_SWAP);
+        busy |= swapped;
+        bench_js_iteration_end(rt, busy, swapped);
         int sleep_ms = busy ? 0 : idle_sleep_ms();
         if (sleep_ms > 0) {
             vd_sleep_ms(sleep_ms);

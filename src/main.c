@@ -1,6 +1,7 @@
 #include <raylib.h>
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
+#include "core/bench.h"
 #include "core/bootstrap.h"
 #include "core/js_runtime.h"
 #include "core/package_library.h"
@@ -30,7 +31,8 @@ int main(int argc, char *argv[])
         TraceLog(LOG_ERROR, "%s", init_error);
         return_defer(1);
     }
-    if (!package_library_has_active_deck_app()) shell_show_home(&shell);
+    bench_init();
+    if (!package_library_has_active_deck_app() && !bench_active()) shell_show_home(&shell);
 
     if (!bootstrap_open_window(&bootstrap, "VitaDeck", NULL, init_error, sizeof(init_error))) {
         TraceLog(LOG_ERROR, "%s", init_error);
@@ -48,6 +50,7 @@ int main(int argc, char *argv[])
 
     while (!WindowShouldClose()) {
         bool request_runtime_restart = false;
+        if (!bench_update(&bootstrap.js_runtime, &request_runtime_restart)) break;
         shell_update(&shell, &request_runtime_restart);
         shell_poll_system_input(&shell, &request_runtime_restart);
         if (request_runtime_restart) {
@@ -75,16 +78,24 @@ int main(int argc, char *argv[])
         if (!deck_app_owns_input) input_cancel_text_input();
         poll_text_input();
         if (deck_app_owns_input && !input_is_editing_text()) {
-            poll_mouse_input();
-            poll_touch_input();
-            poll_gamepad_input();
+            if (bench_active()) {
+                bench_apply_input();
+            } else {
+                poll_mouse_input();
+                poll_touch_input();
+                poll_gamepad_input();
+            }
         }
+        bench_frame_mark(VD_BENCH_FRAME_INPUT);
 
         BeginDrawing();
         ClearBackground(BLACK);
+        bench_frame_mark(VD_BENCH_FRAME_BEGIN);
         bootstrap_draw_deck_canvas(&bootstrap);
         shell_render(&shell);
+        bench_frame_mark(VD_BENCH_FRAME_SHELL);
         EndDrawing();
+        bench_frame_mark(VD_BENCH_FRAME_PRESENT);
     }
 
 defer:

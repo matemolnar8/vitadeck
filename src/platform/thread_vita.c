@@ -1,6 +1,7 @@
 #ifdef __vita__
 
 #include "thread.h"
+#include <psp2/kernel/processmgr.h>
 #include <psp2/kernel/threadmgr.h>
 #include <stdlib.h>
 
@@ -72,6 +73,18 @@ void vd_thread_yield(void)
 void vd_sleep_ms(int ms)
 {
     sceKernelDelayThread((SceUInt)ms * 1000);
+}
+
+uint64_t vd_now_us(void)
+{
+    return sceKernelGetProcessTimeWide();
+}
+
+uint64_t vd_thread_cpu_us(void)
+{
+    SceKernelThreadInfo info = {.size = sizeof(info)};
+    if (sceKernelGetThreadInfo(sceKernelGetThreadId(), &info) < 0) return 0;
+    return info.runClocks;
 }
 
 vd_mutex *vd_mutex_create(void)

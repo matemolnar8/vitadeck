@@ -27,6 +27,7 @@ typedef struct {
 static InstanceEntry *back_registry = NULL;
 static ReactInstance **back_root_children = NULL;
 static bool back_dirty = false;
+static uint32_t back_mutations = 0;
 
 // Front snapshot: UI thread reads from here
 static InstanceSnapshot *front_snapshot = NULL;
@@ -192,6 +193,12 @@ void instance_tree_init(void)
 void instance_back_mark_dirty(void)
 {
     back_dirty = true;
+    back_mutations++;
+}
+
+uint32_t instance_back_mutation_count(void)
+{
+    return back_mutations;
 }
 
 bool instance_tree_swap(void)
