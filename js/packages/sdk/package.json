@@ -62,7 +62,7 @@
     "build:cli": "rolldown -c rolldown.cli.config.mjs && tsx cli/copy-templates.ts",
     "build": "tsx cli/clean-dist.ts && pnpm run build:lib && pnpm run build:cli",
     "prepublishOnly": "pnpm run build",
-    "test:cli": "node --import tsx --test cli/*.test.ts",
+    "test:cli": "node --import tsx --test cli/*.test.ts test/*.test.tsx",
     "tsc": "tsc -p tsconfig.json"
   },
   "dependencies": {
@@ -76,7 +76,9 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/react": "catalog:",
+    "@types/react-reconciler": "catalog:",
     "react": "catalog:",
+    "react-reconciler": "catalog:",
     "tsx": "catalog:"
   },
   "peerDependencies": {
