@@ -14,6 +14,7 @@
 #define GLYPH_PADDING 1
 
 #define ZWJ 0x200d
+#define VS15 0xfe0e
 #define VS16 0xfe0f
 #define KEYCAP 0x20e3
 
@@ -297,6 +298,8 @@ static bool rasterise(const VdGlyphFont *font, int glyph_index, float scale, VdG
     return true;
 }
 
+static bool find_emoji(const VdGlyphFont *font, int size, const VdEmojiSequence *sequence, VdGlyph *glyph);
+
 VdGlyph glyph_cache_get(const VdGlyphFont *font, int size, uint32_t codepoint)
 {
     GlyphKey key;
@@ -316,6 +319,8 @@ VdGlyph glyph_cache_get(const VdGlyphFont *font, int size, uint32_t codepoint)
     int glyph_index = resolve_glyph(font, codepoint, &source);
 
     VdGlyph glyph;
+    VdEmojiSequence alone = {{codepoint}, 1};
+    if (glyph_index == 0 && find_emoji(font, size, &alone, &glyph)) return glyph;
     if (rasterise(source, glyph_index, glyph_scale(font, source, size), &glyph)) {
         hmput(g_glyphs, key, glyph);
         g_rasterised++;
@@ -500,6 +505,25 @@ uint32_t vd_utf8_next(const char *text, int *length)
     return codepoint;
 }
 
+// Emoji_Presentation below U+1F000, from Unicode's emoji-data.txt: these draw as emoji without U+FE0F.
+static const uint32_t EMOJI_PRESENTATION[][2] = {
+    {0x231a, 0x231b}, {0x23e9, 0x23ec}, {0x23f0, 0x23f0}, {0x23f3, 0x23f3}, {0x25fd, 0x25fe}, {0x2614, 0x2615},
+    {0x2648, 0x2653}, {0x267f, 0x267f}, {0x2693, 0x2693}, {0x26a1, 0x26a1}, {0x26aa, 0x26ab}, {0x26bd, 0x26be},
+    {0x26c4, 0x26c5}, {0x26ce, 0x26ce}, {0x26d4, 0x26d4}, {0x26ea, 0x26ea}, {0x26f2, 0x26f3}, {0x26f5, 0x26f5},
+    {0x26fa, 0x26fa}, {0x26fd, 0x26fd}, {0x2705, 0x2705}, {0x270a, 0x270b}, {0x2728, 0x2728}, {0x274c, 0x274c},
+    {0x274e, 0x274e}, {0x2753, 0x2755}, {0x2757, 0x2757}, {0x2795, 0x2797}, {0x27b0, 0x27b0}, {0x27bf, 0x27bf},
+    {0x2b1b, 0x2b1c}, {0x2b50, 0x2b50}, {0x2b55, 0x2b55},
+};
+
+static bool emoji_by_default(uint32_t codepoint)
+{
+    if (codepoint >= 0x1f000) return true;
+    for (size_t i = 0; i < sizeof(EMOJI_PRESENTATION) / sizeof(EMOJI_PRESENTATION[0]); i++) {
+        if (in_range(codepoint, EMOJI_PRESENTATION[i][0], EMOJI_PRESENTATION[i][1])) return true;
+    }
+    return false;
+}
+
 static bool is_regional_indicator(uint32_t codepoint)
 {
     return codepoint >= 0x1f1e6 && codepoint <= 0x1f1ff;
@@ -523,7 +547,7 @@ int vd_emoji_cluster(const char *text, VdEmojiSequence *sequence)
     uint32_t first = vd_utf8_next(text, &bytes);
     int next_length = 0;
     uint32_t next = text[bytes] != '\0' ? vd_utf8_next(text + bytes, &next_length) : 0;
-    if (first < 0x1f000 && next != VS16 && next != KEYCAP) return 0;
+    if (next == VS15 || (!emoji_by_default(first) && next != VS16 && next != KEYCAP)) return 0;
 
     memset(sequence, 0, sizeof(*sequence));
     append(sequence, first);

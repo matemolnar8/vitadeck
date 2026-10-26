@@ -29,6 +29,7 @@ export function ScrollSection() {
             color={theme.primary}
             textColor={theme.buttonText}
             fontSize={16}
+            align="left"
             borderRadius={6}
             onPress={() => {
               setPicked((count) => count + 1);

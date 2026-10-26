@@ -68,6 +68,7 @@ declare global {
     focusColorG: number,
     focusColorB: number,
     focusColorA: number,
+    align: number,
   ): void;
 
   function nativeCreateTextInput(
@@ -198,6 +199,7 @@ declare global {
     focusColorG: number,
     focusColorB: number,
     focusColorA: number,
+    align: number,
   ): void;
 
   function nativeUpdateTextInput(

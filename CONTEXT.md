@@ -49,7 +49,7 @@ _Avoid_: Raw image path, texture path, sprite sheet path
 **Runtime Default Font**: VitaDeck's bundled DejaVu Sans, used when no font is requested and as the first fallback. A build that could not download it uses raylib's built-in font.
 _Avoid_: Built-in Raylib font, implicit app font, serif default
 
-**Runtime Fallback Font**: One of VitaDeck's bundled fonts for characters no earlier font has: Droid Sans Fallback Full for Chinese ideographs and Japanese kana, then Noto Sans KR for Hangul. Each loads the first time a character from its Unicode blocks is drawn; a character no font has draws the missing-glyph box.
+**Runtime Fallback Font**: One of VitaDeck's bundled fonts for characters no earlier font has: Droid Sans Fallback Full for Chinese ideographs and Japanese kana, then Noto Sans KR for Hangul. Each loads the first time a character from its Unicode blocks is drawn; a character no font has draws its Twemoji image when one exists, otherwise the missing-glyph box.
 _Avoid_: System font, CJK default font
 
 **Font Size**: Text height in raw pixels, as requested by author code.

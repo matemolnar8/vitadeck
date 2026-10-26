@@ -54,6 +54,7 @@ typedef struct {
     float border_radius;
     bool has_focus_color;
     Color focus_color;
+    TextAlign align;
 } ButtonProps;
 
 typedef struct {

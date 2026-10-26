@@ -73,8 +73,8 @@ VdGlyphFont *glyph_font_load(const char *path);
 void glyph_font_free(VdGlyphFont *font);
 VdGlyphFontMetrics glyph_font_metrics(const VdGlyphFont *font, int size);
 
-// Codepoints a font lacks come from the fallback, then from the lazy fonts in order; ones none has draw the requested
-// font's missing-glyph box.
+// Codepoints a font lacks come from the fallback, then from the lazy fonts in order; ones none has draw their emoji
+// image, like a text-style symbol such as U+2764, else the requested font's missing-glyph box.
 void glyph_cache_set_fallback(const VdGlyphFont *font);
 // At most VD_LAZY_FONT_MAX; none are open yet. The caller owns the fonts they load.
 void glyph_cache_set_lazy_fonts(const VdLazyFont *fonts, int count);
@@ -99,8 +99,9 @@ VdGlyphCacheStats glyph_cache_stats(void);
 // Malformed UTF-8 decodes one byte at a time as VD_UTF8_REPLACEMENT.
 uint32_t vd_utf8_next(const char *text, int *length);
 // The bytes of the emoji cluster at text, with its codepoints in sequence, or 0 when text does not start one. A
-// cluster starts at a codepoint from U+1F000 up or one followed by U+FE0F or a keycap mark, and takes skin tones,
-// tags, a second regional indicator and ZWJ-joined codepoints.
+// cluster starts at a codepoint from U+1F000 up, an emoji-style symbol like U+2728, or one followed by U+FE0F or a
+// keycap mark; U+FE0E after it keeps it text. It takes skin tones, tags, a second regional indicator and ZWJ-joined
+// codepoints.
 int vd_emoji_cluster(const char *text, VdEmojiSequence *sequence);
 
 #endif /* GLYPH_CACHE_H */

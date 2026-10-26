@@ -2,6 +2,7 @@
 #include "stb_ds.h"
 #include "ui/glyph_cache.h"
 
+#include <dirent.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -357,9 +358,12 @@ static void test_emoji_clusters(void)
                    (const uint32_t[]){0x1f468, 0x200d, 0x1f469, 0x200d, 0x1f467}, 5, "a ZWJ sequence is one cluster");
     expect_cluster("\xf0\x9f\x91\xa8\xe2\x80\x8d", 4, (const uint32_t[]){0x1f468}, 1,
                    "a trailing ZWJ is not part of the cluster");
+    expect_cluster("\xe2\x9c\xa8!", 3, (const uint32_t[]){0x2728}, 1, "an emoji-style symbol needs no U+FE0F");
+    expect_cluster("\xe2\x9c\xa8\xef\xb8\x8e", 0, NULL, 0, "U+FE0E keeps an emoji-style symbol text");
+    expect_cluster("\xe2\x86\x92", 0, NULL, 0, "an arrow is not an emoji");
 }
 
-// Pretends assets/emoji holds 1f3ae, 2764 and 1f468: 8x8 images, opaque red inside a transparent border.
+// Pretends assets/emoji holds 1f3ae, 2764, 2728 and 1f468: 8x8 images, opaque red inside a transparent border.
 static int emoji_loads = 0;
 static int emoji_last_length = 0;
 
@@ -368,7 +372,8 @@ static unsigned char *fake_emoji_loader(const VdEmojiSequence *sequence, int *wi
     emoji_loads++;
     emoji_last_length = sequence->length;
     uint32_t first = sequence->codepoints[0];
-    if (sequence->length != 1 || (first != 0x1f3ae && first != 0x2764 && first != 0x1f468)) return NULL;
+    bool held = first == 0x1f3ae || first == 0x2764 || first == 0x2728 || first == 0x1f468;
+    if (sequence->length != 1 || !held) return NULL;
     *width = *height = 8;
     unsigned char *pixels = calloc(8 * 8, 4);
     for (int row = 1; pixels && row < 7; row++) {
@@ -413,6 +418,8 @@ static void test_emoji(const VdGlyphFont *font)
 
     VdEmojiSequence heart = cluster_of("\xe2\x9d\xa4\xef\xb8\x8f");
     expect(glyph_cache_get_emoji(font, size, &heart).color, "a symbol with U+FE0F resolves to its emoji image");
+    VdEmojiSequence sparkles = cluster_of("\xe2\x9c\xa8");
+    expect(glyph_cache_get_emoji(font, size, &sparkles).color, "an emoji-style symbol resolves to its emoji image");
 
     VdEmojiSequence family = cluster_of("\xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x91\xa7");
     VdEmojiSequence man = cluster_of("\xf0\x9f\x91\xa8");
@@ -441,6 +448,180 @@ static void test_emoji(const VdGlyphFont *font)
     expect(asset != NULL, "the Twemoji download names images without U+FE0F");
     if (asset) fclose(asset);
 #endif
+}
+
+// A text-style symbol no font has draws its emoji image; one without an image keeps the missing-glyph box.
+static void test_symbol_without_glyph(const VdGlyphFont *ascii)
+{
+    glyph_cache_reset();
+    glyph_cache_set_fallback(NULL);
+    glyph_cache_set_lazy_fonts(NULL, 0);
+    glyph_cache_set_emoji_loader(fake_emoji_loader);
+    const int size = 24;
+    expect(glyph_cache_get(ascii, size, 0x2764).color, "a text-style symbol no font has draws its emoji image");
+    VdGlyph arrow = glyph_cache_get(ascii, size, 0x2192);
+    expect(!arrow.color && same_shape(arrow, glyph_cache_get(ascii, size, 0x2190)),
+           "a symbol without an emoji image draws the missing-glyph box");
+    glyph_cache_set_emoji_loader(NULL);
+    glyph_cache_reset();
+}
+
+#define EMOJI_DIR VD_SOURCE_DIR "/assets/emoji"
+
+// Names an image as load_emoji_image in src/ui/fonts.c does; false when it does not fit.
+static bool emoji_file_name(const VdEmojiSequence *sequence, char *name, size_t size)
+{
+    size_t used = 0;
+    for (int i = 0; i < sequence->length && used < size; i++) {
+        used += (size_t)snprintf(name + used, size - used, i == 0 ? "%x" : "-%x", (unsigned)sequence->codepoints[i]);
+    }
+    return used < size;
+}
+
+static int file_loader_found = 0;
+
+// Reads only whether the image exists: an opaque 1x1 image when it does.
+static unsigned char *file_emoji_loader(const VdEmojiSequence *sequence, int *width, int *height)
+{
+    char name[128];
+    char path[sizeof(EMOJI_DIR) + sizeof(name) + 8];
+    if (!emoji_file_name(sequence, name, sizeof(name))) return NULL;
+    snprintf(path, sizeof(path), "%s/%s.png", EMOJI_DIR, name);
+    FILE *file = fopen(path, "rb");
+    if (!file) return NULL;
+    fclose(file);
+    file_loader_found = sequence->length;
+    *width = *height = 1;
+    unsigned char *pixels = malloc(4);
+    if (pixels) memset(pixels, 255, 4);
+    return pixels;
+}
+
+static int append_utf8(char *text, int used, uint32_t codepoint)
+{
+    unsigned char *out = (unsigned char *)text + used;
+    if (codepoint < 0x80) {
+        out[0] = (unsigned char)codepoint;
+        return used + 1;
+    }
+    if (codepoint < 0x800) {
+        out[0] = (unsigned char)(0xc0 | codepoint >> 6);
+        out[1] = (unsigned char)(0x80 | (codepoint & 0x3f));
+        return used + 2;
+    }
+    if (codepoint < 0x10000) {
+        out[0] = (unsigned char)(0xe0 | codepoint >> 12);
+        out[1] = (unsigned char)(0x80 | (codepoint >> 6 & 0x3f));
+        out[2] = (unsigned char)(0x80 | (codepoint & 0x3f));
+        return used + 3;
+    }
+    out[0] = (unsigned char)(0xf0 | codepoint >> 18);
+    out[1] = (unsigned char)(0x80 | (codepoint >> 12 & 0x3f));
+    out[2] = (unsigned char)(0x80 | (codepoint >> 6 & 0x3f));
+    out[3] = (unsigned char)(0x80 | (codepoint & 0x3f));
+    return used + 4;
+}
+
+// As text.c draws it: the emoji cluster at text, else its first codepoint.
+static VdGlyph draw_text(const VdGlyphFont *font, int size, const char *text, int *bytes)
+{
+    VdEmojiSequence sequence;
+    *bytes = vd_emoji_cluster(text, &sequence);
+    if (*bytes > 0) return glyph_cache_get_emoji(font, size, &sequence);
+    return glyph_cache_get(font, size, vd_utf8_next(text, bytes));
+}
+
+// Whether text draws as the image for the whole of sequence, from one cluster. A cached image does not load, so each
+// pass over the same sequences takes its own size.
+static bool draws_image(const VdGlyphFont *font, int size, const char *text, const VdEmojiSequence *sequence)
+{
+    file_loader_found = 0;
+    int bytes = 0;
+    VdGlyph glyph = draw_text(font, size, text, &bytes);
+    return glyph.color && bytes == (int)strlen(text) && file_loader_found == sequence->length;
+}
+
+// Every Twemoji image, written with U+FE0F after each symbol below U+1F000 as fully qualified text has it, draws as
+// itself; a single codepoint does without U+FE0F too, from the font that lacks it.
+static void test_twemoji_files(const VdGlyphFont *ascii)
+{
+    DIR *dir = opendir(EMOJI_DIR);
+    if (!dir) {
+        printf("glyph_cache_harness: skipping Twemoji file cases, %s is missing\n", EMOJI_DIR);
+        return;
+    }
+    glyph_cache_reset();
+    glyph_cache_set_fallback(NULL);
+    glyph_cache_set_lazy_fonts(NULL, 0);
+    glyph_cache_set_emoji_loader(file_emoji_loader);
+
+    int files = 0;
+    for (struct dirent *entry; (entry = readdir(dir)) != NULL;) {
+        size_t length = strlen(entry->d_name);
+        if (length < 5 || strcmp(entry->d_name + length - 4, ".png") != 0) continue;
+        files++;
+        char stem[128];
+        snprintf(stem, sizeof(stem), "%.*s", (int)(length - 4), entry->d_name);
+
+        VdEmojiSequence sequence = {0};
+        bool parsed = true;
+        for (char *part = stem; parsed && *part != '\0';) {
+            char *end = NULL;
+            unsigned long codepoint = strtoul(part, &end, 16);
+            parsed = end != part && (*end == '-' || *end == '\0') && sequence.length < VD_EMOJI_SEQUENCE_MAX;
+            if (parsed) sequence.codepoints[sequence.length++] = (uint32_t)codepoint;
+            part = *end == '-' ? end + 1 : end;
+        }
+        char name[128];
+        if (!parsed || !emoji_file_name(&sequence, name, sizeof(name)) || strcmp(name, stem) != 0) {
+            fprintf(stderr, "glyph_cache_harness: %s\n", entry->d_name);
+            expect(false, "a Twemoji image is named by its lowercase hex codepoints, as the loader names it");
+            continue;
+        }
+
+        char text[VD_EMOJI_SEQUENCE_MAX * 7 + 1] = {0};
+        int used = 0;
+        for (int i = 0; i < sequence.length; i++) {
+            uint32_t codepoint = sequence.codepoints[i];
+            used = append_utf8(text, used, codepoint);
+            if (codepoint < 0x1f000 && codepoint != 0x200d && codepoint != 0x20e3) used = append_utf8(text, used, 0xfe0f);
+        }
+        if (!draws_image(ascii, 4, text, &sequence)) {
+            fprintf(stderr, "glyph_cache_harness: %s\n", entry->d_name);
+            expect(false, "fully qualified text draws its Twemoji image");
+        }
+
+        char bare[8] = {0};
+        append_utf8(bare, 0, sequence.codepoints[0]);
+        if (sequence.length == 1 && !draws_image(ascii, 5, bare, &sequence)) {
+            fprintf(stderr, "glyph_cache_harness: %s\n", entry->d_name);
+            expect(false, "a single codepoint without U+FE0F draws its Twemoji image when no font has it");
+        }
+    }
+    closedir(dir);
+
+    if (files == 0) {
+        printf("glyph_cache_harness: skipping Twemoji file cases, %s has no images\n", EMOJI_DIR);
+    } else {
+        struct {
+            const char *text;
+            VdEmojiSequence sequence;
+            const char *message;
+        } cases[] = {
+            {"\xe2\x9c\xa8", {{0x2728}, 1}, "sparkles draws its image"},
+            {"\xe2\x9d\xa4\xef\xb8\x8f", {{0x2764}, 1}, "a heart with U+FE0F draws its image"},
+            {"\xf0\x9f\x8e\xae", {{0x1f3ae}, 1}, "a video game controller draws its image"},
+            {"\xf0\x9f\x8f\xb3\xef\xb8\x8f\xe2\x80\x8d\xf0\x9f\x8c\x88", {{0x1f3f3, 0x200d, 0x1f308}, 3},
+             "a rainbow flag ZWJ sequence draws its own image"},
+        };
+        for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+            expect(draws_image(ascii, 6, cases[i].text, &cases[i].sequence), cases[i].message);
+        }
+        int bytes = 0;
+        expect(!draw_text(ascii, 4, "\xe2\x86\x92", &bytes).color, "an arrow does not draw an image");
+    }
+    glyph_cache_set_emoji_loader(NULL);
+    glyph_cache_reset();
 }
 
 // assets/emoji without images, as after a failed Twemoji download.
@@ -559,6 +740,8 @@ int main(void)
         test_hits_and_sizes(font);
         test_failing_fallback_loader(font);
         test_emoji(font);
+        test_symbol_without_glyph(ascii);
+        test_twemoji_files(ascii);
     }
     if (ascii && full) {
         test_fallback(full, ascii);
