@@ -1,1 +1,0 @@
-{"path":"js/examples/demo/vitadeck.config.json","ref":"1ac414061e4d8ecdbe718effe4daca0449592e05","side":"new","content":"{\n  \"name\": \"VitaDeck Demo\",\n  \"entry\": \"./src/App.tsx\",\n  \"outDir\": \"./dist\",\n  \"fonts\": {\n    \"mono\": \"./assets/fonts/DejaVuSansMono.ttf\"\n  },\n  \"images\": {\n    \"logo\": \"./assets/images/logo.png\"\n  }\n}\n","language":"json"}
