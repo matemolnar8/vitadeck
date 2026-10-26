@@ -34,7 +34,7 @@ export function TimersSection() {
 
   useEffect(() => {
     const id = setTimeout(() => {
-      setToast(null);
+      setToast((current) => (current === toast ? null : current));
     }, 2000);
     return () => {
       clearTimeout(id);
