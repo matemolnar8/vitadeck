@@ -75,7 +75,7 @@ From the repo root, prefer the tiered verification script:
 
 ### After C or CMake changes
 
-- C sources under `src/` use **clang-format** (`.clang-format` at repo root; editor: **clangd** with format-on-save). Check: `./scripts/clang-format.sh check`; apply: `./scripts/clang-format.sh format`. Run `cmake -S . -B out` so `out/compile_commands.json` exists for clangd.
+- C sources under `src/` and `tests/` use **clang-format** (`.clang-format` at repo root; editor: **clangd** with format-on-save). Check: `./scripts/clang-format.sh check`; apply: `./scripts/clang-format.sh format`. Run `cmake -S . -B out` so `out/compile_commands.json` exists for clangd.
 
 1. Ensure `js/dist/` is current — run **`pnpm --dir js build`** if JS sources changed or after a clean.
 2. Rebuild host: `cmake --build out` (or full configure line if `CMakeLists.txt` changed).
