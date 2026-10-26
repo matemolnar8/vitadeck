@@ -2,8 +2,21 @@
 #include "stb_ds.h"
 #include "text.h"
 
+static const TextLayout *keep_lines(Arena *arena, const TextLines *lines)
+{
+    TextLayout *kept = arena_alloc(arena, sizeof(*kept));
+    kept->count = lines->count;
+    kept->width = lines->width;
+    kept->widths = arena_memdup(arena, (void *)lines->widths, sizeof(int) * (size_t)lines->count);
+    kept->lines = arena_alloc(arena, sizeof(char *) * (size_t)lines->count);
+    for (int i = 0; i < lines->count; i++) {
+        kept->lines[i] = arena_strdup(arena, lines->lines[i]);
+    }
+    return kept;
+}
+
 // Bounds as the props state them; a Stack's 0 width or height is fitted later.
-static InstanceLayout own_bounds(const ReactInstance *inst)
+static InstanceLayout own_bounds(const ReactInstance *inst, Arena *arena)
 {
     switch (inst->type) {
     case NT_RECT: {
@@ -30,8 +43,11 @@ static InstanceLayout own_bounds(const ReactInstance *inst)
     case NT_TEXT: {
         const TextProps *p = &inst->props.text;
         const TextLines *lines = text_lines(inst);
-        return (InstanceLayout){
-            .x = p->x, .y = p->y, .width = lines->width, .height = lines->count * text_props_line_height(p)};
+        return (InstanceLayout){.x = p->x,
+                                .y = p->y,
+                                .width = lines->width,
+                                .height = lines->count * text_props_line_height(p),
+                                .text = keep_lines(arena, lines)};
     }
     case NT_RAW_TEXT:
         break;
@@ -107,21 +123,21 @@ static void stack_rect_texts(ReactInstance *rect)
     }
 }
 
-static void layout_instance(ReactInstance *inst)
+static void layout_instance(ReactInstance *inst, Arena *arena)
 {
-    inst->layout = own_bounds(inst);
+    inst->layout = own_bounds(inst, arena);
     const int count = (int)arrlen(inst->children);
     for (int i = 0; i < count; i++) {
-        layout_instance(inst->children[i]);
+        layout_instance(inst->children[i], arena);
     }
     if (inst->type == NT_STACK || inst->type == NT_SCROLL) layout_flow(inst);
     if (inst->type == NT_RECT) stack_rect_texts(inst);
 }
 
-void layout_tree(ReactInstance **roots)
+void layout_tree(ReactInstance **roots, Arena *arena)
 {
     const int count = (int)arrlen(roots);
     for (int i = 0; i < count; i++) {
-        layout_instance(roots[i]);
+        layout_instance(roots[i], arena);
     }
 }

@@ -92,12 +92,23 @@ typedef struct {
     int x, y, width, height;
 } ImageProps;
 
+// A Text's lines as layout broke them, kept so drawing does not break them again every frame.
+typedef struct {
+    char **lines;
+    int *widths;
+    int count;
+    // The widest line, or the Text's width when that is wider.
+    int width;
+} TextLayout;
+
 // Bounds relative to the parent's top-left, computed from props by layout_tree once per swap, on its first read.
 // A Scroll's offset is not part of it: the offset changes without a swap, so readers subtract it.
 typedef struct {
     int x, y, width, height;
     // Flowed content height of a Stack or Scroll, including padding; a Scroll's scroll range comes from it.
     int content_height;
+    // A Text's lines, in the arena layout_tree was given; NULL for other instances.
+    const TextLayout *text;
 } InstanceLayout;
 
 typedef struct ReactInstance ReactInstance;

@@ -195,7 +195,8 @@ static void render_text_instance(ReactInstance *inst, RenderContext ctx)
     int base_y = ctx.y + inst->layout.y;
     Color color = t->has_color ? t->color : BLACK;
 
-    const TextLines *lines = text_lines(inst);
+    const TextLayout *lines = inst->layout.text;
+    if (!lines) return;
 
     if (t->border) {
         int border_padding = 4;
