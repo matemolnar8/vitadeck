@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 81705ef32a1e4968734146a11cbd9567880f5f7e` and `git rev-parse --verify 43c2875d41d7db87736e061a46b0615e02a57531` in this repository.
+   Run `git rev-parse --verify 534b52add2e2cb44270ae6afe15f3535ca24cb6f` and `git rev-parse --verify 6b26f72d79e69b431a9c8a58e2496ae8108c74d2` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 81705ef32a1e4968734146a11cbd9567880f5f7e 43c2875d41d7db87736e061a46b0615e02a57531 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 534b52add2e2cb44270ae6afe15f3535ca24cb6f 6b26f72d79e69b431a9c8a58e2496ae8108c74d2 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -23,15 +23,15 @@ When no question follows this paste, explain this review concern.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  81705ef32a1e4968734146a11cbd9567880f5f7e
+base (merge-base)  534b52add2e2cb44270ae6afe15f3535ca24cb6f
 
-head               43c2875d41d7db87736e061a46b0615e02a57531
+head               6b26f72d79e69b431a9c8a58e2496ae8108c74d2
 
-Named refs at pin: 81705ef32a1e4968734146a11cbd9567880f5f7e ... 43c2875d41d7db87736e061a46b0615e02a57531
+Named refs at pin: 534b52add2e2cb44270ae6afe15f3535ca24cb6f ... 6b26f72d79e69b431a9c8a58e2496ae8108c74d2
 
 Read the diff:
 
-git diff --find-renames 81705ef32a1e4968734146a11cbd9567880f5f7e 43c2875d41d7db87736e061a46b0615e02a57531
+git diff --find-renames 534b52add2e2cb44270ae6afe15f3535ca24cb6f 6b26f72d79e69b431a9c8a58e2496ae8108c74d2
 
 Review concern 02 of 03: Let the D-pad reach controls scrolled out of view (`reach-hidden-rows`)
 
@@ -56,9 +56,9 @@ Depends on:
 
 Hunk refs for this concern:
 - src/ui/instance_tree.c@1+1
-- src/ui/instance_tree.c@435+436
-- src/ui/instance_tree.c@466+481
-- src/ui/instance_tree.c@497+519
+- src/ui/instance_tree.c@446+447
+- src/ui/instance_tree.c@477+492
+- src/ui/instance_tree.c@508+530
 - src/ui/instance_tree.h
 - src/ui/input.c@479+487
 - tests/hit_test_harness.c

@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 81705ef32a1e4968734146a11cbd9567880f5f7e` and `git rev-parse --verify 43c2875d41d7db87736e061a46b0615e02a57531` in this repository.
+   Run `git rev-parse --verify 534b52add2e2cb44270ae6afe15f3535ca24cb6f` and `git rev-parse --verify 6b26f72d79e69b431a9c8a58e2496ae8108c74d2` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -22,17 +22,18 @@ When no question follows this paste, explain this change.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  81705ef32a1e4968734146a11cbd9567880f5f7e
+base (merge-base)  534b52add2e2cb44270ae6afe15f3535ca24cb6f
 
-head               43c2875d41d7db87736e061a46b0615e02a57531
+head               6b26f72d79e69b431a9c8a58e2496ae8108c74d2
 
-Named refs at pin: 81705ef32a1e4968734146a11cbd9567880f5f7e ... 43c2875d41d7db87736e061a46b0615e02a57531
+Named refs at pin: 534b52add2e2cb44270ae6afe15f3535ca24cb6f ... 6b26f72d79e69b431a9c8a58e2496ae8108c74d2
 
 Read the diff:
 
-git diff --find-renames 81705ef32a1e4968734146a11cbd9567880f5f7e 43c2875d41d7db87736e061a46b0615e02a57531
+git diff --find-renames 534b52add2e2cb44270ae6afe15f3535ca24cb6f 6b26f72d79e69b431a9c8a58e2496ae8108c74d2
 
 Commits:
+- 6b26f72 Merge origin/main into fix/focus-scroll-into-view
 - 43c2875 fix(input): hidden Scroll rows only compete from inside their Scroll
 - 7b67540 Merge remote-tracking branch 'origin/main' into t3/focus-scroll-into-view-fix
 - c603dd3 fix(input): the D-pad reaches controls scrolled out of view
@@ -64,7 +65,7 @@ A Scroll now scrolls to show a control the D-pad or autoFocus moves Focus to, th
 
 ### 01 Scroll a newly focused control into view (`scroll-into-view`)
 
-set_focus_into_view in input.c calls the new instance_scroll_into_view for D-pad and autoFocus Focus, which walks the focused instance's parents in the front snapshot and moves each Scroll's offset to the nearest edge that shows its layout bounds, clamped to the content.
+set_focus_into_view in input.c calls the new instance_scroll_into_view for D-pad and autoFocus Focus, which walks the focused instance's parents in the laid-out front snapshot (via laid_out_front) and moves each Scroll's offset to the nearest edge that shows its layout bounds, clamped to the content.
 
 [groups/scroll-into-view.md](groups/scroll-into-view.md)
 
