@@ -26,8 +26,8 @@ When this file speaks:
 - `src/shell/` - VitaDeck Shell; `src/upload/` - Runtime Upload listener; `src/platform/` - threads (POSIX vs Vita)
 - `js/packages/sdk/` - `@vitadeck/sdk`: author-facing components, theme, types, and the `vitadeck` CLI (`cli/`, scaffold under `cli/templates/`)
 - `js/packages/runtime/` - the React reconciler bundle the host embeds
-- `js/examples/` - example Deck Apps; `smoke` is the CI smoke fixture
-- `tests/` - CTest harnesses (`smoke_harness.c`, `package_manifest_harness.c`, `package_library_harness.c`, `timer_reload_harness.c`, `upload_parsing_harness.c`) and golden screenshots
+- `js/examples/` - example Deck Apps; the smoke test screenshots every section of `demo`
+- `tests/` - CTest harnesses (`smoke_harness.c`, `package_manifest_harness.c`, `package_library_harness.c`, `timer_reload_harness.c`, `upload_parsing_harness.c`) and golden screenshots (`fixtures/golden/`)
 - `vendor/quickjs` - git submodule; `docker-compose.yml` + `Dockerfile` - Vitasdk and Linux smoke images
 - `.agents/skills/` - repo skills (`vitadeck-build`, `vitadeck-smoke`, `vitadeck-manual-testing`, `vitadeck-vdapp-upload`, `vitadeck-deck-app-init`) plus `comprehende` installed from `matemolnar8/comprehende` via the `skills` CLI (`skills-lock.json`) and `pages`, a repo-owned skill with its own publish script. `.claude/skills` symlinks here. Published via `npx skills add matemolnar8/vitadeck`.
 
@@ -45,7 +45,7 @@ When this file speaks:
 
 1. **Stale `js/dist`.** Native CMake copies `js/dist/runtime` into the build tree. After any change under `js/`, run `pnpm --dir js build` before rebuilding or running the host, or you will debug yesterday's JS.
 2. **Two-language package format.** The Deck App Package Manifest is validated natively in `src/core/package_manifest.c` and produced by the SDK CLI. A change to one without the other ships packages the host rejects, or accepts packages the SDK never emits. Update both and the `package_manifest` CTest harness.
-3. **Platform goldens.** `tests/fixtures/smoke_golden.Linux.png` is the only canonical golden (ADR 0002). Refresh it only with `scripts/smoke-docker.sh update-golden`, never from a macOS run. Do not re-enable `smoke_harness` in the macOS ctest step.
+3. **Platform goldens.** `tests/fixtures/golden/Linux/` holds the only canonical goldens (ADR 0002). Refresh it only with `scripts/smoke-docker.sh update-golden`, never from a macOS run. Do not re-enable `smoke_harness` in the macOS ctest step.
 4. **Secrets in examples.** `js/examples/chat/src/genesys/genesys.local.ts` is gitignored and holds real credentials. Never commit it, never paste its contents, and never "fix" imports by renaming it.
 5. **Running from the wrong cwd.** The host resolves `vitadeck-data/` relative to the working directory (or `VITADECK_DATA_ROOT`). Run `./vitadeck` from `out/`, not the repo root.
 
