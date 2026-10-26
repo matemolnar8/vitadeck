@@ -108,7 +108,8 @@ int main(void)
                                                 "})();\n",
                                "out of memory");
     failures += expect_fetch("fetch at limit", "at-limit.txt", "resolved 4194304");
-    failures += expect_fetch("fetch over limit", "over-limit.txt", "rejected: fetch response body exceeds the 4 MiB limit");
+    failures +=
+        expect_fetch("fetch over limit", "over-limit.txt", "rejected: fetch response body exceeds the 4 MiB limit");
     failures += expect_failure("unhandled rejection", DECK_APP_PRELUDE "Promise.reject(new Error('boom'));\n", "boom");
     failures += expect_failure("unhandled rejection in timer",
                                DECK_APP_PRELUDE "setTimeout(() => { Promise.reject(new Error('late boom')); }, 0);\n",

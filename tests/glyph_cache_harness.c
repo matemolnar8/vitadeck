@@ -269,7 +269,8 @@ static void test_korean(const VdGlyphFont *full, const VdGlyphFont *ascii)
 
     fallback_loads = korean_loads = 0;
     glyph_cache_set_fallback(full);
-    const VdLazyFont lazy[] = {{counting_fallback_loader, vd_in_cjk_blocks}, {counting_korean_loader, vd_in_hangul_blocks}};
+    const VdLazyFont lazy[] = {{counting_fallback_loader, vd_in_cjk_blocks},
+                               {counting_korean_loader, vd_in_hangul_blocks}};
     glyph_cache_set_lazy_fonts(lazy, 2);
 
     glyph_cache_get(ascii, 30, private_use);
@@ -317,8 +318,8 @@ static void test_hungarian(const VdGlyphFont *full)
     glyph_cache_reset();
     glyph_cache_set_fallback(NULL);
     VdGlyph notdef = glyph_cache_get(full, 22, 0x65e5);
-    const uint32_t letters[] = {0xc1, 0xe1, 0xc9, 0xe9, 0xcd, 0xed, 0xd3, 0xf3, 0xd6, 0xf6,
-                                0x150, 0x151, 0xda, 0xfa, 0xdc, 0xfc, 0x170, 0x171};
+    const uint32_t letters[] = {0xc1, 0xe1,  0xc9,  0xe9, 0xcd, 0xed, 0xd3, 0xf3,  0xd6,
+                                0xf6, 0x150, 0x151, 0xda, 0xfa, 0xdc, 0xfc, 0x170, 0x171};
     for (size_t i = 0; i < sizeof(letters) / sizeof(letters[0]); i++) {
         VdGlyph glyph = glyph_cache_get(full, 22, letters[i]);
         if (glyph.width > 0 && !same_shape(glyph, notdef)) continue;
@@ -428,7 +429,8 @@ static void test_emoji(const VdGlyphFont *font)
     expect(from_family.color, "a ZWJ sequence without an image resolves");
     expect(emoji_loads - loads == 3 && emoji_last_length == 1,
            "a ZWJ sequence tries itself and each shorter prefix that ends on an emoji");
-    expect(same_glyph(from_family, glyph_cache_get_emoji(font, size, &man)), "a ZWJ sequence without an image draws as its first emoji");
+    expect(same_glyph(from_family, glyph_cache_get_emoji(font, size, &man)),
+           "a ZWJ sequence without an image draws as its first emoji");
 
     VdEmojiSequence missing = cluster_of("\xf0\x9f\x99\x82");
     VdGlyph fallback = glyph_cache_get(font, size, VD_EMOJI_FALLBACK);
@@ -584,7 +586,8 @@ static void test_twemoji_files(const VdGlyphFont *ascii)
         for (int i = 0; i < sequence.length; i++) {
             uint32_t codepoint = sequence.codepoints[i];
             used = append_utf8(text, used, codepoint);
-            if (codepoint < 0x1f000 && codepoint != 0x200d && codepoint != 0x20e3) used = append_utf8(text, used, 0xfe0f);
+            if (codepoint < 0x1f000 && codepoint != 0x200d && codepoint != 0x20e3)
+                used = append_utf8(text, used, 0xfe0f);
         }
         if (!draws_image(ascii, 4, text, &sequence)) {
             fprintf(stderr, "glyph_cache_harness: %s\n", entry->d_name);
@@ -611,7 +614,8 @@ static void test_twemoji_files(const VdGlyphFont *ascii)
             {"\xe2\x9c\xa8", {{0x2728}, 1}, "sparkles draws its image"},
             {"\xe2\x9d\xa4\xef\xb8\x8f", {{0x2764}, 1}, "a heart with U+FE0F draws its image"},
             {"\xf0\x9f\x8e\xae", {{0x1f3ae}, 1}, "a video game controller draws its image"},
-            {"\xf0\x9f\x8f\xb3\xef\xb8\x8f\xe2\x80\x8d\xf0\x9f\x8c\x88", {{0x1f3f3, 0x200d, 0x1f308}, 3},
+            {"\xf0\x9f\x8f\xb3\xef\xb8\x8f\xe2\x80\x8d\xf0\x9f\x8c\x88",
+             {{0x1f3f3, 0x200d, 0x1f308}, 3},
              "a rainbow flag ZWJ sequence draws its own image"},
         };
         for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
