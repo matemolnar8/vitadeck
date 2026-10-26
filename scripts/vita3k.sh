@@ -115,10 +115,12 @@ shacccg() {
 
 case "${1:-run}" in
   run)
+    "$ROOT_DIR/scripts/check-macos-display.sh"
     build
     launch
     ;;
   launch)
+    "$ROOT_DIR/scripts/check-macos-display.sh"
     launch
     ;;
   shacccg)
