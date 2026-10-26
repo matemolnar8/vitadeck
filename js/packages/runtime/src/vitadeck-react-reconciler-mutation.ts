@@ -1,5 +1,5 @@
 import type { Color } from "@vitadeck/sdk/types";
-import type { FocusProps, VitaHostPropsByType } from "@vitadeck/sdk/vitadeck-host-types";
+import type { FocusProps, TextAlign, VitaHostPropsByType } from "@vitadeck/sdk/vitadeck-host-types";
 import type { ReactNode } from "react";
 import Reconciler, { type HostConfig } from "react-reconciler";
 import { DefaultEventPriority } from "react-reconciler/constants";
@@ -81,7 +81,7 @@ const extractHandlers = (props: Props): EventHandlers => {
   return { onPress, onPressStart, onPressEnd, onFocus, onBlur, onChange };
 };
 
-const textAlignToNative = (align: PropsByType["vita-text"]["align"]): number => {
+const textAlignToNative = (align: TextAlign | undefined): number => {
   if (align === "center") return 1;
   if (align === "right") return 2;
   return 0;
@@ -217,6 +217,7 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
       textColor.b,
       textColor.a,
       ...colorToArgs(p.focusColor, Colors.BLANK),
+      textAlignToNative(p.align ?? "center"),
     );
     registerHandlers(id, extractHandlers(props));
   } else if (type === "vita-text-input") {
@@ -339,6 +340,7 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
       textColor.b,
       textColor.a,
       ...colorToArgs(p.focusColor, Colors.BLANK),
+      textAlignToNative(p.align ?? "center"),
     );
   } else if (type === "vita-text-input") {
     nativeUpdateTextInput(id, ...textInputArgs(props as PropsByType["vita-text-input"]));
