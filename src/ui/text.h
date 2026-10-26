@@ -32,6 +32,10 @@ int text_props_line_height(const TextProps *text);
 // between words. Layout sizes the Text from them and render draws them. The result is overwritten by the next call.
 const TextLines *text_lines(const ReactInstance *text);
 
+// Where a line_width line starts inside a box_width box. Text aligns in its TextLines width, which layout gives it,
+// so its lines never draw outside its laid-out box.
+int text_align_offset(int box_width, int line_width, TextAlign align);
+
 // Each frame: text_begin_frame, then text_measure every string the frame draws, then text_upload_pages, then draw.
 // Glyphs first cached after the upload show from the next frame.
 void text_begin_frame(void);

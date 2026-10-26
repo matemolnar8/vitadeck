@@ -293,3 +293,16 @@ const TextLines *text_lines(const ReactInstance *text)
     if (t->width > lines->width) lines->width = t->width;
     return lines;
 }
+
+int text_align_offset(int box_width, int line_width, TextAlign align)
+{
+    if (box_width <= 0) return 0;
+    switch (align) {
+    case TEXT_ALIGN_CENTER:
+        return (box_width - line_width) / 2;
+    case TEXT_ALIGN_RIGHT:
+        return box_width - line_width;
+    default:
+        return 0;
+    }
+}

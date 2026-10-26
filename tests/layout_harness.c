@@ -357,6 +357,26 @@ static void test_text_align_in_stack(void)
     free_tree(s);
 }
 
+static void test_over_width_text_aligns_in_its_box(void)
+{
+    const char *copy = "A line wider than its width";
+    const TextAlign aligns[] = {TEXT_ALIGN_CENTER, TEXT_ALIGN_RIGHT};
+    for (int i = 0; i < 2; i++) {
+        ReactInstance *s = stack(NULL, (StackProps){.direction = STACK_ROW, .gap = 10});
+        rect(s, 0, 0, 40, 10);
+        ReactInstance *t = text(s, (TextProps){.font_size = 16, .width = 100, .align = aligns[i]}, copy);
+        run_layout(s);
+
+        const TextLines *lines = text_lines(t);
+        const int offset = text_align_offset(lines->width, lines->widths[0], aligns[i]);
+        expect_size(t, width_of(copy, 16), line_height_of(16), "an over-width line sets the text's width");
+        expect_at(t, 50, 0, "the text's slot follows its sibling");
+        expect(offset >= 0, "an over-width aligned line does not start left of its slot");
+        expect(offset + lines->widths[0] <= t->layout.width, "an over-width aligned line stays inside its slot");
+        free_tree(s);
+    }
+}
+
 static void test_text_in_rect(void)
 {
     ReactInstance *row = rect(NULL, 0, 0, 900, 64);
@@ -406,6 +426,7 @@ int main(void)
         test_text_in_row();
         test_wrapped_text();
         test_text_align_in_stack();
+    test_over_width_text_aligns_in_its_box();
         test_text_in_rect();
         font_registry_shutdown();
     } else {

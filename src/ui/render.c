@@ -51,19 +51,6 @@ static int text_block_height(int line_count, int line_height, const VdFont *font
     return (line_count - 1) * line_height + text_line_height(font, font_size);
 }
 
-static int text_layout_line_x(int base_x, int box_width, int line_width, TextAlign align)
-{
-    if (box_width <= 0) return base_x;
-    switch (align) {
-    case TEXT_ALIGN_CENTER:
-        return base_x + (box_width - line_width) / 2;
-    case TEXT_ALIGN_RIGHT:
-        return base_x + (box_width - line_width);
-    default:
-        return base_x;
-    }
-}
-
 static void render_children(ReactInstance *inst, int x, int y)
 {
     RenderContext child_ctx = {x, y};
@@ -122,7 +109,6 @@ static void render_text_instance(ReactInstance *inst, RenderContext ctx)
     Color color = t->has_color ? t->color : BLACK;
 
     const TextLines *lines = text_lines(inst);
-    int align_box_width = t->width > 0 ? t->width : lines->width;
 
     if (t->border) {
         int border_padding = 4;
@@ -132,7 +118,7 @@ static void render_text_instance(ReactInstance *inst, RenderContext ctx)
     }
 
     for (int i = 0; i < lines->count; i++) {
-        int line_x = text_layout_line_x(base_x, align_box_width, lines->widths[i], t->align);
+        int line_x = base_x + text_align_offset(lines->width, lines->widths[i], t->align);
         int line_y = base_y + i * line_height;
         text_draw(font, lines->lines[i], (Vector2){line_x, line_y}, font_size, color);
     }
@@ -169,7 +155,7 @@ static void render_button_instance(ReactInstance *inst, RenderContext ctx)
     const VdFont *font = font_registry_get(b->font_name);
     int font_size = button_font_size(b);
     int label_width = (int)(text_measure(font, b->label, font_size) + 0.5f);
-    int label_x = text_layout_line_x(abs_x + padding, width - padding * 2, label_width, b->align);
+    int label_x = abs_x + padding + text_align_offset(width - padding * 2, label_width, b->align);
     int label_y = abs_y + (height - text_line_height(font, font_size)) / 2;
     text_draw(font, b->label, (Vector2){label_x, label_y}, font_size, b->text_color);
 }
