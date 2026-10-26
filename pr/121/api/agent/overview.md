@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 781ac177fafe6b24c3ec78dd6dc9549eaff15a89` and `git rev-parse --verify 49e3d7cc896384082f20e925674c8237418bfa6f` in this repository.
+   Run `git rev-parse --verify 781ac177fafe6b24c3ec78dd6dc9549eaff15a89` and `git rev-parse --verify 005abbd672770ef8f10dec20a6a5c37c61282cd8` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,16 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  781ac177fafe6b24c3ec78dd6dc9549eaff15a89
 
-head               49e3d7cc896384082f20e925674c8237418bfa6f
+head               005abbd672770ef8f10dec20a6a5c37c61282cd8
 
 Named refs at pin: 781ac177fafe6b24c3ec78dd6dc9549eaff15a89 ... chore/upgrade-pnpm-js-deps
 
 Read the diff:
 
-git diff --find-renames 781ac177fafe6b24c3ec78dd6dc9549eaff15a89 49e3d7cc896384082f20e925674c8237418bfa6f
+git diff --find-renames 781ac177fafe6b24c3ec78dd6dc9549eaff15a89 005abbd672770ef8f10dec20a6a5c37c61282cd8
 
 Commits:
+- 005abbd chore(js): stay on Babel 7
 - 49e3d7c chore(js): Node 24, Babel 8, latest oxlint/oxfmt
 - 97038f3 chore(js): upgrade pnpm to 12.15.0 and dependencies within major
 
@@ -48,9 +49,9 @@ The why:
 
 Machines with pnpm 12 fail `pnpm --dir js build` with `ERR_PNPM_BAD_PM_VERSION` because `packageManager` pins pnpm 10.28.2 [per the request](source:t1).
 
-The what (medium):
+The what (small):
 
-The JS toolchain moves to pnpm 12.15.0 and Node 24, the catalog takes the latest oxlint, oxfmt, tsgolint, Babel 8 and in-range bumps while React stays on 18, and a local rolldown plugin replaces `@rollup/plugin-babel`.
+The JS toolchain moves to pnpm 12.15.0 and Node 24, and the catalog takes the latest oxlint, oxfmt and tsgolint plus in-range bumps, with React and Babel staying on their current majors.
 
 ## Review concerns
 
@@ -60,16 +61,7 @@ The JS toolchain moves to pnpm 12.15.0 and Node 24, the catalog takes the latest
 
 [groups/toolchain.md](groups/toolchain.md)
 
-### 02 Babel 8 through a local rolldown plugin (`babel`)
-
-`babel()` in `sdk/cli/babel.ts` runs `transformAsync` with the presets pinned to Babel 7 output, and both the CLI's `vitadeck build` and the runtime's `rolldown.config.js` call it instead of `@rollup/plugin-babel`.
-
-Depends on:
-- 01 pnpm 12 and Node 24 (`toolchain`)
-
-[groups/babel.md](groups/babel.md)
-
-### 03 Catalog bumps and the new lint findings (`deps`)
+### 02 Catalog bumps and the new lint findings (`deps`)
 
 The catalog bumps oxlint, oxlint-tsgolint, oxfmt, `@types/node`, `@types/react`, rolldown and tsx, and the three files oxlint now flags drop a redundant cast or move a `setState` out of an effect.
 

@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 781ac177fafe6b24c3ec78dd6dc9549eaff15a89` and `git rev-parse --verify 49e3d7cc896384082f20e925674c8237418bfa6f` in this repository.
+   Run `git rev-parse --verify 781ac177fafe6b24c3ec78dd6dc9549eaff15a89` and `git rev-parse --verify 005abbd672770ef8f10dec20a6a5c37c61282cd8` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 781ac177fafe6b24c3ec78dd6dc9549eaff15a89 49e3d7cc896384082f20e925674c8237418bfa6f -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 781ac177fafe6b24c3ec78dd6dc9549eaff15a89 005abbd672770ef8f10dec20a6a5c37c61282cd8 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,15 +25,15 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  781ac177fafe6b24c3ec78dd6dc9549eaff15a89
 
-head               49e3d7cc896384082f20e925674c8237418bfa6f
+head               005abbd672770ef8f10dec20a6a5c37c61282cd8
 
 Named refs at pin: 781ac177fafe6b24c3ec78dd6dc9549eaff15a89 ... chore/upgrade-pnpm-js-deps
 
 Read the diff:
 
-git diff --find-renames 781ac177fafe6b24c3ec78dd6dc9549eaff15a89 49e3d7cc896384082f20e925674c8237418bfa6f
+git diff --find-renames 781ac177fafe6b24c3ec78dd6dc9549eaff15a89 005abbd672770ef8f10dec20a6a5c37c61282cd8
 
-Review concern 03 of 03: Catalog bumps and the new lint findings (`deps`)
+Review concern 02 of 02: Catalog bumps and the new lint findings (`deps`)
 
 The why:
 
