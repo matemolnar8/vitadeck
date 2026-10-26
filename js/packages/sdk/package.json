@@ -66,9 +66,9 @@
     "tsc": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@babel/core": "catalog:",
     "@babel/preset-react": "catalog:",
     "@babel/preset-typescript": "catalog:",
+    "@rollup/plugin-babel": "catalog:",
     "babel-plugin-react-compiler": "catalog:",
     "fflate": "catalog:",
     "rolldown": "catalog:"

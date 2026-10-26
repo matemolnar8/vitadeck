@@ -17,6 +17,7 @@
   "devDependencies": {
     "@babel/preset-react": "catalog:",
     "@babel/preset-typescript": "catalog:",
+    "@rollup/plugin-babel": "catalog:",
     "@types/react": "catalog:",
     "@types/react-reconciler": "catalog:",
     "babel-plugin-react-compiler": "catalog:",

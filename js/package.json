@@ -15,9 +15,9 @@
     "format:check": "oxfmt --check"
   },
   "devDependencies": {
-    "@babel/core": "catalog:",
     "@babel/preset-react": "catalog:",
     "@babel/preset-typescript": "catalog:",
+    "@rollup/plugin-babel": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-reconciler": "catalog:",
