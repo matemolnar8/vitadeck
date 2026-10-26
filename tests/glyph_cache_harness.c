@@ -362,6 +362,15 @@ static void test_emoji_clusters(void)
     expect_cluster("\xe2\x9c\xa8!", 3, (const uint32_t[]){0x2728}, 1, "an emoji-style symbol needs no U+FE0F");
     expect_cluster("\xe2\x9c\xa8\xef\xb8\x8e", 0, NULL, 0, "U+FE0E keeps an emoji-style symbol text");
     expect_cluster("\xe2\x86\x92", 0, NULL, 0, "an arrow is not an emoji");
+    expect_cluster("\xf0\x9f\x80\x80", 0, NULL, 0, "a Mahjong tile is not an emoji");
+    expect_cluster("\xf0\x9f\x80\x84", 4, (const uint32_t[]){0x1f004}, 1, "the red dragon tile is an emoji");
+    expect_cluster("\xf0\x9f\x85\xb0", 0, NULL, 0, "a text-style symbol above U+1F000 is not an emoji");
+    expect_cluster("\xf0\x9f\x85\xb0\xef\xb8\x8f", 7, (const uint32_t[]){0x1f170}, 1,
+                   "U+FE0F makes a symbol above U+1F000 an emoji");
+    expect_cluster("\xf0\x9f\x95\xb5\xf0\x9f\x8f\xbb", 8, (const uint32_t[]){0x1f575, 0x1f3fb}, 2,
+                   "a skin tone makes a text-style symbol an emoji");
+    expect_cluster("\xe2\x98\x9d\xf0\x9f\x8f\xbd", 7, (const uint32_t[]){0x261d, 0x1f3fd}, 2,
+                   "a skin tone makes a text-style symbol below U+1F000 an emoji");
 }
 
 // Pretends assets/emoji holds 1f3ae, 2764, 2728 and 1f468: 8x8 images, opaque red inside a transparent border.
@@ -586,8 +595,12 @@ static void test_twemoji_files(const VdGlyphFont *ascii)
         for (int i = 0; i < sequence.length; i++) {
             uint32_t codepoint = sequence.codepoints[i];
             used = append_utf8(text, used, codepoint);
-            if (codepoint < 0x1f000 && codepoint != 0x200d && codepoint != 0x20e3)
-                used = append_utf8(text, used, 0xfe0f);
+            uint32_t next = i + 1 < sequence.length ? sequence.codepoints[i + 1] : 0;
+            bool component = codepoint == 0x200d || codepoint == 0x20e3 ||
+                             (codepoint >= 0x1f1e6 && codepoint <= 0x1f1ff) ||
+                             (codepoint >= 0x1f3fb && codepoint <= 0x1f3ff) || codepoint >= 0xe0000;
+            // Fully qualified text has U+FE0F after each emoji, but not between an emoji and its skin tone.
+            if (!component && !(next >= 0x1f3fb && next <= 0x1f3ff)) used = append_utf8(text, used, 0xfe0f);
         }
         if (!draws_image(ascii, 4, text, &sequence)) {
             fprintf(stderr, "glyph_cache_harness: %s\n", entry->d_name);
