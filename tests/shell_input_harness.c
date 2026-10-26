@@ -156,15 +156,19 @@ int main(void)
     char error[256] = "";
     if (!package_library_init(error, sizeof(error))) {
         fprintf(stderr, "shell_input_harness: %s\n", error);
+        vd_remove_tree(root);
         return 1;
     }
     // Rows sort by display name: Alpha, Beta, then the Shell Upload Entry. Alpha is active.
     publish("a.vdapp", "Alpha");
     publish("b.vdapp", "Beta");
+    expect(active_is("a.vdapp"), "the first publish should activate it");
 
     VdShell shell;
     shell_init(&shell);
 
+    // Each test leaves the Shell hidden and builds on the library the one before left: activating makes b active so
+    // a can be removed, and the upload test runs with b alone.
     test_open_and_hide(&shell);
     test_restart_active(&shell);
     test_activate_other(&shell);

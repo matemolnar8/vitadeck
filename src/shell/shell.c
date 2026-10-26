@@ -198,6 +198,8 @@ void shell_show_home(VdShell *shell)
 void shell_shutdown(VdShell *shell)
 {
     upload_server_stop(&shell->upload_server);
+    vd_mutex_destroy(shell->upload_server.mutex);
+    shell->upload_server.mutex = NULL;
 }
 
 bool shell_is_visible(const VdShell *shell)
