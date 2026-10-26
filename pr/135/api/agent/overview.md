@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 30db9d4b17819151901696ae030c7093afa02eee` and `git rev-parse --verify bdb7e41350d161238273acfd43a954f91a66621d` in this repository.
+   Run `git rev-parse --verify 30db9d4b17819151901696ae030c7093afa02eee` and `git rev-parse --verify 4043e588ee5505a0e8d9b8a96ed6e4fdba82edfa` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,16 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  30db9d4b17819151901696ae030c7093afa02eee
 
-head               bdb7e41350d161238273acfd43a954f91a66621d
+head               4043e588ee5505a0e8d9b8a96ed6e4fdba82edfa
 
 Named refs at pin: 30db9d4b17819151901696ae030c7093afa02eee ... t3/fix-minesweeper-input
 
 Read the diff:
 
-git diff --find-renames 30db9d4b17819151901696ae030c7093afa02eee bdb7e41350d161238273acfd43a954f91a66621d
+git diff --find-renames 30db9d4b17819151901696ae030c7093afa02eee 4043e588ee5505a0e8d9b8a96ed6e4fdba82edfa
 
 Commits:
+- 4043e58 test(smoke): refresh the failure screen golden for the moved runtime.js column
 - bdb7e41 Merge remote-tracking branch 'origin/main' into t3/fix-minesweeper-input
 - 444f2ce fix(sdk): a pad button handler that re-renders runs once per press
 
@@ -72,3 +73,12 @@ Depends on:
 - 01 Dispatch iterates a snapshot (`dispatch`)
 
 [groups/wiring.md](groups/wiring.md)
+
+### 03 Failure screen golden (`golden`)
+
+Regenerated output: only the stack frame column changes, to runtime.js:24:9126, so the reader can skip it.
+
+Depends on:
+- 01 Dispatch iterates a snapshot (`dispatch`)
+
+[groups/golden.md](groups/golden.md)

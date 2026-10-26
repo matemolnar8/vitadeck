@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 30db9d4b17819151901696ae030c7093afa02eee` and `git rev-parse --verify bdb7e41350d161238273acfd43a954f91a66621d` in this repository.
+   Run `git rev-parse --verify 30db9d4b17819151901696ae030c7093afa02eee` and `git rev-parse --verify 4043e588ee5505a0e8d9b8a96ed6e4fdba82edfa` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 30db9d4b17819151901696ae030c7093afa02eee bdb7e41350d161238273acfd43a954f91a66621d -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 30db9d4b17819151901696ae030c7093afa02eee 4043e588ee5505a0e8d9b8a96ed6e4fdba82edfa -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,15 +25,15 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  30db9d4b17819151901696ae030c7093afa02eee
 
-head               bdb7e41350d161238273acfd43a954f91a66621d
+head               4043e588ee5505a0e8d9b8a96ed6e4fdba82edfa
 
 Named refs at pin: 30db9d4b17819151901696ae030c7093afa02eee ... t3/fix-minesweeper-input
 
 Read the diff:
 
-git diff --find-renames 30db9d4b17819151901696ae030c7093afa02eee bdb7e41350d161238273acfd43a954f91a66621d
+git diff --find-renames 30db9d4b17819151901696ae030c7093afa02eee 4043e588ee5505a0e8d9b8a96ed6e4fdba82edfa
 
-Review concern 01 of 02: Dispatch iterates a snapshot (`dispatch`)
+Review concern 01 of 03: Dispatch iterates a snapshot (`dispatch`)
 
 The why:
 
