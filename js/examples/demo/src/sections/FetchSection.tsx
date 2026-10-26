@@ -30,27 +30,30 @@ async function loadRepo(): Promise<Repo> {
   return body;
 }
 
+// Without this catch, a failed request (offline, DNS, TLS) would be an unhandled rejection and fail the Deck App.
+async function requestRepo(): Promise<RequestState> {
+  try {
+    return { status: "done", repo: await loadRepo() };
+  } catch (error) {
+    return { status: "error", message: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 export function FetchSection() {
   const { theme } = useTheme();
-  const [attempt, setAttempt] = useState(0);
   const [request, setRequest] = useState<RequestState>({ status: "loading" });
 
   useEffect(() => {
     let ignore = false;
     const run = async () => {
-      // Without this catch, a failed request (offline, DNS, TLS) would be an unhandled rejection and fail the Deck App.
-      try {
-        const repo = await loadRepo();
-        if (!ignore) setRequest({ status: "done", repo });
-      } catch (error) {
-        if (!ignore) setRequest({ status: "error", message: error instanceof Error ? error.message : String(error) });
-      }
+      const state = await requestRepo();
+      if (!ignore) setRequest(state);
     };
     void run();
     return () => {
       ignore = true;
     };
-  }, [attempt]);
+  }, []);
 
   return (
     <Section
@@ -84,8 +87,9 @@ export function FetchSection() {
         borderRadius={8}
         autoFocus
         onPress={() => {
+          if (request.status === "loading") return;
           setRequest({ status: "loading" });
-          setAttempt((count) => count + 1);
+          void requestRepo().then(setRequest);
         }}
       />
     </Section>

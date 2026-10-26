@@ -102,7 +102,7 @@ function logMetrics() {
 
 function startMetricsLogging() {
   if (metricsIntervalId !== null) return;
-  metricsIntervalId = setInterval(logMetrics, METRICS_REFRESH_MS) as unknown as number;
+  metricsIntervalId = setInterval(logMetrics, METRICS_REFRESH_MS);
 }
 
 function stopMetricsLogging() {

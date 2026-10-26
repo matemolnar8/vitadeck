@@ -12,5 +12,5 @@ export function vitaHost<K extends VitaHostType>(
   props: VitaHostPropsByType[K] | null,
   ...children: React.ReactNode[]
 ): React.ReactElement {
-  return createHostElement(type, props as Record<string, unknown> | null, ...children);
+  return createHostElement(type, props, ...children);
 }

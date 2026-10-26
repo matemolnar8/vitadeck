@@ -34,7 +34,6 @@ export default function TimersDeckApp() {
 
   useEffect(() => {
     if (timeoutActive) {
-      setTimeoutMsg("Waiting 2s...");
       timeoutIdRef.current ??= setTimeout(() => {
         setTimeoutMsg("Timeout fired!");
         timeoutIdRef.current = undefined;
@@ -43,7 +42,6 @@ export default function TimersDeckApp() {
     } else if (timeoutIdRef.current) {
       clearTimeout(timeoutIdRef.current);
       timeoutIdRef.current = undefined;
-      setTimeoutMsg("Cancelled");
     }
   }, [timeoutActive]);
 
@@ -83,6 +81,7 @@ export default function TimersDeckApp() {
               height={40}
               label="Start 2s"
               onPress={() => {
+                setTimeoutMsg("Waiting 2s...");
                 setTimeoutActive(true);
               }}
               color={theme.success}
@@ -94,6 +93,7 @@ export default function TimersDeckApp() {
               height={40}
               label="Cancel"
               onPress={() => {
+                if (timeoutActive) setTimeoutMsg("Cancelled");
                 setTimeoutActive(false);
               }}
               color={theme.danger}
