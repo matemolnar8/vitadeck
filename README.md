@@ -11,6 +11,7 @@ Install on your Vita:
 Start building an app with the SDK:
 
 - SDK docs: [`js/packages/sdk`](js/packages/sdk)
+- A tour of every SDK feature: [`js/examples/demo`](js/examples/demo)
 - npm package: [`@vitadeck/sdk`](https://www.npmjs.com/package/@vitadeck/sdk)
 
 ```bash

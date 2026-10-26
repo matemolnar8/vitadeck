@@ -52,6 +52,8 @@ docker-compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --buil
 
 The `upload_vita`, `upload_vpk`, and `run` targets send the build to a Vita over FTP. They need the Vita's IP in `PSVITAIP` at configure time (Compose passes it into the container), e.g. `PSVITAIP=192.168.1.177 docker-compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita --target run"`. They fail with a message when it is unset.
 
+`upload_vpk` copies the VPK to `ux0:/download/` for a manual install. `upload_vita` (and `run`) stops the running app, uploads `eboot.bin`, the runtime and the fonts, then relaunches. It also uploads `assets/emoji` (about 4,000 PNGs in one curl run), but only the first time per build directory and Vita IP and again when the images change, tracked by `out-vita/upload_emoji-<ip>.stamp`; delete that stamp to force a re-upload, e.g. after removing the app from the Vita.
+
 ## Workflows
 
 ### Canonical agent checks
@@ -88,7 +90,7 @@ Run **JS build**, then the host quick start, then the Vita quick start. Fix comp
 
 ## Notes
 
-- Configure downloads the pinned DejaVu Sans, Droid Sans Fallback Full and Twemoji releases once into the gitignored `assets/fonts/` and `assets/emoji/` (`cmake/fonts.cmake`, `cmake/twemoji.cmake`, SHA-256 checked by `cmake/fetch_asset.cmake`); host and VPK builds both ship them. Offline it warns and builds with fallbacks: raylib's built-in font for the Runtime Default Font, missing-glyph boxes for CJK, a fallback glyph for emoji. The next configure retries.
+- Configure downloads the pinned DejaVu Sans, Droid Sans Fallback Full, Noto Sans KR and Twemoji releases once into the gitignored `assets/fonts/` and `assets/emoji/` (`cmake/fonts.cmake`, `cmake/twemoji.cmake`, SHA-256 checked by `cmake/fetch_asset.cmake`); host and VPK builds both ship them. Offline it warns and builds with fallbacks: raylib's built-in font for the Runtime Default Font, missing-glyph boxes for CJK and Korean, a fallback glyph for emoji. The next configure retries.
 - In the container, `VITASDK` is set by the image; the project picks the Vita toolchain when that env var is present.
 - Host builds use `out/`; Vita builds use `out-vita/` on the **host** filesystem (bind-mounted from the container).
 - Host only: `cmake --build out --target stage_examples` copies every built `js/examples/*/dist/*.vdapp` into `out/vitadeck-data/installed-deck-apps`; `cmake --build out --target run` builds, stages, and launches `out/vitadeck`.

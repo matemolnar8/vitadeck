@@ -463,6 +463,7 @@ if(DEFINED ENV{VITASDK})
       ${vpk_fonts}
       FILE assets/fonts/DejaVuSans-LICENSE.txt assets/fonts/DejaVuSans-LICENSE.txt
       FILE assets/fonts/DroidSansFallbackFull-LICENSE.txt assets/fonts/DroidSansFallbackFull-LICENSE.txt
+      FILE assets/fonts/NotoSansKR-LICENSE.txt assets/fonts/NotoSansKR-LICENSE.txt
       FILE assets/emoji assets/emoji
   )
 
@@ -487,9 +488,32 @@ if(DEFINED ENV{VITASDK})
   )
   add_dependencies(upload_vpk require_psvitaip)
 
+  # Emoji images go up in one curl run over one FTP connection, and only again when they change; the stamp is
+  # per Vita IP. Delete it to force a re-upload, e.g. after the app was removed from the Vita.
+  file(GLOB upload_emoji_files ${CMAKE_SOURCE_DIR}/assets/emoji/*.png)
+  set(upload_emoji_stamp "")
+  if(upload_emoji_files)
+    set(upload_emoji_stamp ${CMAKE_BINARY_DIR}/upload_emoji-${PSVITAIP}.stamp)
+    list(LENGTH upload_emoji_files upload_emoji_count)
+    set(upload_emoji_config "ftp-create-dirs\nsilent\nshow-error\nwrite-out = \"\\r  %{urlnum}/${upload_emoji_count}\"\n")
+    foreach(file IN LISTS upload_emoji_files)
+      get_filename_component(name ${file} NAME)
+      string(APPEND upload_emoji_config "upload-file = \"${file}\"\nurl = \"ftp://${PSVITAIP}:1337/ux0:/app/${VITA_TITLEID}/assets/emoji/${name}\"\n")
+    endforeach()
+    file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/upload_emoji.curl CONTENT "${upload_emoji_config}")
+    add_custom_command(OUTPUT ${upload_emoji_stamp}
+      COMMAND echo "Sending ${upload_emoji_count} emoji images to ${VITA_TITLEID}/assets/emoji (a few minutes)"
+      COMMAND curl -K ${CMAKE_BINARY_DIR}/upload_emoji.curl
+      COMMAND echo ""
+      COMMAND ${CMAKE_COMMAND} -E touch ${upload_emoji_stamp}
+      DEPENDS ${CMAKE_BINARY_DIR}/upload_emoji.curl ${upload_emoji_files}
+      VERBATIM
+    )
+  endif()
+
   # Create an explicit `upload_vita` target so uploads only run when requested.
   add_custom_target(upload_vita
-    DEPENDS ${PROJECT_NAME}.vpk-vpk
+    DEPENDS ${PROJECT_NAME}.vpk-vpk ${upload_emoji_stamp}
     # Destroy running apps
     COMMAND echo "Destroy running apps"
     COMMAND echo destroy | nc ${PSVITAIP} 1338
