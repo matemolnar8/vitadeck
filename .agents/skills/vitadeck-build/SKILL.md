@@ -52,6 +52,8 @@ docker-compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --buil
 
 The `upload_vita`, `upload_vpk`, and `run` targets send the build to a Vita over FTP. They need the Vita's IP in `PSVITAIP` at configure time (Compose passes it into the container), e.g. `PSVITAIP=192.168.1.177 docker-compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita --target run"`. They fail with a message when it is unset.
 
+`upload_vpk` copies the VPK to `ux0:/download/` for a manual install. `upload_vita` (and `run`) stops the running app, uploads `eboot.bin`, the runtime and the fonts, then relaunches. It also uploads `assets/emoji` (about 4,000 PNGs in one curl run), but only the first time per build directory and Vita IP and again when the images change, tracked by `out-vita/upload_emoji-<ip>.stamp`; delete that stamp to force a re-upload, e.g. after removing the app from the Vita.
+
 ## Workflows
 
 ### Canonical agent checks
