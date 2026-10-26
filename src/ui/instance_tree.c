@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -471,9 +472,11 @@ static void collect_focusable_instance(ReactInstance *inst, int offset_x, int of
         add_focusable_if_visible(inst->id, abs_x, abs_y, width, height, has_clip, clip_x, clip_y, clip_width,
                                  clip_height, out_elems);
 
+        // Content scrolled out of view stays a candidate, so the D-pad can reach it and scroll it into view; only
+        // what overflows the Scroll's width is clipped.
         bool child_has_clip = false;
         int child_clip_x = 0, child_clip_y = 0, child_clip_width = 0, child_clip_height = 0;
-        if (!intersect_clip(has_clip, clip_x, clip_y, clip_width, clip_height, abs_x, abs_y, width, height,
+        if (!intersect_clip(has_clip, clip_x, clip_y, clip_width, clip_height, abs_x, INT_MIN / 4, width, INT_MAX / 2,
                             &child_has_clip, &child_clip_x, &child_clip_y, &child_clip_width, &child_clip_height)) {
             return;
         }

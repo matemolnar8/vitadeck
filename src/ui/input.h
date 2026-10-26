@@ -42,7 +42,7 @@ void input_cancel_text_input(void);
 const char *input_editing_text(const char *id);
 
 // Forget Focus, held Pad Buttons and any edit. Called when the Deck App runtime starts or stops. A Pad Button
-// still held presses again on the next sample unless input_ignore_held_pad_buttons asked otherwise.
+// still held presses on the next sample unless input_ignore_held_pad_buttons asked otherwise.
 void input_clear_focus(void);
 
 // Ignore Pad Buttons held right now until they are released, e.g. the Circle that hides the Shell.

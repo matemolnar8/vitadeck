@@ -212,14 +212,20 @@ static bool touch_finish_scroll_gesture(void)
     return true;
 }
 
-// New Focus scrolls into view; touch momentum stops so it does not carry the control back out.
 static void set_focus(const char *new_id)
 {
     if (same_id(focused_id, new_id)) return;
     if (focused_id) push_input_event(focused_id, "blur");
     replace_id(&focused_id, new_id);
+    if (focused_id) push_input_event(focused_id, "focus");
+}
+
+// Focus from the D-pad or autoFocus scrolls into view; touch momentum stops so it does not carry the control back
+// out. Mouse Focus does not, or the content would slide under the pointer and hover the next control.
+static void set_focus_into_view(const char *new_id)
+{
+    set_focus(new_id);
     if (!focused_id) return;
-    push_input_event(focused_id, "focus");
     touch_stop_momentum();
     instance_scroll_into_view(focused_id);
 }
@@ -515,7 +521,7 @@ void input_apply_gamepad(const GamepadSample *s)
     if (gamepad_down_id && !instance_exists(gamepad_down_id)) replace_id(&gamepad_down_id, NULL);
 
     char requested_id[VD_INSTANCE_ID_MAX];
-    if (instance_take_focus_request(requested_id) && instance_exists(requested_id)) set_focus(requested_id);
+    if (instance_take_focus_request(requested_id) && instance_exists(requested_id)) set_focus_into_view(requested_id);
 
     int viewport_h = 0, content_h = 0;
     char scroll_id[VD_INSTANCE_ID_MAX];
@@ -529,7 +535,7 @@ void input_apply_gamepad(const GamepadSample *s)
     if (s->up || s->down || s->left || s->right) {
         NavDirection dir = s->up ? NAV_UP : s->down ? NAV_DOWN : s->left ? NAV_LEFT : NAV_RIGHT;
         char *next_id = find_nearest_focusable(dir);
-        if (next_id) set_focus(next_id);
+        if (next_id) set_focus_into_view(next_id);
         free(next_id);
     }
 

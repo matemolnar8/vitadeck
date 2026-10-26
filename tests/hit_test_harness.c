@@ -126,9 +126,9 @@ static void test_focusables_clip(void)
 
     scroll_set_offset("S", 114);
     elems = get_focusable_elements(&count);
-    expect(count == 3, "only S, b1 and b2 intersect the viewport after scrolling");
-    expect(!has_focusable(elems, count, "b0", 205, -59), "a child scrolled fully out of view is not focusable");
-    expect(!has_focusable(elems, count, "inner-b", 315, -109), "a nested scroll clipped away hides its children");
+    expect(count == 6, "content scrolled out of view stays focusable, so the D-pad can reach it");
+    expect(has_focusable(elems, count, "b0", 205, -59), "a child scrolled fully out of view is still focusable");
+    expect(has_focusable(elems, count, "inner-b", 315, -109), "so are the children of a nested scroll scrolled away");
     expect(has_focusable(elems, count, "b1", 205, 5), "focusables use scrolled absolute coordinates");
     free_focusable_elements(elems, count);
 
