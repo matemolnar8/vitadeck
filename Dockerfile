@@ -27,7 +27,7 @@ RUN apt-get update \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && corepack enable \
-    && corepack prepare pnpm@10.28.2 --activate \
+    && corepack prepare pnpm@12.15.0 --activate \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
