@@ -576,6 +576,7 @@ else()
   add_custom_target(run
     DEPENDS ${PROJECT_NAME} stage_examples
     VERBATIM
+    COMMAND ${CMAKE_SOURCE_DIR}/scripts/check-macos-display.sh
     COMMAND ${CMAKE_BINARY_DIR}/${PROJECT_NAME}
   )
 endif()

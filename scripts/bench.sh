@@ -60,6 +60,7 @@ done
 
 # A baseline holds every scenario, so it is only replaced by a full run.
 ((UPDATE_BASELINE == 0 || ${#SCENARIOS[@]} == 0)) || die "--update-baseline needs a run of every scenario."
+[[ "$TARGET" == "vita" ]] || "$ROOT_DIR/scripts/check-macos-display.sh"
 
 RUN_DIR="$ROOT_DIR/out-bench/$TARGET-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$RUN_DIR"
