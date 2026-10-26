@@ -42,19 +42,31 @@ static bool flows(const ReactInstance *child)
     case NT_TEXT_INPUT:
     case NT_IMAGE:
     case NT_STACK:
+    case NT_SCROLL:
         return true;
     default:
         return false;
     }
 }
 
+// A last-child Scroll with no main-axis size of its own takes what its parent's stated main-axis size leaves.
+static bool fills_rest(const ReactInstance *stack, const ReactInstance *child, bool row)
+{
+    if (child->type != NT_SCROLL || child != stack->children[arrlen(stack->children) - 1]) return false;
+    const StackProps *s = &stack->props.stack;
+    const StackProps *c = &child->props.stack;
+    return row ? s->width > 0 && c->width <= 0 : s->height > 0 && c->height <= 0;
+}
+
 // Children are already sized and still at their own x/y, so each child's margin and offset are read from its
 // layout before being replaced: the first pass places the main axis, the second the cross axis.
+// A Scroll is a start-aligned column, so resizing a filling one does not move its own children.
 static void layout_flow(ReactInstance *stack)
 {
     const StackProps *s = &stack->props.stack;
     const bool row = s->direction == STACK_ROW;
     const int count = (int)arrlen(stack->children);
+    const int inner_main = (row ? s->width : s->height) - s->padding * 2;
 
     int flow = 0, cross = 0;
     bool any = false;
@@ -68,6 +80,10 @@ static void layout_flow(ReactInstance *stack)
         int *main_pos = row ? &c->x : &c->y;
         const int margin = *main_pos;
         *main_pos = s->padding + flow + margin;
+        if (fills_rest(stack, stack->children[i], row)) {
+            const int rest = inner_main - flow - margin;
+            *(row ? &c->width : &c->height) = rest > 0 ? rest : 0;
+        }
         flow += margin + (row ? c->width : c->height) + s->gap;
 
         const int extent = (row ? c->y + c->height : c->x + c->width);

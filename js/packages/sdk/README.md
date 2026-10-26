@@ -111,7 +111,7 @@ Activate the Deck App once in the Shell. After that, each upload replaces the Ac
 
 ## Layout
 
-`Stack` places its `Rect`, `Button`, `TextInput`, `Image` and `Stack` children one after another, so you don't compute every `x` and `y` yourself.
+`Stack` places its `Rect`, `Button`, `TextInput`, `Image`, `Stack` and `Scroll` children one after another, so you don't compute every `x` and `y` yourself.
 
 ```tsx
 import { Button, Image, Stack } from "@vitadeck/sdk";
@@ -127,9 +127,20 @@ import { Button, Image, Stack } from "@vitadeck/sdk";
 
 - `direction` is `"column"` (default) or `"row"`; `gap` and `padding` are pixels; `align` (`"start"`, `"center"`, `"end"`) places children across the other axis.
 - Without `width` or `height` a `Stack` fits its content. `color` fills it.
+- A `Stack` without `color` takes no hits itself: a tap between its children reaches whatever is behind it. With `color` it behaves like a `Rect`.
 - `x` and `y` default to 0. On a child in a `Stack`, the one along the flow is a margin before the child and the other an offset from its aligned position.
-- `Text` is not laid out: wrap it in a `Rect`. A `Scroll` inside a `Stack` keeps its own `x`/`y` too.
+- `Text` is not laid out: wrap it in a `Rect`.
 - `Scroll` lays out its children as a column `Stack` and scrolls them with touch drag, the left stick or the mouse wheel.
+- A `Scroll` flows in a `Stack` like any child. Give it a `height` in a column (`width` in a row), or make it the last child and leave that out: it fills the rest of a `Stack` that has one.
+
+```tsx
+<Stack x={20} y={20} width={920} height={504} gap={12}>
+  <Rect width={920} height={60} color={theme.surface} />
+  <Scroll width={920} gap={8} padding={10}>
+    {rows}
+  </Scroll>
+</Stack>
+```
 
 ## Focus and pad buttons
 
