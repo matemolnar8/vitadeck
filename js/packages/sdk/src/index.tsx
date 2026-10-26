@@ -103,8 +103,8 @@ export function TextInput(props: TextInputProps) {
 }
 
 export { usePadButton } from "./pad-buttons";
-export type { PadButton, PadButtonHandlers } from "./pad-buttons";
-export type { FocusProps } from "./vitadeck-host-types";
+export type { PadButton, PadButtonHandlers, PadButtonPhase } from "./pad-buttons";
+export type { FocusProps, StackAlign, StackDirection, TextAlign, TextWrap } from "./vitadeck-host-types";
 
 const runtimeColors = (globalThis as unknown as { Colors: ColorsMap }).Colors;
 export { runtimeColors as Colors, useTheme };
