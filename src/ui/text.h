@@ -29,7 +29,8 @@ int text_props_font_size(const TextProps *text);
 // The distance between line tops: lineHeight, else the font's line height plus 4.
 int text_props_line_height(const TextProps *text);
 // A Text instance's raw text children joined and broken into lines: at newlines, and with a width and word wrap
-// between words. Layout sizes the Text from them and render draws them. The result is overwritten by the next call.
+// between words. Layout sizes the Text from them and keeps a copy for render. The result is overwritten by the next
+// call.
 const TextLines *text_lines(const ReactInstance *text);
 
 // Where a line_width line starts inside a box_width box. Text aligns in its TextLines width, which layout gives it,

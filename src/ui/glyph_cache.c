@@ -12,6 +12,8 @@
 #include "stb_truetype.h"
 
 #define GLYPH_PADDING 1
+// The largest glyph a page has room for next to its white square.
+#define GLYPH_SIZE_MAX (VD_GLYPH_ATLAS_PAGE_SIZE - VD_GLYPH_ATLAS_WHITE_SIZE - GLYPH_PADDING)
 
 #define ZWJ 0x200d
 #define VS15 0xfe0e
@@ -204,12 +206,23 @@ static bool page_place(AtlasPage *page, int width, int height, int *x, int *y)
     return true;
 }
 
+// Paints the white square into empty pixels; glyphs start after it.
+static void start_page(AtlasPage *page)
+{
+    for (int row = 0; row < VD_GLYPH_ATLAS_WHITE_SIZE; row++) {
+        memset(page->pixels + (size_t)row * VD_GLYPH_ATLAS_PAGE_SIZE * 4, 255, VD_GLYPH_ATLAS_WHITE_SIZE * 4);
+    }
+    page->dirty = true;
+    page->cursor_x = VD_GLYPH_ATLAS_WHITE_SIZE + GLYPH_PADDING;
+    page->cursor_y = 0;
+    page->row_height = VD_GLYPH_ATLAS_WHITE_SIZE;
+}
+
 static void clear_page(int index)
 {
     AtlasPage *page = &g_pages[index];
     memset(page->pixels, 0, VD_GLYPH_ATLAS_PAGE_BYTES);
-    page->dirty = true;
-    page->cursor_x = page->cursor_y = page->row_height = 0;
+    start_page(page);
     // hmdel moves the last entry into the deleted slot, which a backwards walk has already visited.
     for (ptrdiff_t i = hmlen(g_glyphs) - 1; i >= 0; i--) {
         if (g_glyphs[i].value.page != index) continue;
@@ -226,7 +239,7 @@ static void clear_page(int index)
 // The page that now holds a width x height rect at (x, y), or -1 when no page can take it this frame.
 static int atlas_allocate(int width, int height, int *x, int *y)
 {
-    if (width > VD_GLYPH_ATLAS_PAGE_SIZE || height > VD_GLYPH_ATLAS_PAGE_SIZE) return -1;
+    if (width > GLYPH_SIZE_MAX || height > GLYPH_SIZE_MAX) return -1;
     if (g_current_page >= 0 && page_place(&g_pages[g_current_page], width, height, x, y)) return g_current_page;
 
     int index;
@@ -235,6 +248,7 @@ static int atlas_allocate(int width, int height, int *x, int *y)
         if (!pixels) return -1;
         index = g_page_count++;
         g_pages[index] = (AtlasPage){.pixels = pixels};
+        start_page(&g_pages[index]);
     } else {
         index = 0;
         for (int i = 1; i < g_page_count; i++) {
@@ -412,7 +426,7 @@ static bool find_emoji(const VdGlyphFont *font, int size, const VdEmojiSequence 
             continue;
         }
         bool placed = true;
-        if (size > VD_GLYPH_ATLAS_PAGE_SIZE) {
+        if (size > GLYPH_SIZE_MAX) {
             // It keeps its advance and draws nothing, rather than loading again every frame.
             *glyph = (VdGlyph){.page = -1, .advance = (float)size, .color = true};
         } else {

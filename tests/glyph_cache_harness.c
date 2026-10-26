@@ -45,6 +45,17 @@ static bool same_shape(VdGlyph a, VdGlyph b)
            a.advance == b.advance;
 }
 
+static bool has_white_square(const unsigned char *pixels)
+{
+    for (int row = 0; pixels && row < VD_GLYPH_ATLAS_WHITE_SIZE; row++) {
+        for (int col = 0; col < VD_GLYPH_ATLAS_WHITE_SIZE; col++) {
+            const unsigned char *pixel = pixels + ((size_t)row * VD_GLYPH_ATLAS_PAGE_SIZE + (size_t)col) * 4;
+            if (pixel[0] != 255 || pixel[1] != 255 || pixel[2] != 255 || pixel[3] != 255) return false;
+        }
+    }
+    return pixels != NULL;
+}
+
 static void test_utf8(void)
 {
     expect_utf8("A", 'A', 1, "ASCII decodes as itself");
@@ -97,6 +108,8 @@ static void test_hits_and_sizes(const VdGlyphFont *font)
         }
     }
     expect(covered, "the glyph's rect holds coverage");
+    expect(has_white_square(pixels), "a page starts with an opaque white square for shapes");
+    expect(a.x > VD_GLYPH_ATLAS_WHITE_SIZE || a.y > VD_GLYPH_ATLAS_WHITE_SIZE, "glyphs leave the white square alone");
 
     VdGlyphFontMetrics metrics = glyph_font_metrics(font, 30);
     expect(fabsf(metrics.ascent + metrics.descent - 30.0f) < 0.01f, "ascent plus descent is the Font Size");
@@ -717,6 +730,7 @@ static void test_pages(const VdGlyphFont *full)
     glyph_cache_begin_frame();
     VdGlyph placed = glyph_cache_get(full, size, refused);
     expect(placed.page == 0, "a later frame clears the least recently used page");
+    expect(has_white_square(glyph_cache_take_dirty_page(0)), "a cleared page keeps its white square");
     expect(glyph_cache_stats().pages == VD_GLYPH_ATLAS_PAGE_MAX, "clearing a page keeps the cap");
     expect(glyph_cache_stats().glyphs < glyphs_before, "clearing a page drops its glyphs");
 

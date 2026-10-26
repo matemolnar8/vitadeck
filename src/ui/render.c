@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <raylib.h>
+#include <rlgl.h>
 #include "stb_ds.h"
 #include "core/bench.h"
 #include "fonts.h"
@@ -28,6 +29,91 @@ static float border_radius_to_roundness(Rectangle rect, float radius_px)
     if (shorter <= 0.0f || radius_px <= 0.0f) return 0.0f;
     float clamped = fminf(radius_px, shorter / 2.0f);
     return (2.0f * clamped) / shorter;
+}
+
+#define CORNER_SEGMENTS_MAX 8
+
+// DrawRectangleRounded with the corner directions computed once per segment count: it calls sinf and cosf 24 times a
+// corner, which made rounded Buttons the Vita's most expensive draw. It emits the same vertices, so the same pixels.
+// Odd segment counts, and the ones raylib picks itself below 4, go to raylib.
+static void draw_rounded_rect(Rectangle rec, float roundness, int segments, Color color)
+{
+    if (roundness <= 0.0f || rec.width < 1 || rec.height < 1 || segments < 4 || segments > CORNER_SEGMENTS_MAX ||
+        segments % 2 != 0) {
+        DrawRectangleRounded(rec, roundness, segments, color);
+        return;
+    }
+    if (roundness >= 1.0f) roundness = 1.0f;
+    float radius = (rec.width > rec.height) ? (rec.height * roundness) / 2 : (rec.width * roundness) / 2;
+    if (radius <= 0.0f) return;
+
+    // Per corner, from its start angle in steps of 90 / segments degrees.
+    static Vector2 directions[CORNER_SEGMENTS_MAX + 1][4][CORNER_SEGMENTS_MAX + 1];
+    static bool ready[CORNER_SEGMENTS_MAX + 1];
+    const float angles[4] = {180.0f, 270.0f, 0.0f, 90.0f};
+    const float step = 90.0f / (float)segments;
+    if (!ready[segments]) {
+        for (int k = 0; k < 4; k++) {
+            for (int i = 0; i <= segments; i++) {
+                float angle = angles[k] + step * (float)i;
+                directions[segments][k][i] = (Vector2){cosf(DEG2RAD * angle), sinf(DEG2RAD * angle)};
+            }
+        }
+        ready[segments] = true;
+    }
+
+    const float left = rec.x, top = rec.y, right = rec.x + rec.width, bottom = rec.y + rec.height;
+    const Vector2 point[12] = {
+        {left + radius, top},
+        {right - radius, top},
+        {right, top + radius},
+        {right, bottom - radius},
+        {right - radius, bottom},
+        {left + radius, bottom},
+        {left, bottom - radius},
+        {left, top + radius},
+        {left + radius, top + radius},
+        {right - radius, top + radius},
+        {right - radius, bottom - radius},
+        {left + radius, bottom - radius},
+    };
+    const Texture2D texture = GetShapesTexture();
+    const Rectangle source = GetShapesTextureRectangle();
+    const float u0 = source.x / texture.width, u1 = (source.x + source.width) / texture.width;
+    const float v0 = source.y / texture.height, v1 = (source.y + source.height) / texture.height;
+
+    rlSetTexture(texture.id);
+    rlBegin(RL_QUADS);
+    rlColor4ub(color.r, color.g, color.b, color.a);
+    for (int k = 0; k < 4; k++) {
+        const Vector2 center = point[8 + k];
+        const Vector2 *d = directions[segments][k];
+        // Each quad is two segments.
+        for (int i = 0; i < segments; i += 2) {
+            rlTexCoord2f(u0, v0);
+            rlVertex2f(center.x, center.y);
+            rlTexCoord2f(u1, v0);
+            rlVertex2f(center.x + d[i + 2].x * radius, center.y + d[i + 2].y * radius);
+            rlTexCoord2f(u1, v1);
+            rlVertex2f(center.x + d[i + 1].x * radius, center.y + d[i + 1].y * radius);
+            rlTexCoord2f(u0, v1);
+            rlVertex2f(center.x + d[i].x * radius, center.y + d[i].y * radius);
+        }
+    }
+    // Top, right, bottom, left and middle, as point indices.
+    static const int rects[5][4] = {{0, 8, 9, 1}, {2, 9, 10, 3}, {11, 5, 4, 10}, {7, 6, 11, 8}, {8, 11, 10, 9}};
+    for (int r = 0; r < 5; r++) {
+        rlTexCoord2f(u0, v0);
+        rlVertex2f(point[rects[r][0]].x, point[rects[r][0]].y);
+        rlTexCoord2f(u0, v1);
+        rlVertex2f(point[rects[r][1]].x, point[rects[r][1]].y);
+        rlTexCoord2f(u1, v1);
+        rlVertex2f(point[rects[r][2]].x, point[rects[r][2]].y);
+        rlTexCoord2f(u1, v0);
+        rlVertex2f(point[rects[r][3]].x, point[rects[r][3]].y);
+    }
+    rlEnd();
+    rlSetTexture(0);
 }
 
 typedef struct {
@@ -71,7 +157,7 @@ static void render_rect_instance(ReactInstance *inst, RenderContext ctx)
     if (r->border_radius > 0.0f) {
         float roundness = border_radius_to_roundness(rect, r->border_radius);
         if (r->has_fill) {
-            DrawRectangleRounded(rect, roundness, 8, r->fill_color);
+            draw_rounded_rect(rect, roundness, 8, r->fill_color);
         }
         if (r->has_outline) {
             DrawRectangleRoundedLinesEx(rect, roundness, 8, 2.0f, r->border_color);
@@ -109,7 +195,8 @@ static void render_text_instance(ReactInstance *inst, RenderContext ctx)
     int base_y = ctx.y + inst->layout.y;
     Color color = t->has_color ? t->color : BLACK;
 
-    const TextLines *lines = text_lines(inst);
+    const TextLayout *lines = inst->layout.text;
+    if (!lines) return;
 
     if (t->border) {
         int border_padding = 4;
@@ -147,7 +234,7 @@ static void render_button_instance(ReactInstance *inst, RenderContext ctx)
     if (b->border_radius > 0.0f) {
         Rectangle rect = {abs_x, abs_y, width, height};
         float roundness = border_radius_to_roundness(rect, b->border_radius);
-        DrawRectangleRounded(rect, roundness, 8, visual);
+        draw_rounded_rect(rect, roundness, 8, visual);
     } else {
         DrawRectangle(abs_x, abs_y, width, height, visual);
     }
@@ -204,7 +291,7 @@ static void render_text_input_instance(ReactInstance *inst, RenderContext ctx)
     float roundness = border_radius_to_roundness(rect, t->border_radius);
 
     if (roundness > 0.0f)
-        DrawRectangleRounded(rect, roundness, 8, t->color);
+        draw_rounded_rect(rect, roundness, 8, t->color);
     else
         DrawRectangleRec(rect, t->color);
 
@@ -272,8 +359,8 @@ static void render_scrollbar(Rectangle viewport, int content_height, int offset)
         thumb_y += (track_height - thumb_height) * ((float)offset / (float)max_scroll);
     }
 
-    DrawRectangleRounded((Rectangle){track_x, track_y, bar_width, track_height}, 1.0f, 4, (Color){255, 255, 255, 30});
-    DrawRectangleRounded((Rectangle){track_x, thumb_y, bar_width, thumb_height}, 1.0f, 4, (Color){255, 255, 255, 120});
+    draw_rounded_rect((Rectangle){track_x, track_y, bar_width, track_height}, 1.0f, 4, (Color){255, 255, 255, 30});
+    draw_rounded_rect((Rectangle){track_x, thumb_y, bar_width, thumb_height}, 1.0f, 4, (Color){255, 255, 255, 120});
 }
 
 static void render_scroll_instance(ReactInstance *inst, RenderContext ctx)

@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 static int failures = 0;
 
@@ -78,11 +79,13 @@ static void free_tree(ReactInstance *inst)
     free(inst);
 }
 
+static Arena layout_arena = {0};
+
 static void run_layout(ReactInstance *root)
 {
     ReactInstance **roots = NULL;
     arrput(roots, root);
-    layout_tree(roots);
+    layout_tree(roots, &layout_arena);
     arrfree(roots);
 }
 
@@ -331,6 +334,14 @@ static void test_wrapped_text(void)
     expect(count > 2, "the sentence wraps into several lines");
     expect_size(wrapped, 150, count * 20, "wrapped text takes its width and one lineHeight per line");
     expect_at(after, 0, count * 20 + 6, "the next child follows every wrapped line");
+    const TextLines *lines = text_lines(wrapped);
+    const TextLayout *kept = wrapped->layout.text;
+    bool same = kept && kept->count == lines->count && kept->width == lines->width;
+    for (int i = 0; same && i < kept->count; i++) {
+        same = kept->widths[i] == lines->widths[i] && strcmp(kept->lines[i], lines->lines[i]) == 0;
+    }
+    expect(same, "layout keeps the lines it broke the text into, for drawing");
+    expect(after->layout.text == NULL, "only a Text keeps lines");
     free_tree(s);
 
     ReactInstance *unwrapped = text(NULL, (TextProps){.font_size = 16, .width = 150}, copy);

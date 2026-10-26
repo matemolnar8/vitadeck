@@ -272,7 +272,7 @@ void instance_tree_render_unlock(void)
 static InstanceSnapshot *laid_out_front(void)
 {
     if (front_snapshot && !front_snapshot->laid_out) {
-        layout_tree(front_snapshot->root_children);
+        layout_tree(front_snapshot->root_children, &front_snapshot->arena);
         front_snapshot->laid_out = true;
     }
     return front_snapshot;

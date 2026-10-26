@@ -8,9 +8,11 @@
 // Colour emoji share the pages, resampled to a Font Size square.
 // When every page is full, the least recently used one is cleared; one used this frame is never cleared, so a glyph
 // that finds no room waits for a later frame and draws as a missing-glyph box until then.
+// Every page starts with an opaque white square at (0, 0), so shapes can draw from the same texture as text.
 #define VD_GLYPH_ATLAS_PAGE_SIZE 1024
 #define VD_GLYPH_ATLAS_PAGE_BYTES (VD_GLYPH_ATLAS_PAGE_SIZE * VD_GLYPH_ATLAS_PAGE_SIZE * 4)
 #define VD_GLYPH_ATLAS_PAGE_MAX 4
+#define VD_GLYPH_ATLAS_WHITE_SIZE 4
 
 #define VD_UTF8_REPLACEMENT 0xfffd
 #define VD_EMOJI_FALLBACK VD_UTF8_REPLACEMENT

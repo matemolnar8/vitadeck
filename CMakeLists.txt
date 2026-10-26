@@ -318,7 +318,7 @@ if(NOT DEFINED ENV{VITASDK})
     target_link_libraries(scroll_math_harness m)
     add_test(NAME scroll_math_harness COMMAND scroll_math_harness)
 
-    add_executable(layout_harness tests/layout_harness.c ${LAYOUT_SOURCES})
+    add_executable(layout_harness tests/layout_harness.c ${LAYOUT_SOURCES} src/core/arena.c)
     target_link_libraries(layout_harness m ${RAYLIB_LIBRARIES})
     # The Runtime Default Font loads from assets/fonts, relative to the working directory.
     add_test(NAME layout_harness COMMAND layout_harness WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
