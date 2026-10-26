@@ -347,7 +347,9 @@ static const char *hit_test_instance(ReactInstance *inst, int x, int y, int offs
     case NT_STACK: {
         const char *child_hit = hit_test_recursive(inst->children, x, y, abs_x, abs_y);
         if (child_hit) return child_hit;
-        return inside ? inst->id : NULL;
+        // A Stack without a fill is only layout, so points between its children fall through to what is behind.
+        const bool transparent = inst->type == NT_STACK && !inst->props.stack.has_fill;
+        return inside && !transparent ? inst->id : NULL;
     }
     case NT_BUTTON:
     case NT_TEXT_INPUT:

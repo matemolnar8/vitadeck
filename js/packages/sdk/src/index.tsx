@@ -54,10 +54,11 @@ export function Text(props: TextProps) {
 export type StackProps = Omit<VitaStackProps, "key">;
 
 /**
- * Lays out its Rect, Button, TextInput, Image and Stack children one after another along `direction`, `gap` pixels
- * apart inside `padding`, and places each across the other axis by `align`. A child's own `x`/`y` is a margin before
- * it along the flow and an offset across it. Text and Scroll children are not laid out; they keep their own `x`/`y`
- * inside the padding. Without `width` or `height`, the Stack fits its content.
+ * Lays out its Rect, Button, TextInput, Image, Stack and Scroll children one after another along `direction`, `gap`
+ * pixels apart inside `padding`, and places each across the other axis by `align`. A child's own `x`/`y` is a margin
+ * before it along the flow and an offset across it. Text children are not laid out; they keep their own `x`/`y`
+ * inside the padding. Without `width` or `height`, the Stack fits its content. A last-child Scroll without a size
+ * along the flow fills the rest of a Stack that has one. Without `color`, taps between children pass through.
  */
 export function Stack(props: StackProps) {
   return vitaHost("vita-stack", props);

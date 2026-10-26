@@ -118,7 +118,7 @@ _Avoid_: Text field, text box, IME, keyboard input
 **Image**: A visual-only component drawing a **Deck App Image**. It takes no input.
 _Avoid_: Texture, sprite, bitmap widget
 
-**Stack**: A visual-only component placing children in a column or row with gap, padding and cross-axis alignment, sized to content unless given a size. `Scroll` is a column Stack whose content scrolls in a fixed viewport; it is the only component taking scroll input.
+**Stack**: A visual-only component placing children in a column or row with gap, padding and cross-axis alignment, sized to content unless given a size. Without `color` it is hit-transparent, so a tap between children reaches what is behind it; with `color` it takes hits like a Rect. `Scroll` is a column Stack whose content scrolls in a fixed viewport; it is the only component taking scroll input. In a Stack it flows like any child: it takes its stated size along the flow, or, as the last child without one, fills the rest of a Stack that states its size.
 _Avoid_: Flexbox, flex container, layout box, list
 
 ## Shell

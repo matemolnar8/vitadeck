@@ -56,6 +56,11 @@ static ReactInstance *stack(ReactInstance *parent, StackProps props)
     return add(parent, (ReactInstance){.type = NT_STACK, .props.stack = props});
 }
 
+static ReactInstance *scroll(ReactInstance *parent, StackProps props)
+{
+    return add(parent, (ReactInstance){.type = NT_SCROLL, .props.stack = props});
+}
+
 static void free_tree(ReactInstance *inst)
 {
     for (ptrdiff_t i = 0; i < arrlen(inst->children); i++) {
@@ -182,8 +187,6 @@ static void test_scroll_matches_previous_flow(void)
     ReactInstance *title = add(rows[3], (ReactInstance){.type = NT_TEXT, .props.text = {.x = 10, .y = 6}});
     rows[4] = button(scroll, 0, 0, 220, 36);
     rows[5] = button(scroll, 0, 0, 220, 36);
-    ReactInstance *nested = add(scroll, (ReactInstance){.type = NT_SCROLL,
-                                                        .props.stack = {.x = 110, .y = 3, .width = 80, .height = 40}});
     run_layout(scroll);
 
     const int want_y[6] = {10, 82, 154, 226, 306, 350};
@@ -191,11 +194,92 @@ static void test_scroll_matches_previous_flow(void)
         expect_at(rows[i], 10, want_y[i], "scroll children land where the previous flow put them");
     }
     expect_at(title, 10, 6, "text inside a row keeps its own x/y");
-    expect_at(nested, 120, 13, "a nested scroll stays out of the flow, inside the padding");
     expect_at(scroll, 20, 82, "a scroll sits at its own x/y");
     expect_size(scroll, 920, 404, "a scroll keeps its viewport size");
     expect(scroll->layout.content_height == 396, "scroll content height matches the previous flow");
     free_tree(scroll);
+}
+
+static void test_scroll_in_column(void)
+{
+    ReactInstance *col = stack(NULL, (StackProps){.width = 300, .height = 400, .gap = 10, .padding = 5});
+    rect(col, 0, 0, 290, 50);
+    ReactInstance *list = scroll(col, (StackProps){.x = 2, .y = 3, .width = 200, .height = 120});
+    rect(list, 0, 0, 200, 500);
+    ReactInstance *after = rect(col, 0, 0, 10, 10);
+    run_layout(col);
+
+    // 5 + 50 + 10 + its margin 3.
+    expect_at(list, 7, 68, "a scroll flows like any child, with a margin and an offset");
+    expect_size(list, 200, 120, "a scroll keeps its stated height in a column");
+    expect(list->layout.content_height == 500, "its content height is still its own flow");
+    expect_at(after, 5, 198, "the flow continues after the scroll's stated height");
+    free_tree(col);
+}
+
+static void test_scroll_fills_rest(void)
+{
+    ReactInstance *col = stack(NULL, (StackProps){.height = 400, .gap = 10, .padding = 5});
+    rect(col, 0, 0, 290, 50);
+    ReactInstance *list = scroll(col, (StackProps){.y = 4, .width = 290, .gap = 8});
+    ReactInstance *first = rect(list, 0, 0, 290, 300);
+    ReactInstance *second = rect(list, 0, 0, 290, 300);
+    run_layout(col);
+
+    expect_at(list, 5, 69, "a filling scroll still takes its margin");
+    // 400 - 2 * 5 of padding - (50 + 10) - its margin 4.
+    expect_size(list, 290, 326, "the last scroll without a height fills the rest of the column");
+    expect(list->layout.content_height == 608, "a filling scroll still scrolls its full content");
+    expect_at(first, 0, 0, "a filling scroll places its own children from its top");
+    expect_at(second, 0, 308, "and flows them with its gap");
+    expect_size(col, 300, 400, "the column keeps its stated height and fits its width");
+    free_tree(col);
+
+    ReactInstance *fit = stack(NULL, (StackProps){.gap = 10});
+    rect(fit, 0, 0, 100, 50);
+    ReactInstance *fitted = scroll(fit, (StackProps){.width = 100});
+    rect(fitted, 0, 0, 100, 30);
+    run_layout(fit);
+    expect_size(fitted, 100, 30, "in a parent without a height there is no rest, so the scroll fits its content");
+    free_tree(fit);
+
+    ReactInstance *crowded = stack(NULL, (StackProps){.height = 40});
+    rect(crowded, 0, 0, 100, 60);
+    ReactInstance *squeezed = scroll(crowded, (StackProps){.width = 100});
+    rect(squeezed, 0, 0, 100, 30);
+    run_layout(crowded);
+    expect_size(squeezed, 100, 0, "with nothing left the filling scroll is empty, not negative");
+    free_tree(crowded);
+
+    ReactInstance *middle = stack(NULL, (StackProps){.height = 400});
+    ReactInstance *not_last = scroll(middle, (StackProps){.width = 100});
+    rect(not_last, 0, 0, 100, 30);
+    rect(middle, 0, 0, 100, 10);
+    run_layout(middle);
+    expect_size(not_last, 100, 30, "a scroll that is not the last child fits its content");
+    free_tree(middle);
+}
+
+static void test_scroll_in_row(void)
+{
+    ReactInstance *col = stack(NULL, (StackProps){.x = 10, .y = 10, .gap = 6});
+    rect(col, 0, 0, 500, 40);
+    ReactInstance *row =
+        stack(col, (StackProps){.direction = STACK_ROW, .width = 500, .gap = 20, .align = STACK_ALIGN_CENTER});
+    ReactInstance *side = button(row, 0, 0, 100, 40);
+    ReactInstance *list = scroll(row, (StackProps){.height = 200, .padding = 4});
+    ReactInstance *item = button(list, 0, 0, 80, 300);
+    run_layout(col);
+
+    expect_at(side, 0, 80, "a row centers a shorter child against the scroll's height");
+    // 100 + 20 along the row; 500 - 120 is left for the scroll's width.
+    expect_at(list, 120, 0, "a scroll flows along a row");
+    expect_size(list, 380, 200, "the last scroll without a width fills the rest of the row");
+    expect(list->layout.content_height == 308, "a scroll in a row still scrolls vertically");
+    expect_at(item, 4, 4, "the scroll places its children inside its padding");
+    expect_at(row, 0, 46, "the row flows in its column");
+    expect_size(col, 500, 246, "the column fits the row holding the scroll");
+    free_tree(col);
 }
 
 int main(void)
@@ -206,6 +290,9 @@ int main(void)
     test_nested();
     test_unflowed_children();
     test_scroll_matches_previous_flow();
+    test_scroll_in_column();
+    test_scroll_fills_rest();
+    test_scroll_in_row();
 
     if (failures) {
         fprintf(stderr, "layout_harness: %d failure(s)\n", failures);

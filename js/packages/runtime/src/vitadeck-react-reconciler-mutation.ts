@@ -226,7 +226,20 @@ const createNativeInstance = (id: string, type: Type, props: Props): void => {
   } else if (type === "vita-scroll") {
     const p = props as PropsByType["vita-scroll"];
     const [hasFill, r, g, b, a] = colorToArgs(p.color, Colors.BLANK);
-    nativeCreateScroll(id, p.x, p.y, p.width, p.height, hasFill, r, g, b, a, p.gap ?? 0, p.padding ?? 0);
+    nativeCreateScroll(
+      id,
+      p.x ?? 0,
+      p.y ?? 0,
+      p.width ?? 0,
+      p.height ?? 0,
+      hasFill,
+      r,
+      g,
+      b,
+      a,
+      p.gap ?? 0,
+      p.padding ?? 0,
+    );
   } else if (type === "vita-stack") {
     nativeCreateStack(id, ...stackArgs(props as PropsByType["vita-stack"]));
   } else if (type === "vita-image") {
@@ -347,7 +360,20 @@ const updateNativeInstance = (id: string, type: Type, props: Props): void => {
   } else if (type === "vita-scroll") {
     const p = props as PropsByType["vita-scroll"];
     const [hasFill, r, g, b, a] = colorToArgs(p.color, Colors.BLANK);
-    nativeUpdateScroll(id, p.x, p.y, p.width, p.height, hasFill, r, g, b, a, p.gap ?? 0, p.padding ?? 0);
+    nativeUpdateScroll(
+      id,
+      p.x ?? 0,
+      p.y ?? 0,
+      p.width ?? 0,
+      p.height ?? 0,
+      hasFill,
+      r,
+      g,
+      b,
+      a,
+      p.gap ?? 0,
+      p.padding ?? 0,
+    );
   } else if (type === "vita-stack") {
     nativeUpdateStack(id, ...stackArgs(props as PropsByType["vita-stack"]));
   } else if (type === "vita-image") {
