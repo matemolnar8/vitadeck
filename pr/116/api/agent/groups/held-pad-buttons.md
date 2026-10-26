@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 21f616e174d3a9beedead96ee8bb6df07b9b2bca` and `git rev-parse --verify c603dd347c11466593118be5db42c7483c2608a8` in this repository.
+   Run `git rev-parse --verify 81705ef32a1e4968734146a11cbd9567880f5f7e` and `git rev-parse --verify 43c2875d41d7db87736e061a46b0615e02a57531` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 21f616e174d3a9beedead96ee8bb6df07b9b2bca c603dd347c11466593118be5db42c7483c2608a8 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 81705ef32a1e4968734146a11cbd9567880f5f7e 43c2875d41d7db87736e061a46b0615e02a57531 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -23,15 +23,15 @@ When no question follows this paste, explain this review concern.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  21f616e174d3a9beedead96ee8bb6df07b9b2bca
+base (merge-base)  81705ef32a1e4968734146a11cbd9567880f5f7e
 
-head               c603dd347c11466593118be5db42c7483c2608a8
+head               43c2875d41d7db87736e061a46b0615e02a57531
 
-Named refs at pin: 21f616e174d3a9beedead96ee8bb6df07b9b2bca ... c603dd347c11466593118be5db42c7483c2608a8
+Named refs at pin: 81705ef32a1e4968734146a11cbd9567880f5f7e ... 43c2875d41d7db87736e061a46b0615e02a57531
 
 Read the diff:
 
-git diff --find-renames 21f616e174d3a9beedead96ee8bb6df07b9b2bca c603dd347c11466593118be5db42c7483c2608a8
+git diff --find-renames 81705ef32a1e4968734146a11cbd9567880f5f7e 43c2875d41d7db87736e061a46b0615e02a57531
 
 Review concern 03 of 03: Press Pad Buttons held when a Deck App starts (`held-pad-buttons`)
 
@@ -50,7 +50,7 @@ Look for:
 
 Hunk refs for this concern:
 - src/ui/input.c@82+82
-- src/ui/input.c@295+305
+- src/ui/input.c@295+304
 - src/ui/input.h
 - tests/input_harness.c@176+177
 - CONTEXT.md

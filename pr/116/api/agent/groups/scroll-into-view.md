@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 21f616e174d3a9beedead96ee8bb6df07b9b2bca` and `git rev-parse --verify c603dd347c11466593118be5db42c7483c2608a8` in this repository.
+   Run `git rev-parse --verify 81705ef32a1e4968734146a11cbd9567880f5f7e` and `git rev-parse --verify 43c2875d41d7db87736e061a46b0615e02a57531` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 21f616e174d3a9beedead96ee8bb6df07b9b2bca c603dd347c11466593118be5db42c7483c2608a8 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 81705ef32a1e4968734146a11cbd9567880f5f7e 43c2875d41d7db87736e061a46b0615e02a57531 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -23,15 +23,15 @@ When no question follows this paste, explain this review concern.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  21f616e174d3a9beedead96ee8bb6df07b9b2bca
+base (merge-base)  81705ef32a1e4968734146a11cbd9567880f5f7e
 
-head               c603dd347c11466593118be5db42c7483c2608a8
+head               43c2875d41d7db87736e061a46b0615e02a57531
 
-Named refs at pin: 21f616e174d3a9beedead96ee8bb6df07b9b2bca ... c603dd347c11466593118be5db42c7483c2608a8
+Named refs at pin: 81705ef32a1e4968734146a11cbd9567880f5f7e ... 43c2875d41d7db87736e061a46b0615e02a57531
 
 Read the diff:
 
-git diff --find-renames 21f616e174d3a9beedead96ee8bb6df07b9b2bca c603dd347c11466593118be5db42c7483c2608a8
+git diff --find-renames 81705ef32a1e4968734146a11cbd9567880f5f7e 43c2875d41d7db87736e061a46b0615e02a57531
 
 Review concern 01 of 03: Scroll a newly focused control into view (`scroll-into-view`)
 
@@ -51,12 +51,12 @@ Look for:
 - When the focused control is taller than the viewport, the top edge wins because the top check runs after the bottom one.
 
 Hunk refs for this concern:
-- src/ui/instance_tree.c@571+574
+- src/ui/instance_tree.c@571+598
 - src/ui/instance_tree.h
 - src/ui/input.c@220+220
-- src/ui/input.c@512+521
-- src/ui/input.c@526+535
+- src/ui/input.c@512+520
+- src/ui/input.c@526+534
 - tests/input_harness.c@2+2
 - tests/input_harness.c@218+229
-- tests/input_harness.c@385+556
+- tests/input_harness.c@385+621
 - CONTEXT.md

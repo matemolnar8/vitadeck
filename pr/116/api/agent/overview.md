@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 21f616e174d3a9beedead96ee8bb6df07b9b2bca` and `git rev-parse --verify c603dd347c11466593118be5db42c7483c2608a8` in this repository.
+   Run `git rev-parse --verify 81705ef32a1e4968734146a11cbd9567880f5f7e` and `git rev-parse --verify 43c2875d41d7db87736e061a46b0615e02a57531` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -22,17 +22,19 @@ When no question follows this paste, explain this change.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  21f616e174d3a9beedead96ee8bb6df07b9b2bca
+base (merge-base)  81705ef32a1e4968734146a11cbd9567880f5f7e
 
-head               c603dd347c11466593118be5db42c7483c2608a8
+head               43c2875d41d7db87736e061a46b0615e02a57531
 
-Named refs at pin: 21f616e174d3a9beedead96ee8bb6df07b9b2bca ... c603dd347c11466593118be5db42c7483c2608a8
+Named refs at pin: 81705ef32a1e4968734146a11cbd9567880f5f7e ... 43c2875d41d7db87736e061a46b0615e02a57531
 
 Read the diff:
 
-git diff --find-renames 21f616e174d3a9beedead96ee8bb6df07b9b2bca c603dd347c11466593118be5db42c7483c2608a8
+git diff --find-renames 81705ef32a1e4968734146a11cbd9567880f5f7e 43c2875d41d7db87736e061a46b0615e02a57531
 
 Commits:
+- 43c2875 fix(input): hidden Scroll rows only compete from inside their Scroll
+- 7b67540 Merge remote-tracking branch 'origin/main' into t3/focus-scroll-into-view-fix
 - c603dd3 fix(input): the D-pad reaches controls scrolled out of view
 - 13d4fea Merge remote-tracking branch 'origin/main' into t3/focus-scroll-review-fixes
 - 087217d fix(input): press Pad Buttons held when a Deck App starts
@@ -44,6 +46,7 @@ Sources:
 - pr PR #116 Scroll-into-view on focus change and Pad Buttons held at startup press once; fixes #106.
   https://github.com/matemolnar8/vitadeck/pull/116
 - transcript Merge-gate review · Oct 26 Blocker: the D-pad cannot reach rows outside a Scroll viewport; low: hover scroll cascades under the pointer; nit: input.h wording.
+- transcript Round-2 review · Oct 26 Unclipping every Scroll let hidden rows compete with controls outside it; unclip only the Scroll that contains Focus, restore viewport-clip expectations, drop the unreachable guard in set_focus_into_view.
 
 The title:
 
@@ -67,7 +70,7 @@ set_focus_into_view in input.c calls the new instance_scroll_into_view for D-pad
 
 ### 02 Let the D-pad reach controls scrolled out of view (`reach-hidden-rows`)
 
-collect_focusable_instance clips a Scroll's descendants only to the Scroll's x range, so get_focusable_elements returns hidden rows at their scrolled positions and focus_nav_pick can pick them.
+find_nearest_focusable passes the current Focus to get_focusable_elements_for, and collect_focusable_instance clips a Scroll that contains Focus only to its x range, while any other Scroll keeps its viewport clip.
 
 Depends on:
 - 01 Scroll a newly focused control into view (`scroll-into-view`)
