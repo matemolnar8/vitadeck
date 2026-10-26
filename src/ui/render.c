@@ -347,7 +347,7 @@ static void render_button_instance(ReactInstance *inst, RenderContext ctx)
     const int padding = 8;
     const VdFont *font = font_registry_get(b->font_name);
     int font_size = button_font_size(b);
-    int label_width = (int)text_measure(font, b->label, font_size);
+    int label_width = measure_text_width(font, b->label, font_size);
     int label_x = text_layout_line_x(abs_x + padding, width - padding * 2, label_width, b->align);
     int label_y = abs_y + (height - text_line_height(font, font_size)) / 2;
     text_draw(font, b->label, (Vector2){label_x, label_y}, font_size, b->text_color);
