@@ -69,7 +69,11 @@ int main(void)
     expect(list(items) == 2 && !items[0].is_active && items[1].is_active, "set active should move is_active");
 
     expect(package_library_set_active("b.vdapp", error, sizeof(error)), "re-activating the active package failed");
-    expect(list(items) == 2 && items[1].is_active, "re-activating should keep the package active");
+    expect(list(items) == 2 && !items[0].is_active && items[1].is_active,
+           "re-activating should keep the package active");
+    char active[VD_PACKAGE_NAME_MAX];
+    package_library_active_package_name(active, sizeof(active));
+    expect(strcmp(active, "b.vdapp") == 0, "re-activating should keep the Active Deck App name");
 
     expect(package_library_remove("a.vdapp", error, sizeof(error)), "remove failed");
     expect(list(items) == 1 && strcmp(items[0].package_name, "b.vdapp") == 0, "remove should refresh the list");

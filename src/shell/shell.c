@@ -45,45 +45,9 @@ static void shell_draw_footer_hint(bool restart_focused)
     DrawText(hint, SHELL_PADDING, SHELL_FOOTER_Y, SHELL_FONT_CAPTION, GRAY);
 }
 
-static bool start_pressed(void)
+static bool gamepad_pressed(bool available, int button)
 {
-    bool gamepad = IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_MIDDLE_RIGHT);
-    return gamepad || IsKeyPressed(KEY_F1);
-}
-
-static bool confirm_pressed(void)
-{
-    bool gamepad = IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
-    return gamepad || IsKeyPressed(KEY_ENTER);
-}
-
-static bool back_pressed(void)
-{
-    bool gamepad = IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT);
-    return gamepad || IsKeyPressed(KEY_BACKSPACE);
-}
-
-static bool up_pressed(void)
-{
-    return (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_UP)) || IsKeyPressed(KEY_UP);
-}
-
-static bool down_pressed(void)
-{
-    return (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_DOWN)) ||
-           IsKeyPressed(KEY_DOWN);
-}
-
-static bool left_pressed(void)
-{
-    return (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_LEFT)) ||
-           IsKeyPressed(KEY_LEFT);
-}
-
-static bool right_pressed(void)
-{
-    return (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_RIGHT)) ||
-           IsKeyPressed(KEY_RIGHT);
+    return available && IsGamepadButtonPressed(0, button);
 }
 
 static void draw_checkmark(int cx, int cy, Color c)
@@ -184,6 +148,7 @@ static void hide_shell_to_deck(VdShell *shell)
 {
     shell->state = VD_SHELL_HIDDEN;
     clear_remove_confirm(shell);
+    shell->message[0] = '\0';
     input_ignore_held_pad_buttons();
 }
 
@@ -191,8 +156,6 @@ static void activate_package(VdShell *shell, const VdPackageInfo *pkg, bool *req
 {
     char error[256];
     if (package_library_set_active(pkg->package_name, error, sizeof(error))) {
-        snprintf(shell->message, sizeof(shell->message), "%s %s.", pkg->is_active ? "Restarted" : "Activated",
-                 pkg->package_name);
         hide_shell_to_deck(shell);
         *request_runtime_restart = true;
     } else {
@@ -259,13 +222,25 @@ void shell_update(VdShell *shell, bool *request_runtime_restart)
 
 void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart)
 {
-    if (start_pressed()) {
+    const bool pad = IsGamepadAvailable(0);
+    const VdShellInput input = {
+        .start = gamepad_pressed(pad, GAMEPAD_BUTTON_MIDDLE_RIGHT) || IsKeyPressed(KEY_F1),
+        .confirm = gamepad_pressed(pad, GAMEPAD_BUTTON_RIGHT_FACE_DOWN) || IsKeyPressed(KEY_ENTER),
+        .back = gamepad_pressed(pad, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT) || IsKeyPressed(KEY_BACKSPACE),
+        .up = gamepad_pressed(pad, GAMEPAD_BUTTON_LEFT_FACE_UP) || IsKeyPressed(KEY_UP),
+        .down = gamepad_pressed(pad, GAMEPAD_BUTTON_LEFT_FACE_DOWN) || IsKeyPressed(KEY_DOWN),
+        .left = gamepad_pressed(pad, GAMEPAD_BUTTON_LEFT_FACE_LEFT) || IsKeyPressed(KEY_LEFT),
+        .right = gamepad_pressed(pad, GAMEPAD_BUTTON_LEFT_FACE_RIGHT) || IsKeyPressed(KEY_RIGHT),
+    };
+    shell_apply_system_input(shell, &input, request_runtime_restart);
+}
+
+void shell_apply_system_input(VdShell *shell, const VdShellInput *input, bool *request_runtime_restart)
+{
+    if (input->start) {
         if (shell->state == VD_SHELL_HIDDEN) {
             package_library_refresh();
-            shell->state = VD_SHELL_HOME;
-            shell->focus_row = 0;
-            shell->scroll_row = 0;
-            shell->focus_col = 0;
+            shell_show_home(shell);
         } else if (package_library_has_active_deck_app()) {
             hide_shell_to_deck(shell);
         }
@@ -279,11 +254,11 @@ void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart)
     if (row_count <= 0) return;
 
     if (shell->remove_confirm_package[0] != '\0') {
-        if (back_pressed()) {
+        if (input->back) {
             clear_remove_confirm(shell);
             return;
         }
-        if (confirm_pressed()) {
+        if (input->confirm) {
             remove_package_confirmed(shell, shell->remove_confirm_package, shell->remove_confirm_row);
         }
         return;
@@ -292,11 +267,11 @@ void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart)
     if (shell->focus_row >= row_count) shell->focus_row = row_count - 1;
     if (shell->focus_row < 0) shell->focus_row = 0;
 
-    if (up_pressed() && shell->focus_row > 0) {
+    if (input->up && shell->focus_row > 0) {
         shell->focus_row--;
         shell->focus_col = 0;
     }
-    if (down_pressed() && shell->focus_row + 1 < row_count) {
+    if (input->down && shell->focus_row + 1 < row_count) {
         shell->focus_row++;
         shell->focus_col = 0;
     }
@@ -304,18 +279,18 @@ void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart)
     if (row_is_upload(shell->focus_row, package_count)) {
         shell->focus_col = 0;
     } else {
-        if (left_pressed() && shell->focus_col > 0) shell->focus_col--;
-        if (right_pressed() && shell->focus_col < 1) shell->focus_col++;
+        if (input->left && shell->focus_col > 0) shell->focus_col--;
+        if (input->right && shell->focus_col < 1) shell->focus_col++;
     }
 
     ensure_focus_row_visible(shell, package_count, row_count);
 
-    if (back_pressed()) {
+    if (input->back) {
         if (package_library_has_active_deck_app()) hide_shell_to_deck(shell);
         return;
     }
 
-    if (!confirm_pressed()) return;
+    if (!input->confirm) return;
 
     if (row_is_upload(shell->focus_row, package_count)) {
         toggle_upload_server(shell);
