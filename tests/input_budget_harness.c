@@ -2,6 +2,7 @@
 // the snapshot swap during a backlog, and still handles a burst of cheap events in one call.
 #include <raylib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define STB_DS_IMPLEMENTATION
@@ -42,7 +43,12 @@ static int32_t handled_by_one_call(JSContext *ctx, int delay_ms)
              "  const end = Date.now() + %d; while (Date.now() < end) {} handled++;"
              "} } };",
              delay_ms);
-    JS_FreeValue(ctx, JS_Eval(ctx, source, strlen(source), "input-budget-harness.js", JS_EVAL_TYPE_GLOBAL));
+    JSValue result = JS_Eval(ctx, source, strlen(source), "input-budget-harness.js", JS_EVAL_TYPE_GLOBAL);
+    if (JS_IsException(result)) {
+        fprintf(stderr, "input_budget_harness: the handler stub did not evaluate\n");
+        exit(2);
+    }
+    JS_FreeValue(ctx, result);
 
     for (int i = 0; i < EVENTS; i++) {
         InputEvent evt = {.type = EVT_PAD_BUTTON};

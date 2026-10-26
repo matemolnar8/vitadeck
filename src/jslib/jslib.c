@@ -76,7 +76,7 @@ static void call_runtime_input(JSContext *ctx, const char *fn_name, const char *
 }
 
 // About one 60 FPS frame. Past it the loop moves on to timers, microtasks and the snapshot swap, so a backlog of
-// slow handlers still lets each step reach the screen. The rest of the queue waits for the next iteration.
+// slow handlers still reaches the screen at least once per budget. The rest of the queue waits for the next iteration.
 #define INPUT_BUDGET_US 16000
 
 bool process_input_events(JSContext *ctx)
