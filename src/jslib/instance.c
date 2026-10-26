@@ -140,7 +140,7 @@ static void replace_string(JSContext *ctx, char **slot, JSValueConst value, cons
     JS_FreeCString(ctx, str);
 }
 
-#define BUTTON_ARGC 22
+#define BUTTON_ARGC 23
 
 // Create and update share every argument; the strings replace any the instance already owns.
 static void read_button_props(JSContext *ctx, ButtonProps *button, JSValueConst *argv)
@@ -165,6 +165,8 @@ static void read_button_props(JSContext *ctx, ButtonProps *button, JSValueConst 
     button->text_color = read_color(ctx, argv + 13);
     button->has_focus_color = JS_ToBool(ctx, argv[17]);
     button->focus_color = read_color(ctx, argv + 18);
+    JS_ToInt32(ctx, &tmp, argv[22]);
+    button->align = (TextAlign)tmp;
 }
 
 static JSValue native_create_button(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)

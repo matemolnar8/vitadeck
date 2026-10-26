@@ -9,11 +9,15 @@ export type TextWrap = "none" | "word";
 
 export type VitaTextProps = WithKey<{
   children: TextChild | TextChild[];
+  /** Defaults to the theme's `text` colour. */
   color?: Color;
   border?: boolean;
   font?: FontName;
+  /** Defaults to 20. */
   fontSize?: number;
+  /** Defaults to 0. */
   x?: number;
+  /** Defaults to 0. */
   y?: number;
   width?: number;
   align?: TextAlign;
@@ -72,6 +76,8 @@ export type VitaButtonProps = WithKey<
       font?: FontName;
       /** Defaults to 20. */
       fontSize?: number;
+      /** Horizontal placement of the label; it is always centred vertically. Defaults to `"center"`. */
+      align?: TextAlign;
       onPress?: () => void;
       onPressStart?: () => void;
       onPressEnd?: () => void;

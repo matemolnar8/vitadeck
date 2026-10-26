@@ -109,6 +109,12 @@ npx @vitadeck/sdk dev http://192.168.1.50:8787/
 
 Activate the Deck App once in the Shell. After that, each upload replaces the Active Deck App and restarts it with fresh state (a restart, not hot reload). Build errors are printed and watching continues; Ctrl-C stops. "Nothing is listening" means Upload is not open in the Shell or the address is wrong.
 
+## Text
+
+`<Text>` draws in the theme's `text` colour at `fontSize` 20, at `x`/`y` 0 inside its parent, unless you pass `color`, `fontSize`, `x` or `y`. Give it a `width` to `align` it (`"left"`, `"center"`, `"right"`) or to `wrap="word"`.
+
+A `Button` label is centred vertically and, unless `align` says `"left"` or `"right"`, horizontally; `fontSize` defaults to 20 there too.
+
 ## Layout
 
 `Stack` places its `Rect`, `Button`, `TextInput`, `Image`, `Stack` and `Scroll` children one after another, so you don't compute every `x` and `y` yourself.
