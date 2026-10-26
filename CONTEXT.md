@@ -69,7 +69,7 @@ _Avoid_: Current plugin, selected component
 **Installed Deck App Removal**: Deleting a package from the library via the Shell. Cannot target the **Active Deck App**.
 _Avoid_: Uninstalling VitaDeck, clearing cache, revoking permissions
 
-**Deck App Runtime Restart**: A fresh JavaScript context, triggered by changing the **Active Deck App** or by **Runtime Upload Replacement** of it.
+**Deck App Runtime Restart**: A fresh JavaScript context, triggered by changing the **Active Deck App**, confirming it in the Shell, or **Runtime Upload Replacement** of it.
 _Avoid_: Hot reload, refresh, soft reload
 
 **Deck App Failure Screen**: The VitaDeck-painted screen that replaces a **Deck App** after an uncaught error (boot, render, effects, handlers, timers, or an unhandled promise rejection), showing the message, the top of the stack, and that **Start Input** opens the Shell. A **Deck App Runtime Restart** clears it.
@@ -126,7 +126,7 @@ _Avoid_: Flexbox, flex container, layout box, list
 **VitaDeck Shell**: VitaDeck's management UI for choosing and managing installed packages, opened by **System Input**, never by a Deck App.
 _Avoid_: Deck App menu, overlay app, launcher screen
 
-**Shell Home Screen**: The default Shell view: the **Installed Deck App Library** sorted by manifest `name` (case-insensitive, then **Deck App Package Name**), each with its version, plus the **Shell Upload Entry**.
+**Shell Home Screen**: The default Shell view: the **Installed Deck App Library** sorted by manifest `name` (case-insensitive, then **Deck App Package Name**), each with its version, plus the **Shell Upload Entry**. Confirming a package activates it; confirming the **Active Deck App** is a **Deck App Runtime Restart**. Both hide the Shell.
 _Avoid_: Live Area, system settings, account screen
 
 **Shell Upload Entry**: The Upload row at the end of the **Shell Home Screen**. Confirming it starts the **Runtime Upload Listener** and the row shows the **Runtime Upload URL** (or the bind error, with no URL) while the rest of the Shell stays usable. Confirming it again is **Shell Upload Cancel**: it stops the listener without closing the Shell. There is no other cancel shortcut.
