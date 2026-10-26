@@ -12,10 +12,10 @@ fi
 mode="${1:-check}"
 case "$mode" in
 check)
-    find src \( -name '*.c' -o -name '*.h' \) -print | sort | xargs clang-format --dry-run --Werror
+    find src tests \( -name '*.c' -o -name '*.h' \) -print | sort | xargs clang-format --dry-run --Werror
     ;;
 format)
-    find src \( -name '*.c' -o -name '*.h' \) -print | sort | xargs clang-format -i
+    find src tests \( -name '*.c' -o -name '*.h' \) -print | sort | xargs clang-format -i
     ;;
 *)
     echo "usage: $0 [check|format]" >&2

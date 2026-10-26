@@ -26,8 +26,7 @@ static void expect_at(const ReactInstance *inst, int x, int y, const char *messa
 static void expect_size(const ReactInstance *inst, int width, int height, const char *message)
 {
     if (inst->layout.width == width && inst->layout.height == height) return;
-    fprintf(stderr, "layout_harness: size %dx%d, want %dx%d\n", inst->layout.width, inst->layout.height, width,
-            height);
+    fprintf(stderr, "layout_harness: size %dx%d, want %dx%d\n", inst->layout.width, inst->layout.height, width, height);
     expect(false, message);
 }
 
@@ -44,7 +43,8 @@ static ReactInstance *add(ReactInstance *parent, ReactInstance node)
 
 static ReactInstance *rect(ReactInstance *parent, int x, int y, int width, int height)
 {
-    return add(parent, (ReactInstance){.type = NT_RECT, .props.rect = {.x = x, .y = y, .width = width, .height = height}});
+    return add(parent,
+               (ReactInstance){.type = NT_RECT, .props.rect = {.x = x, .y = y, .width = width, .height = height}});
 }
 
 static ReactInstance *button(ReactInstance *parent, int x, int y, int width, int height)
@@ -167,13 +167,9 @@ static void test_nested(void)
 // 6 * 8 + 3 * 64 + 72 + 2 * 36 - 8 + 2 * 10 = 396.
 static void test_scroll_matches_previous_flow(void)
 {
-    ReactInstance *scroll = add(NULL, (ReactInstance){.type = NT_SCROLL,
-                                                      .props.stack = {.x = 20,
-                                                                      .y = 82,
-                                                                      .width = 920,
-                                                                      .height = 404,
-                                                                      .gap = 8,
-                                                                      .padding = 10}});
+    ReactInstance *scroll = add(
+        NULL, (ReactInstance){.type = NT_SCROLL,
+                              .props.stack = {.x = 20, .y = 82, .width = 920, .height = 404, .gap = 8, .padding = 10}});
     ReactInstance *rows[6];
     for (int i = 0; i < 3; i++) {
         rows[i] = rect(scroll, 0, 0, 900, 64);
@@ -437,7 +433,7 @@ int main(void)
         test_text_in_row();
         test_wrapped_text();
         test_text_align_in_stack();
-    test_over_width_text_aligns_in_its_box();
+        test_over_width_text_aligns_in_its_box();
         test_text_in_rect();
         font_registry_shutdown();
     } else {

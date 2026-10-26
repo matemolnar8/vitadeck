@@ -60,9 +60,8 @@ int main(void)
     JSContext *ctx1 = JS_NewContext(rt1);
     if (!rt1 || !ctx1) return 2;
     register_js_timeout(ctx1);
-    eval_or_die(ctx1,
-                "globalThis.ticks = 0;"
-                "globalThis.id = setInterval(() => { globalThis.ticks += 1; }, 0);");
+    eval_or_die(ctx1, "globalThis.ticks = 0;"
+                      "globalThis.id = setInterval(() => { globalThis.ticks += 1; }, 0);");
 
     timeout_shutdown(ctx1);
     JS_FreeContext(ctx1);
@@ -72,9 +71,8 @@ int main(void)
     JSContext *ctx2 = JS_NewContext(rt2);
     if (!rt2 || !ctx2) return 2;
     register_js_timeout(ctx2);
-    eval_or_die(ctx2,
-                "globalThis.ticks = 0;"
-                "globalThis.id = setTimeout(() => { globalThis.ticks += 1; }, 0);");
+    eval_or_die(ctx2, "globalThis.ticks = 0;"
+                      "globalThis.id = setTimeout(() => { globalThis.ticks += 1; }, 0);");
 
     JSValue global = JS_GetGlobalObject(ctx2);
     JSValue id_value = JS_GetPropertyStr(ctx2, global, "id");
@@ -104,14 +102,16 @@ int main(void)
     JS_FreeRuntime(rt2);
 
     int failed = 0;
-    failed |= expect_ticks("self-clearing interval",
-                           "globalThis.ticks = 0;"
-                           "globalThis.id = setInterval(() => { globalThis.ticks += 1; clearInterval(globalThis.id); }, 0);",
-                           3, 1);
-    failed |= expect_ticks("self-clearing timeout",
-                           "globalThis.ticks = 0;"
-                           "globalThis.id = setTimeout(() => { globalThis.ticks += 1; clearTimeout(globalThis.id); }, 0);",
-                           2, 1);
+    failed |=
+        expect_ticks("self-clearing interval",
+                     "globalThis.ticks = 0;"
+                     "globalThis.id = setInterval(() => { globalThis.ticks += 1; clearInterval(globalThis.id); }, 0);",
+                     3, 1);
+    failed |=
+        expect_ticks("self-clearing timeout",
+                     "globalThis.ticks = 0;"
+                     "globalThis.id = setTimeout(() => { globalThis.ticks += 1; clearTimeout(globalThis.id); }, 0);",
+                     2, 1);
     failed |= expect_ticks("timeout clearing a sibling due the same tick",
                            "globalThis.ticks = 0;"
                            "setTimeout(() => { clearTimeout(globalThis.other); }, 0);"
