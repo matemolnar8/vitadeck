@@ -159,7 +159,7 @@ static void test_nested(void)
     free_tree(outer);
 }
 
-// The smoke Deck App's Scroll: x 20, y 82, 920x404, gap 8, padding 10, with three 64px rows, a 72px image row
+// A Scroll at x 20, y 82, 920x404, gap 8, padding 10, with three 64px rows, a 72px image row
 // and two 36px buttons. The flow before Stack placed them at 10, 82, 154, 226, 306 and 350 with content height
 // 6 * 8 + 3 * 64 + 72 + 2 * 36 - 8 + 2 * 10 = 396.
 static void test_scroll_matches_previous_flow(void)

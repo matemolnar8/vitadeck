@@ -19,7 +19,7 @@ A tour of `@vitadeck/sdk`, one section per feature. L and R (keys L and R on the
 
 `Label` and `Section` in [src/ui.tsx](src/ui.tsx) wrap `Text` in a sized `Rect`, because a `Stack` lays out `Rect`s but not `Text`.
 
-The `mono` font is the smoke example's DejaVu Sans Mono, linked rather than copied so the repository holds one copy. In your own Deck App, put the font file in your project.
+The smoke test screenshots every section against the goldens in [tests/fixtures/golden](../../../tests/fixtures/golden), so a visual change here needs `scripts/smoke-docker.sh update-golden`.
 
 ## Run it
 
