@@ -126,6 +126,10 @@ bool instance_scroll_metrics(const char *id, int *viewport_height, int *content_
 // Copies its id into out_id and returns true, or returns false when there is none.
 bool instance_scroll_for_descendant(const char *id, char out_id[VD_INSTANCE_ID_MAX]);
 
+// Scrolls every Scroll containing id, innermost first, by the least that shows id's whole layout bounds, clamped
+// to the content. UI thread only, like the offsets.
+void instance_scroll_into_view(const char *id);
+
 // Deepest scroll container whose viewport contains (x, y).
 // Copies its id into out_id and returns true, or returns false when there is none.
 bool instance_scroll_at(int x, int y, char out_id[VD_INSTANCE_ID_MAX]);
@@ -166,6 +170,9 @@ typedef struct {
 } FocusableElement;
 
 FocusableElement *get_focusable_elements(int *count);
+// Like get_focusable_elements, but a Scroll's scrolled-out descendants stay candidates only when focused_id is
+// inside that Scroll, so the D-pad can reach them from within and hidden rows never compete outside it.
+FocusableElement *get_focusable_elements_for(const char *focused_id, int *count);
 void free_focusable_elements(FocusableElement *elems, int count);
 
 // Back-buffer operations (called from JS thread only)

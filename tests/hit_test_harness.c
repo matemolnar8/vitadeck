@@ -132,6 +132,18 @@ static void test_focusables_clip(void)
     expect(has_focusable(elems, count, "b1", 205, 5), "focusables use scrolled absolute coordinates");
     free_focusable_elements(elems, count);
 
+    elems = get_focusable_elements_for("b1", &count);
+    expect(count == 6, "content scrolled out of view stays focusable when Focus is inside its Scroll");
+    expect(has_focusable(elems, count, "b0", 205, -59), "a child scrolled fully out of view is still focusable then");
+    expect(has_focusable(elems, count, "inner-b", 315, -109),
+           "so are the children of a nested scroll scrolled away then");
+    free_focusable_elements(elems, count);
+
+    elems = get_focusable_elements_for("outside", &count);
+    expect(count == 3, "Focus outside a Scroll keeps its hidden rows out of the candidates");
+    expect(!has_focusable(elems, count, "b0", 205, -59), "a hidden row does not compete outside its Scroll");
+    free_focusable_elements(elems, count);
+
     instance_tree_clear();
     scroll_reset();
 }

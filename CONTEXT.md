@@ -86,13 +86,13 @@ _Avoid_: App shortcut, global hotkey, hidden button
 **Start Input**: Toggles between the **Deck App** and the **VitaDeck Shell**. Hiding the Shell requires an **Active Deck App**; it never stops the **Runtime Upload Listener**.
 _Avoid_: Game menu, global pause, app back button
 
-**Focus**: The one **Deck App** control the D-pad moves between and Cross presses. **Button** and **Text Input** take Focus; a touch press presses directly and clears it. On the host, mouse hover and mouse press move Focus to that **Button**.
+**Focus**: The one **Deck App** control the D-pad moves between and Cross presses. **Button** and **Text Input** take Focus; a touch press presses directly and clears it. On the host, mouse hover and mouse press move Focus to that **Button**. The D-pad also reaches controls scrolled out of view: a `Scroll` scrolls just enough to show the control the D-pad or `autoFocus` moves Focus to.
 _Avoid_: Selection, hover, highlight, active element
 
 **Press**: The input gesture behind **Button** and **Text Input** callbacks.
 _Avoid_: Click, mouse down, mouse up, hover
 
-**Pad Button**: A Vita button a **Deck App** reads directly through `usePadButton`: Circle, Triangle, Square, L or R. Delivered only while the Shell is hidden; one held when the Shell hides is ignored until released.
+**Pad Button**: A Vita button a **Deck App** reads directly through `usePadButton`: Circle, Triangle, Square, L or R. Delivered only while the Shell is hidden; one held when the Shell hides is ignored until released, and one held when a **Deck App** starts otherwise presses on its first frame.
 _Avoid_: Hotkey, shortcut, raw button, gamepad event
 
 **Shell Face Input**: Face-button conventions inside the **VitaDeck Shell**: Cross confirms, Circle backs out (cancels a pending removal, otherwise hides the Shell). A connected gamepad works alongside the host keyboard.
