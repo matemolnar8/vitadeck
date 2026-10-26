@@ -1,1 +1,0 @@
-{"path":"js/examples/smoke/src/vitadeck-env.d.ts","ref":"02d88881c71ebf1091332268ecbcd587dddafb01","side":"old","lines":[{"sha":"5ca8f2f3747475628033e7ff463869a9eaf70f27","author":"Cursor Agent","timestamp":1781940334,"line":1,"text":"/// <reference types=\"@vitadeck/sdk/deck-app-env\" />"}]}
