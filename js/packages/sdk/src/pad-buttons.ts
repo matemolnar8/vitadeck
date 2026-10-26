@@ -12,8 +12,10 @@ export type PadButtonHandlers = {
 
 const subscribers = new Set<{ button: PadButton; handlers: PadButtonHandlers }>();
 
+// A handler's setState can re-run usePadButton's effect mid-dispatch, which subscribes again. Iterating a copy keeps
+// that new subscriber for the next press; iterating the Set itself would visit it and press again, forever.
 export function dispatchPadButton(button: PadButton, phase: PadButtonPhase): void {
-  for (const subscriber of subscribers) {
+  for (const subscriber of Array.from(subscribers)) {
     if (subscriber.button !== button) continue;
     if (phase === "pressstart") subscriber.handlers.onPressStart?.();
     else subscriber.handlers.onPressEnd?.();
