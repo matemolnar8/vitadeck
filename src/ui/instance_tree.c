@@ -19,6 +19,7 @@ typedef struct {
     Arena arena;
     InstanceEntry *registry;
     ReactInstance **root_children;
+    bool laid_out;
 } InstanceSnapshot;
 
 // Back buffer: JS thread writes here (single-threaded access)
@@ -209,7 +210,6 @@ bool instance_tree_swap(void)
             arrput(new_snap->root_children, copy);
         }
     }
-    layout_tree(new_snap->root_children);
 
     // Swap under lock
     InstanceSnapshot *old_snap = NULL;
@@ -259,9 +259,20 @@ void instance_tree_render_unlock(void)
     vd_mutex_unlock(snapshot_mutex);
 }
 
+// Layout measures text through the glyph cache, which belongs to the UI thread, so a snapshot is laid out by its
+// first reader of layout, under snapshot_mutex, rather than by the JS thread that publishes it.
+static InstanceSnapshot *laid_out_front(void)
+{
+    if (front_snapshot && !front_snapshot->laid_out) {
+        layout_tree(front_snapshot->root_children);
+        front_snapshot->laid_out = true;
+    }
+    return front_snapshot;
+}
+
 ReactInstance **instance_get_root_children(void)
 {
-    return front_snapshot ? front_snapshot->root_children : NULL;
+    return laid_out_front() ? front_snapshot->root_children : NULL;
 }
 
 // For hit testing, find in front buffer (UI thread) - must be called under lock
@@ -389,7 +400,7 @@ bool instance_hit_test(int x, int y, char out_id[VD_INSTANCE_ID_MAX])
 {
     bool hit = false;
     vd_mutex_lock(snapshot_mutex);
-    if (front_snapshot) hit = copy_id(out_id, hit_test_recursive(front_snapshot->root_children, x, y, 0, 0));
+    if (laid_out_front()) hit = copy_id(out_id, hit_test_recursive(front_snapshot->root_children, x, y, 0, 0));
     vd_mutex_unlock(snapshot_mutex);
     return hit;
 }
@@ -488,7 +499,7 @@ FocusableElement *get_focusable_elements(int *count)
     FocusableElement *elems = NULL;
 
     vd_mutex_lock(snapshot_mutex);
-    if (front_snapshot) {
+    if (laid_out_front()) {
         collect_focusable_recursive(front_snapshot->root_children, 0, 0, false, 0, 0, 0, 0, &elems);
     }
     vd_mutex_unlock(snapshot_mutex);
@@ -511,7 +522,7 @@ bool instance_scroll_metrics(const char *id, int *viewport_height, int *content_
 
     bool found = false;
     vd_mutex_lock(snapshot_mutex);
-    if (front_snapshot) {
+    if (laid_out_front()) {
         ReactInstance *inst = find_front_instance_unlocked(front_snapshot, id);
         if (inst && inst->type == NT_SCROLL) {
             *viewport_height = inst->layout.height;
@@ -575,7 +586,7 @@ bool instance_scroll_at(int x, int y, char out_id[VD_INSTANCE_ID_MAX])
 {
     bool found = false;
     vd_mutex_lock(snapshot_mutex);
-    if (front_snapshot) {
+    if (laid_out_front()) {
         ReactInstance *scroll = scroll_at_children(front_snapshot->root_children, x, y, 0, 0);
         found = scroll && copy_id(out_id, scroll->id);
     }

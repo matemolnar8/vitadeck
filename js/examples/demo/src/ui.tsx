@@ -1,4 +1,4 @@
-import { Rect, Stack, Text, useTheme, type Color, type FontName, type TextProps } from "@vitadeck/sdk";
+import { Stack, Text, useTheme, type Color, type FontName, type TextProps } from "@vitadeck/sdk";
 import React, { type ReactNode } from "react";
 
 export const CONTENT_WIDTH = 680;
@@ -7,8 +7,8 @@ type LabelProps = {
   children: string;
   width?: number;
   fontSize?: number;
-  /** Reserve this many lines and wrap at word boundaries. */
-  lines?: number;
+  /** Wrap at word boundaries inside `width`. */
+  wrap?: boolean;
   color?: Color;
   font?: FontName;
   align?: TextProps["align"];
@@ -16,12 +16,11 @@ type LabelProps = {
   y?: number;
 };
 
-/** A `Stack` does not lay out `Text`, so each line of copy sits in a transparent `Rect` sized to it. */
 export function Label({
   children,
   width = CONTENT_WIDTH,
   fontSize = 16,
-  lines = 1,
+  wrap = false,
   color,
   font,
   align,
@@ -29,41 +28,37 @@ export function Label({
   y,
 }: LabelProps) {
   const { theme } = useTheme();
-  const lineHeight = Math.round(fontSize * 1.4);
   return (
-    <Rect x={x} y={y} width={width} height={lines * lineHeight}>
-      <Text
-        x={0}
-        y={0}
-        width={width}
-        fontSize={fontSize}
-        lineHeight={lineHeight}
-        color={color ?? theme.text}
-        font={font}
-        align={align}
-        wrap={lines > 1 ? "word" : "none"}
-      >
-        {children}
-      </Text>
-    </Rect>
+    <Text
+      x={x}
+      y={y}
+      width={width}
+      fontSize={fontSize}
+      lineHeight={Math.round(fontSize * 1.4)}
+      color={color ?? theme.text}
+      font={font}
+      align={align}
+      wrap={wrap ? "word" : "none"}
+    >
+      {children}
+    </Text>
   );
 }
 
 type SectionProps = {
   title: string;
   blurb: string;
-  blurbLines?: number;
   children?: ReactNode;
 };
 
-export function Section({ title, blurb, blurbLines = 2, children }: SectionProps) {
+export function Section({ title, blurb, children }: SectionProps) {
   const { theme } = useTheme();
   return (
     <Stack x={16} y={14} width={CONTENT_WIDTH} gap={12}>
       <Label fontSize={24} color={theme.accent}>
         {title}
       </Label>
-      <Label fontSize={15} lines={blurbLines} color={theme.outline}>
+      <Label fontSize={15} wrap color={theme.outline}>
         {blurb}
       </Label>
       {children}

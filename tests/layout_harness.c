@@ -1,6 +1,7 @@
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
 #include "ui/layout.h"
+#include "ui/text.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,6 +50,13 @@ static ReactInstance *button(ReactInstance *parent, int x, int y, int width, int
 {
     return add(parent,
                (ReactInstance){.type = NT_BUTTON, .props.button = {.x = x, .y = y, .width = width, .height = height}});
+}
+
+static ReactInstance *text(ReactInstance *parent, TextProps props, const char *content)
+{
+    ReactInstance *inst = add(parent, (ReactInstance){.type = NT_TEXT, .props.text = props});
+    add(inst, (ReactInstance){.type = NT_RAW_TEXT, .props.raw_text = (char *)content});
+    return inst;
 }
 
 static ReactInstance *stack(ReactInstance *parent, StackProps props)
@@ -151,22 +159,6 @@ static void test_nested(void)
     free_tree(outer);
 }
 
-static void test_unflowed_children(void)
-{
-    ReactInstance *s = stack(NULL, (StackProps){.gap = 5, .padding = 4});
-    ReactInstance *text = add(s, (ReactInstance){.type = NT_TEXT, .props.text = {.x = 3, .y = 7}});
-    ReactInstance *raw = add(text, (ReactInstance){.type = NT_RAW_TEXT});
-    ReactInstance *panel = rect(s, 0, 0, 100, 40);
-    ReactInstance *inner = rect(panel, 12, 9, 10, 10);
-    run_layout(s);
-
-    expect_at(text, 7, 11, "text keeps its own x/y from inside the padding");
-    expect_at(raw, 0, 0, "raw text has no position of its own");
-    expect_at(panel, 4, 4, "text does not take space in the flow");
-    expect_at(inner, 12, 9, "a rect's children sit at their own x/y");
-    free_tree(s);
-}
-
 // The smoke Deck App's Scroll: x 20, y 82, 920x404, gap 8, padding 10, with three 64px rows, a 72px image row
 // and two 36px buttons. The flow before Stack placed them at 10, 82, 154, 226, 306 and 350 with content height
 // 6 * 8 + 3 * 64 + 72 + 2 * 36 - 8 + 2 * 10 = 396.
@@ -184,7 +176,6 @@ static void test_scroll_matches_previous_flow(void)
         rows[i] = rect(scroll, 0, 0, 900, 64);
     }
     rows[3] = rect(scroll, 0, 0, 900, 72);
-    ReactInstance *title = add(rows[3], (ReactInstance){.type = NT_TEXT, .props.text = {.x = 10, .y = 6}});
     rows[4] = button(scroll, 0, 0, 220, 36);
     rows[5] = button(scroll, 0, 0, 220, 36);
     run_layout(scroll);
@@ -193,7 +184,6 @@ static void test_scroll_matches_previous_flow(void)
     for (int i = 0; i < 6; i++) {
         expect_at(rows[i], 10, want_y[i], "scroll children land where the previous flow put them");
     }
-    expect_at(title, 10, 6, "text inside a row keeps its own x/y");
     expect_at(scroll, 20, 82, "a scroll sits at its own x/y");
     expect_size(scroll, 920, 404, "a scroll keeps its viewport size");
     expect(scroll->layout.content_height == 396, "scroll content height matches the previous flow");
@@ -282,17 +272,145 @@ static void test_scroll_in_row(void)
     free_tree(col);
 }
 
+// Expected sizes come from the measurement the renderer uses, at the Runtime Default Font's own metrics.
+static int width_of(const char *line, int font_size)
+{
+    return (int)(text_measure(font_registry_get(NULL), line, font_size) + 0.5f);
+}
+
+static int line_height_of(int font_size)
+{
+    return text_line_height(font_registry_get(NULL), font_size) + 4;
+}
+
+static void test_text_in_column(void)
+{
+    ReactInstance *s = stack(NULL, (StackProps){.gap = 4, .padding = 2});
+    ReactInstance *title = text(s, (TextProps){.font_size = 20}, "Hello");
+    ReactInstance *r = rect(s, 0, 0, 50, 10);
+    ReactInstance *lines = text(s, (TextProps){.font_size = 16, .line_height = 30, .x = 3, .y = 5}, "a\nwider line");
+    ReactInstance *defaulted = text(s, (TextProps){0}, "x");
+    run_layout(s);
+
+    const int h = line_height_of(20);
+    expect_at(title, 2, 2, "text starts inside the padding like any child");
+    expect_size(title, width_of("Hello", 20), h, "text is as wide as its line and one line high");
+    expect_at(r, 2, 2 + h + 4, "the next child follows the text and the gap");
+    expect_at(lines, 5, 2 + h + 4 + 10 + 4 + 5, "y is a leading margin and x an offset, as for any child");
+    expect_size(lines, width_of("wider line", 16), 60, "text is as wide as its widest line and lineHeight per line");
+    expect_size(defaulted, width_of("x", VD_TEXT_FONT_SIZE_DEFAULT), line_height_of(VD_TEXT_FONT_SIZE_DEFAULT),
+                "text without fontSize is measured at the default size");
+    expect(s->layout.height == lines->layout.y + 60 + 4 + defaulted->layout.height + 2,
+           "the column fits its text children");
+    free_tree(s);
+}
+
+static void test_text_in_row(void)
+{
+    ReactInstance *s = stack(NULL, (StackProps){.direction = STACK_ROW, .gap = 10, .align = STACK_ALIGN_CENTER});
+    ReactInstance *label = text(s, (TextProps){.font_size = 20}, "Label");
+    ReactInstance *b = button(s, 0, 0, 100, 60);
+    ReactInstance *after = text(s, (TextProps){.font_size = 20}, "After");
+    run_layout(s);
+
+    const int w = width_of("Label", 20);
+    const int h = line_height_of(20);
+    expect_at(label, 0, (60 - h) / 2, "text is centered on the cross axis by its line height");
+    expect_at(b, w + 10, 0, "a button follows the text's width and the gap");
+    expect_at(after, w + 10 + 100 + 10, (60 - h) / 2, "text flows after a button");
+    expect_size(s, w + 10 + 100 + 10 + width_of("After", 20), 60, "the row fits its text children");
+    free_tree(s);
+}
+
+static void test_wrapped_text(void)
+{
+    const char *copy = "Word wrap breaks this sentence into several lines inside its width.";
+    ReactInstance *s = stack(NULL, (StackProps){.gap = 6});
+    ReactInstance *wrapped =
+        text(s, (TextProps){.font_size = 16, .width = 150, .line_height = 20, .wrap = TEXT_WRAP_WORD}, copy);
+    ReactInstance *after = rect(s, 0, 0, 10, 10);
+    run_layout(s);
+
+    const int count = text_lines(wrapped)->count;
+    expect(count > 2, "the sentence wraps into several lines");
+    expect_size(wrapped, 150, count * 20, "wrapped text takes its width and one lineHeight per line");
+    expect_at(after, 0, count * 20 + 6, "the next child follows every wrapped line");
+    free_tree(s);
+
+    ReactInstance *unwrapped = text(NULL, (TextProps){.font_size = 16, .width = 150}, copy);
+    run_layout(unwrapped);
+    expect_size(unwrapped, width_of(copy, 16), line_height_of(16),
+                "without wrap a line wider than width stays one line and sets the width");
+    free_tree(unwrapped);
+}
+
+static void test_text_align_in_stack(void)
+{
+    ReactInstance *s = stack(NULL, (StackProps){.width = 400, .padding = 10, .align = STACK_ALIGN_END});
+    ReactInstance *fitted = text(s, (TextProps){.font_size = 20, .align = TEXT_ALIGN_CENTER}, "short");
+    ReactInstance *boxed = text(s, (TextProps){.font_size = 20, .width = 200, .align = TEXT_ALIGN_RIGHT}, "short");
+    run_layout(s);
+
+    expect_at(fitted, 390 - width_of("short", 20), 10, "the stack aligns text by its measured width");
+    expect_size(boxed, 200, line_height_of(20), "a text's own align works inside its stated width");
+    expect_at(boxed, 190, 10 + line_height_of(20), "the stack aligns text by its stated width");
+    free_tree(s);
+}
+
+static void test_text_in_rect(void)
+{
+    ReactInstance *row = rect(NULL, 0, 0, 900, 64);
+    ReactInstance *title = text(row, (TextProps){.x = 10, .y = 6, .font_size = 16}, "Title");
+    ReactInstance *panel = rect(row, 0, 0, 10, 10);
+    ReactInstance *body = text(row, (TextProps){.x = 10, .y = 26, .font_size = 13, .line_height = 15}, "Body");
+    ReactInstance *third = text(row, (TextProps){.x = 10, .y = 0, .font_size = 20}, "Third");
+    run_layout(row);
+
+    expect_at(title, 10, 6, "the first text in a rect keeps its own x/y");
+    expect_at(panel, 0, 0, "other rect children are not moved by text");
+    expect_at(body, 10, 26 + 15, "each later text in a rect sits one of its own lines lower per text before it");
+    expect_at(third, 10, 2 * line_height_of(20), "two texts before it move it two of its lines");
+    free_tree(row);
+
+    ReactInstance *s = stack(NULL, (StackProps){0});
+    text(s, (TextProps){.font_size = 20}, "One");
+    ReactInstance *two = text(s, (TextProps){.font_size = 20}, "Two");
+    run_layout(s);
+    expect_at(two, 0, line_height_of(20), "texts in a stack only flow, without the rect's extra line");
+    free_tree(s);
+}
+
+static bool default_font_present(void)
+{
+    FILE *file = fopen("assets/fonts/DejaVuSans.ttf", "rb");
+    if (!file) return false;
+    fclose(file);
+    return true;
+}
+
 int main(void)
 {
     test_column();
     test_row_center();
     test_align_end();
     test_nested();
-    test_unflowed_children();
     test_scroll_matches_previous_flow();
     test_scroll_in_column();
     test_scroll_fills_rest();
     test_scroll_in_row();
+
+    // Without the Runtime Default Font, text would measure with raylib's built-in font, which needs a window.
+    if (default_font_present()) {
+        font_registry_init();
+        test_text_in_column();
+        test_text_in_row();
+        test_wrapped_text();
+        test_text_align_in_stack();
+        test_text_in_rect();
+        font_registry_shutdown();
+    } else {
+        printf("layout_harness: skipping Text cases, assets/fonts/DejaVuSans.ttf is missing\n");
+    }
 
     if (failures) {
         fprintf(stderr, "layout_harness: %d failure(s)\n", failures);

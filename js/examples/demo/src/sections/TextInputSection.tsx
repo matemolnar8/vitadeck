@@ -32,7 +32,7 @@ export function TextInputSection() {
         autoFocus
       />
       <Label fontSize={20}>{name ? `Hello, ${name}!` : "No name confirmed yet."}</Label>
-      <Label fontSize={14} lines={2} color={theme.outline}>
+      <Label fontSize={14} wrap color={theme.outline}>
         {`Each confirmed value is saved with storage.setItem("${NAME_KEY}"), so it is still here after a Deck App Runtime Restart. The Storage section can clear it.`}
       </Label>
     </Section>

@@ -10,7 +10,6 @@ export function TextSection() {
     <Section
       title="Text"
       blurb="UTF-8 text with align, word wrap, lineHeight, any fontSize and declared Deck App Fonts."
-      blurbLines={1}
     >
       <Stack direction="row" gap={10}>
         {ALIGNS.map((align) => (
@@ -19,7 +18,7 @@ export function TextSection() {
           </Rect>
         ))}
       </Stack>
-      <Label fontSize={14} lines={2}>
+      <Label fontSize={14} wrap>
         {
           'wrap="word" breaks long lines at spaces inside width, and lineHeight sets the distance between them. This sentence is long enough to need a second line.'
         }
