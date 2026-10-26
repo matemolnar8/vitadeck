@@ -1,1 +1,0 @@
-{"path":"tests/bench/baselines/vita3k/meta.json","ref":"2e0ae62408e1b95b9b9d4d0a7620cfcf728694a0","side":"new","content":"{\n  \"target\": \"vita3k\",\n  \"commit\": \"220d94d\",\n  \"dirty\": false,\n  \"date\": \"2026-10-26T20:00:36Z\",\n  \"machine\": \"Darwin x86_64 Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz\"\n}\n","language":"json"}
