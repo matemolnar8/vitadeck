@@ -1,0 +1,1 @@
+{"path":"tests/bench/baselines/vita/meta.json","ref":"fdd0f22b606ff6068c0a3234ef5014d4d9ad40a8","side":"old","content":"{\n  \"target\": \"vita\",\n  \"commit\": \"4202f0d\",\n  \"dirty\": false,\n  \"date\": \"2026-10-26T16:59:59Z\",\n  \"machine\": \"PS Vita\"\n}\n","language":"json"}
