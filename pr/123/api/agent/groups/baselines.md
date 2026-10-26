@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 37890a509945b80e7dbaeab3a5a87c58234b5e14` and `git rev-parse --verify 7be7157d78cab3a7b95cfa1b4f4f64424b107fb0` in this repository.
+   Run `git rev-parse --verify 37890a509945b80e7dbaeab3a5a87c58234b5e14` and `git rev-parse --verify a724ceea7f72a91e7420366537b01c70afbb9126` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 37890a509945b80e7dbaeab3a5a87c58234b5e14 7be7157d78cab3a7b95cfa1b4f4f64424b107fb0 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 37890a509945b80e7dbaeab3a5a87c58234b5e14 a724ceea7f72a91e7420366537b01c70afbb9126 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,13 +25,13 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  37890a509945b80e7dbaeab3a5a87c58234b5e14
 
-head               7be7157d78cab3a7b95cfa1b4f4f64424b107fb0
+head               a724ceea7f72a91e7420366537b01c70afbb9126
 
 Named refs at pin: 37890a509945b80e7dbaeab3a5a87c58234b5e14 ... t3/perf-benchmark-suite
 
 Read the diff:
 
-git diff --find-renames 37890a509945b80e7dbaeab3a5a87c58234b5e14 7be7157d78cab3a7b95cfa1b4f4f64424b107fb0
+git diff --find-renames 37890a509945b80e7dbaeab3a5a87c58234b5e14 a724ceea7f72a91e7420366537b01c70afbb9126
 
 Review concern 04 of 05: Recorded baselines (`baselines`)
 

@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 37890a509945b80e7dbaeab3a5a87c58234b5e14` and `git rev-parse --verify 7be7157d78cab3a7b95cfa1b4f4f64424b107fb0` in this repository.
+   Run `git rev-parse --verify 37890a509945b80e7dbaeab3a5a87c58234b5e14` and `git rev-parse --verify a724ceea7f72a91e7420366537b01c70afbb9126` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,17 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  37890a509945b80e7dbaeab3a5a87c58234b5e14
 
-head               7be7157d78cab3a7b95cfa1b4f4f64424b107fb0
+head               a724ceea7f72a91e7420366537b01c70afbb9126
 
 Named refs at pin: 37890a509945b80e7dbaeab3a5a87c58234b5e14 ... t3/perf-benchmark-suite
 
 Read the diff:
 
-git diff --find-renames 37890a509945b80e7dbaeab3a5a87c58234b5e14 7be7157d78cab3a7b95cfa1b4f4f64424b107fb0
+git diff --find-renames 37890a509945b80e7dbaeab3a5a87c58234b5e14 a724ceea7f72a91e7420366537b01c70afbb9126
 
 Commits:
+- a724cee fix(bench): update a baseline only from a full, passing run
+- 959fabf perf(bench): skip the commit hooks outside Benchmark Mode
 - 7be7157 test(bench): record the Vita baseline
 - 4202f0d test(bench): record the Vita3K baseline
 - d1977c6 perf(runtime): drop the always-on reconciler method timing
@@ -57,7 +59,7 @@ The what (large):
 Adds Benchmark Mode to the shipping binary: a request file makes the next launch play scripted input against example Deck Apps, time UI frames and the JS loop, write result.json and exit; scripts/bench.sh runs it on the host, in Vita3K or on the Vita and compares against committed baselines. Separately, it deletes the reconciler's always-on method timing.
 
 Look for:
-- Perf: [The PR](source:s1) says every hook returns on its first branch when Benchmark Mode is off, but three costs run unconditionally: `event_queue_push` stamps `queued_us`, `process_input_events` reads the clock once per event, and `instance_back_mark_dirty` bumps a counter. Each is one clock read or increment per event or mutation.
+- Perf: [The PR](source:s1) says every hook returns on its first branch when Benchmark Mode is off. Two small costs still run unconditionally: `event_queue_push` stamps `queued_us` and `process_input_events` reads the clock once per event, and `instance_back_mark_dirty` bumps a counter per mutation.
 - `scripts/bench.sh vita` uploads any font or emoji the Vita lacks; on a Vita without them the first run spends most of an hour uploading about 4000 emoji over VitaShell FTP.
 
 ## Review concerns
@@ -70,7 +72,7 @@ Look for:
 
 ### 02 Timing hooks in the UI and JS loops (`hooks`)
 
-`main.c`, `render.c`, `js_runtime.c` and `jslib.c` call the `bench_*` marks around existing work, and the reconciler reports commits through `nativeBenchCommit`, while `package_library_set_active_transient` lets a scenario switch Deck App without persisting it.
+`main.c`, `render.c`, `js_runtime.c` and `jslib.c` call the `bench_*` marks around existing work, the reconciler reports commits through `nativeBenchCommit` only when `nativeBenchActive()` was true at load, and `package_library_set_active_transient` lets a scenario switch Deck App without persisting it.
 
 Depends on:
 - 01 Benchmark Mode state machine and clocks (`core`)
@@ -97,6 +99,6 @@ Depends on:
 
 ### 05 Drop always-on reconciler timing (`metrics-removal`)
 
-`reconciler-metrics.ts` is deleted, the reconciler passes `hostConfig` straight to `Reconciler`, and `main.tsx` stops logging and exporting the metrics.
+`reconciler-metrics.ts` is deleted, the reconciler passes `hostConfig` straight to `Reconciler`, and `main.tsx` stops logging and exporting the metrics; the `hostConfig` hunk also declares the `benchActive` constant the hooks group uses.
 
 [groups/metrics-removal.md](groups/metrics-removal.md)
