@@ -21,12 +21,19 @@ typedef struct {
     VdUploadServer upload_server;
 } VdShell;
 
+// System Input and Shell navigation pressed this frame.
+typedef struct {
+    bool start, confirm, back, up, down, left, right;
+} VdShellInput;
+
 void shell_init(VdShell *shell);
 void shell_show_home(VdShell *shell);
 void shell_shutdown(VdShell *shell);
 bool shell_is_visible(const VdShell *shell);
 void shell_update(VdShell *shell, bool *request_runtime_restart);
+// Samples raylib and applies it with shell_apply_system_input.
 void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart);
+void shell_apply_system_input(VdShell *shell, const VdShellInput *input, bool *request_runtime_restart);
 void shell_render(VdShell *shell);
 
 #endif /* VD_SHELL_H */
