@@ -462,6 +462,32 @@ static JSValue native_create_raw_text(JSContext *ctx, JSValueConst this_val, int
     return JS_UNDEFINED;
 }
 
+// Takes child out of its parent's children, or the root's. React moves an attached child by appending or
+// inserting it again, so every link change starts here and a child is never listed twice.
+static void unlink_child(ReactInstance *child)
+{
+    if (!child->parent) {
+        instance_back_root_remove(child);
+        return;
+    }
+    ReactInstance *parent = child->parent;
+    for (int i = 0; i < arrlen(parent->children); i++) {
+        if (parent->children[i] == child) {
+            arrdel(parent->children, i);
+            break;
+        }
+    }
+    child->parent = NULL;
+}
+
+// React only calls detachDeletedInstance for host components, never for text instances, so raw text is freed
+// here: when React removes it directly, or when its parent is destroyed.
+static void destroy_raw_text(ReactInstance *inst)
+{
+    instance_back_del(inst->id);
+    instance_back_free(inst);
+}
+
 static JSValue native_append_child(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
@@ -484,10 +510,12 @@ static JSValue native_append_child(JSContext *ctx, JSValueConst this_val, int ar
     }
 
     if (parent_id[0] == '\0') {
+        unlink_child(child);
         instance_back_root_append(child);
     } else {
         ReactInstance *parent = instance_back_find(parent_id);
         if (parent) {
+            unlink_child(child);
             child->parent = parent;
             arrput(parent->children, child);
         }
@@ -525,6 +553,7 @@ static JSValue native_insert_before(JSContext *ctx, JSValueConst this_val, int a
     }
 
     if (parent_id[0] == '\0') {
+        unlink_child(child);
         instance_back_root_insert(child, before);
     } else {
         ReactInstance *parent = instance_back_find(parent_id);
@@ -534,6 +563,7 @@ static JSValue native_insert_before(JSContext *ctx, JSValueConst this_val, int a
             JS_FreeCString(ctx, before_id);
             return JS_UNDEFINED;
         }
+        unlink_child(child);
         child->parent = parent;
 
         int count = arrlen(parent->children);
@@ -559,43 +589,14 @@ static JSValue native_remove_child(JSContext *ctx, JSValueConst this_val, int ar
     instance_back_mark_dirty();
     if (argc < 2) return JS_UNDEFINED;
 
-    const char *parent_id = JS_ToCString(ctx, argv[0]);
     const char *child_id = JS_ToCString(ctx, argv[1]);
-
-    if (!parent_id || !child_id) {
-        JS_FreeCString(ctx, parent_id);
-        JS_FreeCString(ctx, child_id);
-        return JS_UNDEFINED;
-    }
+    if (!child_id) return JS_UNDEFINED;
 
     ReactInstance *child = instance_back_find(child_id);
-    if (!child) {
-        JS_FreeCString(ctx, parent_id);
-        JS_FreeCString(ctx, child_id);
-        return JS_UNDEFINED;
+    if (child) {
+        unlink_child(child);
+        if (child->type == NT_RAW_TEXT) destroy_raw_text(child);
     }
-
-    if (parent_id[0] == '\0') {
-        instance_back_root_remove(child);
-    } else {
-        ReactInstance *parent = instance_back_find(parent_id);
-        if (!parent) {
-            JS_FreeCString(ctx, parent_id);
-            JS_FreeCString(ctx, child_id);
-            return JS_UNDEFINED;
-        }
-
-        int count = arrlen(parent->children);
-        for (int i = 0; i < count; i++) {
-            if (parent->children[i] == child) {
-                arrdel(parent->children, i);
-                break;
-            }
-        }
-    }
-
-    child->parent = NULL;
-    JS_FreeCString(ctx, parent_id);
     JS_FreeCString(ctx, child_id);
     return JS_UNDEFINED;
 }
@@ -615,6 +616,16 @@ static JSValue native_destroy_instance(JSContext *ctx, JSValueConst this_val, in
         return JS_UNDEFINED;
     }
 
+    // React destroys a deleted subtree in no particular order, so leave no links to inst behind.
+    unlink_child(inst);
+    for (int i = 0; i < arrlen(inst->children); i++) {
+        ReactInstance *child = inst->children[i];
+        if (child->type == NT_RAW_TEXT) {
+            destroy_raw_text(child);
+        } else {
+            child->parent = NULL;
+        }
+    }
     instance_back_del(id);
     instance_back_free(inst);
 
