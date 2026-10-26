@@ -398,6 +398,10 @@ if(NOT DEFINED ENV{VITASDK})
     target_link_libraries(js_limits_vita_stack_harness ${VITADECK_LIBRARIES})
     add_test(NAME js_limits_vita_stack_harness COMMAND js_limits_vita_stack_harness)
 
+    add_executable(input_budget_harness tests/input_budget_harness.c ${HOST_RUNTIME_SOURCES})
+    target_link_libraries(input_budget_harness ${VITADECK_LIBRARIES})
+    add_test(NAME input_budget_harness COMMAND input_budget_harness)
+
     add_executable(smoke_harness tests/smoke_harness.c ${HOST_RUNTIME_SOURCES})
     target_link_libraries(smoke_harness ${VITADECK_LIBRARIES})
     add_dependencies(smoke_harness js_copy)

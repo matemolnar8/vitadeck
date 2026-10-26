@@ -75,8 +75,13 @@ static void call_runtime_input(JSContext *ctx, const char *fn_name, const char *
     JS_FreeValue(ctx, global);
 }
 
+// About one 60 FPS frame. Past it the loop moves on to timers, microtasks and the snapshot swap, so a backlog of
+// slow handlers still lets each step reach the screen. The rest of the queue waits for the next iteration.
+#define INPUT_BUDGET_US 16000
+
 bool process_input_events(JSContext *ctx)
 {
+    const uint64_t budget_end_us = vd_now_us() + INPUT_BUDGET_US;
     bool ran = false;
     InputEvent evt;
     while (event_queue_pop(&evt)) {
@@ -95,6 +100,7 @@ bool process_input_events(JSContext *ctx)
         free(evt.text);
         bench_js_input_handled(JS_GetRuntime(ctx), evt.queued_us, started_us);
         ran = true;
+        if (vd_now_us() >= budget_end_us) break;
     }
     return ran;
 }
