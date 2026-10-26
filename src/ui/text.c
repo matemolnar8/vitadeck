@@ -11,6 +11,8 @@
 
 static Texture2D g_page_textures[VD_GLYPH_ATLAS_PAGE_MAX];
 static bool g_overflow_warned = false;
+static Texture2D g_raylib_shapes_texture;
+static Rectangle g_raylib_shapes_source;
 
 void text_begin_frame(void)
 {
@@ -19,6 +21,7 @@ void text_begin_frame(void)
 
 void text_reset(void)
 {
+    if (IsTextureValid(g_page_textures[0])) SetShapesTexture(g_raylib_shapes_texture, g_raylib_shapes_source);
     for (int i = 0; i < VD_GLYPH_ATLAS_PAGE_MAX; i++) {
         if (IsTextureValid(g_page_textures[i])) UnloadTexture(g_page_textures[i]);
     }
@@ -45,6 +48,14 @@ void text_upload_pages(void)
         Image image = {(void *)pixels, VD_GLYPH_ATLAS_PAGE_SIZE, VD_GLYPH_ATLAS_PAGE_SIZE, 1,
                        PIXELFORMAT_UNCOMPRESSED_R8G8B8A8};
         g_page_textures[page] = LoadTextureFromImage(image);
+        if (page == 0 && IsTextureValid(g_page_textures[0])) {
+            // Shapes draw from page 0's white square, so they batch with the text around them: a texture switch
+            // costs a draw call, and a screen of Buttons alternates shapes and text.
+            g_raylib_shapes_texture = GetShapesTexture();
+            g_raylib_shapes_source = GetShapesTextureRectangle();
+            SetShapesTexture(g_page_textures[0],
+                             (Rectangle){1, 1, VD_GLYPH_ATLAS_WHITE_SIZE - 2, VD_GLYPH_ATLAS_WHITE_SIZE - 2});
+        }
         TraceLog(LOG_DEBUG, "TEXT: Glyph atlas page %d of %d added (%d KiB)", page + 1, VD_GLYPH_ATLAS_PAGE_MAX,
                  VD_GLYPH_ATLAS_PAGE_BYTES / 1024);
     }
