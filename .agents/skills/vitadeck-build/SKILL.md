@@ -54,6 +54,8 @@ The `upload_vita`, `upload_vpk`, and `run` targets send the build to a Vita over
 
 `upload_vpk` copies the VPK to `ux0:/download/` for a manual install. `upload_vita` (and `run`) stops the running app, uploads `eboot.bin`, the runtime and the fonts, then relaunches. It also uploads `assets/emoji` (about 4,000 PNGs in one curl run), but only the first time per build directory and Vita IP and again when the images change, tracked by `out-vita/upload_emoji-<ip>.stamp`; delete that stamp to force a re-upload, e.g. after removing the app from the Vita.
 
+Without the device, run the VPK in the Vita3K emulator with `scripts/vita3k.sh` (skill `vitadeck-emulator`).
+
 ## Workflows
 
 ### Canonical agent checks
