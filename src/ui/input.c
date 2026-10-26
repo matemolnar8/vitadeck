@@ -212,12 +212,16 @@ static bool touch_finish_scroll_gesture(void)
     return true;
 }
 
+// New Focus scrolls into view; touch momentum stops so it does not carry the control back out.
 static void set_focus(const char *new_id)
 {
     if (same_id(focused_id, new_id)) return;
     if (focused_id) push_input_event(focused_id, "blur");
     replace_id(&focused_id, new_id);
-    if (focused_id) push_input_event(focused_id, "focus");
+    if (!focused_id) return;
+    push_input_event(focused_id, "focus");
+    touch_stop_momentum();
+    instance_scroll_into_view(focused_id);
 }
 
 static void clear_focus(void)

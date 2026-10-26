@@ -571,6 +571,33 @@ bool instance_scroll_for_descendant(const char *id, char out_id[VD_INSTANCE_ID_M
     return found;
 }
 
+void instance_scroll_into_view(const char *id)
+{
+    vd_mutex_lock(snapshot_mutex);
+    const ReactInstance *inst = find_front_instance_unlocked(front_snapshot, id);
+    if (inst) {
+        const int height = inst->layout.height;
+        // inst's top relative to the current ancestor; inside a Scroll, after that Scroll's offset.
+        int top = 0;
+        for (const ReactInstance *child = inst; child->parent; child = child->parent) {
+            const ReactInstance *scroll = child->parent;
+            top += child->layout.y;
+            if (scroll->type != NT_SCROLL) continue;
+
+            const int viewport = scroll->layout.height;
+            int offset = scroll_get_offset(scroll->id);
+            if (top + height > offset + viewport) offset = top + height - viewport;
+            if (top < offset) offset = top;
+            const int max_offset = scroll_max_offset(viewport, scroll->layout.content_height);
+            if (offset > max_offset) offset = max_offset;
+            if (offset < 0) offset = 0;
+            scroll_set_offset(scroll->id, offset);
+            top -= offset;
+        }
+    }
+    vd_mutex_unlock(snapshot_mutex);
+}
+
 bool instance_scroll_at(int x, int y, char out_id[VD_INSTANCE_ID_MAX])
 {
     bool found = false;

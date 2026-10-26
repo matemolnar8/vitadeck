@@ -86,7 +86,7 @@ _Avoid_: App shortcut, global hotkey, hidden button
 **Start Input**: Toggles between the **Deck App** and the **VitaDeck Shell**. Hiding the Shell requires an **Active Deck App**; it never stops the **Runtime Upload Listener**.
 _Avoid_: Game menu, global pause, app back button
 
-**Focus**: The one **Deck App** control the D-pad moves between and Cross presses. **Button** and **Text Input** take Focus; a touch press presses directly and clears it. On the host, mouse hover and mouse press move Focus to that **Button**.
+**Focus**: The one **Deck App** control the D-pad moves between and Cross presses. **Button** and **Text Input** take Focus; a touch press presses directly and clears it. On the host, mouse hover and mouse press move Focus to that **Button**. A `Scroll` scrolls just enough to show the control that takes Focus.
 _Avoid_: Selection, hover, highlight, active element
 
 **Press**: The input gesture behind **Button** and **Text Input** callbacks.

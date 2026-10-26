@@ -125,6 +125,10 @@ bool instance_scroll_metrics(const char *id, int *viewport_height, int *content_
 // Copies its id into out_id and returns true, or returns false when there is none.
 bool instance_scroll_for_descendant(const char *id, char out_id[VD_INSTANCE_ID_MAX]);
 
+// Scrolls every Scroll containing id, innermost first, by the least that shows id's whole layout bounds, clamped
+// to the content. UI thread only, like the offsets.
+void instance_scroll_into_view(const char *id);
+
 // Deepest scroll container whose viewport contains (x, y).
 // Copies its id into out_id and returns true, or returns false when there is none.
 bool instance_scroll_at(int x, int y, char out_id[VD_INSTANCE_ID_MAX]);

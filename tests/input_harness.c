@@ -2,6 +2,7 @@
 #include "instance_fixture.h"
 #include "core/event_queue.h"
 #include "ui/input.h"
+#include "ui/scroll.h"
 
 #include <raylib.h>
 #include <stdio.h>
@@ -218,6 +219,83 @@ static void test_auto_focus(void)
     instance_tree_clear();
 }
 
+static void expect_offset(const char *scroll_id, int want, const char *message)
+{
+    const int got = scroll_get_offset(scroll_id);
+    if (got != want) {
+        fprintf(stderr, "input_harness: %s offset %d, want %d\n", scroll_id, got, want);
+        expect(false, message);
+    }
+}
+
+static void request_focus(const char *id)
+{
+    instance_back_request_focus(id);
+    fixture_publish();
+    gamepad((GamepadSample){0});
+}
+
+// Scroll S 300x120 with gap 10: s0..s3 are 40 high at content y 0, 50, 100 and 150, so the offset goes up to 70.
+// S is wide so that the D-pad, which can focus a Scroll too, prefers the buttons in its left column.
+static void test_focus_scrolls_into_view(void)
+{
+    ReactInstance *s = fixture_scroll(NULL, "S", 0, 0, 300, 120, 10, 0);
+    fixture_button(s, "s0", 0, 0, 100, 40);
+    fixture_button(s, "s1", 0, 0, 100, 40);
+    fixture_button(s, "s2", 0, 0, 100, 40);
+    fixture_button(s, "s3", 0, 0, 100, 40);
+    fixture_publish();
+    reset();
+
+    request_focus("s1");
+    expect_offset("S", 0, "a visible control keeps the offset");
+    gamepad((GamepadSample){.down = true});
+    expect_events("focus:s1 blur:s1 focus:s2", "the D-pad moves to the partly hidden s2");
+    expect_offset("S", 20, "the D-pad scrolls just enough to show s2's bottom edge");
+    gamepad((GamepadSample){.up = true});
+    expect_offset("S", 20, "moving back to a visible control keeps the offset");
+    gamepad((GamepadSample){.up = true});
+    expect_events("blur:s2 focus:s1 blur:s1 focus:s0", "the D-pad moves up to the partly hidden s0");
+    expect_offset("S", 0, "the D-pad scrolls just enough to show s0's top edge");
+
+    request_focus("s3");
+    expect_offset("S", 70, "autoFocus scrolls a fully hidden control into view");
+
+    mouse(10, 5, false);
+    expect_events("blur:s0 focus:s3 blur:s3 focus:s1", "hovering the partly hidden s1 focuses it");
+    expect_offset("S", 50, "hover scrolls the focused control into view");
+
+    instance_tree_clear();
+    scroll_reset();
+}
+
+// Scroll O 100x100 flows o0 (80 high), Scroll I (60 high) and o1 (40 high), so its offset goes up to 80.
+// I holds i0..i3, 40 high each, so its offset goes up to 100.
+static void test_nested_scrolls_into_view(void)
+{
+    ReactInstance *o = fixture_scroll(NULL, "O", 0, 0, 100, 100, 0, 0);
+    fixture_button(o, "o0", 0, 0, 100, 80);
+    ReactInstance *i = fixture_scroll(o, "I", 0, 0, 100, 60, 0, 0);
+    fixture_button(i, "i0", 0, 0, 100, 40);
+    fixture_button(i, "i1", 0, 0, 100, 40);
+    fixture_button(i, "i2", 0, 0, 100, 40);
+    fixture_button(i, "i3", 0, 0, 100, 40);
+    fixture_button(o, "o1", 0, 0, 100, 40);
+    fixture_publish();
+    reset();
+
+    request_focus("i2");
+    expect_offset("I", 60, "the inner Scroll shows i2 first");
+    expect_offset("O", 40, "then the outer Scroll shows where i2 ended up");
+
+    request_focus("o0");
+    expect_offset("O", 0, "the outer Scroll scrolls back for o0");
+    expect_offset("I", 60, "a Scroll that does not contain the focused control keeps its offset");
+
+    instance_tree_clear();
+    scroll_reset();
+}
+
 // One frame of host keyboard editing: typed UTF-8, then Backspace, Enter or Escape.
 static void keys(const char *typed, bool backspace, bool confirm, bool cancel)
 {
@@ -385,6 +463,8 @@ int main(void)
     test_press();
     test_pad_buttons();
     test_auto_focus();
+    test_focus_scrolls_into_view();
+    test_nested_scrolls_into_view();
     test_text_input_editing();
     test_text_input_ends();
     test_text_input_limits();
