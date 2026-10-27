@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2` and `git rev-parse --verify 272bd3f3912f9c6530d785c4b894dd287b997483` in this repository.
+   Run `git rev-parse --verify a526711c80571b41bcfc9b420317b70597c23ede` and `git rev-parse --verify a36879835bbd7c67c3b55491523c8dbaf305f373` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -22,18 +22,21 @@ When no question follows this paste, explain this change.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2
+base (merge-base)  a526711c80571b41bcfc9b420317b70597c23ede
 
-head               272bd3f3912f9c6530d785c4b894dd287b997483
+head               a36879835bbd7c67c3b55491523c8dbaf305f373
 
 Named refs at pin: origin/main ... origin/t3/ci-c-format
 
 Read the diff:
 
-git diff --find-renames 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 272bd3f3912f9c6530d785c4b894dd287b997483
+git diff --find-renames a526711c80571b41bcfc9b420317b70597c23ede a36879835bbd7c67c3b55491523c8dbaf305f373
 
 Commits:
+- a368798 fix(scripts): point clang-format.sh at the CI-pinned version
+- a526711 Merge pull request #136 from matemolnar8/t3/drop-pr-attribution-clause
 - 272bd3f ci: check C formatting of src/ and tests/
+- aca107f docs(agents): drop the PR attribution clause
 
 Sources:
 - transcript Claude session · Oct 27 Retro on the unattended threads behind PRs #127–#135 lists six vitadeck guardrail fixes.
@@ -57,6 +60,6 @@ A `c-format` CI job installs clang-format 21.1.8 from PyPI and runs `scripts/cla
 
 ### 01 Pinned clang-format job (`job`)
 
-The Ubuntu `c-format` job installs a pinned clang-format with `pipx`, runs the same script as the `fast` tier, and `AGENTS.md` names that version.
+The Ubuntu `c-format` job installs a pinned clang-format with `pipx` and runs the same script as the `fast` tier, whose not-found hint and `AGENTS.md` name that version.
 
 [groups/job.md](groups/job.md)

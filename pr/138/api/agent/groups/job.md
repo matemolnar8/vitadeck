@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2` and `git rev-parse --verify 272bd3f3912f9c6530d785c4b894dd287b997483` in this repository.
+   Run `git rev-parse --verify a526711c80571b41bcfc9b420317b70597c23ede` and `git rev-parse --verify a36879835bbd7c67c3b55491523c8dbaf305f373` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 272bd3f3912f9c6530d785c4b894dd287b997483 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames a526711c80571b41bcfc9b420317b70597c23ede a36879835bbd7c67c3b55491523c8dbaf305f373 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -23,15 +23,15 @@ When no question follows this paste, explain this review concern.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2
+base (merge-base)  a526711c80571b41bcfc9b420317b70597c23ede
 
-head               272bd3f3912f9c6530d785c4b894dd287b997483
+head               a36879835bbd7c67c3b55491523c8dbaf305f373
 
 Named refs at pin: origin/main ... origin/t3/ci-c-format
 
 Read the diff:
 
-git diff --find-renames 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 272bd3f3912f9c6530d785c4b894dd287b997483
+git diff --find-renames a526711c80571b41bcfc9b420317b70597c23ede a36879835bbd7c67c3b55491523c8dbaf305f373
 
 Review concern 01 of 01: Pinned clang-format job (`job`)
 
@@ -41,7 +41,7 @@ CI lost its format step in [8cb20a5](source:s3) when clang-format was missing on
 
 The what:
 
-The Ubuntu `c-format` job installs a pinned clang-format with `pipx`, runs the same script as the `fast` tier, and `AGENTS.md` names that version.
+The Ubuntu `c-format` job installs a pinned clang-format with `pipx` and runs the same script as the `fast` tier, whose not-found hint and `AGENTS.md` name that version.
 
 Look for:
 - A local clang-format of another major (MacPorts or Homebrew upgrade) can pass locally and fail this job, or the reverse; `AGENTS.md` now says to match 21.1.8.
@@ -49,3 +49,4 @@ Look for:
 Hunk refs for this concern:
 - .github/workflows/ci.yml
 - AGENTS.md
+- scripts/clang-format.sh
