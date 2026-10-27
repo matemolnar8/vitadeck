@@ -19,9 +19,15 @@ gui_lock() {
   until mkdir "$GUI_LOCK" 2>/dev/null; do
     owner=$(gui_lock_owner)
     pid=${owner%% *}
-    if [[ "$pid" =~ ^[0-9]+$ ]] && ! kill -0 "$pid" 2>/dev/null; then
-      echo "Removing the stale GUI lock of $owner"
-      rm -rf "$GUI_LOCK"
+    # mkdir of reclaim lets one waiter remove a stale lock, and only while its dead owner still holds it, so a
+    # second waiter cannot remove the lock the first just took.
+    if [[ "$pid" =~ ^[0-9]+$ ]] && ! kill -0 "$pid" 2>/dev/null && mkdir "$GUI_LOCK/reclaim" 2>/dev/null; then
+      if [[ "$(gui_lock_owner)" == "$owner" ]]; then
+        echo "Removing the stale GUI lock of $owner"
+        rm -rf "$GUI_LOCK"
+      else
+        rmdir "$GUI_LOCK/reclaim"
+      fi
       continue
     fi
     if ((!waiting)); then
