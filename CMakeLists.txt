@@ -264,7 +264,9 @@ if(NOT DEFINED ENV{VITASDK})
   # The host reads js/runtime.js and assets/ relative to its working directory; links instead of copies keep them
   # current. Build trees from before the links held copies, which CREATE_LINK cannot replace. In the source tree
   # those names are the real js/ and assets/.
-  if(CMAKE_BINARY_DIR STREQUAL CMAKE_SOURCE_DIR)
+  get_filename_component(real_source_dir ${CMAKE_SOURCE_DIR} REALPATH)
+  get_filename_component(real_binary_dir ${CMAKE_BINARY_DIR} REALPATH)
+  if(real_binary_dir STREQUAL real_source_dir)
     message(FATAL_ERROR "In-source builds are not supported; configure a build directory, e.g. cmake -S . -B out")
   endif()
   function(link_into_build name source)
