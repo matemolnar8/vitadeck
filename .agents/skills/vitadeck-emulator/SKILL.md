@@ -14,7 +14,7 @@ scripts/vita3k.sh          # build, then launch
 scripts/vita3k.sh launch   # launch the existing out-vita/vitadeck.vpk
 ```
 
-Emulator config and storage live in `~/.vitadeck/vita3k` (`VITADECK_VITA3K_HOME`), shared by every worktree. `fs/` in there is the emulated Vita: `ux0/data/vitadeck` is the VitaDeck Data Root, `ur0/data` holds the shader compiler. Run `scripts/vita3k.sh help` for the environment variables.
+Emulator config and storage live in `~/.vitadeck/vita3k` (`VITADECK_VITA3K_HOME`), shared by every worktree. Launching waits for the machine-wide GUI lock (`scripts/gui-run.sh`) that `scripts/bench.sh` and `cmake --build out --target run` also take, so one VitaDeck window runs at a time; copying the emulator home doesn't sidestep it. `fs/` in there is the emulated Vita: `ux0/data/vitadeck` is the VitaDeck Data Root, `ur0/data` holds the shader compiler. Run `scripts/vita3k.sh help` for the environment variables.
 
 ## Set up a new machine
 

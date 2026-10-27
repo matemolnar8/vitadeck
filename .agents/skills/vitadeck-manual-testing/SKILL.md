@@ -16,8 +16,8 @@ metadata:
 2. Stage Deck Apps for local runs when `out/vitadeck-data` is missing or stale:
    - `cmake --build out --target stage_examples` copies every built example into `out/vitadeck-data/installed-deck-apps/`.
    - Pick the one to run: `printf 'chat.vdapp\n' > out/vitadeck-data/active-package.txt`. Without this file the Shell opens with no Active Deck App.
-3. Run from `out/`, not the repo root:
-   - `./vitadeck`
+3. Run from `out/`, not the repo root, under the machine-wide GUI lock so it does not overlap a benchmark:
+   - `../scripts/gui-run.sh ./vitadeck`
    - Prefer a task-specific tmux session, e.g. `vitadeck-ui-demo`.
 4. Use `computerUse` for the raylib window. Record only the final successful walkthrough.
 

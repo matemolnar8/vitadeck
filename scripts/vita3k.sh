@@ -7,6 +7,8 @@ FS_DIR="$HOME_DIR/fs"
 CONFIG="$HOME_DIR/config.yml"
 SHACCCG="$FS_DIR/ur0/data/libshacccg.suprx"
 VPK="$ROOT_DIR/out-vita/vitadeck.vpk"
+# shellcheck source=gui-run.sh
+source "$ROOT_DIR/scripts/gui-run.sh"
 
 usage() {
   cat <<'EOF'
@@ -15,6 +17,8 @@ usage: scripts/vita3k.sh [run|launch|shacccg [file]]
 run              Build JS and the VPK (Docker), then launch (default).
 launch           Install out-vita/vitadeck.vpk and the example Deck Apps into Vita3K and run it.
 shacccg [file]   Copy libshacccg.suprx into the emulator; without a file, download it from the Vita's FTP server at $PSVITAIP.
+
+run and launch wait for the machine-wide GUI lock (scripts/gui-run.sh) before touching the emulator.
 
 Environment:
   VITA3K                 Path to the Vita3K executable (default: found on PATH or in Applications)
@@ -93,11 +97,12 @@ vitaGL compiles its shaders with Sony's libshacccg.suprx, which cannot be redist
 EOF
     exit 1
   fi
+  gui_lock launch
   write_config
   step "Stage example Deck Apps"
   "$ROOT_DIR/scripts/stage-example-apps.sh" "$ROOT_DIR" "$FS_DIR/ux0/data/vitadeck"
   step "Install and run in Vita3K (Start: Enter, Cross: X, Circle: C)"
-  "$vita3k" -c "$(native_path "$CONFIG")" --frontend sdl "$(native_path "$VPK")"
+  gui_run "$vita3k" -c "$(native_path "$CONFIG")" --frontend sdl "$(native_path "$VPK")"
 }
 
 shacccg() {
