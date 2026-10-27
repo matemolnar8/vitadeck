@@ -24,7 +24,8 @@ gui_lock() {
     if [[ "$pid" =~ ^[0-9]+$ ]] && ! kill -0 "$pid" 2>/dev/null && mkdir "$GUI_LOCK/reclaim" 2>/dev/null; then
       if [[ "$(gui_lock_owner)" == "$owner" ]]; then
         echo "Removing the stale GUI lock of $owner"
-        rm -rf "$GUI_LOCK"
+        # A rename leaves no half-removed lock for another waiter's mkdir of reclaim to land in.
+        mv "$GUI_LOCK" "$GUI_LOCK.stale.$$" && rm -rf "$GUI_LOCK.stale.$$"
       else
         rmdir "$GUI_LOCK/reclaim"
       fi
@@ -91,5 +92,9 @@ gui_run() {
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
   set -euo pipefail
+  (($#)) || {
+    echo "usage: scripts/gui-run.sh <command...>" >&2
+    exit 2
+  }
   gui_run "$@"
 fi
