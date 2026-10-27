@@ -248,6 +248,7 @@ if(NOT DEFINED ENV{VITASDK})
   )
   file(GLOB_RECURSE js_sources CONFIGURE_DEPENDS
     js/packages/*/src/* js/packages/sdk/cli/templates/*/src/* js/examples/*/src/* js/examples/*/assets/*
+    js/examples/*/scripts/*
   )
   set(js_runtime ${CMAKE_SOURCE_DIR}/js/dist/runtime/runtime.js)
   add_custom_command(OUTPUT ${js_runtime}
