@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2` and `git rev-parse --verify 411554aaf96796d4f990e94021382e9e01662620` in this repository.
+   Run `git rev-parse --verify ece6f2c3bf4d9da1a964534b195c30231cc89a18` and `git rev-parse --verify 173943acf944d4c4ad2aa50f99a6a2933fcbac67` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -22,17 +22,18 @@ When no question follows this paste, explain this change.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2
+base (merge-base)  ece6f2c3bf4d9da1a964534b195c30231cc89a18
 
-head               411554aaf96796d4f990e94021382e9e01662620
+head               173943acf944d4c4ad2aa50f99a6a2933fcbac67
 
-Named refs at pin: origin/main ... HEAD
+Named refs at pin: origin/main ... origin/t3/deck-app-input-harness
 
 Read the diff:
 
-git diff --find-renames 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 411554aaf96796d4f990e94021382e9e01662620
+git diff --find-renames ece6f2c3bf4d9da1a964534b195c30231cc89a18 173943acf944d4c4ad2aa50f99a6a2933fcbac67
 
 Commits:
+- 173943a Merge remote-tracking branch 'origin/main' into t3/deck-app-input-harness
 - 411554a test: press every Pad Button in each example Deck App and switch Deck Apps
 
 Sources:
