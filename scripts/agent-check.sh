@@ -65,7 +65,7 @@ run_host() {
     cmake --build out --parallel
 
     step "Run non-smoke CTest"
-    ctest --test-dir out --output-on-failure -E smoke_harness
+    ctest --test-dir out --output-on-failure -LE smoke
 }
 
 run_smoke_tests() {

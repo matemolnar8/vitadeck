@@ -103,7 +103,7 @@ jobs:
 
       - name: Tests
         # Visual smoke runs in the Linux `smoke` job — see docs/adr/0002-smoke-ci-linux-xvfb.md
-        run: ctest --test-dir out --output-on-failure -E smoke_harness
+        run: ctest --test-dir out --output-on-failure -LE smoke
 
   smoke:
     runs-on: ubuntu-latest

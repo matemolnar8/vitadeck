@@ -72,6 +72,14 @@ bool event_queue_pop(InputEvent *evt)
     return got_event;
 }
 
+bool event_queue_is_empty(void)
+{
+    vd_mutex_lock(queue.mutex);
+    bool empty = queue.count == 0;
+    vd_mutex_unlock(queue.mutex);
+    return empty;
+}
+
 void event_queue_shutdown(void)
 {
     vd_mutex_lock(queue.mutex);

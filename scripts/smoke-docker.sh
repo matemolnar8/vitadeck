@@ -15,7 +15,7 @@ usage() {
   cat <<'EOF'
 usage: scripts/smoke-docker.sh [test|ctest|update-golden|shell]
 
-test          Build and run the Linux smoke test.
+test          Build and run the Linux smoke tests (CTest label smoke).
 ctest         Build every host target and run all CTest harnesses, smoke included.
 update-golden Build and refresh the goldens in tests/fixtures/golden/Linux.
 shell         Open a shell in the smoke Docker image.
@@ -58,14 +58,14 @@ run_inside() {
     step "Build host targets"
     cmake --build "$BUILD_DIR" --parallel "$(nproc)"
   else
-    step "Build smoke harness"
-    cmake --build "$BUILD_DIR" --parallel "$(nproc)" --target smoke_harness
+    step "Build smoke harnesses"
+    cmake --build "$BUILD_DIR" --parallel "$(nproc)" --target smoke_harness deck_app_input_harness
   fi
 
   case "$mode" in
     test)
-      step "Run smoke test"
-      ctest --test-dir "$BUILD_DIR" --output-on-failure -R smoke_harness
+      step "Run smoke tests"
+      ctest --test-dir "$BUILD_DIR" --output-on-failure -L smoke
       ;;
     ctest)
       step "Run all CTest harnesses"
