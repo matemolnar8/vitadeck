@@ -71,7 +71,7 @@ Use `scripts/agent-check.sh` from the repo root; pick the smallest tier that pro
 
 Individual commands: `pnpm --dir js tsc`, `pnpm --dir js test:cli`, `pnpm --dir js lint`, `pnpm --dir js format:check`, `pnpm --dir js build`, `./scripts/clang-format.sh check` (or `format` to apply), `cmake -S . -B out && cmake --build out`, Vita: `docker-compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"`.
 
-- C under `src/` and `tests/` follows `.clang-format`; run `cmake -S . -B out` so `out/compile_commands.json` exists for clangd.
+- C under `src/` and `tests/` follows `.clang-format` with clang-format 21 (CI pins 21.1.8, `pipx install clang-format==21.1.8`); run `cmake -S . -B out` so `out/compile_commands.json` exists for clangd.
 - Write React for the React Compiler: pure renders, Rules of Hooks, accurate effect deps, no manual `useMemo`/`useCallback`/`memo`.
 - For a change that could affect performance (rendering, the reconciler, the JS thread loop), run `scripts/bench.sh vita3k` and compare against the baseline; see the `vitadeck-bench` skill.
 - For a UI change, do one pass in the real host window (load the `vitadeck-manual-testing` skill). Ask before testing on Vita hardware; it is Máté's device.
