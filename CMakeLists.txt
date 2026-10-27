@@ -136,13 +136,10 @@ if(DEFINED ENV{VITASDK})
     target_compile_definitions(quickjs PRIVATE __vita__)
 endif()
 
-set(PLATFORM_SOURCES)
 if(DEFINED ENV{VITASDK})
-  list(APPEND PLATFORM_SOURCES src/platform/thread_vita.c)
-  set(TEXT_INPUT_SOURCES src/platform/text_input_vita.c)
+  set(PLATFORM_SOURCES src/platform/thread_vita.c src/platform/text_input_vita.c)
 else()
-  list(APPEND PLATFORM_SOURCES src/platform/thread_posix.c)
-  set(TEXT_INPUT_SOURCES src/platform/text_input_host.c)
+  set(PLATFORM_SOURCES src/platform/thread_posix.c src/platform/text_input_host.c)
 endif()
 
 set(JSLIB_SOURCES
@@ -183,7 +180,6 @@ set(VITADECK_CORE_SOURCES
     src/upload/http_parse.c
     src/upload/http_server.c
     ${PLATFORM_SOURCES}
-    ${TEXT_INPUT_SOURCES}
 )
 
 set(VITADECK_LIBRARIES m)
@@ -248,9 +244,11 @@ if(NOT DEFINED ENV{VITASDK})
   # It runs only when these inputs change. The Vita build packs whatever an earlier pnpm build left in js/dist.
   file(GLOB js_inputs CONFIGURE_DEPENDS
     js/*.json js/*.yaml js/packages/*/*.json js/packages/*/*.js js/packages/*/*.mjs js/packages/sdk/cli/*.ts
-    js/examples/*/*.json
+    js/packages/sdk/cli/templates/*/*.json js/packages/sdk/cli/templates/*/.gitignore js/examples/*/*.json
   )
-  file(GLOB_RECURSE js_sources CONFIGURE_DEPENDS js/packages/*/src/* js/examples/*/src/* js/examples/*/assets/*)
+  file(GLOB_RECURSE js_sources CONFIGURE_DEPENDS
+    js/packages/*/src/* js/packages/sdk/cli/templates/*/src/* js/examples/*/src/* js/examples/*/assets/*
+  )
   set(js_runtime ${CMAKE_SOURCE_DIR}/js/dist/runtime/runtime.js)
   add_custom_command(OUTPUT ${js_runtime}
     COMMAND pnpm build
@@ -261,9 +259,14 @@ if(NOT DEFINED ENV{VITASDK})
     VERBATIM
   )
   add_custom_target(js ALL DEPENDS ${js_runtime})
+  add_dependencies(${PROJECT_NAME} js)
 
   # The host reads js/runtime.js and assets/ relative to its working directory; links instead of copies keep them
-  # current. Build trees from before the links held copies, which CREATE_LINK cannot replace.
+  # current. Build trees from before the links held copies, which CREATE_LINK cannot replace. In the source tree
+  # those names are the real js/ and assets/.
+  if(CMAKE_BINARY_DIR STREQUAL CMAKE_SOURCE_DIR)
+    message(FATAL_ERROR "In-source builds are not supported; configure a build directory, e.g. cmake -S . -B out")
+  endif()
   function(link_into_build name source)
     set(link ${CMAKE_BINARY_DIR}/${name})
     if(IS_DIRECTORY ${link} AND NOT IS_SYMLINK ${link})
