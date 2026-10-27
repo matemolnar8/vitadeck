@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2` and `git rev-parse --verify 082fca0b6123d1c025f533ae625e4b5a6a5273b9` in this repository.
+   Run `git rev-parse --verify 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2` and `git rev-parse --verify 21f4d669c55fc00053f3ab785a59c45ec9ea9cb5` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,16 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2
 
-head               082fca0b6123d1c025f533ae625e4b5a6a5273b9
+head               21f4d669c55fc00053f3ab785a59c45ec9ea9cb5
 
-Named refs at pin: 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 ... 082fca0b6123d1c025f533ae625e4b5a6a5273b9
+Named refs at pin: 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 ... origin/t3/gui-run-lock
 
 Read the diff:
 
-git diff --find-renames 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 082fca0b6123d1c025f533ae625e4b5a6a5273b9
+git diff --find-renames 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 21f4d669c55fc00053f3ab785a59c45ec9ea9cb5
 
 Commits:
+- 21f4d66 docs(scripts): keep the vita3k.sh command list together in its usage
 - 082fca0 fix(scripts): GUI runs share one machine-wide lock and bench kills hung runs
 
 Sources:
