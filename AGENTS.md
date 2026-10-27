@@ -33,7 +33,7 @@ When this file speaks:
 
 ## Setup
 
-- Node.js 24.16+ (`.nvmrc`; `fnm use` picks it up) and pnpm (pinned by `packageManager` in `js/package.json`). `pnpm --dir js install` once. Older Node bundles a corepack that cannot launch pnpm 11+ and fails with `Cannot find module .../bin/pnpm.cjs`.
+- Node.js 24.16+ (`.nvmrc`; `fnm use` picks it up, and `scripts/agent-check.sh` switches to it through fnm on its own) and pnpm (pinned by `packageManager` in `js/package.json`). `pnpm --dir js install` once. Older Node bundles a corepack that cannot launch pnpm 11+ and fails with `Cannot find module .../bin/pnpm.cjs`.
 - `git submodule update --init --recursive` if `vendor/quickjs/quickjs.c` is missing.
 - Host build needs CMake, raylib 5.5, curl, OpenSSL, zlib (`brew install raylib` on macOS; raylib + OpenGL/X11 dev packages on Linux). On Linux/GCC configure with `CC=gcc CXX=g++ cmake -S . -B out -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group"`.
 - Vita build and Linux smoke run in Docker. Start Docker Desktop first.
@@ -64,12 +64,12 @@ The common defect is a change that works on the host and breaks the Vita, or wor
 
 Use `scripts/agent-check.sh` from the repo root; pick the smallest tier that proves the change:
 
-- `fast` - JS typecheck, SDK CLI tests, JS lint, JS and C format checks. Run after every change.
-- `host` - JS build, host build, non-smoke CTest. Run for any `src/` or runtime change.
+- `fast` - JS install and build, JS typecheck, SDK CLI tests, JS lint, JS and C format checks. Run after every change.
+- `host` - JS install and build, host build, non-smoke CTest. Run for any `src/` or runtime change.
 - `smoke` - Dockerized Linux visual smoke. Run when rendering, theme, fonts, or Deck App output change.
 - `full` - all of the above plus the Vita Docker build. Run before a PR that touches native code.
 
-Individual commands: `pnpm --dir js tsc`, `pnpm --dir js test:cli`, `pnpm --dir js lint`, `pnpm --dir js format:check`, `pnpm --dir js build`, `./scripts/clang-format.sh check` (or `format` to apply), `cmake -S . -B out && cmake --build out`, Vita: `docker-compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"`.
+Individual commands: `pnpm --dir js tsc`, `pnpm --dir js test:cli`, `pnpm --dir js lint`, `pnpm --dir js format:check`, `pnpm --dir js build`, `./scripts/clang-format.sh check` (or `format` to apply), `cmake -S . -B out && cmake --build out`, Vita: `docker compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"`.
 
 - C under `src/` and `tests/` follows `.clang-format` with clang-format 21 (CI pins 21.1.8, `pipx install clang-format==21.1.8`); run `cmake -S . -B out` so `out/compile_commands.json` exists for clangd.
 - Write React for the React Compiler: pure renders, Rules of Hooks, accurate effect deps, no manual `useMemo`/`useCallback`/`memo`.

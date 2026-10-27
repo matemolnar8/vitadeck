@@ -1,6 +1,6 @@
 ---
 name: vitadeck-build
-description: Builds the JS runtime (pnpm in js/), then vitadeck for the host (CMake + raylib) and for PSVita in the Vitasdk Docker Compose service. Use when editing vitadeck C/native or JS/deck-app code, verifying desktop and Vita targets, producing out/vitadeck or out-vita/vitadeck.vpk, or when the user mentions macOS build, PSVita, VPK, VITASDK, docker-compose vitasdk, or js/dist.
+description: Builds the JS runtime (pnpm in js/), then vitadeck for the host (CMake + raylib) and for PSVita in the Vitasdk Docker Compose service. Use when editing vitadeck C/native or JS/deck-app code, verifying desktop and Vita targets, producing out/vitadeck or out-vita/vitadeck.vpk, or when the user mentions macOS build, PSVita, VPK, VITASDK, docker compose vitasdk, or js/dist.
 metadata:
   internal: true
 ---
@@ -47,10 +47,10 @@ cmake -S . -B out && cmake --build out
 **3. PSVita** (artifacts under `out-vita/`, including `vitadeck.vpk` when packaging is enabled):
 
 ```sh
-docker-compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"
+docker compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"
 ```
 
-The `upload_vita`, `upload_vpk`, and `run` targets send the build to a Vita over FTP. They need the Vita's IP in `PSVITAIP` at configure time (Compose passes it into the container), e.g. `PSVITAIP=192.168.1.177 docker-compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita --target run"`. They fail with a message when it is unset.
+The `upload_vita`, `upload_vpk`, and `run` targets send the build to a Vita over FTP. They need the Vita's IP in `PSVITAIP` at configure time (Compose passes it into the container), e.g. `PSVITAIP=192.168.1.177 docker compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita --target run"`. They fail with a message when it is unset.
 
 `upload_vpk` copies the VPK to `ux0:/download/` for a manual install. `upload_vita` (and `run`) stops the running app, uploads `eboot.bin`, the runtime and the fonts, then relaunches. It also uploads `assets/emoji` (about 4,000 PNGs in one curl run), but only the first time per build directory and Vita IP and again when the images change, tracked by `out-vita/upload_emoji-<ip>.stamp`; delete that stamp to force a re-upload, e.g. after removing the app from the Vita.
 
@@ -71,7 +71,7 @@ From the repo root, prefer the tiered verification script:
 
 1. `pnpm --dir js build` (and `pnpm --dir js tsc` when checking types).
 2. Rebuild host: `cmake --build out` (or full configure if CMake changed).
-3. Rebuild Vita: `docker-compose run --rm vitasdk bash -lc "cmake --build out-vita"` (or full configure in the container if CMake changed).
+3. Rebuild Vita: `docker compose run --rm vitasdk bash -lc "cmake --build out-vita"` (or full configure in the container if CMake changed).
 
 ### After C or CMake changes
 
@@ -79,12 +79,12 @@ From the repo root, prefer the tiered verification script:
 
 1. Ensure `js/dist/` is current — run **`pnpm --dir js build`** if JS sources changed or after a clean.
 2. Rebuild host: `cmake --build out` (or full configure line if `CMakeLists.txt` changed).
-3. Rebuild Vita: `docker-compose run --rm vitasdk bash -lc "cmake --build out-vita"` (or full configure inside the container if CMake changed).
+3. Rebuild Vita: `docker compose run --rm vitasdk bash -lc "cmake --build out-vita"` (or full configure inside the container if CMake changed).
 
 ### Clean or switch generators
 
 - Host: remove `out/` and re-run JS step if needed, then configure + build.
-- Vita: remove `out-vita/` inside the same `docker-compose run ... bash -lc "..."` pattern, then configure and build again.
+- Vita: remove `out-vita/` inside the same `docker compose run ... bash -lc "..."` pattern, then configure and build again.
 
 ### Verify both targets
 

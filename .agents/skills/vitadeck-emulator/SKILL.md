@@ -18,7 +18,7 @@ Emulator config and storage live in `~/.vitadeck/vita3k` (`VITADECK_VITA3K_HOME`
 
 ## Set up a new machine
 
-1. Install the Vita build prerequisites: Node.js 22+, pnpm, Docker (see `vitadeck-build`). `scripts/vita3k.sh` uses `docker compose`.
+1. Install the Vita build prerequisites: Node.js 24.16+ (`.nvmrc`), pnpm, Docker (see `vitadeck-build`). `scripts/vita3k.sh` uses `docker compose`.
 2. Install Vita3K:
    - macOS: download the dmg from [vita3k.org](https://vita3k.org) for your CPU (Intel or Apple silicon) and drag `Vita3K.app` to Applications.
    - Windows: `winget install Vita3K.Vita3K`, then run the script from Git Bash. If Vita3K isn't on PATH, set `VITA3K` to `Vita3K.exe`.
