@@ -18,6 +18,8 @@ scripts/bench.sh vita3k --no-build            # rerun the existing build
 
 Results land in `out-bench/<target>-<time>/` (`result.json`, `meta.json`, `log.txt`). `pnpm --dir js bench:report <run dir> [baseline dir]` reprints any run against any other.
 
+`host` and `vita3k` build in parallel with anything, then wait for the machine-wide GUI lock (`scripts/gui-run.sh`, which prints who holds it), so concurrent runs from other worktrees queue instead of skewing each other. A run with no result after `VITADECK_BENCH_TIMEOUT` seconds (default 300) is killed, emulator included, and fails.
+
 - `vita` is the source of truth. Ask Máté before running it; it is his device. It needs VitaShell's FTP server (1337) and vitacompanion (1338) running, uploads `eboot.bin`, `runtime.js`, the example Deck Apps, and any fonts or emoji the Vita lacks (the first time, about 4000 emoji take most of an hour), and leaves the Vita on the LiveArea when done. Get the IP from Máté rather than scanning for it: a bare connection such as `nc -z` crashes VitaShell's FTP and vitacompanion until the Vita restarts.
 - `vita3k` needs the emulator set up (`vitadeck-emulator` skill). Its numbers depend on the machine running it, so compare only against a baseline recorded on the same machine (`meta.json` says which).
 - `host` is fast for checking that a scenario works, but says little about the Vita.

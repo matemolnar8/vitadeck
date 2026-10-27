@@ -8,8 +8,8 @@ usage() {
     cat <<'EOF'
 usage: scripts/agent-check.sh [fast|host|smoke|full]
 
-fast   JS typecheck, CLI tests, JS lint, JS and C formatting checks
-host   JS build, host configure/build, and non-smoke CTest
+fast   JS install and build, JS typecheck, CLI tests, JS lint, JS and C formatting checks
+host   JS install and build, host configure/build, and non-smoke CTest
        (VITADECK_SANITIZE=address,undefined builds the host with sanitizers)
 smoke  Dockerized Linux visual smoke CTest
 full   fast, host, smoke, and Vita Docker build
@@ -23,6 +23,31 @@ step() {
 die() {
     printf '%s\n' "$1" >&2
     exit 1
+}
+
+version_at_least() {
+    [ "$(printf '%s\n%s\n' "$2" "$1" | sort -t. -k1,1n -k2,2n -k3,3n | head -n 1)" = "$2" ]
+}
+
+# A fresh worktree often starts on the shell's default Node. Node needs the .nvmrc major and at least the
+# engines.node minimum in js/package.json.
+use_pinned_node() {
+    major=$(cat .nvmrc)
+    min=$(sed -n 's/.*"node": *">=\([0-9.]*\)".*/\1/p' js/package.json)
+    have=$(node -p 'process.versions.node' 2>/dev/null || echo none)
+    if [ "${have%%.*}" = "$major" ] && version_at_least "$have" "$min"; then
+        return
+    fi
+    if [ -z "${VITADECK_PINNED_NODE:-}" ] && command -v fnm >/dev/null 2>&1; then
+        printf 'Node %s is active; rerunning on Node %s from .nvmrc with fnm.\n' "$have" "$major" >&2
+        VITADECK_PINNED_NODE=1 exec fnm exec --using="$ROOT_DIR/.nvmrc" -- "$ROOT_DIR/scripts/agent-check.sh" "$@"
+    fi
+    die "Node $have is active, but VitaDeck needs Node $major at $min or newer. Install it with fnm install $major, run fnm use, then rerun."
+}
+
+install_js() {
+    step "Install JS dependencies"
+    pnpm --dir js install --frozen-lockfile
 }
 
 configure_host() {
@@ -39,6 +64,13 @@ configure_host() {
 }
 
 run_fast() {
+    install_js
+
+    # tsc reads the SDK's dist and the font and image types `vitadeck build` writes to each example's .vitadeck/,
+    # so a fresh worktree fails it with unrelated errors such as '"mono"' is not assignable.
+    step "Build JS"
+    pnpm --dir js build
+
     step "Typecheck JS"
     pnpm --dir js tsc
 
@@ -56,6 +88,8 @@ run_fast() {
 }
 
 run_host() {
+    install_js
+
     step "Build JS"
     pnpm --dir js build
 
@@ -82,15 +116,12 @@ run_vita() {
     docker info >/dev/null 2>&1 || die "Docker daemon not running; start Docker Desktop and rerun scripts/agent-check.sh full."
 
     step "Build Vita target"
-    if docker compose version >/dev/null 2>&1; then
-        compose="docker compose"
-    elif command -v docker-compose >/dev/null 2>&1; then
-        compose="docker-compose"
-    else
-        die "Neither docker compose nor docker-compose is available."
-    fi
-    $compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"
+    docker compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"
 }
+
+case "${1:-fast}" in
+    fast | host | full) use_pinned_node "$@" ;;
+esac
 
 case "${1:-fast}" in
     fast)

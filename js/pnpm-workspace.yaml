@@ -23,5 +23,8 @@ catalog:
   "tsx": 4.23.15
   "typescript": 7.0.2
 
+# Fails install on a Node older than engines.node in package.json instead of failing later in tsc.
+engineStrict: true
+
 allowBuilds:
   esbuild: false
