@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 7539bc14c3481390b79fee499bc961194f4cd055` and `git rev-parse --verify 9ffb5d4a96440b7224060250ed7df4d32757b326` in this repository.
+   Run `git rev-parse --verify 7539bc14c3481390b79fee499bc961194f4cd055` and `git rev-parse --verify 56d96fa218b0f5a6d86a6609da45bd9d51f36b7a` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 7539bc14c3481390b79fee499bc961194f4cd055 9ffb5d4a96440b7224060250ed7df4d32757b326 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 7539bc14c3481390b79fee499bc961194f4cd055 56d96fa218b0f5a6d86a6609da45bd9d51f36b7a -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,13 +25,13 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  7539bc14c3481390b79fee499bc961194f4cd055
 
-head               9ffb5d4a96440b7224060250ed7df4d32757b326
+head               56d96fa218b0f5a6d86a6609da45bd9d51f36b7a
 
 Named refs at pin: origin/main ... HEAD
 
 Read the diff:
 
-git diff --find-renames 7539bc14c3481390b79fee499bc961194f4cd055 9ffb5d4a96440b7224060250ed7df4d32757b326
+git diff --find-renames 7539bc14c3481390b79fee499bc961194f4cd055 56d96fa218b0f5a6d86a6609da45bd9d51f36b7a
 
 Review concern 02 of 03: JS as a dependency, links instead of copies (`js`)
 
@@ -52,6 +52,6 @@ Depends on:
 
 Hunk refs for this concern:
 - CMakeLists.txt@1+1
-- CMakeLists.txt@458+349
-- CMakeLists.txt@489+358
-- CMakeLists.txt@589+456
+- CMakeLists.txt@458+350
+- CMakeLists.txt@489+359
+- CMakeLists.txt@589+457

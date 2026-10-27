@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 7539bc14c3481390b79fee499bc961194f4cd055` and `git rev-parse --verify 9ffb5d4a96440b7224060250ed7df4d32757b326` in this repository.
+   Run `git rev-parse --verify 7539bc14c3481390b79fee499bc961194f4cd055` and `git rev-parse --verify 56d96fa218b0f5a6d86a6609da45bd9d51f36b7a` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,16 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  7539bc14c3481390b79fee499bc961194f4cd055
 
-head               9ffb5d4a96440b7224060250ed7df4d32757b326
+head               56d96fa218b0f5a6d86a6609da45bd9d51f36b7a
 
 Named refs at pin: origin/main ... HEAD
 
 Read the diff:
 
-git diff --find-renames 7539bc14c3481390b79fee499bc961194f4cd055 9ffb5d4a96440b7224060250ed7df4d32757b326
+git diff --find-renames 7539bc14c3481390b79fee499bc961194f4cd055 56d96fa218b0f5a6d86a6609da45bd9d51f36b7a
 
 Commits:
+- 56d96fa2 build: rebuild JS when an example's build script changes
 - 9ffb5d4a build: compare real paths in the in-source build guard
 - d821d043 build: rebuild JS for vitadeck and on scaffold edits, refuse in-source builds
 - f779b22e build: one parallel run target, JS as a real dependency
