@@ -16,9 +16,9 @@ usage: scripts/vita3k.sh [run|launch|shacccg [file]]
 
 run              Build JS and the VPK (Docker), then launch (default).
 launch           Install out-vita/vitadeck.vpk and the example Deck Apps into Vita3K and run it.
+shacccg [file]   Copy libshacccg.suprx into the emulator; without a file, download it from the Vita's FTP server at $PSVITAIP.
 
 run and launch wait for the machine-wide GUI lock (scripts/gui-run.sh) before touching the emulator.
-shacccg [file]   Copy libshacccg.suprx into the emulator; without a file, download it from the Vita's FTP server at $PSVITAIP.
 
 Environment:
   VITA3K                 Path to the Vita3K executable (default: found on PATH or in Applications)
