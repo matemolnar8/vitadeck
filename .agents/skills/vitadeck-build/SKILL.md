@@ -38,11 +38,13 @@ pnpm --dir js install
 pnpm --dir js build
 ```
 
-**2. Host** (executable `out/vitadeck`):
+**2. Host** (executable `out/vitadeck`; reruns `pnpm build` when JS changed, so step 1 is only needed once):
 
 ```sh
-cmake -S . -B out && cmake --build out
+cmake -S . -B out && cmake --build out --parallel
 ```
+
+Everyday loop: `cmake --build out --parallel --target run` (or `make -j16 run` from `out/`) rebuilds JS if it changed, builds the host, stages the examples, and launches.
 
 **3. PSVita** (artifacts under `out-vita/`, including `vitadeck.vpk` when packaging is enabled):
 
@@ -69,21 +71,19 @@ From the repo root, prefer the tiered verification script:
 
 ### After JS, TSX, or deck-app changes
 
-1. `pnpm --dir js build` (and `pnpm --dir js tsc` when checking types).
-2. Rebuild host: `cmake --build out` (or full configure if CMake changed).
-3. Rebuild Vita: `docker compose run --rm vitasdk bash -lc "cmake --build out-vita"` (or full configure in the container if CMake changed).
+1. Rebuild host: `cmake --build out --parallel` reruns `pnpm build` (run `pnpm --dir js tsc` when checking types).
+2. Rebuild Vita: `pnpm --dir js build` first, then `docker compose run --rm vitasdk bash -lc "cmake --build out-vita"` (or full configure in the container if CMake changed).
 
 ### After C or CMake changes
 
 - C sources under `src/` and `tests/` use **clang-format** (`.clang-format` at repo root; editor: **clangd** with format-on-save). Check: `./scripts/clang-format.sh check`; apply: `./scripts/clang-format.sh format`. Run `cmake -S . -B out` so `out/compile_commands.json` exists for clangd.
 
-1. Ensure `js/dist/` is current — run **`pnpm --dir js build`** if JS sources changed or after a clean.
-2. Rebuild host: `cmake --build out` (or full configure line if `CMakeLists.txt` changed).
-3. Rebuild Vita: `docker compose run --rm vitasdk bash -lc "cmake --build out-vita"` (or full configure inside the container if CMake changed).
+1. Rebuild host: `cmake --build out --parallel` (or full configure line if `CMakeLists.txt` changed).
+2. Rebuild Vita: ensure `js/dist/` is current with **`pnpm --dir js build`**, then `docker compose run --rm vitasdk bash -lc "cmake --build out-vita"` (or full configure inside the container if CMake changed).
 
 ### Clean or switch generators
 
-- Host: remove `out/` and re-run JS step if needed, then configure + build.
+- Host: remove `out/`, then configure + build.
 - Vita: remove `out-vita/` inside the same `docker compose run ... bash -lc "..."` pattern, then configure and build again.
 
 ### Verify both targets
@@ -96,5 +96,6 @@ Run **JS build**, then the host quick start, then the Vita quick start. Fix comp
 - In the container, `VITASDK` is set by the image; the project picks the Vita toolchain when that env var is present.
 - Host builds use `out/`; Vita builds use `out-vita/` on the **host** filesystem (bind-mounted from the container).
 - Host only: `cmake --build out --target stage_examples` copies every built `js/examples/*/dist/*.vdapp` into `out/vitadeck-data/installed-deck-apps`; `cmake --build out --target run` builds, stages, and launches `out/vitadeck`.
-- CMake can invoke JS via the `js_build` target; for agent workflows, treat **`pnpm --dir js build` before native builds** as the normal prerequisite so `js/dist/` is explicit and up to date.
+- Host only: the `js` target (in the default build, and a dependency of `stage_examples`, `run`, and the smoke harnesses) runs `pnpm build` when the JS inputs globbed in `CMakeLists.txt` are newer than `js/dist/runtime/runtime.js`. Cleaning the host build removes that file, so the next build reruns pnpm. The Vita build never runs pnpm.
+- `out/js` and `out/assets` are symlinks into the source tree, created at configure time, so the host reads the current runtime and assets without a copy step.
 - The **`vitadeck`** CLI is a compiled **`js/packages/sdk/dist/cli.mjs`** (plus **`dist/templates/`**); **`pnpm --dir js install`** runs the workspace **`prepare`** script, which builds **`@vitadeck/sdk`**.

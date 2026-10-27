@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.14)
 
 if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
   if(DEFINED ENV{VITASDK})
@@ -142,7 +142,6 @@ if(DEFINED ENV{VITASDK})
   set(TEXT_INPUT_SOURCES src/platform/text_input_vita.c)
 else()
   list(APPEND PLATFORM_SOURCES src/platform/thread_posix.c)
-  # Kept apart from PLATFORM_SOURCES because it needs raylib, which most harnesses do not link.
   set(TEXT_INPUT_SOURCES src/platform/text_input_host.c)
 endif()
 
@@ -157,8 +156,8 @@ set(JSLIB_SOURCES
     src/jslib/storage.c
 )
 
-set(VITADECK_SOURCES
-    src/main.c
+# Everything but main.c, so the app and the test harnesses compile each source once.
+set(VITADECK_CORE_SOURCES
     src/core/arena.c
     src/core/bench.c
     src/core/bootstrap.c
@@ -186,9 +185,8 @@ set(VITADECK_SOURCES
     ${PLATFORM_SOURCES}
     ${TEXT_INPUT_SOURCES}
 )
-add_executable(${PROJECT_NAME} ${VITADECK_SOURCES})
 
-set(VITADECK_LIBRARIES m quickjs)
+set(VITADECK_LIBRARIES m)
 
 if(DEFINED ENV{VITASDK})
   list(APPEND VITADECK_LIBRARIES
@@ -236,192 +234,80 @@ else()
   list(APPEND VITADECK_LIBRARIES pthread)
 endif()
 
-target_link_libraries(${PROJECT_NAME} ${VITADECK_LIBRARIES})
+add_library(vitadeck_core STATIC ${VITADECK_CORE_SOURCES})
+target_link_libraries(vitadeck_core PUBLIC ${VITADECK_LIBRARIES})
+# QuickJS links next to vitadeck_core rather than into it: a link dependency would make Make compile them one after
+# the other.
+set(VITADECK_CORE_LIBRARIES vitadeck_core quickjs)
+
+add_executable(${PROJECT_NAME} src/main.c)
+target_link_libraries(${PROJECT_NAME} ${VITADECK_CORE_LIBRARIES})
 
 if(NOT DEFINED ENV{VITASDK})
+  # pnpm build makes the SDK, the example Deck Apps, and the runtime together; runtime.js stands for all of them.
+  # It runs only when these inputs change. The Vita build packs whatever an earlier pnpm build left in js/dist.
+  file(GLOB js_inputs CONFIGURE_DEPENDS
+    js/*.json js/*.yaml js/packages/*/*.json js/packages/*/*.js js/packages/*/*.mjs js/packages/sdk/cli/*.ts
+    js/examples/*/*.json
+  )
+  file(GLOB_RECURSE js_sources CONFIGURE_DEPENDS js/packages/*/src/* js/examples/*/src/* js/examples/*/assets/*)
+  set(js_runtime ${CMAKE_SOURCE_DIR}/js/dist/runtime/runtime.js)
+  add_custom_command(OUTPUT ${js_runtime}
+    COMMAND pnpm build
+    COMMAND ${CMAKE_COMMAND} -E touch ${js_runtime}
+    DEPENDS ${js_inputs} ${js_sources}
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/js
+    COMMENT "Building JavaScript with pnpm"
+    VERBATIM
+  )
+  add_custom_target(js ALL DEPENDS ${js_runtime})
+
+  # The host reads js/runtime.js and assets/ relative to its working directory; links instead of copies keep them
+  # current. Build trees from before the links held copies, which CREATE_LINK cannot replace.
+  function(link_into_build name source)
+    set(link ${CMAKE_BINARY_DIR}/${name})
+    if(IS_DIRECTORY ${link} AND NOT IS_SYMLINK ${link})
+      file(REMOVE_RECURSE ${link})
+    endif()
+    file(CREATE_LINK ${CMAKE_SOURCE_DIR}/${source} ${link} SYMBOLIC)
+  endfunction()
+  link_into_build(js js/dist/runtime)
+  link_into_build(assets assets)
+
   include(CTest)
   if(BUILD_TESTING)
-    # Layout measures Text through the glyph cache.
-    set(LAYOUT_SOURCES src/ui/layout.c src/ui/text.c src/ui/fonts.c src/ui/glyph_cache.c src/core/util.c)
-
-    add_executable(timer_reload_harness tests/timer_reload_harness.c src/jslib/timeout.c src/jslib/error.c)
-    target_link_libraries(timer_reload_harness quickjs m ${RAYLIB_LIBRARIES})
-    add_test(NAME timer_reload_harness COMMAND timer_reload_harness)
-
-    add_executable(package_manifest_harness tests/package_manifest_harness.c src/core/package_manifest.c src/core/util.c)
-    add_test(NAME package_manifest_harness COMMAND package_manifest_harness)
-
-    add_executable(package_library_harness
-      tests/package_library_harness.c
-      src/core/deck_app_storage.c
-      src/core/package_library.c
-      src/core/package_manifest.c
-      src/core/util.c
-      ${PLATFORM_SOURCES}
+    foreach(harness
+      timer_reload package_manifest package_library upload_parsing storage event_queue snapshot_swap hit_test
+      scroll_math input upload_single_flight shell_input js_limits input_budget
     )
-    add_test(NAME package_library_harness COMMAND package_library_harness)
+      add_executable(${harness}_harness tests/${harness}_harness.c)
+      target_link_libraries(${harness}_harness ${VITADECK_CORE_LIBRARIES})
+      add_test(NAME ${harness}_harness COMMAND ${harness}_harness)
+    endforeach()
 
-    add_executable(upload_parsing_harness
-      tests/upload_parsing_harness.c
-      src/upload/archive.c
-      src/upload/http_parse.c
-      src/core/arena.c
-      src/core/deck_app_storage.c
-      src/core/package_library.c
-      src/core/package_manifest.c
-      src/core/util.c
-      ${PLATFORM_SOURCES}
-    )
-    target_link_libraries(upload_parsing_harness ZLIB::ZLIB)
-    add_test(NAME upload_parsing_harness COMMAND upload_parsing_harness)
-
-    add_executable(storage_harness
-      tests/storage_harness.c
-      src/jslib/storage.c
-      src/core/deck_app_storage.c
-      src/core/package_library.c
-      src/core/package_manifest.c
-      src/core/util.c
-      ${PLATFORM_SOURCES}
-    )
-    target_link_libraries(storage_harness quickjs m pthread)
-    add_test(NAME storage_harness COMMAND storage_harness)
-
-    add_executable(event_queue_harness tests/event_queue_harness.c src/core/event_queue.c ${PLATFORM_SOURCES})
-    target_link_libraries(event_queue_harness pthread ${RAYLIB_LIBRARIES})
-    add_test(NAME event_queue_harness COMMAND event_queue_harness)
-
-    add_executable(snapshot_swap_harness
-      tests/snapshot_swap_harness.c
-      src/ui/instance_tree.c
-      ${LAYOUT_SOURCES}
-      src/ui/scroll.c
-      src/core/arena.c
-      ${PLATFORM_SOURCES}
-    )
-    target_link_libraries(snapshot_swap_harness m pthread ${RAYLIB_LIBRARIES})
-    add_test(NAME snapshot_swap_harness COMMAND snapshot_swap_harness)
-
-    add_executable(hit_test_harness
-      tests/hit_test_harness.c
-      src/ui/instance_tree.c
-      ${LAYOUT_SOURCES}
-      src/ui/focus_nav.c
-      src/ui/scroll.c
-      src/core/arena.c
-      ${PLATFORM_SOURCES}
-    )
-    target_link_libraries(hit_test_harness m pthread ${RAYLIB_LIBRARIES})
-    add_test(NAME hit_test_harness COMMAND hit_test_harness)
-
-    add_executable(scroll_math_harness tests/scroll_math_harness.c src/ui/scroll.c)
-    target_link_libraries(scroll_math_harness m)
-    add_test(NAME scroll_math_harness COMMAND scroll_math_harness)
-
-    add_executable(layout_harness tests/layout_harness.c ${LAYOUT_SOURCES} src/core/arena.c)
-    target_link_libraries(layout_harness m ${RAYLIB_LIBRARIES})
+    add_executable(layout_harness tests/layout_harness.c)
+    target_link_libraries(layout_harness ${VITADECK_CORE_LIBRARIES})
     # The Runtime Default Font loads from assets/fonts, relative to the working directory.
     add_test(NAME layout_harness COMMAND layout_harness WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
-    add_executable(glyph_cache_harness tests/glyph_cache_harness.c src/ui/glyph_cache.c src/core/util.c)
+    add_executable(glyph_cache_harness tests/glyph_cache_harness.c)
     target_compile_definitions(glyph_cache_harness PRIVATE VD_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
     if(Twemoji_FOUND)
       target_compile_definitions(glyph_cache_harness PRIVATE VD_TWEMOJI_DOWNLOADED)
     endif()
-    target_link_libraries(glyph_cache_harness m)
+    target_link_libraries(glyph_cache_harness ${VITADECK_CORE_LIBRARIES})
     add_test(NAME glyph_cache_harness COMMAND glyph_cache_harness)
 
-    # Links raylib because input.c and text_input_host.c also hold the raylib polls, and layout's text measurement
-    # reaches it; the harness drives the input_apply_* and vd_text_input_apply_keys steps.
-    add_executable(input_harness
-      tests/input_harness.c
-      src/ui/input.c
-      src/ui/instance_tree.c
-      ${LAYOUT_SOURCES}
-      src/ui/focus_nav.c
-      src/ui/scroll.c
-      src/core/arena.c
-      src/core/event_queue.c
-      ${PLATFORM_SOURCES}
-      ${TEXT_INPUT_SOURCES}
-    )
-    target_link_libraries(input_harness m pthread ${RAYLIB_LIBRARIES})
-    add_test(NAME input_harness COMMAND input_harness)
-
-    # Includes src/upload/http_server.c itself, to reach the static request handler.
-    add_executable(upload_single_flight_harness
-      tests/upload_single_flight_harness.c
-      src/upload/archive.c
-      src/upload/http_parse.c
-      src/core/arena.c
-      src/core/deck_app_storage.c
-      src/core/package_library.c
-      src/core/package_manifest.c
-      src/core/util.c
-      ${PLATFORM_SOURCES}
-    )
-    target_link_libraries(upload_single_flight_harness ZLIB::ZLIB pthread)
-    add_test(NAME upload_single_flight_harness COMMAND upload_single_flight_harness)
-
-    # Links raylib only because shell.c also renders; the harness drives shell_apply_system_input.
-    add_executable(shell_input_harness
-      tests/shell_input_harness.c
-      src/shell/shell.c
-      src/upload/http_server.c
-      src/upload/archive.c
-      src/upload/http_parse.c
-      src/core/arena.c
-      src/core/deck_app_storage.c
-      src/core/package_library.c
-      src/core/package_manifest.c
-      src/core/util.c
-      ${PLATFORM_SOURCES}
-    )
-    target_link_libraries(shell_input_harness ZLIB::ZLIB pthread ${RAYLIB_LIBRARIES})
-    add_test(NAME shell_input_harness COMMAND shell_input_harness)
-
-    # The native app without main.c, the shell and Runtime Upload, for harnesses that drive the real JS thread.
-    set(HOST_RUNTIME_SOURCES
-      src/core/arena.c
-      src/core/bench.c
-      src/core/bootstrap.c
-      src/core/js_runtime.c
-      src/core/package_manifest.c
-      src/core/deck_app_storage.c
-      src/core/package_library.c
-      src/core/util.c
-      src/core/event_queue.c
-      ${JSLIB_SOURCES}
-      src/ui/instance_tree.c
-      src/ui/layout.c
-      src/ui/fonts.c
-      src/ui/glyph_cache.c
-      src/ui/text.c
-      src/ui/images.c
-      src/ui/render.c
-      src/ui/input.c
-      src/ui/focus_nav.c
-      src/ui/scroll.c
-      src/platform/thread_posix.c
-      ${TEXT_INPUT_SOURCES}
-    )
-    add_executable(js_limits_harness tests/js_limits_harness.c ${HOST_RUNTIME_SOURCES})
-    target_link_libraries(js_limits_harness ${VITADECK_LIBRARIES})
-    add_test(NAME js_limits_harness COMMAND js_limits_harness)
-
-    # Same checks on the Vita JS thread stack, to prove the QuickJS stack headroom fits it.
-    add_executable(js_limits_vita_stack_harness tests/js_limits_harness.c ${HOST_RUNTIME_SOURCES})
+    # Same checks on the Vita JS thread stack, to prove the QuickJS stack headroom fits it. Its own copies of the two
+    # sources that read VD_THREAD_STACK_SIZE take the place of the ones in vitadeck_core.
+    add_executable(js_limits_vita_stack_harness tests/js_limits_harness.c src/core/js_runtime.c src/platform/thread_posix.c)
     target_compile_definitions(js_limits_vita_stack_harness PRIVATE VD_THREAD_STACK_SIZE=VD_VITA_THREAD_STACK_SIZE)
-    target_link_libraries(js_limits_vita_stack_harness ${VITADECK_LIBRARIES})
+    target_link_libraries(js_limits_vita_stack_harness ${VITADECK_CORE_LIBRARIES})
     add_test(NAME js_limits_vita_stack_harness COMMAND js_limits_vita_stack_harness)
 
-    add_executable(input_budget_harness tests/input_budget_harness.c ${HOST_RUNTIME_SOURCES})
-    target_link_libraries(input_budget_harness ${VITADECK_LIBRARIES})
-    add_test(NAME input_budget_harness COMMAND input_budget_harness)
-
-    add_executable(smoke_harness tests/smoke_harness.c ${HOST_RUNTIME_SOURCES})
-    target_link_libraries(smoke_harness ${VITADECK_LIBRARIES})
-    add_dependencies(smoke_harness js_copy)
+    add_executable(smoke_harness tests/smoke_harness.c)
+    target_link_libraries(smoke_harness ${VITADECK_CORE_LIBRARIES})
+    add_dependencies(smoke_harness js)
     add_test(
       NAME smoke_harness
       COMMAND ${CMAKE_SOURCE_DIR}/tests/run_smoke_test.sh ${CMAKE_BINARY_DIR}
@@ -438,9 +324,9 @@ if(NOT DEFINED ENV{VITASDK})
 
     # Presses every Pad Button in each example Deck App and switches to the next; the harness's own watchdog
     # reports a hang, TIMEOUT is the backstop.
-    add_executable(deck_app_input_harness tests/deck_app_input_harness.c ${HOST_RUNTIME_SOURCES})
-    target_link_libraries(deck_app_input_harness ${VITADECK_LIBRARIES})
-    add_dependencies(deck_app_input_harness js_copy)
+    add_executable(deck_app_input_harness tests/deck_app_input_harness.c)
+    target_link_libraries(deck_app_input_harness ${VITADECK_CORE_LIBRARIES})
+    add_dependencies(deck_app_input_harness js)
     add_test(
       NAME deck_app_input_harness
       COMMAND ${CMAKE_SOURCE_DIR}/tests/run_deck_app_input_test.sh ${CMAKE_BINARY_DIR}
@@ -458,28 +344,6 @@ if(NOT DEFINED ENV{VITASDK})
   endif()
 endif()
 
-add_custom_target(js_build
-  COMMAND pnpm build
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/js
-  COMMENT "Building JavaScript with pnpm"
-  VERBATIM
-)
-
-add_custom_target(js_copy
-  COMMENT "Copying js/dist/runtime to ${CMAKE_BINARY_DIR}/js"
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/js/dist/runtime ${CMAKE_BINARY_DIR}/js
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets ${CMAKE_BINARY_DIR}/assets
-  BYPRODUCTS ${CMAKE_BINARY_DIR}/js
-)
-
-add_custom_target(js
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/js
-  COMMAND pnpm build
-  COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${PROJECT_NAME}
-  COMMENT "Build JS bundle (pnpm build) then native ${PROJECT_NAME}"
-  VERBATIM
-)
-
 add_custom_target(cloc
   COMMENT "Count lines of code in ${CMAKE_SOURCE_DIR}"
   COMMAND cloc ${CMAKE_SOURCE_DIR} --match-d=src "--not-match-d=(out|node_modules)"
@@ -488,8 +352,6 @@ add_custom_target(cloc
 
 if(DEFINED ENV{VITASDK})
   set(VITA_ELF_CREATE_FLAGS "${VITA_ELF_CREATE_FLAGS}")
-
-  add_dependencies(${PROJECT_NAME} js_copy)
 
   vita_create_self(eboot.bin ${PROJECT_NAME} UNSAFE NOSTRIP)
 
@@ -589,13 +451,12 @@ if(DEFINED ENV{VITASDK})
     VERBATIM
   )
 else()
-  add_dependencies(${PROJECT_NAME} js_copy)
-
   add_custom_target(stage_examples
     COMMAND ${CMAKE_SOURCE_DIR}/scripts/stage-example-apps.sh ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}/vitadeck-data
     COMMENT "Staging example Deck Apps to ${CMAKE_BINARY_DIR}/vitadeck-data/installed-deck-apps"
     VERBATIM
   )
+  add_dependencies(stage_examples js)
 
   add_custom_target(run
     DEPENDS ${PROJECT_NAME} stage_examples

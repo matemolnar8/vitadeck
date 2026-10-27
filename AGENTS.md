@@ -16,7 +16,7 @@ When this file speaks:
 
 ## How it works
 
-`pnpm --dir js build` compiles the SDK, the example Deck Apps (`js/examples/*/dist/*.vdapp`), and the runtime bundle (`js/dist/runtime/runtime.js`). CMake copies the runtime into the build tree on every build; the `stage_examples` target (also run by `run`) copies the examples into `<build>/vitadeck-data/installed-deck-apps`, a plain `cmake --build out` does not. At startup `src/core/bootstrap.c` inits raylib, fonts, and the QuickJS runtime, loads the **Active Deck App** from the **Installed Deck App Library**, and the reconciler in `js/packages/runtime` mutates the native instance tree that `src/ui/render.c` paints each frame. `Start`/F1 toggles the **VitaDeck Shell**, which also hosts **Runtime Upload** (HTTP listener on 8787) for installing `.vdapp.zip` archives over LAN.
+`pnpm --dir js build` compiles the SDK, the example Deck Apps (`js/examples/*/dist/*.vdapp`), and the runtime bundle (`js/dist/runtime/runtime.js`). The host CMake build reruns that when files under `js/` change and links `js/dist/runtime` and `assets/` into the build tree; the `stage_examples` target (also run by `run`) copies the examples into `<build>/vitadeck-data/installed-deck-apps`, a plain `cmake --build out` does not. The everyday loop is `cmake --build out --parallel --target run`. At startup `src/core/bootstrap.c` inits raylib, fonts, and the QuickJS runtime, loads the **Active Deck App** from the **Installed Deck App Library**, and the reconciler in `js/packages/runtime` mutates the native instance tree that `src/ui/render.c` paints each frame. `Start`/F1 toggles the **VitaDeck Shell**, which also hosts **Runtime Upload** (HTTP listener on 8787) for installing `.vdapp.zip` archives over LAN.
 
 ## Where code lives
 
@@ -44,7 +44,7 @@ When this file speaks:
 
 ## Footguns
 
-1. **Stale `js/dist`.** Native CMake copies `js/dist/runtime` into the build tree. After any change under `js/`, run `pnpm --dir js build` before rebuilding or running the host, or you will debug yesterday's JS.
+1. **Stale `js/dist`.** The host CMake build reruns `pnpm build` when JS changes; the Vita build packs `js/dist` as it finds it. After any change under `js/`, run `pnpm --dir js build` before a Vita build, or you will debug yesterday's JS on the Vita.
 2. **Two-language package format.** The Deck App Package Manifest is validated natively in `src/core/package_manifest.c` and produced by the SDK CLI. A change to one without the other ships packages the host rejects, or accepts packages the SDK never emits. Update both and the `package_manifest` CTest harness.
 3. **Platform goldens.** `tests/fixtures/golden/Linux/` holds the only canonical goldens (ADR 0002). Refresh it only with `scripts/smoke-docker.sh update-golden`, never from a macOS run. Do not re-enable the `smoke` CTest label in the macOS ctest step.
 4. **Secrets in examples.** `js/examples/chat/src/genesys/genesys.local.ts` is gitignored and holds real credentials. Never commit it, never paste its contents, and never "fix" imports by renaming it.
@@ -69,7 +69,7 @@ Use `scripts/agent-check.sh` from the repo root; pick the smallest tier that pro
 - `smoke` - Dockerized Linux visual smoke and Deck App input check. Run when rendering, theme, fonts, input, or Deck App output change.
 - `full` - all of the above plus the Vita Docker build. Run before a PR that touches native code.
 
-Individual commands: `pnpm --dir js tsc`, `pnpm --dir js test:cli`, `pnpm --dir js lint`, `pnpm --dir js format:check`, `pnpm --dir js build`, `./scripts/clang-format.sh check` (or `format` to apply), `cmake -S . -B out && cmake --build out`, Vita: `docker compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"`.
+Individual commands: `pnpm --dir js tsc`, `pnpm --dir js test:cli`, `pnpm --dir js lint`, `pnpm --dir js format:check`, `pnpm --dir js build`, `./scripts/clang-format.sh check` (or `format` to apply), `cmake -S . -B out && cmake --build out --parallel`, Vita: `docker compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"`.
 
 - C under `src/` and `tests/` follows `.clang-format` with clang-format 21 (CI pins 21.1.8, `pipx install clang-format==21.1.8`); run `cmake -S . -B out` so `out/compile_commands.json` exists for clangd.
 - Write React for the React Compiler: pure renders, Rules of Hooks, accurate effect deps, no manual `useMemo`/`useCallback`/`memo`.
