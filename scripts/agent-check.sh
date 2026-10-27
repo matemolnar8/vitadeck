@@ -25,16 +25,24 @@ die() {
     exit 1
 }
 
-# A fresh worktree often starts on the shell's default Node, which is older than .nvmrc.
+version_at_least() {
+    [ "$(printf '%s\n%s\n' "$2" "$1" | sort -t. -k1,1n -k2,2n -k3,3n | head -n 1)" = "$2" ]
+}
+
+# A fresh worktree often starts on the shell's default Node. Node needs the .nvmrc major and at least the
+# engines.node minimum in js/package.json.
 use_pinned_node() {
-    want=$(cat .nvmrc)
-    have=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo none)
-    [ "$have" = "$want" ] && return
+    major=$(cat .nvmrc)
+    min=$(sed -n 's/.*"node": *">=\([0-9.]*\)".*/\1/p' js/package.json)
+    have=$(node -p 'process.versions.node' 2>/dev/null || echo none)
+    if [ "${have%%.*}" = "$major" ] && version_at_least "$have" "$min"; then
+        return
+    fi
     if [ -z "${VITADECK_PINNED_NODE:-}" ] && command -v fnm >/dev/null 2>&1; then
-        printf 'Node %s is active; rerunning on Node %s from .nvmrc with fnm.\n' "$have" "$want" >&2
+        printf 'Node %s is active; rerunning on Node %s from .nvmrc with fnm.\n' "$have" "$major" >&2
         VITADECK_PINNED_NODE=1 exec fnm exec --using="$ROOT_DIR/.nvmrc" -- "$ROOT_DIR/scripts/agent-check.sh" "$@"
     fi
-    die "Node $have is active, but VitaDeck needs Node $want (.nvmrc). Run fnm use or nvm use, then rerun."
+    die "Node $have is active, but VitaDeck needs Node $major at $min or newer. Install it with fnm install $major, run fnm use, then rerun."
 }
 
 install_js() {
