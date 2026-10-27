@@ -105,6 +105,20 @@ jobs:
         # Visual smoke runs in the Linux `smoke` job — see docs/adr/0002-smoke-ci-linux-xvfb.md
         run: ctest --test-dir out --output-on-failure -E smoke_harness
 
+  c-format:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install clang-format
+        # Pinned: another clang-format release can format the same code differently.
+        run: pipx install clang-format==21.1.8
+
+      - name: Check C formatting
+        run: ./scripts/clang-format.sh check
+
   smoke:
     runs-on: ubuntu-latest
     permissions:

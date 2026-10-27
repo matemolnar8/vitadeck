@@ -5,7 +5,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 
 if ! command -v clang-format >/dev/null 2>&1; then
-    echo "clang-format not found; install LLVM clang-format (e.g. brew install clang-format)" >&2
+    echo "clang-format not found; install LLVM clang-format (CI pins 21.1.8: pipx install clang-format==21.1.8)" >&2
     exit 1
 fi
 
