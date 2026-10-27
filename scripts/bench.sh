@@ -5,6 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TITLE_ID="PGRI00001"
 VITA3K_HOME="${VITADECK_VITA3K_HOME:-$HOME/.vitadeck/vita3k}"
 RESULT_TIMEOUT_S="${VITADECK_BENCH_TIMEOUT:-300}"
+# shellcheck source=gui-run.sh
+source "$ROOT_DIR/scripts/gui-run.sh"
 
 usage() {
   cat <<'EOF'
@@ -17,13 +19,16 @@ host     The desktop build in out/.
 vita3k   The VPK in the Vita3K emulator (see the vitadeck-emulator skill).
 vita     The VPK on the Vita at $PSVITAIP, through VitaShell's FTP (1337) and vitacompanion (1338).
 
+host and vita3k wait for the machine-wide GUI lock (scripts/gui-run.sh) after building, and stop the run when no result
+arrives in time.
+
 --no-build          Run the existing build.
 --update-baseline   Also copy the results to tests/bench/baselines/<target>; needs every scenario to run and pass.
 
 Environment:
   PSVITAIP                 Vita IP, for vita
   VITADECK_VITA3K_HOME     Emulator config and storage (default: ~/.vitadeck/vita3k)
-  VITADECK_BENCH_TIMEOUT   Seconds to wait for the result (default: 300)
+  VITADECK_BENCH_TIMEOUT   Seconds to wait for the result before stopping the run (default: 300)
 EOF
 }
 
@@ -76,6 +81,27 @@ wait_for() {
   done
 }
 
+# Runs the host or Vita3K until it quits after writing the result. Stops it on a timeout, or when it lingers after the
+# result.
+bench_gui() {
+  local result="$1"
+  shift
+  gui_start "$@" >"$RUN_DIR/log.txt" 2>&1
+  local deadline=$((SECONDS + RESULT_TIMEOUT_S)) linger=
+  while kill -0 "$GUI_PID" 2>/dev/null; do
+    if [[ -f "$result" ]]; then
+      linger=${linger:-$((SECONDS + 10))}
+      ((SECONDS < linger)) || break
+    elif ((SECONDS >= deadline)); then
+      gui_stop
+      die "No result after ${RESULT_TIMEOUT_S}s (VITADECK_BENCH_TIMEOUT), so the run was stopped; see $RUN_DIR/log.txt"
+    fi
+    sleep 1
+  done
+  gui_stop
+  [[ -f "$result" ]] || die "No result; see $RUN_DIR/log.txt"
+}
+
 build_js() {
   step "Build JS"
   pnpm --dir "$ROOT_DIR/js" build
@@ -95,25 +121,25 @@ run_host() {
     cmake --build "$ROOT_DIR/out" --target vitadeck stage_examples
   fi
   local data="$ROOT_DIR/out/vitadeck-data"
+  gui_lock "$TARGET"
   mkdir -p "$data/bench"
   rm -f "$data/bench/result.json"
   printf '%s\n' "$REQUEST" >"$data/bench/request"
   step "Benchmark (host)"
-  (cd "$ROOT_DIR/out" && VITADECK_DATA_ROOT="$data" ./vitadeck) >"$RUN_DIR/log.txt" 2>&1 ||
-    die "vitadeck failed; see $RUN_DIR/log.txt"
-  [[ -f "$data/bench/result.json" ]] || die "No result; see $RUN_DIR/log.txt"
+  cd "$ROOT_DIR/out"
+  VITADECK_DATA_ROOT="$data" bench_gui "$data/bench/result.json" ./vitadeck
   cp "$data/bench/result.json" "$RUN_DIR/result.json"
 }
 
 run_vita3k() {
   if ((BUILD)); then build_vpk; fi
   local data="$VITA3K_HOME/fs/ux0/data/vitadeck"
+  gui_lock "$TARGET"
   mkdir -p "$data/bench"
   rm -f "$data/bench/result.json"
   printf '%s\n' "$REQUEST" >"$data/bench/request"
   step "Benchmark (Vita3K, quits with the app)"
-  "$ROOT_DIR/scripts/vita3k.sh" launch >"$RUN_DIR/log.txt" 2>&1 || true
-  [[ -f "$data/bench/result.json" ]] || die "No result; see $RUN_DIR/log.txt"
+  bench_gui "$data/bench/result.json" "$ROOT_DIR/scripts/vita3k.sh" launch
   cp "$data/bench/result.json" "$RUN_DIR/result.json"
 }
 
