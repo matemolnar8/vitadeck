@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2` and `git rev-parse --verify d6edb09cfe8f79d79fd4782ff75a48db7f7ee98c` in this repository.
+   Run `git rev-parse --verify a526711c80571b41bcfc9b420317b70597c23ede` and `git rev-parse --verify 2c2415d15f7bebbe8aa7af46f9eb3b6be1f3072c` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -22,18 +22,22 @@ When no question follows this paste, explain this change.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2
+base (merge-base)  a526711c80571b41bcfc9b420317b70597c23ede
 
-head               d6edb09cfe8f79d79fd4782ff75a48db7f7ee98c
+head               2c2415d15f7bebbe8aa7af46f9eb3b6be1f3072c
 
 Named refs at pin: origin/main ... origin/t3/agent-check-node-sdk
 
 Read the diff:
 
-git diff --find-renames 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 d6edb09cfe8f79d79fd4782ff75a48db7f7ee98c
+git diff --find-renames a526711c80571b41bcfc9b420317b70597c23ede 2c2415d15f7bebbe8aa7af46f9eb3b6be1f3072c
 
 Commits:
+- 2c2415d docs(emulator): the Vita build needs Node 24.16+
+- 020c1b5 fix(scripts): agent-check also checks the engines.node minimum
+- a526711 Merge pull request #136 from matemolnar8/t3/drop-pr-attribution-clause
 - d6edb09 fix(scripts): agent-check runs on the pinned Node and builds JS before tsc
+- aca107f docs(agents): drop the PR attribution clause
 
 Sources:
 - transcript Claude session · Oct 27 Retro on the unattended threads behind PRs #127–#135 lists six vitadeck guardrail fixes.
@@ -59,7 +63,7 @@ Look for:
 
 ### 01 Run on the pinned Node (`node`)
 
-`use_pinned_node` compares the running Node major with `.nvmrc` before `fast`, `host` and `full`, and `engineStrict` makes `pnpm install` enforce `engines.node`.
+`use_pinned_node` checks the running Node against the `.nvmrc` major and the `engines.node` minimum before `fast`, `host` and `full`, and `engineStrict` makes `pnpm install` enforce `engines.node`.
 
 [groups/node.md](groups/node.md)
 

@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2` and `git rev-parse --verify d6edb09cfe8f79d79fd4782ff75a48db7f7ee98c` in this repository.
+   Run `git rev-parse --verify a526711c80571b41bcfc9b420317b70597c23ede` and `git rev-parse --verify 2c2415d15f7bebbe8aa7af46f9eb3b6be1f3072c` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 d6edb09cfe8f79d79fd4782ff75a48db7f7ee98c -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames a526711c80571b41bcfc9b420317b70597c23ede 2c2415d15f7bebbe8aa7af46f9eb3b6be1f3072c -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -23,15 +23,15 @@ When no question follows this paste, explain this review concern.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2
+base (merge-base)  a526711c80571b41bcfc9b420317b70597c23ede
 
-head               d6edb09cfe8f79d79fd4782ff75a48db7f7ee98c
+head               2c2415d15f7bebbe8aa7af46f9eb3b6be1f3072c
 
 Named refs at pin: origin/main ... origin/t3/agent-check-node-sdk
 
 Read the diff:
 
-git diff --find-renames 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 d6edb09cfe8f79d79fd4782ff75a48db7f7ee98c
+git diff --find-renames a526711c80571b41bcfc9b420317b70597c23ede 2c2415d15f7bebbe8aa7af46f9eb3b6be1f3072c
 
 Review concern 03 of 03: docker compose, not docker-compose (`compose`)
 
@@ -45,5 +45,5 @@ The `vitadeck-build` skill and `AGENTS.md` switch every `docker-compose run` to 
 
 Hunk refs for this concern:
 - .agents/skills/vitadeck-build/SKILL.md
-- scripts/agent-check.sh@82+108
+- scripts/agent-check.sh@82+116
 - AGENTS.md@64+64
