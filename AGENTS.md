@@ -27,7 +27,7 @@ When this file speaks:
 - `js/packages/sdk/` - `@vitadeck/sdk`: author-facing components, theme, types, and the `vitadeck` CLI (`cli/`, scaffold under `cli/templates/`)
 - `js/packages/runtime/` - the React reconciler bundle the host embeds
 - `js/examples/` - example Deck Apps; the smoke test screenshots every section of `demo`
-- `tests/` - CTest harnesses (`smoke_harness.c`, `package_manifest_harness.c`, `package_library_harness.c`, `timer_reload_harness.c`, `upload_parsing_harness.c`), golden screenshots (`fixtures/golden/`), and benchmark baselines (`bench/baselines/`)
+- `tests/` - CTest harnesses (`smoke_harness.c`, `deck_app_input_harness.c`, `package_manifest_harness.c`, `package_library_harness.c`, `timer_reload_harness.c`, `upload_parsing_harness.c`), golden screenshots (`fixtures/golden/`), and benchmark baselines (`bench/baselines/`)
 - `vendor/quickjs` - git submodule; `docker-compose.yml` + `Dockerfile` - Vitasdk and Linux smoke images
 - `.agents/skills/` - repo skills (`vitadeck-build`, `vitadeck-emulator`, `vitadeck-smoke`, `vitadeck-bench`, `vitadeck-manual-testing`, `vitadeck-vdapp-upload`, `vitadeck-deck-app-init`) plus `comprehende` installed from `matemolnar8/comprehende` via the `skills` CLI (`skills-lock.json`) and `pages`, a repo-owned skill with its own publish script. `.claude/skills` symlinks here. Published via `npx skills add matemolnar8/vitadeck`.
 
@@ -46,7 +46,7 @@ When this file speaks:
 
 1. **Stale `js/dist`.** Native CMake copies `js/dist/runtime` into the build tree. After any change under `js/`, run `pnpm --dir js build` before rebuilding or running the host, or you will debug yesterday's JS.
 2. **Two-language package format.** The Deck App Package Manifest is validated natively in `src/core/package_manifest.c` and produced by the SDK CLI. A change to one without the other ships packages the host rejects, or accepts packages the SDK never emits. Update both and the `package_manifest` CTest harness.
-3. **Platform goldens.** `tests/fixtures/golden/Linux/` holds the only canonical goldens (ADR 0002). Refresh it only with `scripts/smoke-docker.sh update-golden`, never from a macOS run. Do not re-enable `smoke_harness` in the macOS ctest step.
+3. **Platform goldens.** `tests/fixtures/golden/Linux/` holds the only canonical goldens (ADR 0002). Refresh it only with `scripts/smoke-docker.sh update-golden`, never from a macOS run. Do not re-enable the `smoke` CTest label in the macOS ctest step.
 4. **Secrets in examples.** `js/examples/chat/src/genesys/genesys.local.ts` is gitignored and holds real credentials. Never commit it, never paste its contents, and never "fix" imports by renaming it.
 5. **Running from the wrong cwd.** The host resolves `vitadeck-data/` relative to the working directory (or `VITADECK_DATA_ROOT`). Run `./vitadeck` from `out/`, not the repo root.
 
@@ -66,7 +66,7 @@ Use `scripts/agent-check.sh` from the repo root; pick the smallest tier that pro
 
 - `fast` - JS install and build, JS typecheck, SDK CLI tests, JS lint, JS and C format checks. Run after every change.
 - `host` - JS install and build, host build, non-smoke CTest. Run for any `src/` or runtime change.
-- `smoke` - Dockerized Linux visual smoke. Run when rendering, theme, fonts, or Deck App output change.
+- `smoke` - Dockerized Linux visual smoke and Deck App input check. Run when rendering, theme, fonts, input, or Deck App output change.
 - `full` - all of the above plus the Vita Docker build. Run before a PR that touches native code.
 
 Individual commands: `pnpm --dir js tsc`, `pnpm --dir js test:cli`, `pnpm --dir js lint`, `pnpm --dir js format:check`, `pnpm --dir js build`, `./scripts/clang-format.sh check` (or `format` to apply), `cmake -S . -B out && cmake --build out`, Vita: `docker compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"`.

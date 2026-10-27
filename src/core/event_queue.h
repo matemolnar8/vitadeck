@@ -23,6 +23,8 @@ bool event_queue_init(void);
 void event_queue_destroy(void);
 void event_queue_push(const InputEvent *evt);
 bool event_queue_pop(InputEvent *evt);
+// For harnesses: true once the JS thread has taken every queued event.
+bool event_queue_is_empty(void);
 void event_queue_shutdown(void);
 bool event_queue_is_shutdown(void);
 void event_queue_clear(void);

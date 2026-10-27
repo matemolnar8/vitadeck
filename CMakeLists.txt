@@ -435,6 +435,26 @@ if(NOT DEFINED ENV{VITASDK})
         ENVIRONMENT "LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/tests/lsan.supp"
       )
     endif()
+
+    # Presses every Pad Button in each example Deck App and switches to the next; the harness's own watchdog
+    # reports a hang, TIMEOUT is the backstop.
+    add_executable(deck_app_input_harness tests/deck_app_input_harness.c ${HOST_RUNTIME_SOURCES})
+    target_link_libraries(deck_app_input_harness ${VITADECK_LIBRARIES})
+    add_dependencies(deck_app_input_harness js_copy)
+    add_test(
+      NAME deck_app_input_harness
+      COMMAND ${CMAKE_SOURCE_DIR}/tests/run_deck_app_input_test.sh ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(deck_app_input_harness PROPERTIES
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+      LABELS "smoke"
+      TIMEOUT 300
+    )
+    if(VITADECK_SANITIZE)
+      set_tests_properties(deck_app_input_harness PROPERTIES
+        ENVIRONMENT "LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/tests/lsan.supp"
+      )
+    endif()
   endif()
 endif()
 
