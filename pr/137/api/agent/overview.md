@@ -1,0 +1,79 @@
+Answer questions about this git change.
+
+## Steps
+
+When no question follows this paste, explain this change.
+
+1. Resolve the pinned SHAs.
+   Run `git rev-parse --verify 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2` and `git rev-parse --verify d6edb09cfe8f79d79fd4782ff75a48db7f7ee98c` in this repository.
+   Done when both objects exist.
+
+2. Choose the relevant review concerns.
+   Read Review concerns. Fetch a concern file only when that concern is relevant to the question.
+   Done when every concern the question touches has its markdown loaded.
+
+3. Answer from live git.
+   Follow those files. Use the why and the what as interpretation. Live git wins when they disagree.
+   When you show code, quote the live git lines.
+   Done when the answer quotes the live code.
+
+## Pin
+
+Repository: vitadeck
+Origin: git@github.com:matemolnar8/vitadeck.git
+
+base (merge-base)  9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2
+
+head               d6edb09cfe8f79d79fd4782ff75a48db7f7ee98c
+
+Named refs at pin: origin/main ... origin/t3/agent-check-node-sdk
+
+Read the diff:
+
+git diff --find-renames 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 d6edb09cfe8f79d79fd4782ff75a48db7f7ee98c
+
+Commits:
+- d6edb09 fix(scripts): agent-check runs on the pinned Node and builds JS before tsc
+
+Sources:
+- transcript Claude session · Oct 27 Retro on the unattended threads behind PRs #127–#135 lists six vitadeck guardrail fixes.
+- pr PR #137 Node pin, JS build before tsc, docker compose docs.
+  https://github.com/matemolnar8/vitadeck/pull/137
+
+The title:
+
+fix(scripts): agent-check runs on the pinned Node and builds JS before tsc
+
+The why:
+
+Fresh worktrees started on Node 22 with no built SDK and failed `tsc` until someone fixed them by hand, and docs called a `docker-compose` binary that is not installed [retro item 4](source:s1).
+
+The what (small):
+
+`scripts/agent-check.sh` reruns itself on the `.nvmrc` Node, installs, and builds JS before `tsc`; `pnpm install` fails on an old Node; docs say `docker compose`.
+
+Look for:
+- `.nvmrc` and `engines.node` already existed before this PR; the fix makes the check script and `pnpm install` enforce them rather than adding a new pin.
+
+## Review concerns
+
+### 01 Run on the pinned Node (`node`)
+
+`use_pinned_node` compares the running Node major with `.nvmrc` before `fast`, `host` and `full`, and `engineStrict` makes `pnpm install` enforce `engines.node`.
+
+[groups/node.md](groups/node.md)
+
+### 02 Install and build JS before tsc (`build`)
+
+`run_fast` and `run_host` call `install_js`, and `run_fast` runs `pnpm --dir js build` before the typecheck.
+
+Depends on:
+- 01 Run on the pinned Node (`node`)
+
+[groups/build.md](groups/build.md)
+
+### 03 docker compose, not docker-compose (`compose`)
+
+The `vitadeck-build` skill and `AGENTS.md` switch every `docker-compose run` to `docker compose run`, and `run_vita` drops its fallback.
+
+[groups/compose.md](groups/compose.md)
