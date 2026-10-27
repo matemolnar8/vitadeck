@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2` and `git rev-parse --verify 21f4d669c55fc00053f3ab785a59c45ec9ea9cb5` in this repository.
+   Run `git rev-parse --verify 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2` and `git rev-parse --verify 5dadfb0edbd6c18f2bd07a2a33180832cf743a23` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,17 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2
 
-head               21f4d669c55fc00053f3ab785a59c45ec9ea9cb5
+head               5dadfb0edbd6c18f2bd07a2a33180832cf743a23
 
 Named refs at pin: 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 ... origin/t3/gui-run-lock
 
 Read the diff:
 
-git diff --find-renames 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 21f4d669c55fc00053f3ab785a59c45ec9ea9cb5
+git diff --find-renames 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 5dadfb0edbd6c18f2bd07a2a33180832cf743a23
 
 Commits:
+- 5dadfb0 fix(scripts): reclaim a stale GUI lock by rename, and require a command
+- 623f3e2 fix(scripts): only one waiter reclaims a stale GUI lock
 - 21f4d66 docs(scripts): keep the vita3k.sh command list together in its usage
 - 082fca0 fix(scripts): GUI runs share one machine-wide lock and bench kills hung runs
 
@@ -81,7 +83,7 @@ Depends on:
 
 ### 04 Skills mention the lock and the timeout (`docs`)
 
-`vitadeck-bench` says runs wait for the lock and time out with the emulator killed, and `vitadeck-emulator` says launching waits for the same lock.
+`vitadeck-bench` says runs wait for the lock and time out with the emulator killed, `vitadeck-emulator` says launching waits for the same lock, and `vitadeck-manual-testing` runs `./vitadeck` through `gui-run.sh`.
 
 Depends on:
 - 02 bench.sh: lock after build, stop on timeout (`bench`)

@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2` and `git rev-parse --verify 21f4d669c55fc00053f3ab785a59c45ec9ea9cb5` in this repository.
+   Run `git rev-parse --verify 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2` and `git rev-parse --verify 5dadfb0edbd6c18f2bd07a2a33180832cf743a23` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 21f4d669c55fc00053f3ab785a59c45ec9ea9cb5 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 5dadfb0edbd6c18f2bd07a2a33180832cf743a23 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,13 +25,13 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2
 
-head               21f4d669c55fc00053f3ab785a59c45ec9ea9cb5
+head               5dadfb0edbd6c18f2bd07a2a33180832cf743a23
 
 Named refs at pin: 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 ... origin/t3/gui-run-lock
 
 Read the diff:
 
-git diff --find-renames 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 21f4d669c55fc00053f3ab785a59c45ec9ea9cb5
+git diff --find-renames 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 5dadfb0edbd6c18f2bd07a2a33180832cf743a23
 
 Review concern 01 of 04: The GUI lock and process-group helper (`helper`)
 
@@ -44,11 +44,12 @@ The what:
 `gui_lock` takes the `mkdir` lock that `gui_cleanup` releases on exit, and `gui_start`/`gui_stop` run and kill a command as one process group, which `gui_run` combines for callers.
 
 Look for:
-- Race: stale reclaim is read-owner, check PID, `rm -rf`; two waiters reclaiming the same dead lock in the same instant can let the second one delete the lock the first just took.
+- Race: a waiter reclaims a dead owner's lock only after it wins `mkdir "$GUI_LOCK/reclaim"` and re-reads the same owner, then renames the lock away before deleting it, so a second waiter can neither delete a fresh lock nor leave an ownerless one.
 - Subtle: a dead owner PID that the OS has reused for another process makes the lock look held; the waiting message prints the owner so a human can remove it.
 - Subtle: `gui_lock` is a no-op when the owner PID is `$$` or the exported `VITADECK_GUI_LOCK_PID`, so `vita3k.sh launch` under `bench.sh` reuses the parent's lock and `gui_run` then runs Vita3K in the foreground inside the parent's process group.
 - Subtle: `gui_start` turns on `set -m`, so the GUI gets its own process group and a terminal Ctrl-C reaches only the script; its `INT` trap exits, and the `EXIT` trap stops the group and removes the lock.
 - `VITADECK_GUI_LOCK` overrides the lock path; it is documented only in the code and exists for tests.
+- A lock directory without an `owner` file (a holder killed between `mkdir` and writing it) is never reclaimed; every run waits and prints `remove it if nothing holds it`.
 
 Hunk refs for this concern:
 - scripts/gui-run.sh

@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2` and `git rev-parse --verify 21f4d669c55fc00053f3ab785a59c45ec9ea9cb5` in this repository.
+   Run `git rev-parse --verify 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2` and `git rev-parse --verify 5dadfb0edbd6c18f2bd07a2a33180832cf743a23` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 21f4d669c55fc00053f3ab785a59c45ec9ea9cb5 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 5dadfb0edbd6c18f2bd07a2a33180832cf743a23 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,13 +25,13 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2
 
-head               21f4d669c55fc00053f3ab785a59c45ec9ea9cb5
+head               5dadfb0edbd6c18f2bd07a2a33180832cf743a23
 
 Named refs at pin: 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 ... origin/t3/gui-run-lock
 
 Read the diff:
 
-git diff --find-renames 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 21f4d669c55fc00053f3ab785a59c45ec9ea9cb5
+git diff --find-renames 9ebcde7346d590fe7a7f43160760ca3e7d6d2bc2 5dadfb0edbd6c18f2bd07a2a33180832cf743a23
 
 Review concern 02 of 04: bench.sh: lock after build, stop on timeout (`bench`)
 
