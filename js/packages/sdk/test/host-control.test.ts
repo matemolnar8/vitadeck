@@ -31,7 +31,7 @@ function answering(status: number, body: string): HostTransport {
   return () => Promise.resolve({ status, text: () => Promise.resolve(body) });
 }
 
-const URL_ = "http://192.168.1.20:8797/";
+const COMPANION_URL = "http://192.168.1.20:8797/";
 
 const nativeGlobal = globalThis as { nativeGetHostControlLinks?: () => string };
 
@@ -48,10 +48,10 @@ function withLinks(json: string | undefined, t: test.TestContext) {
 void test("echo sends the fixture envelope to {url}command and returns its fields", async () => {
   const fx = await fixture("echo");
   const sent: Sent[] = [];
-  const client = createHostClient(corePlugin, { url: URL_, transport: replay(fx, sent) });
+  const client = createHostClient(corePlugin, { url: COMPANION_URL, transport: replay(fx, sent) });
   const reply = await client.echo({ text: "hi" });
   assert.deepEqual(reply, fx.response);
-  assert.equal(sent[0]?.url, `${URL_}command`);
+  assert.equal(sent[0]?.url, `${COMPANION_URL}command`);
   assert.equal(sent[0]?.headers["Content-Type"], "application/json");
   assert.deepEqual(sent[0]?.body, fx.request);
 });
@@ -64,7 +64,7 @@ void test("capabilities omits the payload", async () => {
     transport: replay(fx, sent),
   }).capabilities();
   assert.deepEqual(sent[0]?.body, fx.request);
-  assert.equal(sent[0]?.url, `${URL_}command`);
+  assert.equal(sent[0]?.url, `${COMPANION_URL}command`);
   assert.ok(reply.ok);
   assert.deepEqual(reply.plugins, [{ id: "core", commands: ["capabilities", "echo"] }]);
 });
@@ -74,31 +74,37 @@ for (const name of ["command-version-mismatch", "unknown-plugin", "unknown-comma
     const fx = await fixture(name);
     const code = fx.response.code as keyof typeof HOST_CONTROL_WIRE_ERRORS;
     assert.equal(HOST_CONTROL_WIRE_ERRORS[code], fx.status);
-    const reply = await createHostClient(corePlugin, { url: URL_, transport: replay(fx) }).echo({ text: "hi" });
+    const reply = await createHostClient(corePlugin, { url: COMPANION_URL, transport: replay(fx) }).echo({
+      text: "hi",
+    });
     assert.deepEqual(reply, fx.response);
   });
 }
 
 void test("an unknown code becomes command_failed and keeps the message", async () => {
   const reply = await createHostClient(corePlugin, {
-    url: URL_,
+    url: COMPANION_URL,
     transport: answering(500, JSON.stringify({ ok: false, code: "fan_on_fire", message: "Too hot." })),
   }).echo({ text: "hi" });
   assert.deepEqual(reply, { ok: false, code: "command_failed", message: "Too hot." });
 });
 
 void test("a non-JSON or ok-less answer is bad_response", async () => {
-  for (const body of ["<html>", JSON.stringify({ text: "hi" }), "[]"]) {
-    const reply = await createHostClient(corePlugin, { url: URL_, transport: answering(200, body) }).echo({
-      text: "hi",
-    });
-    assert.equal(reply.ok ? "ok" : reply.code, "bad_response", body);
-  }
+  const bodies = ["<html>", JSON.stringify({ text: "hi" }), "[]"];
+  const replies = await Promise.all(
+    bodies.map((body) =>
+      createHostClient(corePlugin, { url: COMPANION_URL, transport: answering(200, body) }).echo({ text: "hi" }),
+    ),
+  );
+  assert.deepEqual(
+    replies.map((reply) => (reply.ok ? "ok" : reply.code)),
+    bodies.map(() => "bad_response"),
+  );
 });
 
 void test("a rejected transport is unreachable", async () => {
   const reply = await createHostClient(corePlugin, {
-    url: URL_,
+    url: COMPANION_URL,
     transport: () => Promise.reject(new Error("Connection refused")),
   }).echo({ text: "hi" });
   assert.equal(reply.ok ? "ok" : reply.code, "unreachable");
@@ -107,26 +113,26 @@ void test("a rejected transport is unreachable", async () => {
 
 void test("a slow companion times out without waiting for it", async () => {
   const reply = await createHostClient(corePlugin, {
-    url: URL_,
+    url: COMPANION_URL,
     timeoutMs: 20,
     transport: () => new Promise(() => {}),
   }).echo({ text: "hi" });
   assert.equal(reply.ok ? "ok" : reply.code, "timeout");
 });
 
-void test("without a native link getter or links, calls fail not_linked without the network", async (t) => {
-  let calls = 0;
-  const transport: HostTransport = () => {
-    calls++;
-    return Promise.reject(new Error("unused"));
-  };
-  for (const links of [undefined, "", "[]", "not json"]) {
+for (const links of [undefined, "", "[]", "not json"]) {
+  void test(`with links ${String(links)}, calls fail not_linked without the network`, async (t) => {
+    let calls = 0;
+    const transport: HostTransport = () => {
+      calls++;
+      return Promise.reject(new Error("unused"));
+    };
     withLinks(links, t);
     const reply = await createHostClient(corePlugin, { transport }).echo({ text: "hi" });
-    assert.equal(reply.ok ? "ok" : reply.code, "not_linked", String(links));
-  }
-  assert.equal(calls, 0);
-});
+    assert.equal(reply.ok ? "ok" : reply.code, "not_linked");
+    assert.equal(calls, 0);
+  });
+}
 
 void test("calls go to the most recent link, or to hostId, read on every call", async (t) => {
   const links = [
@@ -156,6 +162,6 @@ void test("the core plugin guards accept fixture payloads and reject invalid one
   const invalid = await fixture("invalid-payload");
   assert.equal(corePlugin.commands.echo.isPayload(echo.request.payload), true);
   assert.equal(corePlugin.commands.echo.isPayload(invalid.request.payload), false);
-  assert.equal(corePlugin.commands.capabilities.isPayload(undefined), true);
+  assert.equal(corePlugin.commands.capabilities.isPayload((await fixture("capabilities")).request.payload), true);
   assert.equal(corePlugin.commands.capabilities.isPayload({}), false);
 });

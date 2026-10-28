@@ -45,7 +45,7 @@ export function linkedHosts(): LinkedHost[] {
   if (raw === "") return [];
   try {
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(isLinkedHost) : [];
+    return Array.isArray(parsed) ? parsed.filter((item) => isLinkedHost(item)) : [];
   } catch {
     return [];
   }
@@ -101,10 +101,9 @@ async function send(
   // The Vita fetch has no AbortSignal, so a timed-out command may still run on the computer. Never retried.
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<HostFailure>((resolve) => {
-    timer = setTimeout(
-      () => resolve(failure("timeout", `The Host Companion did not answer within ${timeoutMs} ms.`)),
-      timeoutMs,
-    );
+    timer = setTimeout(() => {
+      resolve(failure("timeout", `The Host Companion did not answer within ${timeoutMs} ms.`));
+    }, timeoutMs);
   });
   const exchange = (async (): Promise<HostResult<object>> => {
     try {
