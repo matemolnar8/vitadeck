@@ -101,11 +101,12 @@ export async function startHostCompanion(options: HostCompanionOptions): Promise
 
   async function reply(request: IncomingMessage, peer: string): Promise<Reply> {
     const route = `${request.method ?? "?"} ${request.url ?? "?"}`;
-    const body = await readBody(request);
-
     if (!(await isAllowed(peer))) {
+      // Discards the body unbuffered, so a peer that is not linked costs no memory.
+      request.resume();
       return fail(route, "forbidden", "This Host Companion only answers the VitaDeck it is linked with.");
     }
+    const body = await readBody(request);
     // Every status comes from HOST_CONTROL_WIRE_ERRORS, so an unknown route is an unknown command.
     if (new URL(request.url ?? "/", "http://companion").pathname !== "/command") {
       return fail(route, "unknown_command", "This Host Companion serves only POST /command.");
