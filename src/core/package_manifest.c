@@ -1,7 +1,5 @@
-#define JIMP_IMPLEMENTATION
-#include "jimp/jimp.h"
-
 #include "core/package_manifest.h"
+#include "core/json.h"
 #include "core/util.h"
 
 #include <ctype.h>
@@ -71,29 +69,6 @@ static bool supported_path_extension(const char *path, const char *const *extens
 
     for (int i = 0; i < extension_count; i++) {
         if (strcmp(ext, extensions[i]) == 0) return true;
-    }
-    return false;
-}
-
-static bool skip_json_value(Jimp *jimp)
-{
-    if (jimp_is_string_ahead(jimp)) return jimp_string(jimp);
-    if (jimp_is_number_ahead(jimp)) return jimp_number(jimp);
-    if (jimp_is_bool_ahead(jimp)) return jimp_bool(jimp);
-    if (jimp_is_null_ahead(jimp)) return jimp__get_and_expect_token(jimp, JIMP_NULL);
-    if (jimp_is_array_ahead(jimp)) {
-        if (!jimp_array_begin(jimp)) return false;
-        while (jimp_array_item(jimp)) {
-            if (!skip_json_value(jimp)) return false;
-        }
-        return jimp_array_end(jimp);
-    }
-    if (jimp_is_object_ahead(jimp)) {
-        if (!jimp_object_begin(jimp)) return false;
-        while (jimp_object_member(jimp)) {
-            if (!skip_json_value(jimp)) return false;
-        }
-        return jimp_object_end(jimp);
     }
     return false;
 }
@@ -260,7 +235,7 @@ bool package_manifest_read(const char *package_path, const char *package_name, V
             ok = parse_asset_object(&jimp, package_path, out_manifest->images, &out_manifest->image_count,
                                     VD_PACKAGE_IMAGE_MAX, false, error, error_size);
         } else {
-            ok = skip_json_value(&jimp);
+            ok = json_skip_value(&jimp);
         }
     }
     if (ok) ok = jimp_object_end(&jimp);

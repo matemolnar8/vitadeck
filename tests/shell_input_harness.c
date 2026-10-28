@@ -146,6 +146,51 @@ static void test_upload_cancel(VdShell *shell)
     press(shell, BACK);
 }
 
+static int link_count(void)
+{
+    VdHostControlLink links[VD_HOST_CONTROL_MAX_LINKS];
+    return host_control_links_list(links, VD_HOST_CONTROL_MAX_LINKS);
+}
+
+static void test_host_control(VdShell *shell)
+{
+    const VdHostControlLink studio = {"studio", "Studio Mac", "http://192.168.1.20:8797/"};
+    const VdHostControlLink den = {"den", "Den PC", "http://192.168.1.21:8797/"};
+    expect(host_control_links_save(&studio) && host_control_links_save(&den), "could not save links");
+
+    // Rows: Beta, the Shell Upload Entry, then the Shell Host Control Entry.
+    press(shell, START);
+    press(shell, DOWN);
+    press(shell, DOWN);
+    press(shell, CONFIRM);
+    expect(shell->state == VD_SHELL_HOST_CONTROL, "confirming Host Control should open its screen");
+    expect(host_control_listener_is_running(&shell->host_control_listener),
+           "opening Host Control should start the listener");
+
+    expect(!press(shell, BACK) && shell_is_visible(shell), "Circle on Host Control should keep the Shell open");
+    expect(shell->state == VD_SHELL_HOME, "Circle should return to Home");
+    expect(shell->focus_row == 2, "Circle should focus the Shell Host Control Entry");
+    expect(!host_control_listener_is_running(&shell->host_control_listener), "Circle should stop the listener");
+
+    press(shell, CONFIRM);
+    expect(host_control_listener_is_running(&shell->host_control_listener), "reopening should start the listener");
+    press(shell, DOWN);
+    expect(!press(shell, CONFIRM), "forgetting a link should not restart");
+    VdHostControlLink left[VD_HOST_CONTROL_MAX_LINKS];
+    expect(host_control_links_list(left, VD_HOST_CONTROL_MAX_LINKS) == 1 && strcmp(left[0].id, "den") == 0,
+           "Cross should forget the focused computer at once");
+    expect(strcmp(shell->message, "Forgot Studio Mac.") == 0, "forgetting should say so");
+    expect(shell->host_control_focus == 0, "forgetting the last row should focus the one above");
+    press(shell, CONFIRM);
+    expect(link_count() == 0, "Cross should forget the remaining computer");
+    press(shell, CONFIRM);
+    expect(shell->state == VD_SHELL_HOST_CONTROL, "Cross with no computers should do nothing");
+
+    press(shell, START);
+    expect(!shell_is_visible(shell), "Start should hide the Shell from Host Control");
+    expect(!host_control_listener_is_running(&shell->host_control_listener), "Start should stop the listener");
+}
+
 int main(void)
 {
     char root[] = "/tmp/vitadeck-shell-input-XXXXXX";
@@ -154,8 +199,8 @@ int main(void)
         return 1;
     }
     char error[256] = "";
-    if (!package_library_init(error, sizeof(error))) {
-        fprintf(stderr, "shell_input_harness: %s\n", error);
+    if (!package_library_init(error, sizeof(error)) || !host_control_links_init(root)) {
+        fprintf(stderr, "shell_input_harness: could not init the data root: %s\n", error);
         vd_remove_tree(root);
         return 1;
     }
@@ -168,12 +213,13 @@ int main(void)
     shell_init(&shell);
 
     // Each test leaves the Shell hidden and builds on the library the one before left: activating makes b active so
-    // a can be removed, and the upload test runs with b alone.
+    // a can be removed, and the upload and Host Control tests run with b alone.
     test_open_and_hide(&shell);
     test_restart_active(&shell);
     test_activate_other(&shell);
     test_remove_cancel_and_confirm(&shell);
     test_upload_cancel(&shell);
+    test_host_control(&shell);
 
     shell_shutdown(&shell);
     vd_remove_tree(root);

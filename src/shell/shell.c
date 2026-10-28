@@ -27,7 +27,7 @@
 
 #define SHELL_ROW_H 50
 #define SHELL_ROW_STEP (SHELL_ROW_H + SHELL_SPACE_SM)
-#define SHELL_UPLOAD_ROW_H (SHELL_SPACE_MD + SHELL_FONT_BODY + SHELL_SPACE_XS + SHELL_FONT_CAPTION + SHELL_SPACE_MD)
+#define SHELL_ENTRY_ROW_H (SHELL_SPACE_MD + SHELL_FONT_BODY + SHELL_SPACE_XS + SHELL_FONT_CAPTION + SHELL_SPACE_MD)
 #define SHELL_OVERFLOW_ROW_H 18
 #define SHELL_OVERFLOW_ROW_STEP (SHELL_OVERFLOW_ROW_H + SHELL_SPACE_SM)
 #define SHELL_NAME_X SHELL_PADDING
@@ -39,9 +39,8 @@ static int shell_text_baseline_y(int row_top, int font_h)
     return row_top + (SHELL_ROW_H - font_h) / 2;
 }
 
-static void shell_draw_footer_hint(bool restart_focused)
+static void shell_draw_footer_hint(const char *hint)
 {
-    const char *hint = restart_focused ? "Start / F1 · Confirm: restart · Back" : "Start / F1 · Confirm · Back";
     DrawText(hint, SHELL_PADDING, SHELL_FOOTER_Y, SHELL_FONT_CAPTION, GRAY);
 }
 
@@ -56,11 +55,14 @@ static void draw_checkmark(int cx, int cy, Color c)
     DrawLine(cx - 1, cy + 6, cx + 10, cy - 8, c);
 }
 
+// The Home rows: the packages, then the Shell Upload Entry, then the Shell Host Control Entry.
+#define SHELL_ENTRY_ROWS 2
+
 static int shell_row_count(void)
 {
     VdPackageInfo packages[VD_PACKAGE_LIST_MAX];
     int n = package_library_list(packages, VD_PACKAGE_LIST_MAX);
-    return n + 1;
+    return n + SHELL_ENTRY_ROWS;
 }
 
 static bool row_is_upload(int row, int package_count)
@@ -68,9 +70,14 @@ static bool row_is_upload(int row, int package_count)
     return row == package_count;
 }
 
+static bool row_is_host_control(int row, int package_count)
+{
+    return row == package_count + 1;
+}
+
 static int row_band_height(int row, int package_count)
 {
-    return row_is_upload(row, package_count) ? SHELL_UPLOAD_ROW_H : SHELL_ROW_H;
+    return row < package_count ? SHELL_ROW_H : SHELL_ENTRY_ROW_H;
 }
 
 static int shell_visible_rows_from(int start_row, int package_count, int row_count)
@@ -144,8 +151,59 @@ static void toggle_upload_server(VdShell *shell)
     start_upload_server(shell);
 }
 
+static void open_host_control(VdShell *shell)
+{
+    shell->state = VD_SHELL_HOST_CONTROL;
+    shell->host_control_focus = 0;
+    shell->message[0] = '\0';
+    if (host_control_listener_start(&shell->host_control_listener, shell->host_control_error,
+                                    sizeof(shell->host_control_error))) {
+        shell->host_control_error[0] = '\0';
+        snprintf(shell->host_control_status, sizeof(shell->host_control_status),
+                 "Waiting for a Host Companion to link.");
+    } else {
+        snprintf(shell->host_control_status, sizeof(shell->host_control_status), "Not listening for links.");
+    }
+}
+
+static void close_host_control(VdShell *shell)
+{
+    host_control_listener_stop(&shell->host_control_listener);
+    shell->state = VD_SHELL_HOME;
+    shell->message[0] = '\0';
+    shell->focus_row = shell_row_count() - 1;
+    shell->focus_col = 0;
+}
+
+static void forget_focused_link(VdShell *shell)
+{
+    VdHostControlLink links[VD_HOST_CONTROL_MAX_LINKS];
+    int count = host_control_links_list(links, VD_HOST_CONTROL_MAX_LINKS);
+    if (shell->host_control_focus >= count) return;
+    const VdHostControlLink *link = &links[shell->host_control_focus];
+    bool forgot = host_control_links_forget(link->id);
+    snprintf(shell->message, sizeof(shell->message), forgot ? "Forgot %s." : "Could not forget %s.", link->name);
+    if (forgot && shell->host_control_focus >= count - 1) {
+        shell->host_control_focus = count > 1 ? count - 2 : 0;
+    }
+}
+
+static void apply_host_control_input(VdShell *shell, const VdShellInput *input)
+{
+    if (input->back) {
+        close_host_control(shell);
+        return;
+    }
+    VdHostControlLink links[VD_HOST_CONTROL_MAX_LINKS];
+    int count = host_control_links_list(links, VD_HOST_CONTROL_MAX_LINKS);
+    if (input->up && shell->host_control_focus > 0) shell->host_control_focus--;
+    if (input->down && shell->host_control_focus + 1 < count) shell->host_control_focus++;
+    if (input->confirm) forget_focused_link(shell);
+}
+
 static void hide_shell_to_deck(VdShell *shell)
 {
+    host_control_listener_stop(&shell->host_control_listener);
     shell->state = VD_SHELL_HIDDEN;
     clear_remove_confirm(shell);
     shell->message[0] = '\0';
@@ -185,6 +243,7 @@ void shell_init(VdShell *shell)
     shell->state = VD_SHELL_HIDDEN;
     shell->remove_confirm_row = -1;
     upload_server_init(&shell->upload_server);
+    host_control_listener_init(&shell->host_control_listener);
 }
 
 void shell_show_home(VdShell *shell)
@@ -200,6 +259,7 @@ void shell_shutdown(VdShell *shell)
     upload_server_stop(&shell->upload_server);
     vd_mutex_destroy(shell->upload_server.mutex);
     shell->upload_server.mutex = NULL;
+    host_control_listener_destroy(&shell->host_control_listener);
 }
 
 bool shell_is_visible(const VdShell *shell)
@@ -219,6 +279,18 @@ void shell_update(VdShell *shell, bool *request_runtime_restart)
     if (upload_server_take_success(&shell->upload_server, &restart_active, &info)) {
         snprintf(shell->message, sizeof(shell->message), "Installed %s %s.", info.display_name, info.version);
         if (restart_active) *request_runtime_restart = true;
+    }
+
+    if (host_control_listener_take_message(&shell->host_control_listener, message, sizeof(message))) {
+        snprintf(shell->message, sizeof(shell->message), "%s", message);
+    }
+
+    VdHostControlLink link;
+    if (host_control_listener_take_link(&shell->host_control_listener, &link)) {
+        host_control_listener_stop(&shell->host_control_listener);
+        snprintf(shell->host_control_status, sizeof(shell->host_control_status), "Linked to %s at %s", link.name,
+                 link.url);
+        shell->host_control_focus = 0;
     }
 }
 
@@ -249,11 +321,14 @@ void shell_apply_system_input(VdShell *shell, const VdShellInput *input, bool *r
     }
 
     if (shell->state == VD_SHELL_HIDDEN) return;
+    if (shell->state == VD_SHELL_HOST_CONTROL) {
+        apply_host_control_input(shell, input);
+        return;
+    }
 
     VdPackageInfo packages[VD_PACKAGE_LIST_MAX];
     int package_count = package_library_list(packages, VD_PACKAGE_LIST_MAX);
-    int row_count = package_count + 1;
-    if (row_count <= 0) return;
+    int row_count = package_count + SHELL_ENTRY_ROWS;
 
     if (shell->remove_confirm_package[0] != '\0') {
         if (input->back) {
@@ -278,7 +353,7 @@ void shell_apply_system_input(VdShell *shell, const VdShellInput *input, bool *r
         shell->focus_col = 0;
     }
 
-    if (row_is_upload(shell->focus_row, package_count)) {
+    if (shell->focus_row >= package_count) {
         shell->focus_col = 0;
     } else {
         if (input->left && shell->focus_col > 0) shell->focus_col--;
@@ -296,6 +371,10 @@ void shell_apply_system_input(VdShell *shell, const VdShellInput *input, bool *r
 
     if (row_is_upload(shell->focus_row, package_count)) {
         toggle_upload_server(shell);
+        return;
+    }
+    if (row_is_host_control(shell->focus_row, package_count)) {
+        open_host_control(shell);
         return;
     }
 
@@ -377,17 +456,99 @@ static void draw_overflow_row(int row_top, bool points_up)
     }
 }
 
+static void draw_message(const VdShell *shell)
+{
+    if (shell->message[0] == '\0') return;
+    int msg_y = SHELL_FOOTER_Y - SHELL_SPACE_MD - SHELL_FONT_BODY;
+    DrawText(shell->message, SHELL_PADDING, msg_y, SHELL_FONT_BODY, YELLOW);
+}
+
+static void draw_host_control_entry(int text_y)
+{
+    VdHostControlLink links[VD_HOST_CONTROL_MAX_LINKS];
+    int count = host_control_links_list(links, VD_HOST_CONTROL_MAX_LINKS);
+    int x = SHELL_NAME_X + SHELL_SPACE_MD;
+    DrawText("Host Control", x, text_y, SHELL_FONT_BODY, RAYWHITE);
+    int sub_y = text_y + SHELL_FONT_BODY + SHELL_SPACE_XS;
+    if (count == 0) {
+        DrawText("Not linked", x, sub_y, SHELL_FONT_CAPTION, (Color){130, 140, 160, 255});
+        return;
+    }
+    char caption[VD_HOST_CONTROL_NAME_MAX + 32];
+    if (count == 1) {
+        snprintf(caption, sizeof(caption), "Linked: %s", links[0].name);
+    } else {
+        snprintf(caption, sizeof(caption), "Linked: %s +%d", links[0].name, count - 1);
+    }
+    DrawText(caption, x, sub_y, SHELL_FONT_CAPTION, GREEN);
+}
+
+static void draw_host_control_screen(VdShell *shell)
+{
+    DrawText("Host Control", SHELL_PADDING, SHELL_SECTION_Y, SHELL_FONT_BODY, GRAY);
+
+    const VdHostControlListener *listener = &shell->host_control_listener;
+    const char *address = host_control_listener_address(listener);
+    bool bind_failed = shell->host_control_error[0] != '\0';
+    int y = SHELL_LIST_Y;
+    char line[160];
+    if (bind_failed) {
+        DrawText(shell->host_control_error, SHELL_PADDING, y, SHELL_FONT_BODY, (Color){230, 120, 120, 255});
+    } else {
+        snprintf(line, sizeof(line), "Link address: %s", address);
+        DrawText(line, SHELL_PADDING, y, SHELL_FONT_BODY,
+                 host_control_listener_is_running(listener) ? GREEN : RAYWHITE);
+    }
+    y += SHELL_FONT_BODY + SHELL_SPACE_XS;
+    if (!bind_failed) {
+        snprintf(line, sizeof(line), "On the computer: pnpm --dir js host-companion link %s", address);
+        DrawText(line, SHELL_PADDING, y, SHELL_FONT_CAPTION, (Color){130, 140, 160, 255});
+    }
+    y += SHELL_FONT_CAPTION + SHELL_SPACE_XS;
+    DrawText(shell->host_control_status, SHELL_PADDING, y, SHELL_FONT_CAPTION, (Color){150, 160, 180, 255});
+    y += SHELL_FONT_CAPTION + SHELL_SPACE_MD;
+
+    DrawText("Linked computers", SHELL_PADDING, y, SHELL_FONT_BODY, GRAY);
+    y += SHELL_FONT_BODY + SHELL_SPACE_SM;
+
+    VdHostControlLink links[VD_HOST_CONTROL_MAX_LINKS];
+    int count = host_control_links_list(links, VD_HOST_CONTROL_MAX_LINKS);
+    if (count == 0) {
+        DrawText("No computers linked yet.", SHELL_PADDING, y, SHELL_FONT_CAPTION, (Color){150, 160, 180, 255});
+    }
+    int row_w = VD_SCREEN_WIDTH - SHELL_PADDING - SHELL_PADDING;
+    for (int i = 0; i < count; i++) {
+        bool focused = i == shell->host_control_focus;
+        DrawRectangle(SHELL_PADDING, y, row_w, SHELL_ROW_H,
+                      focused ? (Color){42, 52, 72, 255} : (Color){28, 34, 44, 255});
+        int text_y = shell_text_baseline_y(y, SHELL_FONT_BODY);
+        int x = SHELL_NAME_X + SHELL_SPACE_MD;
+        DrawText(links[i].name, x, text_y, SHELL_FONT_BODY, RAYWHITE);
+        x += MeasureText(links[i].name, SHELL_FONT_BODY) + SHELL_SPACE_MD;
+        DrawText(links[i].url, x, shell_text_baseline_y(y, SHELL_FONT_CAPTION), SHELL_FONT_CAPTION,
+                 (Color){150, 160, 180, 255});
+        y += SHELL_ROW_STEP;
+    }
+
+    draw_message(shell);
+    shell_draw_footer_hint(count > 0 ? "Start / F1 · Confirm: forget · Back" : "Start / F1 · Back");
+}
+
 void shell_render(VdShell *shell)
 {
     if (shell->state == VD_SHELL_HIDDEN) return;
     draw_panel();
 
     DrawText("VitaDeck", SHELL_PADDING, SHELL_TITLE_Y, SHELL_FONT_TITLE, RAYWHITE);
+    if (shell->state == VD_SHELL_HOST_CONTROL) {
+        draw_host_control_screen(shell);
+        return;
+    }
     DrawText("Deck Apps", SHELL_PADDING, SHELL_SECTION_Y, SHELL_FONT_BODY, GRAY);
 
     VdPackageInfo packages[VD_PACKAGE_LIST_MAX];
     int package_count = package_library_list(packages, VD_PACKAGE_LIST_MAX);
-    int row_count = package_count + 1;
+    int row_count = package_count + SHELL_ENTRY_ROWS;
 
     int list_top = SHELL_LIST_Y;
     if (package_count == 0) {
@@ -426,9 +587,11 @@ void shell_render(VdShell *shell)
         DrawRectangle(SHELL_PADDING, row_top, row_w, band_h, band_color);
 
         int text_y = shell_text_baseline_y(row_top, SHELL_FONT_BODY);
-        if (upload_row) text_y = row_top + SHELL_SPACE_MD;
+        if (row >= package_count) text_y = row_top + SHELL_SPACE_MD;
 
-        if (upload_row) {
+        if (row_is_host_control(row, package_count)) {
+            draw_host_control_entry(text_y);
+        } else if (upload_row) {
             int pad = SHELL_SPACE_MD;
             DrawText("Upload", SHELL_NAME_X + pad, text_y, SHELL_FONT_BODY, upload_running ? GREEN : RAYWHITE);
             int sub_y = text_y + SHELL_FONT_BODY + SHELL_SPACE_XS;
@@ -464,9 +627,6 @@ void shell_render(VdShell *shell)
                  SHELL_FONT_CAPTION, GRAY);
     }
 
-    if (shell->message[0] != '\0') {
-        int msg_y = SHELL_FOOTER_Y - SHELL_SPACE_MD - SHELL_FONT_BODY;
-        DrawText(shell->message, SHELL_PADDING, msg_y, SHELL_FONT_BODY, YELLOW);
-    }
-    shell_draw_footer_hint(restart_focused);
+    draw_message(shell);
+    shell_draw_footer_hint(restart_focused ? "Start / F1 · Confirm: restart · Back" : "Start / F1 · Confirm · Back");
 }

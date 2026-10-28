@@ -3,11 +3,12 @@
 
 #include <stdbool.h>
 #include "core/package_library.h"
+#include "host_control/listener.h"
 #include "upload/http_server.h"
 
 #define VD_SHELL_REMOVE_LABEL_MAX 192
 
-typedef enum { VD_SHELL_HIDDEN, VD_SHELL_HOME } VdShellState;
+typedef enum { VD_SHELL_HIDDEN, VD_SHELL_HOME, VD_SHELL_HOST_CONTROL } VdShellState;
 
 typedef struct {
     VdShellState state;
@@ -19,6 +20,10 @@ typedef struct {
     char remove_confirm_label[VD_SHELL_REMOVE_LABEL_MAX];
     char message[256];
     VdUploadServer upload_server;
+    VdHostControlListener host_control_listener;
+    int host_control_focus;
+    char host_control_error[256];
+    char host_control_status[VD_HOST_CONTROL_NAME_MAX + VD_HOST_CONTROL_URL_MAX + 32];
 } VdShell;
 
 // System Input and Shell navigation pressed this frame.

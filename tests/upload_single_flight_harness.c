@@ -2,6 +2,7 @@
 #include "upload/http_server.c"
 
 #include <sys/stat.h>
+#include "platform/socket.h"
 
 static int failures = 0;
 

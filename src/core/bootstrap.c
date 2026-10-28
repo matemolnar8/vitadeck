@@ -6,6 +6,7 @@
 #include "core/event_queue.h"
 #include "core/package_library.h"
 #include "core/package_manifest.h"
+#include "host_control/link.h"
 #include "ui/fonts.h"
 #include "ui/images.h"
 #include "ui/instance_tree.h"
@@ -51,6 +52,10 @@ bool bootstrap_boot_subsystems(char *error, size_t error_size)
     instance_tree_init();
 
     if (!package_library_init(error, error_size)) return false;
+    if (!host_control_links_init(package_library_data_root())) {
+        if (error && error_size > 0) snprintf(error, error_size, "Could not initialize Host Control Links.");
+        return false;
+    }
     return true;
 }
 
