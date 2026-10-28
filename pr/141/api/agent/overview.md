@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 7539bc14c3481390b79fee499bc961194f4cd055` and `git rev-parse --verify d741b11fc23f7c1d6ffcad842e17f18c22c44f08` in this repository.
+   Run `git rev-parse --verify 7539bc14c3481390b79fee499bc961194f4cd055` and `git rev-parse --verify c5e2ea9170ebcea04b1e655bc0a2fe59bb9b08b1` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,16 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  7539bc14c3481390b79fee499bc961194f4cd055
 
-head               d741b11fc23f7c1d6ffcad842e17f18c22c44f08
+head               c5e2ea9170ebcea04b1e655bc0a2fe59bb9b08b1
 
-Named refs at pin: origin/main ... d741b11f
+Named refs at pin: origin/main ... c5e2ea91
 
 Read the diff:
 
-git diff --find-renames 7539bc14c3481390b79fee499bc961194f4cd055 d741b11fc23f7c1d6ffcad842e17f18c22c44f08
+git diff --find-renames 7539bc14c3481390b79fee499bc961194f4cd055 c5e2ea9170ebcea04b1e655bc0a2fe59bb9b08b1
 
 Commits:
+- c5e2ea91 build: drop the linux preset
 - d741b11f build: configure host builds through CMake presets
 - da535645 build: configure host builds with Ninja
 - 56d96fa2 build: rebuild JS when an example's build script changes
@@ -42,7 +43,7 @@ Commits:
 
 Sources:
 - ticket Máté's request Collapse harness sources into vitadeck_core, make JS a real dependency of vitadeck/run/stage_examples, replace js_copy with configure-time symlinks, update every surface and doc in place.
-- transcript Máté in Claude Code · Oct 28 Use Ninja; then add CMake presets so the configure flags need no remembering.
+- transcript Máté in Claude Code · Oct 28 Use Ninja; add CMake presets so the configure flags need no remembering; drop the linux preset once Linux proved not to need its flags.
 
 The title:
 
@@ -59,7 +60,6 @@ The host CMake build compiles every source once into a vitadeck_core static libr
 Look for:
 - The request lets JS be a stamp or an output; this uses the real output js/dist/runtime/runtime.js, so cleaning a host build dir deletes that file from the source tree.
 - Subtle: an existing Make build dir now fails `cmake --preset default` with CMake's generator-mismatch error, so `agent-check.sh` and `bench.sh` stop on an old `out/` until it is removed.
-- Subtle: on Linux `agent-check.sh` no longer honors `CC`/`CXX`; the `linux` preset caches GCC, and `-DCMAKE_C_COMPILER=...` overrides it.
 
 ## Review concerns
 
@@ -80,7 +80,7 @@ Depends on:
 
 ### 03 Ninja through CMake presets (`ninja`)
 
-`CMakePresets.json` names the Ninja configure (`default`) and its GCC variant (`linux`), and every script and CI job that configures a host build calls a preset; the smoke image installs `ninja-build`, and `run` joins the console pool.
+`CMakePresets.json` names the one Ninja configure (`default`) that every script and CI job uses on macOS and Linux; the smoke image installs `ninja-build`, and `run` joins the console pool.
 
 Depends on:
 - 02 JS as a dependency, links instead of copies (`js`)
