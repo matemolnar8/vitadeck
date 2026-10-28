@@ -52,7 +52,7 @@ run_inside() {
   pnpm --dir js build
 
   step "Configure host smoke build"
-  CC=gcc CXX=g++ cmake -S . -B "$BUILD_DIR" -G Ninja -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group" -DVITADECK_SANITIZE="$SANITIZE"
+  cmake --preset linux -B "$BUILD_DIR" -DVITADECK_SANITIZE="$SANITIZE"
 
   if [[ "$mode" == "ctest" ]]; then
     step "Build host targets"

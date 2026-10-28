@@ -35,7 +35,7 @@ When this file speaks:
 
 - Node.js 24.16+ (`.nvmrc`; `fnm use` picks it up, and `scripts/agent-check.sh` switches to it through fnm on its own) and pnpm (pinned by `packageManager` in `js/package.json`). `pnpm --dir js install` once. Older Node bundles a corepack that cannot launch pnpm 11+ and fails with `Cannot find module .../bin/pnpm.cjs`.
 - `git submodule update --init --recursive` if `vendor/quickjs/quickjs.c` is missing.
-- Host build needs CMake, Ninja, raylib 5.5, curl, OpenSSL, zlib (`brew install ninja raylib` on macOS; Ninja, raylib + OpenGL/X11 dev packages on Linux). Configure with `cmake -S . -B out -G Ninja`; on Linux/GCC with `CC=gcc CXX=g++ cmake -S . -B out -G Ninja -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group"`. A build directory keeps the generator it was configured with; delete an old Make `out/` before configuring it with Ninja.
+- Host build needs CMake, Ninja, raylib 5.5, curl, OpenSSL, zlib (`brew install ninja raylib` on macOS; Ninja, raylib + OpenGL/X11 dev packages on Linux). Configure `out/` with `cmake --preset default`, or `cmake --preset linux` on Linux (GCC, `-Wl,--start-group`); see [CMakePresets.json](CMakePresets.json). A build directory keeps the generator it was configured with; delete an old Make `out/` before configuring it with a preset.
 - Vita build and Linux smoke run in Docker. Start Docker Desktop first.
 - The first CMake configure downloads the pinned runtime fonts and Twemoji images ([cmake/fonts.cmake](cmake/fonts.cmake), [cmake/twemoji.cmake](cmake/twemoji.cmake)) into the gitignored `assets/fonts/` and `assets/emoji/`; offline it warns, builds anyway with fallbacks (raylib's built-in font, missing-glyph boxes for CJK and Korean, a fallback glyph for emoji), and the next configure retries.
 - Uploading a Vita build (`upload_vita`, `upload_vpk`, `run`) reads the Vita's IP from `PSVITAIP` when CMake configures, e.g. `export PSVITAIP=192.168.1.177`.
@@ -69,9 +69,9 @@ Use `scripts/agent-check.sh` from the repo root; pick the smallest tier that pro
 - `smoke` - Dockerized Linux visual smoke and Deck App input check. Run when rendering, theme, fonts, input, or Deck App output change.
 - `full` - all of the above plus the Vita Docker build. Run before a PR that touches native code.
 
-Individual commands: `pnpm --dir js tsc`, `pnpm --dir js test:cli`, `pnpm --dir js lint`, `pnpm --dir js format:check`, `pnpm --dir js build`, `./scripts/clang-format.sh check` (or `format` to apply), `cmake -S . -B out -G Ninja && cmake --build out`, Vita: `docker compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"`.
+Individual commands: `pnpm --dir js tsc`, `pnpm --dir js test:cli`, `pnpm --dir js lint`, `pnpm --dir js format:check`, `pnpm --dir js build`, `./scripts/clang-format.sh check` (or `format` to apply), `cmake --preset default && cmake --build out`, Vita: `docker compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"`.
 
-- C under `src/` and `tests/` follows `.clang-format` with clang-format 21 (CI pins 21.1.8, `pipx install clang-format==21.1.8`); run `cmake -S . -B out -G Ninja` so `out/compile_commands.json` exists for clangd.
+- C under `src/` and `tests/` follows `.clang-format` with clang-format 21 (CI pins 21.1.8, `pipx install clang-format==21.1.8`); run `cmake --preset default` so `out/compile_commands.json` exists for clangd.
 - Write React for the React Compiler: pure renders, Rules of Hooks, accurate effect deps, no manual `useMemo`/`useCallback`/`memo`.
 - For a change that could affect performance (rendering, the reconciler, the JS thread loop), run `scripts/bench.sh vita3k` and compare against the baseline; see the `vitadeck-bench` skill.
 - For a UI change, do one pass in the real host window (load the `vitadeck-manual-testing` skill). Ask before testing on Vita hardware; it is Máté's device.

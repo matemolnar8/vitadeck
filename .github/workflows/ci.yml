@@ -91,7 +91,7 @@ jobs:
             echo "ccache not found at $CCACHE" >&2
             exit 1
           fi
-          cmake -S . -B out -G Ninja \
+          cmake --preset default \
             -DVITADECK_WERROR=ON \
             -DCMAKE_C_COMPILER_LAUNCHER="$CCACHE" \
             -DCMAKE_CXX_COMPILER_LAUNCHER="$CCACHE"

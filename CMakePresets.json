@@ -1,0 +1,21 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "default",
+      "displayName": "Host",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out"
+    },
+    {
+      "name": "linux",
+      "displayName": "Host on Linux with GCC",
+      "inherits": "default",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_EXE_LINKER_FLAGS": "-Wl,--start-group"
+      }
+    }
+  ]
+}

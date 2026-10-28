@@ -52,15 +52,11 @@ install_js() {
 
 configure_host() {
     step "Configure host target"
-    case "$(uname -s)" in
-        Linux)
-            CC=${CC:-gcc} CXX=${CXX:-g++} cmake -S . -B out -G Ninja -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group" \
-                -DVITADECK_SANITIZE="${VITADECK_SANITIZE:-}"
-            ;;
-        *)
-            cmake -S . -B out -G Ninja -DVITADECK_SANITIZE="${VITADECK_SANITIZE:-}"
-            ;;
-    esac
+    local preset=default
+    if [ "$(uname -s)" = Linux ]; then
+        preset=linux
+    fi
+    cmake --preset "$preset" -DVITADECK_SANITIZE="${VITADECK_SANITIZE:-}"
 }
 
 run_fast() {
