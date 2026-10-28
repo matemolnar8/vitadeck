@@ -52,11 +52,7 @@ install_js() {
 
 configure_host() {
     step "Configure host target"
-    local preset=default
-    if [ "$(uname -s)" = Linux ]; then
-        preset=linux
-    fi
-    cmake --preset "$preset" -DVITADECK_SANITIZE="${VITADECK_SANITIZE:-}"
+    cmake --preset default -DVITADECK_SANITIZE="${VITADECK_SANITIZE:-}"
 }
 
 run_fast() {

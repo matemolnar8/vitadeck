@@ -41,7 +41,7 @@ pnpm --dir js build
 **2. Host** (executable `out/vitadeck`; reruns `pnpm build` when JS changed, so step 1 is only needed once):
 
 ```sh
-cmake --preset default && cmake --build out   # Linux: --preset linux
+cmake --preset default && cmake --build out
 ```
 
 Everyday loop: `ninja -C out run` (or `cmake --build out --target run`) rebuilds JS if it changed, builds the host, stages the examples, and launches.

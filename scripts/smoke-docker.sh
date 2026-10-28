@@ -52,7 +52,7 @@ run_inside() {
   pnpm --dir js build
 
   step "Configure host smoke build"
-  cmake --preset linux -B "$BUILD_DIR" -DVITADECK_SANITIZE="$SANITIZE"
+  cmake --preset default -B "$BUILD_DIR" -DVITADECK_SANITIZE="$SANITIZE"
 
   if [[ "$mode" == "ctest" ]]; then
     step "Build host targets"
