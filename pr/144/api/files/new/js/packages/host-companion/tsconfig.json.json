@@ -1,0 +1,1 @@
+{"path":"js/packages/host-companion/tsconfig.json","ref":"eb61ca83421e50b68494e84294baac13b7c346d1","side":"new","content":"{\n  \"extends\": \"../../tsconfig.json\",\n  \"compilerOptions\": {\n    \"types\": [\"node\"],\n    \"lib\": [\"es2023\"]\n  },\n  \"include\": [\"src/**/*.ts\", \"test/**/*.ts\"]\n}\n","language":"json"}

@@ -1,0 +1,1 @@
+{"path":"js/packages/host-companion/src/index.ts","ref":"eb61ca83421e50b68494e84294baac13b7c346d1","side":"new","content":"export { HostCommandError, implementHostPlugin } from \"./plugin\";\nexport type { HostPluginImplementations, ImplementedHostPlugin } from \"./plugin\";\n","language":"typescript"}
