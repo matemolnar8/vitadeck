@@ -52,14 +52,14 @@ run_inside() {
   pnpm --dir js build
 
   step "Configure host smoke build"
-  CC=gcc CXX=g++ cmake -S . -B "$BUILD_DIR" -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group" -DVITADECK_SANITIZE="$SANITIZE"
+  CC=gcc CXX=g++ cmake -S . -B "$BUILD_DIR" -G Ninja -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group" -DVITADECK_SANITIZE="$SANITIZE"
 
   if [[ "$mode" == "ctest" ]]; then
     step "Build host targets"
-    cmake --build "$BUILD_DIR" --parallel "$(nproc)"
+    cmake --build "$BUILD_DIR"
   else
     step "Build smoke harnesses"
-    cmake --build "$BUILD_DIR" --parallel "$(nproc)" --target smoke_harness deck_app_input_harness
+    cmake --build "$BUILD_DIR" --target smoke_harness deck_app_input_harness
   fi
 
   case "$mode" in

@@ -54,11 +54,11 @@ configure_host() {
     step "Configure host target"
     case "$(uname -s)" in
         Linux)
-            CC=${CC:-gcc} CXX=${CXX:-g++} cmake -S . -B out -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group" \
+            CC=${CC:-gcc} CXX=${CXX:-g++} cmake -S . -B out -G Ninja -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group" \
                 -DVITADECK_SANITIZE="${VITADECK_SANITIZE:-}"
             ;;
         *)
-            cmake -S . -B out -DVITADECK_SANITIZE="${VITADECK_SANITIZE:-}"
+            cmake -S . -B out -G Ninja -DVITADECK_SANITIZE="${VITADECK_SANITIZE:-}"
             ;;
     esac
 }
@@ -96,7 +96,7 @@ run_host() {
     configure_host
 
     step "Build host target"
-    cmake --build out --parallel
+    cmake --build out
 
     step "Run non-smoke CTest"
     ctest --test-dir out --output-on-failure -LE smoke

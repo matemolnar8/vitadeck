@@ -117,8 +117,8 @@ run_host() {
   if ((BUILD)); then
     build_js
     step "Build host"
-    cmake -S "$ROOT_DIR" -B "$ROOT_DIR/out" >/dev/null
-    cmake --build "$ROOT_DIR/out" --parallel --target vitadeck stage_examples
+    cmake -S "$ROOT_DIR" -B "$ROOT_DIR/out" -G Ninja >/dev/null
+    cmake --build "$ROOT_DIR/out" --target vitadeck stage_examples
   fi
   local data="$ROOT_DIR/out/vitadeck-data"
   gui_lock "$TARGET"

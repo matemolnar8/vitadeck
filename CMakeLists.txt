@@ -268,7 +268,7 @@ if(NOT DEFINED ENV{VITASDK})
   get_filename_component(real_source_dir ${CMAKE_SOURCE_DIR} REALPATH)
   get_filename_component(real_binary_dir ${CMAKE_BINARY_DIR} REALPATH)
   if(real_binary_dir STREQUAL real_source_dir)
-    message(FATAL_ERROR "In-source builds are not supported; configure a build directory, e.g. cmake -S . -B out")
+    message(FATAL_ERROR "In-source builds are not supported; configure a build directory, e.g. cmake -S . -B out -G Ninja")
   endif()
   function(link_into_build name source)
     set(link ${CMAKE_BINARY_DIR}/${name})
@@ -466,6 +466,7 @@ else()
 
   add_custom_target(run
     DEPENDS ${PROJECT_NAME} stage_examples
+    USES_TERMINAL
     VERBATIM
     COMMAND ${CMAKE_SOURCE_DIR}/scripts/check-macos-display.sh
     COMMAND ${CMAKE_SOURCE_DIR}/scripts/gui-run.sh ${CMAKE_BINARY_DIR}/${PROJECT_NAME}

@@ -10,8 +10,8 @@ metadata:
 ## Quick start
 
 1. Build; the host build reruns `pnpm build` when JS changed:
-   - macOS: `cmake -S . -B out && cmake --build out --parallel`
-   - Linux/GCC: `CC=gcc CXX=g++ cmake -S . -B out -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group" && cmake --build out --parallel`
+   - macOS: `cmake -S . -B out -G Ninja && cmake --build out`
+   - Linux/GCC: `CC=gcc CXX=g++ cmake -S . -B out -G Ninja -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group" && cmake --build out`
 2. Stage Deck Apps for local runs when `out/vitadeck-data` is missing or stale:
    - `cmake --build out --target stage_examples` copies every built example into `out/vitadeck-data/installed-deck-apps/`.
    - Pick the one to run: `printf 'chat.vdapp\n' > out/vitadeck-data/active-package.txt`. Without this file the Shell opens with no Active Deck App.
