@@ -500,9 +500,12 @@ static void draw_host_control_screen(VdShell *shell)
                  host_control_listener_is_running(listener) ? GREEN : RAYWHITE);
     }
     y += SHELL_FONT_BODY + SHELL_SPACE_XS;
-    if (!bind_failed) {
+    if (host_control_listener_is_running(listener)) {
         snprintf(line, sizeof(line), "On the computer: pnpm --dir js host-companion link %s", address);
         DrawText(line, SHELL_PADDING, y, SHELL_FONT_CAPTION, (Color){130, 140, 160, 255});
+    } else if (!bind_failed) {
+        DrawText("To link another computer, go Back and open Host Control again.", SHELL_PADDING, y, SHELL_FONT_CAPTION,
+                 (Color){130, 140, 160, 255});
     }
     y += SHELL_FONT_CAPTION + SHELL_SPACE_XS;
     DrawText(shell->host_control_status, SHELL_PADDING, y, SHELL_FONT_CAPTION, (Color){150, 160, 180, 255});

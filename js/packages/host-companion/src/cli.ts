@@ -68,6 +68,10 @@ async function main(): Promise<number> {
   const [command, ...rest] = positionals;
   const configPath = values.config === undefined ? DEFAULT_CONFIG_PATH : path.resolve(userCwd, values.config);
 
+  if (values.help) {
+    console.log(USAGE);
+    return 0;
+  }
   if (command === "start" && rest.length === 0) {
     await start(values, configPath);
     return 0;
@@ -80,10 +84,6 @@ async function main(): Promise<number> {
     });
     (outcome.ok ? console.log : console.error)(outcome.message);
     return outcome.ok ? 0 : 1;
-  }
-  if (values.help) {
-    console.log(USAGE);
-    return 0;
   }
   console.error(USAGE);
   return 1;
