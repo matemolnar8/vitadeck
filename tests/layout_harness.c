@@ -294,7 +294,7 @@ static void test_text_in_column(void)
     const int h = line_height_of(20);
     expect_at(title, 2, 2, "text starts inside the padding like any child");
     expect_size(title, width_of("Hello", 20), h, "text is as wide as its line and one line high");
-    // DejaVu Sans advances for "Hello" sum to 5191 of 2384 units per 20 px, plus 1 px between glyphs: 47.5.
+    // DejaVu Sans advances for "Hello" sum to 5191 of 2384 units per 20 px, plus 1 px between glyphs: 47.55.
     expect(title->layout.width == 48, "layout measures a known string at the font's own advances");
     expect_at(r, 2, 2 + h + 4, "the next child follows the text and the gap");
     expect_at(lines, 5, 2 + h + 4 + 10 + 4 + 5, "y is a leading margin and x an offset, as for any child");
