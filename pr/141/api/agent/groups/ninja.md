@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 7539bc14c3481390b79fee499bc961194f4cd055` and `git rev-parse --verify da5356456e7647fa2d1b6538715d78881460edce` in this repository.
+   Run `git rev-parse --verify 7539bc14c3481390b79fee499bc961194f4cd055` and `git rev-parse --verify d741b11fc23f7c1d6ffcad842e17f18c22c44f08` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 7539bc14c3481390b79fee499bc961194f4cd055 da5356456e7647fa2d1b6538715d78881460edce -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 7539bc14c3481390b79fee499bc961194f4cd055 d741b11fc23f7c1d6ffcad842e17f18c22c44f08 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,32 +25,34 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  7539bc14c3481390b79fee499bc961194f4cd055
 
-head               da5356456e7647fa2d1b6538715d78881460edce
+head               d741b11fc23f7c1d6ffcad842e17f18c22c44f08
 
-Named refs at pin: origin/main ... da535645
+Named refs at pin: origin/main ... d741b11f
 
 Read the diff:
 
-git diff --find-renames 7539bc14c3481390b79fee499bc961194f4cd055 da5356456e7647fa2d1b6538715d78881460edce
+git diff --find-renames 7539bc14c3481390b79fee499bc961194f4cd055 d741b11fc23f7c1d6ffcad842e17f18c22c44f08
 
-Review concern 03 of 04: Ninja for host builds (`ninja`)
+Review concern 03 of 04: Ninja through CMake presets (`ninja`)
 
 The why:
 
-[Máté asked to use Ninja](source:ninja); it drops make 3.81's recursion overhead from the edit loop.
+[Máté asked to use Ninja, then for presets](source:ninja) so the configure flags need no remembering.
 
 The what:
 
-Every script and CI job that configures a host build passes `-G Ninja`, the smoke image installs `ninja-build`, and `run` joins the console pool.
+`CMakePresets.json` names the Ninja configure (`default`) and its GCC variant (`linux`), and every script and CI job that configures a host build calls a preset; the smoke image installs `ninja-build`, and `run` joins the console pool.
 
 Look for:
 - `run` is `USES_TERMINAL`: without the console pool Ninja buffers the app's stdout until it exits.
 - The Vita Docker build and vita-build.yml stay on Make; the vitasdk image has no Ninja.
+- `smoke-docker.sh` passes `-B "$BUILD_DIR"` after `--preset linux`; the command-line build dir overrides the preset's `out/`.
 
 Depends on:
 - 02 JS as a dependency, links instead of copies (`js`)
 
 Hunk refs for this concern:
+- CMakePresets.json
 - .github/workflows/ci.yml
 - Dockerfile
 - scripts/agent-check.sh
