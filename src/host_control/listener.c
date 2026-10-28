@@ -109,8 +109,13 @@ static void *listener_thread(void *raw)
         struct timeval timeout = {.tv_sec = VD_HOST_CONTROL_RECV_TIMEOUT_SEC};
         setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
         vd_mutex_lock(listener->mutex);
-        listener->client_fd = fd;
+        bool stopping = !listener->running;
+        if (!stopping) listener->client_fd = fd;
         vd_mutex_unlock(listener->mutex);
+        if (stopping) {
+            close(fd);
+            break;
+        }
         bool linked = handle_connection(listener, fd);
         vd_mutex_lock(listener->mutex);
         listener->client_fd = -1;
