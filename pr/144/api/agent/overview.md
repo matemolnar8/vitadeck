@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify eb61ca83421e50b68494e84294baac13b7c346d1` in this repository.
+   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify 04760101d68405a97b39f799f3f4f9181fa18778` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,16 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  a447e3b960dc1c5434b9fbc2f45c112b1c630b1f
 
-head               eb61ca83421e50b68494e84294baac13b7c346d1
+head               04760101d68405a97b39f799f3f4f9181fa18778
 
 Named refs at pin: a447e3b9 ... HEAD
 
 Read the diff:
 
-git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f eb61ca83421e50b68494e84294baac13b7c346d1
+git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 04760101d68405a97b39f799f3f4f9181fa18778
 
 Commits:
+- 04760101 fix(host-companion): reject unlinked peers before reading their body
 - eb61ca83 fix(host-control): close a connection accepted while the listener stops
 - 77aad963 fix(host-control): show how to link another computer after a link; help before commands
 - 3d928f8d fix(host-control): review fixes for polling backoff, result spread, and listener stop
