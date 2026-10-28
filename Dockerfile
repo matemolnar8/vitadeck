@@ -21,6 +21,7 @@ RUN apt-get update \
         libxinerama-dev \
         libxrandr-dev \
         libxxf86vm-dev \
+        ninja-build \
         pkg-config \
         xvfb \
         zlib1g-dev \

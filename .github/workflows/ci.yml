@@ -73,7 +73,7 @@ jobs:
             brew-${{ runner.os }}-
 
       - name: Install host native dependencies
-        run: brew install raylib pkgconf cmake ccache
+        run: brew install raylib pkgconf cmake ninja ccache
 
       - name: Cache downloaded assets
         uses: actions/cache@v5
@@ -91,11 +91,11 @@ jobs:
             echo "ccache not found at $CCACHE" >&2
             exit 1
           fi
-          cmake -S . -B out \
+          cmake --preset default \
             -DVITADECK_WERROR=ON \
             -DCMAKE_C_COMPILER_LAUNCHER="$CCACHE" \
             -DCMAKE_CXX_COMPILER_LAUNCHER="$CCACHE"
-          cmake --build out --parallel "$(sysctl -n hw.logicalcpu)"
+          cmake --build out
 
       - name: ccache stats
         if: success()

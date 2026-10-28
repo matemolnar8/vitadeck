@@ -117,7 +117,7 @@ run_host() {
   if ((BUILD)); then
     build_js
     step "Build host"
-    cmake -S "$ROOT_DIR" -B "$ROOT_DIR/out" >/dev/null
+    cmake -S "$ROOT_DIR" --preset default >/dev/null
     cmake --build "$ROOT_DIR/out" --target vitadeck stage_examples
   fi
   local data="$ROOT_DIR/out/vitadeck-data"

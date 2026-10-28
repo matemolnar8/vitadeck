@@ -52,15 +52,7 @@ install_js() {
 
 configure_host() {
     step "Configure host target"
-    case "$(uname -s)" in
-        Linux)
-            CC=${CC:-gcc} CXX=${CXX:-g++} cmake -S . -B out -DCMAKE_EXE_LINKER_FLAGS="-Wl,--start-group" \
-                -DVITADECK_SANITIZE="${VITADECK_SANITIZE:-}"
-            ;;
-        *)
-            cmake -S . -B out -DVITADECK_SANITIZE="${VITADECK_SANITIZE:-}"
-            ;;
-    esac
+    cmake --preset default -DVITADECK_SANITIZE="${VITADECK_SANITIZE:-}"
 }
 
 run_fast() {
@@ -96,7 +88,7 @@ run_host() {
     configure_host
 
     step "Build host target"
-    cmake --build out --parallel
+    cmake --build out
 
     step "Run non-smoke CTest"
     ctest --test-dir out --output-on-failure -LE smoke

@@ -5,6 +5,7 @@ out-vita
 out-smoke
 out-sanitize
 out-bench
+CMakeUserPresets.json
 .ccache
 
 module/*.suprx
