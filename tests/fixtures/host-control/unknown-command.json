@@ -1,0 +1,13 @@
+{
+  "request": {
+    "protocolVersion": 1,
+    "plugin": "core",
+    "command": "launchApp"
+  },
+  "status": 404,
+  "response": {
+    "ok": false,
+    "code": "unknown_command",
+    "message": "Plugin core has no command launchApp."
+  }
+}

@@ -41,6 +41,11 @@
       "import": "./dist/internal.js",
       "default": "./dist/internal.js"
     },
+    "./host-control": {
+      "types": "./dist/host-control/index.d.ts",
+      "import": "./dist/host-control/index.js",
+      "default": "./dist/host-control/index.js"
+    },
     "./tsconfig": "./tsconfig.deck-app.json",
     "./types": {
       "types": "./dist/types.d.ts",
@@ -62,7 +67,7 @@
     "build:cli": "rolldown -c rolldown.cli.config.mjs && tsx cli/copy-templates.ts",
     "build": "tsx cli/clean-dist.ts && pnpm run build:lib && pnpm run build:cli",
     "prepublishOnly": "pnpm run build",
-    "test:cli": "node --import tsx --test cli/*.test.ts test/*.test.tsx",
+    "test:cli": "node --import tsx --test cli/*.test.ts test/*.test.ts test/*.test.tsx",
     "tsc": "tsc -p tsconfig.json"
   },
   "dependencies": {

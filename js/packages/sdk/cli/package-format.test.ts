@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
-import { cliPath, execFileText, makeDeckAppProject, tsxBin, writeProjectFile } from "./test-project";
+import { cliPath, execFileText, linkSdk, makeDeckAppProject, tsxBin, writeProjectFile } from "./test-project";
 
 type BuildResult = {
   ok: boolean;
@@ -153,4 +153,28 @@ void test("build rejects asset source paths outside the Deck App project", async
   const result = await runBuild(projectRoot);
   assert.equal(result.ok, false, buildOutput(result));
   assert.match(buildOutput(result), /must stay inside the Deck App project/u);
+});
+
+void test("build bundles @vitadeck/sdk/host-control into the Deck App", async (t) => {
+  const projectRoot = await makeDeckAppProject();
+  t.after(async () => {
+    await rm(projectRoot, { recursive: true, force: true });
+  });
+  await linkSdk(projectRoot);
+  await writeProjectFile(
+    projectRoot,
+    "src/App.tsx",
+    `import { host } from "@vitadeck/sdk/host-control";
+export default function App() {
+  void host.echo({ text: "hi" });
+  return null;
+}
+`,
+  );
+
+  const result = await runBuild(projectRoot);
+  assert.equal(result.ok, true, buildOutput(result));
+  const appJs = await readFile(path.join(projectRoot, "dist/sample-deck.vdapp/app.js"), "utf8");
+  assert.match(appJs, /nativeGetHostControlLinks/u);
+  assert.doesNotMatch(appJs, /@vitadeck\/sdk\/host-control/u);
 });

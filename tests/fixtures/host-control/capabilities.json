@@ -1,0 +1,23 @@
+{
+  "request": {
+    "protocolVersion": 1,
+    "plugin": "core",
+    "command": "capabilities"
+  },
+  "status": 200,
+  "response": {
+    "ok": true,
+    "protocolVersion": 1,
+    "name": "Fixture Host",
+    "platform": "darwin",
+    "plugins": [
+      {
+        "id": "core",
+        "commands": [
+          "capabilities",
+          "echo"
+        ]
+      }
+    ]
+  }
+}

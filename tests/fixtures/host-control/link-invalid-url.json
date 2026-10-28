@@ -1,0 +1,14 @@
+{
+  "request": {
+    "protocolVersion": 1,
+    "id": "3f0c9a52-6f1e-4c55-9d0b-0a8f4c1e7b21",
+    "name": "Studio Mac",
+    "url": "ftp://192.168.1.20/"
+  },
+  "status": 422,
+  "response": {
+    "ok": false,
+    "code": "invalid_payload",
+    "message": "Link needs an id, a name of 1 to 64 bytes, and an http:// url of at most 255 bytes."
+  }
+}

@@ -15,6 +15,7 @@ type TestDeckAppConfig = {
 };
 
 export const cliPath = fileURLToPath(new URL("cli.ts", import.meta.url));
+const sdkRoot = fileURLToPath(new URL("../", import.meta.url));
 const jsRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const requireFromSdk = createRequire(import.meta.url);
 export const tsxBin = path.join(jsRoot, "node_modules", ".bin", process.platform === "win32" ? "tsx.CMD" : "tsx");
@@ -48,6 +49,13 @@ async function linkDependency(projectRoot: string, packageName: string): Promise
   const linkPath = path.join(projectRoot, "node_modules", ...packageName.split("/"));
   await mkdir(path.dirname(linkPath), { recursive: true });
   await symlink(packageRoot, linkPath, process.platform === "win32" ? "junction" : "dir");
+}
+
+/** Links this SDK checkout as the project's `@vitadeck/sdk`, for subpaths a Deck App bundles. Needs a built `dist`. */
+export async function linkSdk(projectRoot: string): Promise<void> {
+  const linkPath = path.join(projectRoot, "node_modules", "@vitadeck", "sdk");
+  await mkdir(path.dirname(linkPath), { recursive: true });
+  await symlink(sdkRoot, linkPath, process.platform === "win32" ? "junction" : "dir");
 }
 
 async function linkSdkBuildDependencies(projectRoot: string): Promise<void> {
