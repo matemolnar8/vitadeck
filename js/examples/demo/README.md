@@ -26,8 +26,7 @@ The smoke test screenshots every section against the goldens in [tests/fixtures/
 On the desktop host, from the repository root:
 
 ```bash
-pnpm --dir js build
-cmake -S . -B out && cmake --build out --target run
+cmake --preset default && ninja -C out run
 ```
 
 `run` stages every example into `out/vitadeck-data/installed-deck-apps`; open the VitaDeck Shell with F1 and activate VitaDeck Demo.
