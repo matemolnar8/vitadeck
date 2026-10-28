@@ -1,0 +1,23 @@
+{
+  "name": "@vitadeck/host-plugin-system-stats",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./companion": "./src/companion.ts"
+  },
+  "scripts": {
+    "tsc": "tsc -p tsconfig.json && tsc -p tsconfig.deck-app.json"
+  },
+  "dependencies": {
+    "@vitadeck/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "@vitadeck/host-companion": "workspace:*"
+  }
+}

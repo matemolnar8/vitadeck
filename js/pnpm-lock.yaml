@@ -339,6 +339,38 @@ importers:
         specifier: 'catalog:'
         version: 7.0.2
 
+  host-plugins/system-stats:
+    dependencies:
+      '@vitadeck/host-companion':
+        specifier: workspace:*
+        version: link:../../packages/host-companion
+      '@vitadeck/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
+  packages/host-companion:
+    dependencies:
+      '@vitadeck/host-plugin-system-stats':
+        specifier: workspace:*
+        version: link:../../host-plugins/system-stats
+      '@vitadeck/sdk':
+        specifier: workspace:*
+        version: link:../sdk
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
   packages/runtime:
     dependencies:
       '@vitadeck/sdk':

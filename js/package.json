@@ -6,8 +6,10 @@
   "scripts": {
     "prepare": "pnpm --filter @vitadeck/sdk run build",
     "build": "pnpm --filter @vitadeck/sdk build && pnpm --filter \"./examples/*\" build && pnpm --filter @vitadeck/runtime build",
-    "tsc": "pnpm --filter @vitadeck/sdk tsc && pnpm --filter @vitadeck/runtime tsc && pnpm --filter \"./examples/*\" tsc && tsc -p scripts",
+    "tsc": "pnpm --filter @vitadeck/sdk tsc && pnpm --filter @vitadeck/runtime tsc && pnpm --filter \"./examples/*\" tsc && pnpm --filter @vitadeck/host-companion tsc && pnpm --filter \"./host-plugins/*\" tsc && tsc -p scripts",
     "test:cli": "pnpm --filter @vitadeck/sdk test:cli",
+    "test:host-companion": "node --import tsx --test packages/host-companion/test/*.test.ts",
+    "host-companion": "tsx packages/host-companion/src/cli.ts",
     "test:native-globals": "tsx scripts/check-native-globals.ts",
     "bench:report": "tsx scripts/bench-report.ts",
     "lint": "node examples/chat/scripts/ensure-genesys-local.mjs && oxlint",
