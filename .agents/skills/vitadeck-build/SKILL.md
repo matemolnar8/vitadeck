@@ -18,8 +18,8 @@ metadata:
 
 **Host (current machine)** — e.g. macOS:
 
-- CMake 3.18+ (older versions build without DejaVu Sans and the Twemoji images)
-- [raylib](https://www.raylib.com/) via Homebrew: `brew install raylib`
+- CMake 3.21+ for `cmake --preset default`
+- Ninja and [raylib](https://www.raylib.com/) via Homebrew: `brew install ninja raylib`
 - CURL, OpenSSL, and zlib (typical on macOS; CMake `find_package` must succeed)
 
 **PSVita** — no local Vitasdk install required:
