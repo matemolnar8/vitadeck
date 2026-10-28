@@ -1,3 +1,4 @@
+import { execFile } from "node:child_process";
 import os from "node:os";
 import { setTimeout as sleep } from "node:timers/promises";
 import { implementHostPlugin } from "@vitadeck/host-companion";
@@ -32,12 +33,27 @@ async function cpuPercent(): Promise<number> {
   return total > 0 ? roundTenth(((total - idle) / total) * 100) : 0;
 }
 
+// Node counts macOS's reclaimable file cache as used, so a Mac would always read near 100%. vm_stat's free, inactive
+// and speculative pages are what Activity Monitor treats as available.
+async function availableMemoryBytes(): Promise<number> {
+  if (process.platform !== "darwin") return os.freemem();
+  const stdout = await new Promise<string>((resolve, reject) => {
+    execFile("vm_stat", (error, output) => {
+      if (error) reject(new Error(`vm_stat failed: ${error.message}`));
+      else resolve(output);
+    });
+  });
+  const pageSize = Number(/page size of (\d+) bytes/u.exec(stdout)?.[1] ?? 4096);
+  const pages = (label: string) => Number(new RegExp(`${label}:\\s+(\\d+)`, "u").exec(stdout)?.[1] ?? 0);
+  return (pages("Pages free") + pages("Pages inactive") + pages("Pages speculative")) * pageSize;
+}
+
 export default implementHostPlugin(systemStatsPlugin, {
   read: async () => {
     const memoryTotalBytes = os.totalmem();
     return {
       cpuPercent: await cpuPercent(),
-      memoryUsedPercent: roundTenth(((memoryTotalBytes - os.freemem()) / memoryTotalBytes) * 100),
+      memoryUsedPercent: roundTenth(((memoryTotalBytes - (await availableMemoryBytes())) / memoryTotalBytes) * 100),
       memoryTotalBytes,
       uptimeSeconds: Math.floor(os.uptime()),
     };

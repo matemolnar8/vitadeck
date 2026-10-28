@@ -1,0 +1,19 @@
+{
+  "name": "@vitadeck/example-host-control",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vitadeck build",
+    "tsc": "tsc"
+  },
+  "dependencies": {
+    "@vitadeck/host-plugin-system-stats": "workspace:*",
+    "@vitadeck/sdk": "workspace:*",
+    "react": "catalog:"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "typescript": "catalog:"
+  }
+}

@@ -82,6 +82,25 @@ function finish(score: number) {
 
 `getItem(key)` returns `null` for a missing key. `setItem` and `removeItem` return once the change is on disk. Each Deck App gets 1 MiB; a `setItem` that would go past it throws a `RangeError` and keeps the previous value. Reinstalling the Deck App over Runtime Upload keeps its storage; removing it in the VitaDeck Shell deletes it.
 
+## Host Control
+
+`@vitadeck/sdk/host-control` lets a Deck App call a computer on the same LAN that runs the [VitaDeck Host Companion](https://github.com/matemolnar8/vitadeck/tree/main/js/packages/host-companion). The user links computers in the VitaDeck Shell (Host Control); a Deck App never needs their addresses.
+
+```tsx
+import { host, linkedHosts } from "@vitadeck/sdk/host-control";
+
+const reply = await host.echo({ text: "hi" });
+if (reply.ok) console.log(reply.text);
+else if (reply.code === "not_linked") setHint("Link a computer in the VitaDeck Shell");
+```
+
+- `host` calls the built-in `core` plugin (`capabilities`, `echo`) on the most recently linked computer.
+- Commands come in **Host Control Plugins**. `createHostClient(plugin, { hostId })` returns a typed client for one plugin on one computer; leave out `hostId` for the most recent link. `linkedHosts()` lists the linked computers (`id`, `name`, `url`), newest first, and reflects Shell changes on its next call.
+- Every method resolves to `{ ok: true, ...result }` or `{ ok: false, code, message }` and never rejects, so TypeScript makes you check `ok`. Besides the companion's codes, the client reports `not_linked`, `unreachable`, `timeout` (5 s by default; the command may still have run) and `bad_response`. A failed command is never retried.
+- `capabilities()` lists the plugins a computer loaded, so a Deck App can tell an `unknown_plugin` apart before calling it.
+
+This subpath is bundled into your Deck App, along with any plugin registry you import.
+
 ## Build
 
 From the root of a Deck App (with `vitadeck.config.json`):

@@ -3,6 +3,7 @@ function clearTimeout(id: number): void;
 function setInterval(callback: () => void, delay: number): number;
 function clearInterval(id: number): void;
 
+/** Seconds since VitaDeck started. */
 function getTime(): number;
 
 type VitaHeadersInit = Record<string, string> | Array<[string, string]>;

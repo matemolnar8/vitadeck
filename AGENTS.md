@@ -20,14 +20,15 @@ When this file speaks:
 
 ## Where code lives
 
-- `src/core/` - bootstrap, QuickJS runtime, event queue, package library and manifest parsing (vendored `vendor/jimp/jimp.h`, see ADR 0003), Benchmark Mode (`bench.c`, see ADR 0005)
+- `src/core/` - bootstrap, QuickJS runtime, event queue, package library and manifest parsing (vendored `vendor/jimp/jimp.h` behind `json.c`, see ADR 0003), Benchmark Mode (`bench.c`, see ADR 0005)
 - `src/jslib/` - native functions exposed to JS: instances, timers, fetch, log, colors
 - `src/ui/` - instance tree, rendering, fonts, images, input, scroll
-- `src/shell/` - VitaDeck Shell; `src/upload/` - Runtime Upload listener; `src/platform/` - threads (POSIX vs Vita)
+- `src/shell/` - VitaDeck Shell; `src/upload/` - Runtime Upload listener; `src/host_control/` - Host Control Link Listener and link store; `src/net/` - HTTP request parsing both listeners share; `src/platform/` - threads and LAN address (POSIX vs Vita)
 - `js/packages/sdk/` - `@vitadeck/sdk`: author-facing components, theme, types, and the `vitadeck` CLI (`cli/`, scaffold under `cli/templates/`)
 - `js/packages/runtime/` - the React reconciler bundle the host embeds
+- `js/packages/host-companion/` - the Host Companion CLI (unpublished); `js/host-plugins/` - Host Control Plugins it loads. The wire contract is `js/packages/sdk/src/host-control/` and the fixtures in `tests/fixtures/host-control/`, replayed by the SDK, companion and native tests (ADR 0004)
 - `js/examples/` - example Deck Apps; the smoke test screenshots every section of `demo`
-- `tests/` - CTest harnesses (`smoke_harness.c`, `deck_app_input_harness.c`, `package_manifest_harness.c`, `package_library_harness.c`, `timer_reload_harness.c`, `upload_parsing_harness.c`), golden screenshots (`fixtures/golden/`), and benchmark baselines (`bench/baselines/`)
+- `tests/` - CTest harnesses (`smoke_harness.c`, `deck_app_input_harness.c`, `package_manifest_harness.c`, `package_library_harness.c`, `timer_reload_harness.c`, `upload_parsing_harness.c`, `host_control_link_harness.c`), golden screenshots (`fixtures/golden/`), and benchmark baselines (`bench/baselines/`)
 - `vendor/quickjs` - git submodule; `docker-compose.yml` + `Dockerfile` - Vitasdk and Linux smoke images
 - `.agents/skills/` - repo skills (`vitadeck-build`, `vitadeck-emulator`, `vitadeck-smoke`, `vitadeck-bench`, `vitadeck-manual-testing`, `vitadeck-vdapp-upload`, `vitadeck-deck-app-init`) plus `comprehende` installed from `matemolnar8/comprehende` via the `skills` CLI (`skills-lock.json`) and `pages`, a repo-owned skill with its own publish script. `.claude/skills` symlinks here. Published via `npx skills add matemolnar8/vitadeck`.
 
@@ -64,12 +65,12 @@ The common defect is a change that works on the host and breaks the Vita, or wor
 
 Use `scripts/agent-check.sh` from the repo root; pick the smallest tier that proves the change:
 
-- `fast` - JS install and build, JS typecheck, SDK CLI tests, JS lint, JS and C format checks. Run after every change.
+- `fast` - JS install and build, JS typecheck, SDK CLI tests, Host Companion tests, JS lint, JS and C format checks. Run after every change.
 - `host` - JS install and build, host build, non-smoke CTest. Run for any `src/` or runtime change.
 - `smoke` - Dockerized Linux visual smoke and Deck App input check. Run when rendering, theme, fonts, input, or Deck App output change.
 - `full` - all of the above plus the Vita Docker build. Run before a PR that touches native code.
 
-Individual commands: `pnpm --dir js tsc`, `pnpm --dir js test:cli`, `pnpm --dir js lint`, `pnpm --dir js format:check`, `pnpm --dir js build`, `./scripts/clang-format.sh check` (or `format` to apply), `cmake --preset default && cmake --build out`, Vita: `docker compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"`.
+Individual commands: `pnpm --dir js tsc`, `pnpm --dir js test:cli`, `pnpm --dir js test:host-companion`, `pnpm --dir js lint`, `pnpm --dir js format:check`, `pnpm --dir js build`, `./scripts/clang-format.sh check` (or `format` to apply), `cmake --preset default && cmake --build out`, Vita: `docker compose run --rm vitasdk bash -lc "cmake -S . -B out-vita && cmake --build out-vita"`.
 
 - C under `src/` and `tests/` follows `.clang-format` with clang-format 21 (CI pins 21.1.8, `pipx install clang-format==21.1.8`); run `cmake --preset default` so `out/compile_commands.json` exists for clangd.
 - Write React for the React Compiler: pure renders, Rules of Hooks, accurate effect deps, no manual `useMemo`/`useCallback`/`memo`.

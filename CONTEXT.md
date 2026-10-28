@@ -95,7 +95,7 @@ _Avoid_: Click, mouse down, mouse up, hover
 **Pad Button**: A Vita button a **Deck App** reads directly through `usePadButton`: Circle, Triangle, Square, L or R. Delivered only while the Shell is hidden; one held when the Shell hides is ignored until released, and one held when a **Deck App** starts otherwise presses on its first frame.
 _Avoid_: Hotkey, shortcut, raw button, gamepad event
 
-**Shell Face Input**: Face-button conventions inside the **VitaDeck Shell**: Cross confirms, Circle backs out (cancels a pending removal, otherwise hides the Shell). A connected gamepad works alongside the host keyboard.
+**Shell Face Input**: Face-button conventions inside the **VitaDeck Shell**: Cross confirms, Circle backs out (cancels a pending removal, leaves the **Shell Host Control Screen**, otherwise hides the Shell). A connected gamepad works alongside the host keyboard.
 _Avoid_: Deck App **Press**, mouse click, tap
 
 ## Runtime API
@@ -129,11 +129,17 @@ _Avoid_: Flexbox, flex container, layout box, list
 **VitaDeck Shell**: VitaDeck's management UI for choosing and managing installed packages, opened by **System Input**, never by a Deck App.
 _Avoid_: Deck App menu, overlay app, launcher screen
 
-**Shell Home Screen**: The default Shell view: the **Installed Deck App Library** sorted by manifest `name` (case-insensitive, then **Deck App Package Name**), each with its version, plus the **Shell Upload Entry**. Confirming a package activates it; confirming the **Active Deck App** is a **Deck App Runtime Restart**. Both hide the Shell.
+**Shell Home Screen**: The default Shell view: the **Installed Deck App Library** sorted by manifest `name` (case-insensitive, then **Deck App Package Name**), each with its version, plus the **Shell Upload Entry** and the **Shell Host Control Entry**. Confirming a package activates it; confirming the **Active Deck App** is a **Deck App Runtime Restart**. Both hide the Shell.
 _Avoid_: Live Area, system settings, account screen
 
 **Shell Upload Entry**: The Upload row at the end of the **Shell Home Screen**. Confirming it starts the **Runtime Upload Listener** and the row shows the **Runtime Upload URL** (or the bind error, with no URL) while the rest of the Shell stays usable. Confirming it again is **Shell Upload Cancel**: it stops the listener without closing the Shell. There is no other cancel shortcut.
 _Avoid_: Hidden gesture, Deck App **Press**, browser bookmark, FTP client
+
+**Shell Host Control Entry**: The Host Control row after the **Shell Upload Entry**, captioned with the newest linked computer or `Not linked`. Confirming it opens the **Shell Host Control Screen**.
+_Avoid_: Settings, network menu
+
+**Shell Host Control Screen**: The Shell view that runs the **Host Control Link Listener** and shows its address, the link status, and the linked computers. Confirming a computer forgets its link at once. Circle returns to the **Shell Home Screen**; leaving the screen by Circle or **Start Input** stops the listener.
+_Avoid_: Pairing screen, connection wizard
 
 ## Runtime Upload
 
@@ -186,14 +192,20 @@ _Avoid_: Plugin folder, examples folder
 
 ## Host Control
 
-**Host Control**: A **Deck App** asking a nearby LAN computer to run a typed command through the **Host Companion**. Results use the same `ok` / `code` / `message` JSON shape as **Runtime Upload POST**.
+**Host Control**: A **Deck App** asking a linked LAN computer to run a typed command through its **Host Companion** (`@vitadeck/sdk/host-control`). Results use the same `ok` / `code` / `message` JSON shape as **Runtime Upload POST**.
 _Avoid_: Remote desktop, PC control, Runtime Upload
 
-**Host Companion**: The program on a nearby Mac or Windows computer that performs **Host Control Link** and runs commands. Not the desktop build of VitaDeck.
+**Host Companion**: The program on a nearby Mac, Windows or Linux computer that performs **Host Control Link** and runs commands from the **Host Control Plugins** it loaded. Not the desktop build of VitaDeck.
 _Avoid_: Host Control Companion, desktop app, daemon, host build
 
-**Host Control Link**: The Companion, given the address shown in the Shell, tells VitaDeck where to send commands; VitaDeck keeps that address until replaced or forgotten. Addresses only, no credentials; it does not use the **Runtime Upload Listener**.
+**Host Control Plugin**: A named group of typed commands: a registry a **Deck App** imports and a **Host Companion** implementation. The `core` plugin (`capabilities`, `echo`) is always loaded; a computer without a plugin answers `unknown_plugin`.
+_Avoid_: Extension, driver, action, Host Control command set
+
+**Host Control Link**: A **Host Companion**, given the address shown on the **Shell Host Control Screen**, tells VitaDeck its id, name and command URL. VitaDeck keeps up to 4 links, newest first, one per companion id, until replaced or forgotten. Addresses only, no credentials; it does not use the **Runtime Upload Listener**.
 _Avoid_: Pairing, Upload Pairing, session, typing the computer's address on the Vita
+
+**Host Control Link Listener**: The VitaDeck-owned HTTP endpoint (`POST /link`, `src/host_control/`) that accepts a **Host Control Link**. Binds on all interfaces at port 8798, falling forward up to 10 ports. It runs only while the **Shell Host Control Screen** is open and stops after a successful link.
+_Avoid_: Host Control server, always-on LAN service, Runtime Upload Listener
 
 ## Host mappings
 

@@ -1,45 +1,48 @@
-# Deliver Host Control in three slices, with the companion as the command listener
+# Host Control: the companion listens, plugins define the commands
 
-**Host Control** lets a **Deck App** ask a nearby Mac or Windows computer to run a typed command (launch an app, send a media key). Draft PR #16 designed and built it as one 50-file change: SDK contract, companion CLI, a `sceHttp` client on the Vita, vendored picohttpparser, a rewritten upload server, and an always-on LAN listener that changed the **Runtime Upload** lifecycle. It was closed because it could not be reviewed or rebased. This ADR keeps the parts of that design that held up and drops the rest.
+**Host Control** lets a **Deck App** ask a nearby computer to run a typed command. Draft PR #16 designed and built it as one 50-file change: SDK contract, companion CLI, a `sceHttp` client on the Vita, vendored picohttpparser, a rewritten upload server, and an always-on LAN listener that changed the **Runtime Upload** lifecycle. It was closed because it could not be reviewed or rebased. This ADR keeps the parts of that design that held up and drops the rest.
 
 ## Delivery
 
-Host Control lands as three PRs. Each one builds, tests, and merges on its own. (b) and (c) depend only on (a), so they can run in parallel.
-
-1. **Wire contract and SDK client.** `protocolVersion`, a typed command registry, machine error codes, and the JSON result shape **Runtime Upload POST** already uses (`ok: true` plus fields, or `ok: false` with `code` and `message`). The only commands are `host.capabilities` and `host.echo`. It ships as an additive subpath export of `@vitadeck/sdk`, so it is part of the author contract from day one. The client takes its base URL and transport as arguments, so its tests need neither a Vita nor a companion.
-2. **Host Companion CLI.** A TypeScript workspace package, not published to npm in v1. It serves commands and performs **Host Control Link**. Its tests run against a TypeScript stand-in for the Vita link endpoint.
-3. **Native link and Shell connection screen.** The Vita link endpoint, the persisted callback URL, a native getter that the SDK client reads, and a **VitaDeck Shell** screen showing the Vita address, the linked computer, and a way to forget the link. This slice needs the `full` agent-check tier.
+Host Control was planned as three slices (#109 wire contract and SDK client, #110 Host Companion CLI, #111 native link and Shell screen). They landed together in one PR on request, as one commit per slice, and the slice boundaries still hold: the SDK client needs neither a Vita nor a companion in its tests, the companion tests against a TypeScript stand-in for the Vita link endpoint, and only the native slice needs the `full` agent-check tier. All three replay the same contract fixtures in `tests/fixtures/host-control/`.
 
 ## Topology
 
-**Recommended default, pending Máté's confirmation:** link once, then the Vita calls the companion. This is option C in #16's topology comparison, and it is what the branch shipped.
+Link once, then the Vita calls the companion. This is option C in #16's topology comparison.
 
-The user reads an address on the Vita's Shell connection screen and gives it to the **Host Companion**. The companion sends one link request with its protocol version, its name, and the callback URL where it accepts commands. VitaDeck stores that URL and sends each later command to it as an HTTP POST. The companion is the long-lived listener. The Vita listens only while the Shell connection screen is open, and stops when a link succeeds or the user cancels. That matches the **Runtime Upload Listener** lifecycle, and the link endpoint stays separate from that listener rather than becoming #16's always-on server shared with upload.
+The user reads an address on the **Shell Host Control Screen** and gives it to the **Host Companion**. The companion sends one link request with its protocol version, a stable id, its name, and the callback URL where it accepts commands. VitaDeck stores that URL and sends each later command to it as an HTTP POST. The companion is the long-lived listener. The Vita listens only while the Shell Host Control Screen is open, and stops when a link succeeds or the user leaves. That matches the **Runtime Upload Listener** lifecycle, and the link endpoint stays separate from that listener rather than becoming #16's always-on server shared with upload.
 
-This is the only option that meets the pairing goal ("type the Vita's address on the computer") without running a session server on the Vita. Steady-state commands need no new native code: Deck Apps already have `fetch()` on libcurl, with completions on a worker thread, on both targets. That makes #16's 650-line `sceHttp` client unnecessary. The Vita is exposed on the LAN only briefly, and only when the user asks for it. A new TCP connection per command costs a few milliseconds on a home LAN, which is fine for button presses.
+This is the only option that meets the pairing goal ("type the Vita's address on the computer") without running a session server on the Vita. Steady-state commands need no new native code: Deck Apps already have `fetch()` on libcurl, with completions on a worker thread, on both targets. That makes #16's 650-line `sceHttp` client unnecessary. The Vita is exposed on the LAN only briefly, and only when the user asks for it. A new TCP connection per command costs a few milliseconds on a home LAN, which is fine for button presses and for polling a gauge once a second.
+
+**Several computers.** VitaDeck keeps up to 4 links, newest first, keyed by the companion's id, so one Deck App can drive several machines (`createHostClient(plugin, { hostId })`) and a relink replaces rather than duplicates. One companion can likewise be linked by several Vitas.
 
 Accepted costs:
 - The companion needs an inbound firewall rule.
 - A stale callback URL (a DHCP change, or the companion restarting on another port) breaks commands until the user links again.
-- The computer cannot push events to the Vita.
+- The computer cannot push events to the Vita; a Deck App polls. Alerts (a build finished, a session needs attention) arrive within one poll interval.
 
-**Alternative (option B):** the companion dials in and holds a persistent WebSocket or long-poll session with the Vita. That gives lower per-command latency and lets the computer push to the Vita. The cost is a WebSocket or long-poll server, a command queue, and reconnect logic in Vita C, which is the riskiest native work in this initiative and all of it has to exist before the first command works.
+**Alternative (option B):** the companion dials in and holds a persistent WebSocket or long-poll session with the Vita. That gives lower per-command latency and lets the computer push to the Vita. The cost is a WebSocket or long-poll server, a command queue, and reconnect logic in Vita C, which is the riskiest native work in this initiative. Revisit it only if polling proves too slow or too costly on the Vita.
+
+## Commands come in plugins
+
+A fixed catalogue in the companion cannot cover what Deck Apps will want (keyboard shortcuts, media keys, a Stream Deck-style grid, sensors and fan control, a T3 Code dashboard), and a generic "run this shell command" endpoint loses types and invites misuse. So commands are grouped into **Host Control Plugins**. A plugin is a typed registry (`defineHostPlugin(id, { name: command<Payload, Result>(guard) })`) that a Deck App imports and bundles, plus an implementation the companion loads from its config. Every request names its plugin and command; the companion validates the payload with the registry's guard, and TypeScript fails a missing or mistyped implementation. The built-in `core` plugin (`capabilities`, `echo`) is always loaded, and `capabilities` lists every loaded plugin, so a Deck App can tell a computer without a plugin (`unknown_plugin`) from an offline one.
+
+There is no schema library, since one would ship inside every Deck App bundle. The protocol version covers only the envelope; a plugin changes its own command names when it breaks them. The only plugin so far is the read-only `system-stats` example.
 
 ## HTTP parsing
 
-**Recommendation:** extract and extend the upload server's parsing. Do not vendor picohttpparser now.
+Extend the upload server's parsing; do not vendor picohttpparser.
 
-Under the recommended topology, the Vita parses exactly one new kind of request: a small JSON link POST with `Content-Length`, answered with `Connection: close`. `src/upload/http_server.c` already reads that shape. Slice (c) moves its request-line, header, and body reading into a module that both listeners call, and fixes its one real defect along the way: it matches header names case-sensitively. Browsers and curl send `Content-Length`, but Node's built-in `fetch` sends `content-length`, so the companion's link request would get a 400 today. #16's spike showed that picohttpparser compiles for the Vita without patches. It did not show that the Vita needs it. Two parsers in the tree would mean two behaviours for the same bytes. picohttpparser remains the fallback if the Vita ever needs keep-alive, pipelining, or chunked bodies, which would happen if option B is chosen.
+The Vita parses exactly one new kind of request: a small JSON link POST with `Content-Length`, answered with `Connection: close`. The request reading, response writing, and JSON error helpers moved from `src/upload/http_server.c` into `src/net/http.c`, which both listeners call; header names match case-insensitively, since Node's `fetch` sends `content-length`. picohttpparser remains the fallback if the Vita ever needs keep-alive, pipelining, or chunked bodies, which would happen if option B is chosen.
 
 ## Deferred
 
-- **Linux companion.** macOS and Windows come first. Nothing in the contract depends on the platform.
-- **Command catalogue.** Every command beyond `host.capabilities` and `host.echo` is its own later PR, with per-platform implementations.
+- **Credentials.** v1 trusts the LAN, like the initial **Runtime Upload**. A linked companion answers only its Vitas, loopback and its own addresses, but IPs can be spoofed. That is harmless for reading stats, but not for typing keys or launching apps, so a credential decision must come before the first plugin that acts on the computer.
+- **Publishing.** The companion and its plugins are unpublished workspace packages; `@vitadeck/sdk/host-control` is the only published surface.
 - **Internet or account pairing.** Host Control is LAN only.
-- **Credentials.** v1 trusts the LAN, like the initial **Runtime Upload**. The companion therefore accepts commands from any LAN peer. That is harmless for `echo`, but not for launching apps, so a credential decision must come before the first command that acts on the computer.
 
-**Host Control Link** is not **Upload Pairing**. A link exchanges an address and authorizes nothing. **Upload Pairing** is a future, ephemeral credential scoped to the **Runtime Upload Listener**. When Host Control needs a credential, the likely shape is the same idea: a short-lived code shown on the Vita and entered on the companion. At that point, either widen **Upload Pairing** to cover both listeners or add a sibling term. Decide then; do not overload the term now. Internet pairing is neither.
+**Host Control Link** is not **Upload Pairing**. A link exchanges an address and authorizes nothing. **Upload Pairing** is a future, ephemeral credential scoped to the **Runtime Upload Listener**. When Host Control needs a credential, the likely shape is the same idea: a short-lived code shown on the Vita and entered on the companion. At that point, either widen **Upload Pairing** to cover both listeners or add a sibling term. Decide then; do not overload the term now.
 
-**Considered options:** rebase #16 (rejected: four months stale, and it couldn't be reviewed as one change). Topology A, where the user types the computer's address on the Vita (rejected: wrong pairing direction, and it needs a Shell text editor). Topology B (see the alternative above). One always-on LAN listener for upload and Host Control (rejected: it changes the Runtime Upload lifecycle for no Host Control need). A second HTTP client on `sceHttp` (rejected: `fetch()` already covers it).
+**Considered options:** rebase #16 (rejected: four months stale, and it couldn't be reviewed as one change). Topology A, where the user types the computer's address on the Vita (rejected: wrong pairing direction, and it needs a Shell text editor). Topology B (see the alternative above). One always-on LAN listener for upload and Host Control (rejected: it changes the Runtime Upload lifecycle for no Host Control need). A second HTTP client on `sceHttp` (rejected: `fetch()` already covers it). A fixed command catalogue or a shell-command endpoint (rejected: see plugins above).
 
-**Consequences:** slices may lift code from #16 (the SDK registry, the companion gateway) but not its shared listener, `sceHttp` client, or picohttpparser. The Runtime Upload lifecycle and its glossary entries stay as they are. If option B is chosen instead, rewrite this ADR and the HTTP parsing recommendation together.
+**Consequences:** the Runtime Upload lifecycle and its glossary entries stay as they are. If option B is chosen instead, rewrite this ADR and the HTTP parsing recommendation together.

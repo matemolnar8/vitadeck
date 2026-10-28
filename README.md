@@ -12,6 +12,7 @@ Start building an app with the SDK:
 
 - SDK docs: [`js/packages/sdk`](js/packages/sdk)
 - A tour of every SDK feature: [`js/examples/demo`](js/examples/demo)
+- Calling a linked computer with Host Control: [`js/examples/host-control`](js/examples/host-control)
 - npm package: [`@vitadeck/sdk`](https://www.npmjs.com/package/@vitadeck/sdk)
 
 ```bash
