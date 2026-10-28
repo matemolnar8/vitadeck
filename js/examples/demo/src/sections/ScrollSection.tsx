@@ -15,42 +15,40 @@ export function ScrollSection() {
       title="Scroll"
       blurb="A column Stack with a fixed viewport. Drag it, flick the left stick while a Button inside has Focus, or use the mouse wheel; it keeps gliding with momentum."
     >
-      <Rect width={CONTENT_WIDTH} height={VIEWPORT_HEIGHT}>
-        <Scroll x={0} y={0} width={CONTENT_WIDTH} height={VIEWPORT_HEIGHT} gap={6} padding={12} color={theme.surface}>
-          <Button
+      <Scroll width={CONTENT_WIDTH} height={VIEWPORT_HEIGHT} gap={6} padding={12} color={theme.surface}>
+        <Button
+          width={ROW_WIDTH}
+          height={40}
+          label={
+            picked === 0
+              ? "Press to focus the list, then use the left stick"
+              : `Pressed ${picked}× · focus is in the list`
+          }
+          color={theme.primary}
+          textColor={theme.buttonText}
+          fontSize={16}
+          align="left"
+          borderRadius={6}
+          onPress={() => {
+            setPicked((count) => count + 1);
+          }}
+        />
+        {ROWS.map((row) => (
+          <Stack
+            key={row}
+            direction="row"
             width={ROW_WIDTH}
-            height={40}
-            label={
-              picked === 0
-                ? "Press to focus the list, then use the left stick"
-                : `Pressed ${picked}× · focus is in the list`
-            }
-            color={theme.primary}
-            textColor={theme.buttonText}
-            fontSize={16}
-            align="left"
-            borderRadius={6}
-            onPress={() => {
-              setPicked((count) => count + 1);
-            }}
-          />
-          {ROWS.map((row) => (
-            <Stack
-              key={row}
-              direction="row"
-              width={ROW_WIDTH}
-              height={32}
-              padding={6}
-              gap={10}
-              align="center"
-              color={row % 2 === 0 ? theme.surfaceAlt : theme.background}
-            >
-              <Rect width={20} height={20} color={row % 5 === 0 ? theme.accent : theme.outline} borderRadius={10} />
-              <Label width={ROW_WIDTH - 50}>{`Row ${row} of ${ROWS.length}`}</Label>
-            </Stack>
-          ))}
-        </Scroll>
-      </Rect>
+            height={32}
+            padding={6}
+            gap={10}
+            align="center"
+            color={row % 2 === 0 ? theme.surfaceAlt : theme.background}
+          >
+            <Rect width={20} height={20} color={row % 5 === 0 ? theme.accent : theme.outline} borderRadius={10} />
+            <Label width={ROW_WIDTH - 50}>{`Row ${row} of ${ROWS.length}`}</Label>
+          </Stack>
+        ))}
+      </Scroll>
     </Section>
   );
 }
