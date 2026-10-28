@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 7539bc14c3481390b79fee499bc961194f4cd055` and `git rev-parse --verify 56d96fa218b0f5a6d86a6609da45bd9d51f36b7a` in this repository.
+   Run `git rev-parse --verify 7539bc14c3481390b79fee499bc961194f4cd055` and `git rev-parse --verify da5356456e7647fa2d1b6538715d78881460edce` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,16 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  7539bc14c3481390b79fee499bc961194f4cd055
 
-head               56d96fa218b0f5a6d86a6609da45bd9d51f36b7a
+head               da5356456e7647fa2d1b6538715d78881460edce
 
-Named refs at pin: origin/main ... HEAD
+Named refs at pin: origin/main ... da535645
 
 Read the diff:
 
-git diff --find-renames 7539bc14c3481390b79fee499bc961194f4cd055 56d96fa218b0f5a6d86a6609da45bd9d51f36b7a
+git diff --find-renames 7539bc14c3481390b79fee499bc961194f4cd055 da5356456e7647fa2d1b6538715d78881460edce
 
 Commits:
+- da535645 build: configure host builds with Ninja
 - 56d96fa2 build: rebuild JS when an example's build script changes
 - 9ffb5d4a build: compare real paths in the in-source build guard
 - d821d043 build: rebuild JS for vitadeck and on scaffold edits, refuse in-source builds
@@ -40,6 +41,7 @@ Commits:
 
 Sources:
 - ticket Máté's request Collapse harness sources into vitadeck_core, make JS a real dependency of vitadeck/run/stage_examples, replace js_copy with configure-time symlinks, update every surface and doc in place.
+- transcript Máté in Claude Code · Oct 28 Use Ninja; asks what presets would be for.
 
 The title:
 
@@ -54,8 +56,9 @@ The what (medium):
 The host CMake build compiles every source once into a vitadeck_core static library, runs pnpm build only when JS inputs change, and links js/dist/runtime and assets/ into the build tree instead of copying them on every build.
 
 Look for:
-- Optional item 4 (CMakePresets.json, Ninja) is not in this diff; the request said to ask in the handoff.
-- The request lets JS be a stamp or an output; this uses the real output js/dist/runtime/runtime.js, so make clean in a host build dir deletes that file from the source tree.
+- The request lets JS be a stamp or an output; this uses the real output js/dist/runtime/runtime.js, so cleaning a host build dir deletes that file from the source tree.
+- [Ninja is in](source:ninja); CMakePresets.json is not, because it would only name the `-G Ninja` and Linux linker flags.
+- Subtle: an existing Make build dir now fails `cmake -S . -B out -G Ninja` with CMake's generator-mismatch error, so `agent-check.sh` and `bench.sh` stop on an old `out/` until it is removed.
 
 ## Review concerns
 
@@ -74,9 +77,18 @@ Depends on:
 
 [groups/js.md](groups/js.md)
 
-### 03 Docs, skills, and bench (`docs`)
+### 03 Ninja for host builds (`ninja`)
 
-The docs now say the host build reruns pnpm itself while the Vita build still needs a manual pnpm build, and bench.sh builds the host in parallel.
+Every script and CI job that configures a host build passes `-G Ninja`, the smoke image installs `ninja-build`, and `run` joins the console pool.
+
+Depends on:
+- 02 JS as a dependency, links instead of copies (`js`)
+
+[groups/ninja.md](groups/ninja.md)
+
+### 04 Docs, skills, and bench (`docs`)
+
+The docs now say the host build reruns pnpm itself, configures with Ninja, and loops on `ninja -C out run`, while the Vita build still needs a manual pnpm build.
 
 Depends on:
 - 02 JS as a dependency, links instead of copies (`js`)
