@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 7539bc14c3481390b79fee499bc961194f4cd055` and `git rev-parse --verify c5e2ea9170ebcea04b1e655bc0a2fe59bb9b08b1` in this repository.
+   Run `git rev-parse --verify 7539bc14c3481390b79fee499bc961194f4cd055` and `git rev-parse --verify ac07483a3197041d1727248664f137cdc6aedc8f` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,17 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  7539bc14c3481390b79fee499bc961194f4cd055
 
-head               c5e2ea9170ebcea04b1e655bc0a2fe59bb9b08b1
+head               ac07483a3197041d1727248664f137cdc6aedc8f
 
-Named refs at pin: origin/main ... c5e2ea91
+Named refs at pin: origin/main ... ac07483a
 
 Read the diff:
 
-git diff --find-renames 7539bc14c3481390b79fee499bc961194f4cd055 c5e2ea9170ebcea04b1e655bc0a2fe59bb9b08b1
+git diff --find-renames 7539bc14c3481390b79fee499bc961194f4cd055 ac07483a3197041d1727248664f137cdc6aedc8f
 
 Commits:
+- ac07483a docs(skills): host build needs CMake 3.21 and Ninja
+- 876b38ff build: preset minimum version, ignore user presets, demo README
 - c5e2ea91 build: drop the linux preset
 - d741b11f build: configure host builds through CMake presets
 - da535645 build: configure host builds with Ninja

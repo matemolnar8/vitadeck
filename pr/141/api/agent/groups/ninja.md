@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 7539bc14c3481390b79fee499bc961194f4cd055` and `git rev-parse --verify c5e2ea9170ebcea04b1e655bc0a2fe59bb9b08b1` in this repository.
+   Run `git rev-parse --verify 7539bc14c3481390b79fee499bc961194f4cd055` and `git rev-parse --verify ac07483a3197041d1727248664f137cdc6aedc8f` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 7539bc14c3481390b79fee499bc961194f4cd055 c5e2ea9170ebcea04b1e655bc0a2fe59bb9b08b1 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 7539bc14c3481390b79fee499bc961194f4cd055 ac07483a3197041d1727248664f137cdc6aedc8f -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,13 +25,13 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  7539bc14c3481390b79fee499bc961194f4cd055
 
-head               c5e2ea9170ebcea04b1e655bc0a2fe59bb9b08b1
+head               ac07483a3197041d1727248664f137cdc6aedc8f
 
-Named refs at pin: origin/main ... c5e2ea91
+Named refs at pin: origin/main ... ac07483a
 
 Read the diff:
 
-git diff --find-renames 7539bc14c3481390b79fee499bc961194f4cd055 c5e2ea9170ebcea04b1e655bc0a2fe59bb9b08b1
+git diff --find-renames 7539bc14c3481390b79fee499bc961194f4cd055 ac07483a3197041d1727248664f137cdc6aedc8f
 
 Review concern 03 of 04: Ninja through CMake presets (`ninja`)
 
@@ -48,6 +48,7 @@ Look for:
 - The Vita Docker build and vita-build.yml stay on Make; the vitasdk image has no Ninja.
 - `smoke-docker.sh` passes `-B "$BUILD_DIR"` after `--preset default`; the command-line build dir overrides the preset's `out/`.
 - Linux loses `CC=gcc` and `-Wl,--start-group`: Ubuntu's `cc` is GCC, and the link resolves without the group.
+- `CMakePresets.json` sets `cmakeMinimumRequired` 3.21 while `CMakeLists.txt` still accepts 3.14: only the preset path, not the Vita build, needs the newer CMake.
 
 Depends on:
 - 02 JS as a dependency, links instead of copies (`js`)
@@ -60,3 +61,4 @@ Hunk refs for this concern:
 - scripts/smoke-docker.sh
 - scripts/bench.sh
 - CMakeLists.txt@589+457
+- .gitignore
