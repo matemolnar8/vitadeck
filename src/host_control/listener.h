@@ -12,6 +12,8 @@ typedef struct {
     vd_mutex *mutex;
     volatile bool running;
     int listen_fd;
+    // The connection being answered, so stop can cut off a client that sends slowly. -1 when none.
+    int client_fd;
     char address[64];
     bool link_pending;
     VdHostControlLink last_link;

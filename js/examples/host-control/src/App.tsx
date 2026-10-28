@@ -11,6 +11,8 @@ import {
 import React, { useEffect, useState } from "react";
 
 const POLL_MS = 1000;
+// A timed-out fetch keeps running natively for up to 30 s, so an unanswering computer is polled no faster than that.
+const OFFLINE_POLL_MS = 30_000;
 const LIST_W = 300;
 const GAUGE_W = 560;
 
@@ -38,7 +40,7 @@ function pollSystemStats(hostId: string, onResult: (result: HostResult<SystemSta
     const result = await client.read();
     if (stopped) return;
     onResult(result);
-    timer = setTimeout(() => void poll(), POLL_MS);
+    timer = setTimeout(() => void poll(), !result.ok && result.code === "timeout" ? OFFLINE_POLL_MS : POLL_MS);
   };
   void poll();
   return () => {
@@ -49,9 +51,9 @@ function pollSystemStats(hostId: string, onResult: (result: HostResult<SystemSta
 
 function useSystemStats(hosts: LinkedHost[]): Record<string, HostResult<SystemStats>> {
   const [stats, setStats] = useState<Record<string, HostResult<SystemStats>>>({});
-  const hostIds = hosts.map((host) => host.id).join(",");
+  const hostIds = JSON.stringify(hosts.map((host) => host.id));
   useEffect(() => {
-    const stops = (hostIds === "" ? [] : hostIds.split(",")).map((id) =>
+    const stops = (JSON.parse(hostIds) as string[]).map((id) =>
       pollSystemStats(id, (result) => {
         setStats((current) => ({ ...current, [id]: result }));
       }),
@@ -87,6 +89,7 @@ function failureHint(result: HostResult<object>): string {
   if (result.ok) return "";
   if (result.code === "unknown_plugin")
     return "Load @vitadeck/host-plugin-system-stats in that computer's Host Companion.";
+  if (result.code === "forbidden") return "This Vita's address changed. Link it again from Host Control in the Shell.";
   if (result.code === "unreachable" || result.code === "timeout")
     return "Is the Host Companion running? pnpm --dir js host-companion start";
   return "";

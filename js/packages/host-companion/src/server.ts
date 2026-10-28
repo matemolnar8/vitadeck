@@ -143,7 +143,7 @@ export async function startHostCompanion(options: HostCompanionOptions): Promise
 
     try {
       const result = await command.run(envelope.payload);
-      return { status: 200, label, outcome: "ok", body: { ok: true, ...result } };
+      return { status: 200, label, outcome: "ok", body: { ...result, ok: true } };
     } catch (error) {
       if (error instanceof HostCommandError) return fail(label, error.code, error.message);
       return fail(label, "command_failed", error instanceof Error ? error.message : String(error));

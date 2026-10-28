@@ -108,7 +108,13 @@ static void *listener_thread(void *raw)
         }
         struct timeval timeout = {.tv_sec = VD_HOST_CONTROL_RECV_TIMEOUT_SEC};
         setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+        vd_mutex_lock(listener->mutex);
+        listener->client_fd = fd;
+        vd_mutex_unlock(listener->mutex);
         bool linked = handle_connection(listener, fd);
+        vd_mutex_lock(listener->mutex);
+        listener->client_fd = -1;
+        vd_mutex_unlock(listener->mutex);
         close(fd);
         if (linked) listener->running = false;
     }
@@ -119,6 +125,7 @@ void host_control_listener_init(VdHostControlListener *listener)
 {
     memset(listener, 0, sizeof(*listener));
     listener->listen_fd = -1;
+    listener->client_fd = -1;
     listener->mutex = vd_mutex_create();
 }
 
@@ -172,6 +179,11 @@ void host_control_listener_stop(VdHostControlListener *listener)
         shutdown(listener->listen_fd, SHUT_RDWR);
         close(listener->listen_fd);
         listener->listen_fd = -1;
+    }
+    if (listener->mutex) {
+        vd_mutex_lock(listener->mutex);
+        if (listener->client_fd >= 0) shutdown(listener->client_fd, SHUT_RDWR);
+        vd_mutex_unlock(listener->mutex);
     }
     if (listener->thread) {
         vd_thread_join(listener->thread);
