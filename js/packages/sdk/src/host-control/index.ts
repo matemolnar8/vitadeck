@@ -1,24 +1,32 @@
 import { createHostClient } from "./client";
 import { corePlugin } from "./plugin";
 
-export { createHostClient, linkedHosts } from "./client";
-export type { HostClient, HostClientOptions, HostTransport, LinkedHost } from "./client";
+export { createHostClient, linkedHosts, watchHostEvents } from "./client";
+export type { HostClient, HostClientOptions, HostTransport, LinkedHost, WatchHostEventsOptions } from "./client";
 export {
   HOST_PLUGIN_SCHEMA_VERSION,
   HostCommandError,
   command,
   corePlugin,
   defineHostPlugin,
+  event,
   implementHostPlugin,
   isAbsent,
   isRecord,
 } from "./plugin";
 export type {
+  DataOf,
   HostCapabilities,
   HostCommand,
   HostCommandMap,
+  HostEvent,
+  HostEventBatch,
+  HostEventMap,
+  HostEventOf,
   HostPlugin,
+  HostPluginEmit,
   HostPluginImplementations,
+  HostPluginLifecycle,
   HostPluginManifest,
   ImplementedHostPlugin,
   PayloadOf,

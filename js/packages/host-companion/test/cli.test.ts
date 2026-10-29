@@ -5,7 +5,7 @@ import { createServer } from "node:net";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { createHostClient } from "@vitadeck/sdk/host-control";
+import { corePlugin, createHostClient } from "@vitadeck/sdk/host-control";
 import { greeterPlugin } from "./fixtures/greeter-plugin";
 import { buildGreeterPackage, tempDir, writePackage, zipPackage } from "./fixtures/plugin-package";
 
@@ -135,4 +135,28 @@ void test("install refuses a built-in id and anything but a .vdplugin.zip or .vd
   const unknown = await runCli(["remove", "nothing", "--config", config], dir);
   assert.equal(unknown.code, 1);
   assert.match(unknown.output, /No plugin nothing is installed/u);
+});
+
+void test("notify reaches a Deck App's waiting core.events within a moment", async (t) => {
+  const dir = await tempDir(t);
+  const config = path.join(dir, "host-companion.json");
+  const port = await freePort();
+  const waitFor = startCompanion(t, ["--port", String(port), "--config", config], dir);
+  await waitFor(/^Plugins: core, systemStats$/u);
+  const core = createHostClient(corePlugin, { url: `http://127.0.0.1:${port}/`, timeoutMs: 30_000 });
+  const start = await core.events({ plugin: "core" });
+  assert.ok(start.ok);
+
+  const waiting = core.events({ plugin: "core", after: start.next });
+  const sent = await runCli(["notify", "Build done", "--port", String(port), "--config", config], dir);
+  assert.equal(sent.code, 0, sent.output);
+  assert.deepEqual(await waiting, {
+    ok: true,
+    events: [{ seq: start.next + 1, name: "notice", data: { text: "Build done" } }],
+    next: start.next + 1,
+  });
+
+  const nobody = await runCli(["notify", "lost", "--port", String(await freePort()), "--config", config], dir);
+  assert.equal(nobody.code, 1);
+  assert.match(nobody.output, /No Host Companion took the notice/u);
 });

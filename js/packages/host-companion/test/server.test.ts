@@ -3,12 +3,14 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { networkInterfaces } from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import {
   command,
   corePlugin,
   createHostClient,
   defineHostPlugin,
+  event,
   implementHostPlugin,
   isAbsent,
   systemStatsPlugin,
@@ -19,6 +21,32 @@ import { MAX_REQUEST_BYTES, startHostCompanion, type HostCompanionOptions } from
 import { systemStats } from "../src/system-stats";
 import { greeterPlugin } from "./fixtures/greeter-plugin";
 import { buildGreeterPackage, tempDir, writePackage } from "./fixtures/plugin-package";
+
+const alertsPlugin = defineHostPlugin(
+  "alerts",
+  { ping: command<undefined, object>(isAbsent) },
+  { fired: event<{ level: number }>() },
+);
+
+/** An `alerts` implementation whose emit the test drives, and a record of its lifecycle. */
+function alertsWithEmit() {
+  const lifecycle = { emit: (_level: number) => {}, stopped: false };
+  const plugin = implementHostPlugin(
+    alertsPlugin,
+    { ping: () => ({}) },
+    {
+      start(emit) {
+        lifecycle.emit = (level) => {
+          emit("fired", { level });
+        };
+        return () => {
+          lifecycle.stopped = true;
+        };
+      },
+    },
+  );
+  return { plugin, lifecycle };
+}
 
 type Fixture = { request: unknown; status: number; response: unknown };
 
@@ -125,7 +153,7 @@ void test("serves the SDK client for core and system stats", async (t) => {
   const capabilities = await core.capabilities();
   assert.ok(capabilities.ok);
   assert.deepEqual(capabilities.plugins, [
-    { id: "core", commands: ["capabilities", "echo"] },
+    { id: "core", commands: ["capabilities", "echo", "events", "notify"] },
     { id: "systemStats", commands: ["read"] },
   ]);
 
@@ -302,7 +330,22 @@ void test("implementations are checked by tsc", () => {
     capabilities: () => ({ protocolVersion: 1, name: "", platform: "", plugins: [] }),
     // @ts-expect-error: echo must return `{ text: string }`.
     echo: ({ text }) => ({ text: text.length }),
+    events: () => ({ events: [], next: 0 }),
+    notify: () => ({}),
   });
+  implementHostPlugin(
+    alertsPlugin,
+    { ping: () => ({}) },
+    {
+      start(emit) {
+        emit("fired", { level: 1 });
+        // @ts-expect-error: `missing` is not a declared event.
+        emit("missing", {});
+        // @ts-expect-error: `fired` carries `{ level: number }`.
+        emit("fired", { level: "high" });
+      },
+    },
+  );
   implementHostPlugin(systemStatsPlugin, {
     // @ts-expect-error: `read` takes no payload.
     read: (_payload: { text: string }) => ({
@@ -312,4 +355,57 @@ void test("implementations are checked by tsc", () => {
       uptimeSeconds: 0,
     }),
   });
+});
+
+void test("core.events holds a wait until the plugin emits, then answers at once", async (t) => {
+  const { plugin, lifecycle } = alertsWithEmit();
+  const core = createHostClient(corePlugin, { url: await companion(t, { plugins: [plugin], eventWaitMs: 5000 }) });
+
+  assert.deepEqual(await core.events({ plugin: "alerts" }), { ok: true, events: [], next: 0 });
+  const started = performance.now();
+  const waiting = core.events({ plugin: "alerts", after: 0 });
+  setTimeout(() => {
+    lifecycle.emit(3);
+  }, 100);
+  assert.deepEqual(await waiting, { ok: true, events: [{ seq: 1, name: "fired", data: { level: 3 } }], next: 1 });
+  assert.ok(performance.now() - started < 1000, "the event arrives well before the wait ends");
+
+  lifecycle.emit(4);
+  assert.deepEqual(await core.events({ plugin: "alerts", after: 1 }), {
+    ok: true,
+    events: [{ seq: 2, name: "fired", data: { level: 4 } }],
+    next: 2,
+  });
+});
+
+void test("a wait ignores other plugins' events, answers empty when it ends, and restarts after a reset", async (t) => {
+  const { plugin } = alertsWithEmit();
+  const core = createHostClient(corePlugin, { url: await companion(t, { plugins: [plugin], eventWaitMs: 300 }) });
+
+  const waiting = core.events({ plugin: "alerts", after: 0 });
+  await core.notify({ text: "not for alerts" });
+  assert.deepEqual(await waiting, { ok: true, events: [], next: 1 });
+  assert.deepEqual(await core.events({ plugin: "core", after: 0 }), {
+    ok: true,
+    events: [{ seq: 1, name: "notice", data: { text: "not for alerts" } }],
+    next: 1,
+  });
+  // An `after` ahead of the companion's count comes from before it restarted: watching starts from now.
+  assert.deepEqual(await core.events({ plugin: "alerts", after: 99 }), { ok: true, events: [], next: 1 });
+});
+
+void test("setPlugins stops the old plugins' lifecycles and drops their later emits; close answers waits", async (t) => {
+  const { plugin, lifecycle } = alertsWithEmit();
+  const running = await runningCompanion(t, { plugins: [plugin], eventWaitMs: 25_000 });
+  const core = createHostClient(corePlugin, { url: `http://127.0.0.1:${running.port}/` });
+
+  running.setPlugins([]);
+  assert.equal(lifecycle.stopped, true);
+  lifecycle.emit(9);
+  const waiting = core.events({ plugin: "alerts", after: 0 });
+  const started = performance.now();
+  await sleep(100);
+  await running.close();
+  assert.deepEqual(await waiting, { ok: true, events: [], next: 0 });
+  assert.ok(performance.now() - started < 2000, "closing does not wait out the 25 s wait");
 });

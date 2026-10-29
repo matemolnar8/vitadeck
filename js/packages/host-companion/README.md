@@ -24,7 +24,13 @@ vitadeck-host-companion link 192.168.1.177
 
 Open Host Control in the VitaDeck Shell and pass the address it shows (add `:port` if it is not 8798). `link` checks that `start` is answering, then tells VitaDeck where to send commands. One Vita can link several computers, and one computer can link several Vitas.
 
-Options: `--port N` (`start` and `link`; use the same one for both), `--plugin <name.vdplugin or folder>` (repeatable, `start` only; a folder loads every `.vdplugin` package in it), `--advertise <ip>` (`link` only), `--config <path>`.
+```sh
+vitadeck-host-companion notify "Build done"
+```
+
+Sends a notice to every Deck App watching this computer's `core` events (the `host-control` demo shows it), for example at the end of a script: `make && vitadeck-host-companion notify "Build done"`. Deck Apps keep one request waiting at the companion for events, renewed every 25 s while nothing happens, so the request log shows a `core.events` line about every 25 s per watching Deck App.
+
+Options: `--port N` (`start`, `link` and `notify`; use the same one for all), `--plugin <name.vdplugin or folder>` (repeatable, `start` only; a folder loads every `.vdplugin` package in it), `--advertise <ip>` (`link` only), `--config <path>`.
 
 ## Plugins
 

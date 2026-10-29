@@ -4,6 +4,7 @@ import {
   createHostClient,
   linkedHosts,
   systemStatsPlugin,
+  watchHostEvents,
   type HostCapabilities,
   type HostResult,
   type LinkedHost,
@@ -98,6 +99,24 @@ function HostDetails({ host, stats }: { host: LinkedHost; stats: HostResult<Syst
   const { theme } = useTheme();
   const [capabilities, setCapabilities] = useState<HostResult<HostCapabilities>>();
   const [echo, setEcho] = useState("Press Echo to time a round trip.");
+  const [notice, setNotice] = useState('No notice yet. On the computer: vitadeck-host-companion notify "Hello"');
+
+  // Notices arrive as soon as the computer sends them: the companion holds each request until there is one.
+  useEffect(
+    () =>
+      watchHostEvents(
+        corePlugin,
+        (event) => {
+          const now = new Date();
+          const time = [now.getHours(), now.getMinutes(), now.getSeconds()]
+            .map((part) => String(part).padStart(2, "0"))
+            .join(":");
+          setNotice(`${time}  ${event.data.text}`);
+        },
+        { hostId: host.id },
+      ),
+    [host.id],
+  );
 
   useEffect(() => {
     let stopped = false;
@@ -171,6 +190,9 @@ function HostDetails({ host, stats }: { host: LinkedHost; stats: HostResult<Syst
           {echo}
         </Text>
       </Stack>
+      <Text fontSize={18} color={theme.text} width={GAUGE_W} wrap="word">
+        {`Notice: ${notice}`}
+      </Text>
     </Stack>
   );
 }

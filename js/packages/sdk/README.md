@@ -100,6 +100,24 @@ else if (stats.code === "not_linked") setHint("Link a computer in the VitaDeck S
 - Every method resolves to `{ ok: true, ...result }` or `{ ok: false, code, message }` and never rejects, so TypeScript makes you check `ok`. Besides the companion's codes, the client reports `not_linked`, `unreachable`, `timeout` (5 s by default; the command may still have run) and `bad_response`. A failed command is never retried.
 - `capabilities()` lists the plugins a computer loaded, so a Deck App can tell an `unknown_plugin` apart before calling it.
 
+### Events from the computer
+
+A plugin can also send **events** to a Deck App as soon as something happens on the computer, instead of the Deck App polling for it. `watchHostEvents` keeps one request waiting at the companion, which answers it the moment an event is emitted, or after 25 s with nothing, when it simply waits again:
+
+```tsx
+import { corePlugin, watchHostEvents } from "@vitadeck/sdk/host-control";
+
+useEffect(
+  () =>
+    watchHostEvents(corePlugin, (event) => setNotice(event.data.text), { hostId, onFailure: (f) => setHint(f.code) }),
+  [hostId],
+);
+```
+
+- It returns a function that stops watching, so it fits a `useEffect` cleanup. A failed wait is retried after 5 s, or 30 s after a `timeout`.
+- `core` emits `notice` for `vitadeck-host-companion notify "Build done"`, so any script on the computer can reach Deck Apps with no plugin of its own.
+- Events are best effort: a companion restart or more than 100 events between two waits drops some.
+
 ### Your own Host Plugin
 
 When the built-in plugins are not enough, write a plugin: in the Deck App's own project, or on its own for several Deck Apps to use (see [Standalone plugins](#standalone-plugins)). `create --host-plugin` scaffolds a Deck App with one:
@@ -111,6 +129,7 @@ npx @vitadeck/sdk create my-app --host-plugin
 - `host/plugin.ts` defines the commands with `defineHostPlugin(id, { name: command<Payload, Result>(guard) })`. Deck Apps import it, so it is bundled into them and must not import Node.js modules. The companion runs `guard` on every payload before your code.
 - `host/companion.ts` default-exports `implementHostPlugin(plugin, { name: async (payload) => result })`. It runs in the companion with Node.js. `tsc` fails if a command is missing or returns the wrong type; throw `new HostCommandError("unsupported_platform", "...")` to answer with a specific code.
 - `"hostPlugin": { "entry": "./host/companion.ts" }` in `vitadeck.config.json` makes `build` and `dev` also write `dist/my-app.vdplugin`, a **Host Plugin Package**, and its `dist/my-app.vdplugin.zip`. The package holds `manifest.json` and `companion.mjs`, your implementation bundled with its npm dependencies (pure JavaScript only). Add `"files": "./host/files"` to ship other files too, like scripts or data; read them with `new URL("./files/<name>", import.meta.url)` when a command runs, since a rebuild that changes only `files/` does not re-run your module. The `.vdplugin.zip` keeps no file permissions, so run a shipped script through its interpreter (`execFile("sh", [path])`) rather than directly.
+- To send events, declare them as a third argument, `defineHostPlugin("lights", { toggle: ... }, { changed: event<{ room: string; on: boolean }>() })`, and emit them from a lifecycle in `host/companion.ts`: `implementHostPlugin(lightsPlugin, { toggle: ... }, { start: (emit) => { const stop = watchLights((room, on) => emit("changed", { room, on })); return stop; } })`. `start` runs when the companion loads the plugin, and the function it returns runs when it unloads or reloads. `emit` only accepts the declared events and their data.
 - `pnpm host` builds and runs a companion with your plugin, reloading it whenever `vitadeck dev` rebuilds. Link it once with `npx vitadeck-host-companion link <address>`.
 
 Users install your plugin with `vitadeck-host-companion install my-app.vdplugin.zip`, so ship the `.vdplugin.zip` next to the `.vdapp.zip`. When they have not, your Deck App gets `unknown_plugin`; tell them what to install.

@@ -15,7 +15,9 @@
         "id": "core",
         "commands": [
           "capabilities",
-          "echo"
+          "echo",
+          "events",
+          "notify"
         ]
       }
     ]

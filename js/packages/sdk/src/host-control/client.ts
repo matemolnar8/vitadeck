@@ -1,5 +1,5 @@
-import type { HostCommandMap, HostPlugin, PayloadOf, ResultOf } from "./plugin";
-import { isRecord } from "./plugin";
+import type { HostCommandMap, HostEventMap, HostEventOf, HostPlugin, PayloadOf, ResultOf } from "./plugin";
+import { corePlugin, isRecord } from "./plugin";
 import type { HostCommandRequest, HostFailure, HostResult } from "./protocol";
 import { HOST_CONTROL_PROTOCOL_VERSION, isWireErrorCode } from "./protocol";
 
@@ -138,4 +138,50 @@ export function createHostClient<C extends HostCommandMap>(
     methods[name] = (payload) => send(plugin.id, name, payload, options);
   }
   return methods as HostClient<C>;
+}
+
+export type WatchHostEventsOptions = Omit<HostClientOptions, "timeoutMs"> & {
+  /** Called for each failed wait, before the next try: 5 s later, or 30 s after a `timeout`. */
+  onFailure?: (failure: HostFailure) => void;
+};
+
+// The companion holds an event wait for 25 s; the Vita's native fetch gives up at 30 s.
+const EVENT_WAIT_TIMEOUT_MS = 29_000;
+const EVENT_RETRY_MS = 5000;
+// A timed-out fetch keeps running natively for up to 30 s, so a computer that stopped answering is retried no faster.
+const EVENT_TIMEOUT_RETRY_MS = 30_000;
+
+/**
+ * Calls `onEvent` for every event the plugin emits on a linked computer from now on, within about one network
+ * round trip. Keeps one request waiting at the companion at a time. Returns a function that stops watching.
+ */
+export function watchHostEvents<C extends HostCommandMap, E extends HostEventMap>(
+  plugin: HostPlugin<C, E>,
+  onEvent: (event: HostEventOf<E>) => void,
+  options: WatchHostEventsOptions = {},
+): () => void {
+  const { onFailure, ...clientOptions } = options;
+  const core = createHostClient(corePlugin, { ...clientOptions, timeoutMs: EVENT_WAIT_TIMEOUT_MS });
+  let stopped = false;
+  let after: number | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  const wait = async () => {
+    const batch = await core.events(after === undefined ? { plugin: plugin.id } : { plugin: plugin.id, after });
+    if (stopped) return;
+    if (batch.ok) {
+      after = batch.next;
+      // The companion only sends events of this plugin, which emits only the events its registry declares.
+      for (const event of batch.events) onEvent(event as HostEventOf<E>);
+    } else {
+      onFailure?.(batch);
+    }
+    const delay = batch.ok ? 0 : batch.code === "timeout" ? EVENT_TIMEOUT_RETRY_MS : EVENT_RETRY_MS;
+    timer = setTimeout(() => void wait(), delay);
+  };
+  void wait();
+  return () => {
+    stopped = true;
+    clearTimeout(timer);
+  };
 }

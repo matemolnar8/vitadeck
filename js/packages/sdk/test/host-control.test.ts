@@ -6,7 +6,11 @@ import {
   HOST_CONTROL_WIRE_ERRORS,
   corePlugin,
   createHostClient,
+  defineHostPlugin,
+  event,
   linkedHosts,
+  watchHostEvents,
+  type HostEventOf,
   type HostTransport,
 } from "../src/host-control/index";
 
@@ -66,7 +70,7 @@ void test("capabilities omits the payload", async () => {
   assert.deepEqual(sent[0]?.body, fx.request);
   assert.equal(sent[0]?.url, `${COMPANION_URL}command`);
   assert.ok(reply.ok);
-  assert.deepEqual(reply.plugins, [{ id: "core", commands: ["capabilities", "echo"] }]);
+  assert.deepEqual(reply.plugins, [{ id: "core", commands: ["capabilities", "echo", "events", "notify"] }]);
 });
 
 for (const name of ["command-version-mismatch", "unknown-plugin", "unknown-command", "invalid-payload"]) {
@@ -164,4 +168,47 @@ void test("the core plugin guards accept fixture payloads and reject invalid one
   assert.equal(corePlugin.commands.echo.isPayload(invalid.request.payload), false);
   assert.equal(corePlugin.commands.capabilities.isPayload((await fixture("capabilities")).request.payload), true);
   assert.equal(corePlugin.commands.capabilities.isPayload({}), false);
+});
+
+void test("watchHostEvents waits again after each answer, passing `next` as `after`, until stopped", async () => {
+  const alerts = defineHostPlugin("alerts", {}, { fired: event<{ level: number }>(), cleared: event<undefined>() });
+  const answers = [
+    { ok: true, events: [], next: 4 },
+    { ok: true, events: [{ seq: 5, name: "fired", data: { level: 2 } }], next: 5 },
+  ];
+  const sent: unknown[] = [];
+  let waitingThird: (() => void) | undefined;
+  const third = new Promise<void>((resolve) => {
+    waitingThird = resolve;
+  });
+  const transport: HostTransport = (_url, init) => {
+    sent.push(JSON.parse(init.body));
+    const answer = answers.shift();
+    if (!answer) {
+      waitingThird?.();
+      return new Promise(() => {});
+    }
+    return Promise.resolve({ status: 200, text: () => Promise.resolve(JSON.stringify(answer)) });
+  };
+  const received: HostEventOf<typeof alerts.events>[] = [];
+  const levels: number[] = [];
+  const stop = watchHostEvents(
+    alerts,
+    (fired) => {
+      received.push(fired);
+      // `name` narrows `data`.
+      if (fired.name === "fired") levels.push(fired.data.level);
+    },
+    { url: COMPANION_URL, transport },
+  );
+  await third;
+  stop();
+
+  assert.deepEqual(received, [{ seq: 5, name: "fired", data: { level: 2 } }]);
+  assert.deepEqual(levels, [2]);
+  assert.deepEqual(sent, [
+    { protocolVersion: 1, plugin: "core", command: "events", payload: { plugin: "alerts" } },
+    { protocolVersion: 1, plugin: "core", command: "events", payload: { plugin: "alerts", after: 4 } },
+    { protocolVersion: 1, plugin: "core", command: "events", payload: { plugin: "alerts", after: 5 } },
+  ]);
 });

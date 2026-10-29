@@ -3,7 +3,7 @@ import { cp, mkdir, mkdtemp, rename, rm } from "node:fs/promises";
 import { networkInterfaces } from "node:os";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import type { ImplementedHostPlugin } from "@vitadeck/sdk/host-control";
+import { corePlugin, createHostClient, type ImplementedHostPlugin } from "@vitadeck/sdk/host-control";
 import { DEFAULT_CONFIG_PATH, installedPluginsDir, isPort, loadConfig, readConfig } from "./config";
 import { linkVita } from "./link";
 import {
@@ -29,7 +29,9 @@ const USAGE = `Usage: vitadeck-host-companion <command>
       Install a Host Plugin Package that a Deck App's author built. It runs with your permissions on this
       computer.
   remove <plugin-id> [--config <path>]
-      Uninstall a plugin.`;
+      Uninstall a plugin.
+  notify <text> [--port N] [--config <path>]
+      Send a notice to every Deck App watching this computer, e.g. after a build: make && vitadeck-host-companion notify "Build done".`;
 
 const BUILT_IN_PLUGINS: readonly ImplementedHostPlugin[] = [systemStats];
 const BUILT_IN_IDS = new Set(["core", ...BUILT_IN_PLUGINS.map((plugin) => plugin.id)]);
@@ -168,6 +170,16 @@ async function remove(id: string, configPath: string): Promise<void> {
   console.log(`Removed ${id}.`);
 }
 
+async function notify(text: string, port: number | undefined, configPath: string): Promise<number> {
+  const target = port ?? (await loadConfig(configPath)).port;
+  const sent = await createHostClient(corePlugin, { url: `http://127.0.0.1:${target}/` }).notify({ text });
+  if (sent.ok) return 0;
+  console.error(
+    `No Host Companion took the notice on port ${target} (${sent.message}). Is \`vitadeck-host-companion start\` running?`,
+  );
+  return 1;
+}
+
 async function main(): Promise<number> {
   const { positionals, values } = parseArgs({
     allowPositionals: true,
@@ -203,6 +215,9 @@ async function main(): Promise<number> {
   if (command === "install" && rest.length === 1 && arg !== undefined) {
     await install(arg, configPath);
     return 0;
+  }
+  if (command === "notify" && rest.length === 1 && arg !== undefined) {
+    return notify(arg, parsePort(values.port), configPath);
   }
   if (command === "remove" && rest.length === 1 && arg !== undefined) {
     await remove(arg, configPath);

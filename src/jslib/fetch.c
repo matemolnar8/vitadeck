@@ -39,6 +39,8 @@ typedef struct {
     char error[CURL_ERROR_SIZE];
 
     bool done;
+    // Set when the Deck App stops; the transfer aborts at curl's next progress call, about once a second.
+    bool cancelled;
     vd_thread *thread;
 
     JSValue resolve;
@@ -90,6 +92,19 @@ static size_t fetch_header_cb(char *buffer, size_t size, size_t nitems, void *us
     return total;
 }
 
+static int fetch_progress_cb(void *userdata, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
+{
+    (void)dltotal;
+    (void)dlnow;
+    (void)ultotal;
+    (void)ulnow;
+    FetchRequest *req = userdata;
+    vd_mutex_lock(fetch_mutex);
+    bool cancelled = req->cancelled;
+    vd_mutex_unlock(fetch_mutex);
+    return cancelled ? 1 : 0;
+}
+
 static void *fetch_worker(void *arg)
 {
     FetchRequest *req = arg;
@@ -110,6 +125,9 @@ static void *fetch_worker(void *arg)
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, req);
         curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, fetch_header_cb);
         curl_easy_setopt(curl, CURLOPT_HEADERDATA, req);
+        curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+        curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, fetch_progress_cb);
+        curl_easy_setopt(curl, CURLOPT_XFERINFODATA, req);
         if (req->headers) curl_easy_setopt(curl, CURLOPT_HTTPHEADER, req->headers);
         if (req->body) {
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req->body);
@@ -335,6 +353,11 @@ bool run_fetch(JSContext *ctx)
 void fetch_shutdown(JSContext *ctx)
 {
     if (!fetch_pending) return;
+    // A Host Control event wait holds its request open for up to 25 s; stopping must not wait for it.
+    vd_mutex_lock(fetch_mutex);
+    for (ptrdiff_t i = 0; i < arrlen(fetch_pending); i++)
+        fetch_pending[i]->cancelled = true;
+    vd_mutex_unlock(fetch_mutex);
     for (ptrdiff_t i = 0; i < arrlen(fetch_pending); i++) {
         FetchRequest *req = fetch_pending[i];
         vd_thread_join(req->thread);

@@ -33,7 +33,8 @@ else setHint(`${stats.code}: ${stats.message}`);
 
 - Calls never reject. Always branch on `ok`.
 - Leave out `hostId` to call the most recent link.
-- Poll no faster than once a second. After a `timeout`, back off; the demo uses 30 s. See [`js/examples/host-control`](https://github.com/matemolnar8/vitadeck/tree/main/js/examples/host-control).
+- For things that happen on the computer (an alert, a build finishing), watch events instead of polling: `useEffect(() => watchHostEvents(plugin, (event) => ..., { hostId }), [hostId])`. Each event arrives within about one round trip. `core`'s `notice` events come from `vitadeck-host-companion notify "text"`, so any script can reach Deck Apps.
+- When you do poll, go no faster than once a second. After a `timeout`, back off; the demo uses 30 s. See [`js/examples/host-control`](https://github.com/matemolnar8/vitadeck/tree/main/js/examples/host-control).
 
 ## Write a plugin
 
@@ -44,6 +45,7 @@ else setHint(`${stats.code}: ${stats.message}`);
 
 - **`host/plugin.ts`** declares the commands with `defineHostPlugin(id, { name: command<Payload, Result>(guard) })`. Deck Apps bundle it, so it must not import Node.js modules. The id defaults to the project slug.
 - **`host/companion.ts`** default-exports `implementHostPlugin(plugin, { name: (payload) => result })` and runs in the companion with Node.js. `tsc -p host` fails on a missing or mistyped command. Throw `new HostCommandError("unsupported_platform", "...")` to answer with a specific code.
+- **Events:** declare them in `defineHostPlugin(id, commands, { name: event<Data>() })` and emit them from `implementHostPlugin(plugin, impls, { start: (emit) => { ...; return stop; } })`. `start` runs while the plugin is loaded, including after each reload.
 - **`vitadeck.config.json`** holds `"hostPlugin": { "entry": "./host/companion.ts", "files": "./host/files" }`.
   - `files` is optional. Read those files with `new URL("./files/x", import.meta.url)` when a command runs, not at module load.
   - The zip drops file modes, so run a shipped script through its interpreter (`execFile("sh", [path])`).
@@ -73,6 +75,7 @@ The SDK README section [Your own Host Plugin](https://github.com/matemolnar8/vit
 | `forbidden` | The Vita's IP is not the one the companion linked. Link again from the Shell. |
 | `invalid_payload` | The payload failed the command's guard. |
 | `command_failed` | The implementation threw. The companion logs one line per request. |
+| No events arrive | The watcher only gets events after it started; check the companion log for `core.events` lines, which repeat every 25 s while it waits. |
 | `Port 8797 is already in use` | Another companion is running. Stop it or pass the same `--port` to `start` and `link`. |
 | `--plugin takes a .vdplugin folder` | Point `--plugin` at `dist` or a `.vdplugin` folder; `install` the `.zip`. |
 

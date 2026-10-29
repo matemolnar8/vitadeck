@@ -204,6 +204,9 @@ _Avoid_: Extension, driver, action, Host Control command set
 **Host Plugin Package**: The `<slug>.vdplugin` folder holding a custom **Host Control Plugin** implementation: `manifest.json`, the bundled `companion.mjs`, and an optional `files/` folder. `vitadeck build` writes it, and its `.vdplugin.zip` archive, from `hostPlugin` in `vitadeck.config.json`: next to the **Runtime Upload Archive** in a **Deck App** project, or alone in a project with no Deck App, whose commands any Deck App can depend on. The user installs the archive with `vitadeck-host-companion install`, and the companion reloads a package when it changes. It runs with the user's permissions on the computer.
 _Avoid_: Plugin file, npm plugin, `.vdapp` (that is the **Deck App Package**)
 
+**Host Control Event**: A named, typed message a **Host Control Plugin**'s implementation emits on the computer, which a **Deck App** watching that plugin receives within about one network round trip (`watchHostEvents`). The Vita keeps one request waiting at the companion, which answers it when the event happens (long-polling); the computer never connects to the Vita. `core` emits `notice` for `vitadeck-host-companion notify`.
+_Avoid_: Push notification, websocket, subscription, callback
+
 **Host Control Link**: A **Host Companion**, given the address shown on the **Shell Host Control Screen**, tells VitaDeck its id, name and command URL. VitaDeck keeps up to 4 links, newest first, one per companion id, until replaced or forgotten. Addresses only, no credentials; it does not use the **Runtime Upload Listener**.
 _Avoid_: Pairing, Upload Pairing, session, typing the computer's address on the Vita
 

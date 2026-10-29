@@ -10,6 +10,7 @@ import {
   type ImplementedHostPlugin,
 } from "@vitadeck/sdk/host-control";
 import { implementCorePlugin } from "./core";
+import { createEventLog, EVENT_WAIT_MS } from "./events";
 
 export const MAX_REQUEST_BYTES = 64 * 1024;
 
@@ -24,11 +25,13 @@ export type HostCompanionOptions = {
   vitas?: () => Promise<readonly string[]>;
   remoteAddress?: (request: IncomingMessage) => string | undefined;
   log?: (line: string) => void;
+  /** How long `core.events` waits for an event; shortened in tests. */
+  eventWaitMs?: number;
 };
 
 export type RunningHostCompanion = {
   port: number;
-  /** Replaces every plugin but `core`, or throws and keeps the current ones. */
+  /** Replaces every plugin but `core`, stopping the old ones and starting the new, or throws and keeps them. */
   setPlugins: (plugins: readonly ImplementedHostPlugin[]) => void;
   close: () => Promise<void>;
 };
@@ -93,8 +96,37 @@ export async function startHostCompanion(options: HostCompanionOptions): Promise
     },
   } = options;
 
+  const events = createEventLog(options.eventWaitMs ?? EVENT_WAIT_MS);
   let plugins = new Map<string, ImplementedHostPlugin>();
-  const core = implementCorePlugin(name, platform, () => [...plugins.values()]);
+  const core = implementCorePlugin(name, platform, () => [...plugins.values()], events);
+
+  // Each plugin's lifecycle runs while it is loaded; an emit after its stop is dropped.
+  function startPlugins(loaded: readonly ImplementedHostPlugin[]): () => void {
+    let running = true;
+    const stops = loaded.flatMap((plugin) => {
+      try {
+        const stop = plugin.start?.((event, data) => {
+          if (running) events.emit(plugin.id, event, data);
+        });
+        return stop ? [stop] : [];
+      } catch (error) {
+        log(`Plugin ${plugin.id} failed to start: ${error instanceof Error ? error.message : String(error)}`);
+        return [];
+      }
+    });
+    return () => {
+      running = false;
+      for (const stop of stops) {
+        try {
+          stop();
+        } catch (error) {
+          log(`A plugin failed to stop: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+    };
+  }
+
+  let stopRunning = startPlugins([]);
 
   function setPlugins(next: readonly ImplementedHostPlugin[]): void {
     const byId = new Map([[core.id, core]]);
@@ -102,7 +134,9 @@ export async function startHostCompanion(options: HostCompanionOptions): Promise
       if (byId.has(plugin.id)) throw new Error(`Two loaded plugins share the id ${plugin.id}.`);
       byId.set(plugin.id, plugin);
     }
+    stopRunning();
     plugins = byId;
+    stopRunning = startPlugins(next);
   }
   setPlugins(options.plugins ?? []);
 
@@ -205,6 +239,12 @@ export async function startHostCompanion(options: HostCompanionOptions): Promise
     setPlugins,
     close: () =>
       new Promise((resolve, reject) => {
+        events.close();
+        stopRunning();
+        if (!server.listening) {
+          resolve();
+          return;
+        }
         server.close((error) => {
           if (error) reject(error);
           else resolve();
