@@ -4,6 +4,7 @@ import { corePlugin } from "./plugin";
 export { createHostClient, linkedHosts } from "./client";
 export type { HostClient, HostClientOptions, HostTransport, LinkedHost } from "./client";
 export {
+  HOST_PLUGIN_SCHEMA_VERSION,
   HostCommandError,
   command,
   corePlugin,
@@ -18,6 +19,7 @@ export type {
   HostCommandMap,
   HostPlugin,
   HostPluginImplementations,
+  HostPluginManifest,
   ImplementedHostPlugin,
   PayloadOf,
   ResultOf,

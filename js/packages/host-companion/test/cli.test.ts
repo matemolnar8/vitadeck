@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
-import { access, mkdir, readdir } from "node:fs/promises";
+import { access, readdir } from "node:fs/promises";
 import { createServer } from "node:net";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { createHostClient } from "@vitadeck/sdk/host-control";
 import { greeterPlugin } from "./fixtures/greeter-plugin";
-import { buildGreeterPluginFile, tempDir, writeTempFile } from "./fixtures/plugin-file";
+import { buildGreeterPackage, tempDir, writePackage, zipPackage } from "./fixtures/plugin-package";
 
 const cliPath = fileURLToPath(new URL("../src/cli.ts", import.meta.url));
 const tsxBin = fileURLToPath(new URL("../../../node_modules/.bin/tsx", import.meta.url));
@@ -70,16 +70,16 @@ function exists(file: string): Promise<boolean> {
   );
 }
 
-void test("install loads a Host Plugin File into a running companion, remove unloads it", async (t) => {
+void test("install loads a .vdplugin.zip into a running companion, remove unloads it", async (t) => {
   const dir = await tempDir(t);
   const config = path.join(dir, "home", "host-companion.json");
-  await buildGreeterPluginFile(t, dir);
+  await zipPackage(await buildGreeterPackage(t, path.join(dir, "build")));
   const port = await freePort();
   const waitFor = startCompanion(t, ["--port", String(port), "--config", config], dir);
   await waitFor(/^Plugins: core, systemStats$/u);
   const greeter = createHostClient(greeterPlugin, { url: `http://127.0.0.1:${port}/` });
 
-  const installed = await runCli(["install", "greeter.vdplugin", "--config", config], dir);
+  const installed = await runCli(["install", "build/greeter.vdplugin.zip", "--config", config], dir);
   assert.equal(installed.code, 0, installed.output);
   assert.match(installed.output, /Installed greeter \(greet, crash, launch\)/u);
   assert.deepEqual(await readdir(path.join(dir, "home", "plugins")), ["greeter.vdplugin"]);
@@ -94,20 +94,19 @@ void test("install loads a Host Plugin File into a running companion, remove unl
   assert.equal(gone.ok ? "ok" : gone.code, "unknown_plugin");
 });
 
-void test("a --plugin directory reloads a rebuilt file, and a broken rebuild keeps the previous one", async (t) => {
+void test("a --plugin folder reloads a rebuilt package, and a broken rebuild keeps the previous one", async (t) => {
   const dir = await tempDir(t);
   const config = path.join(dir, "host-companion.json");
-  await mkdir(path.join(dir, "dist"));
-  await buildGreeterPluginFile(t, path.join(dir, "dist"));
+  await buildGreeterPackage(t, path.join(dir, "dist"));
   const port = await freePort();
   const waitFor = startCompanion(t, ["--port", String(port), "--config", config, "--plugin", "dist"], dir);
   await waitFor(/^Plugins: core, systemStats, greeter$/u);
   const greeter = createHostClient(greeterPlugin, { url: `http://127.0.0.1:${port}/` });
   assert.deepEqual(await greeter.greet({ name: "Vita" }), { ok: true, greeting: "Hello, Vita!" });
 
-  await writeTempFile(
+  await writePackage(
     path.join(dir, "dist"),
-    "greeter.vdplugin",
+    "greeter",
     `export default {
   id: "greeter",
   commands: new Map([["greet", { isPayload: () => true, run: ({ name }) => ({ greeting: "Hi again, " + name }) }]]),
@@ -117,23 +116,22 @@ void test("a --plugin directory reloads a rebuilt file, and a broken rebuild kee
   await waitFor(/^Reloaded plugins: core, systemStats, greeter$/u);
   assert.deepEqual(await greeter.greet({ name: "Vita" }), { ok: true, greeting: "Hi again, Vita" });
 
-  await writeTempFile(path.join(dir, "dist"), "greeter.vdplugin", "export default {\n");
+  await writePackage(path.join(dir, "dist"), "greeter", "export default {\n");
   await waitFor(/^Kept the previous plugins: .*greeter\.vdplugin failed to load/u);
   assert.deepEqual(await greeter.greet({ name: "Vita" }), { ok: true, greeting: "Hi again, Vita" });
 });
 
-void test("install refuses a built-in id and a file that is not a .vdplugin", async (t) => {
+void test("install refuses a built-in id and anything but a .vdplugin.zip or .vdplugin folder", async (t) => {
   const dir = await tempDir(t);
   const config = path.join(dir, "host-companion.json");
-  await writeTempFile(dir, "stats.vdplugin", 'export default { id: "systemStats", commands: new Map() };\n');
-  await writeTempFile(dir, "plugin.js", 'export default { id: "x", commands: new Map() };\n');
+  await writePackage(dir, "stats", 'export default { id: "systemStats", commands: new Map() };\n');
 
   const builtIn = await runCli(["install", "stats.vdplugin", "--config", config], dir);
   assert.equal(builtIn.code, 1);
   assert.match(builtIn.output, /systemStats is a built-in plugin/u);
   const wrongExtension = await runCli(["install", "plugin.js", "--config", config], dir);
   assert.equal(wrongExtension.code, 1);
-  assert.match(wrongExtension.output, /is not a \.vdplugin file/u);
+  assert.match(wrongExtension.output, /is not a \.vdplugin\.zip archive or a \.vdplugin folder/u);
   const unknown = await runCli(["remove", "nothing", "--config", config], dir);
   assert.equal(unknown.code, 1);
   assert.match(unknown.output, /No plugin nothing is installed/u);

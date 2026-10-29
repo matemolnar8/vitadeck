@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { networkInterfaces } from "node:os";
+import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import {
@@ -12,11 +13,12 @@ import {
   isAbsent,
   systemStatsPlugin,
 } from "@vitadeck/sdk/host-control";
-import { loadHostPluginFile } from "../src/plugin";
+import { strToU8, zipSync } from "fflate";
+import { extractHostPluginArchive, loadHostPluginPackage } from "../src/plugin";
 import { MAX_REQUEST_BYTES, startHostCompanion, type HostCompanionOptions } from "../src/server";
 import { systemStats } from "../src/system-stats";
 import { greeterPlugin } from "./fixtures/greeter-plugin";
-import { buildGreeterPluginFile, tempDir, writeTempFile } from "./fixtures/plugin-file";
+import { buildGreeterPackage, tempDir, writePackage } from "./fixtures/plugin-package";
 
 type Fixture = { request: unknown; status: number; response: unknown };
 
@@ -139,8 +141,8 @@ void test("serves the SDK client for core and system stats", async (t) => {
   }
 });
 
-void test("loads a bundled Host Plugin File and maps its throws, including its own HostCommandError", async (t) => {
-  const plugin = await loadHostPluginFile(await buildGreeterPluginFile(t));
+void test("loads a bundled Host Plugin Package and maps its throws, including its own HostCommandError", async (t) => {
+  const plugin = await loadHostPluginPackage(await buildGreeterPackage(t));
   const url = await companion(t, { plugins: [plugin] });
   const greeter = createHostClient(greeterPlugin, { url });
 
@@ -153,26 +155,63 @@ void test("loads a bundled Host Plugin File and maps its throws, including its o
   });
 });
 
-void test("rejects a file that is not a Host Plugin File", async (t) => {
+void test("a package's entry reads the package's other files through import.meta.url", async (t) => {
+  const packageDir = await writePackage(
+    await tempDir(t),
+    "files",
+    `import { readFileSync } from "node:fs";
+const read = () => ({ text: readFileSync(new URL("./files/greeting.txt", import.meta.url), "utf8") });
+export default { id: "files", commands: new Map([["read", { isPayload: () => true, run: read }]]) };
+`,
+  );
+  await mkdir(path.join(packageDir, "files"));
+  await writeFile(path.join(packageDir, "files", "greeting.txt"), "Hello from a file");
+  const plugin = await loadHostPluginPackage(packageDir);
+  assert.deepEqual(await plugin.commands.get("read")?.run(null), { text: "Hello from a file" });
+});
+
+void test("rejects a folder that is not a Host Plugin Package", async (t) => {
   const dir = await tempDir(t);
+  const plain = (name: string, id: string) =>
+    writePackage(dir, name, `export default { id: ${JSON.stringify(id)}, commands: new Map() };\n`);
+
+  await assert.rejects(loadHostPluginPackage(path.join(dir, "missing.vdplugin")), /has no readable manifest\.json/u);
   await assert.rejects(
-    loadHostPluginFile(await writeTempFile(dir, "number.vdplugin", "export default 1;\n")),
+    loadHostPluginPackage(await writePackage(dir, "number", "export default 1;\n")),
     /does not default-export implementHostPlugin/u,
   );
   await assert.rejects(
-    loadHostPluginFile(await writeTempFile(dir, "broken.vdplugin", "export default {\n")),
+    loadHostPluginPackage(await writePackage(dir, "broken", "export default {\n")),
     /broken\.vdplugin failed to load/u,
   );
+  await assert.rejects(loadHostPluginPackage(await plain("escape", "../x")), /has plugin id "\.\.\/x"/u);
   await assert.rejects(
-    loadHostPluginFile(
-      await writeTempFile(dir, "escape.vdplugin", 'export default { id: "../x", commands: new Map() };\n'),
-    ),
-    /has plugin id "\.\.\/x"/u,
+    loadHostPluginPackage(await writePackage(dir, "future", "", { schemaVersion: 2, entry: "companion.mjs" })),
+    /is not a Host Plugin Package manifest/u,
   );
-  const digits = await loadHostPluginFile(
-    await writeTempFile(dir, "digits.vdplugin", 'export default { id: "2048", commands: new Map() };\n'),
+  await assert.rejects(
+    loadHostPluginPackage(await writePackage(dir, "outside", "", { schemaVersion: 1, entry: "../x.mjs" })),
+    /names an entry outside the package/u,
   );
-  assert.equal(digits.id, "2048");
+  assert.equal((await loadHostPluginPackage(await plain("digits", "2048"))).id, "2048");
+});
+
+void test("extracting an archive refuses unsafe paths and anything but one .vdplugin folder", async (t) => {
+  const dir = await tempDir(t);
+  const archive = async (name: string, files: Record<string, string>) => {
+    const file = path.join(dir, name);
+    const entries = Object.fromEntries(Object.entries(files).map(([key, text]) => [key, strToU8(text)]));
+    await writeFile(file, zipSync(entries));
+    return file;
+  };
+  await assert.rejects(
+    extractHostPluginArchive(await archive("two.vdplugin.zip", { "a.vdplugin/m": "", "b.vdplugin/m": "" }), dir),
+    /exactly one top-level \.vdplugin folder/u,
+  );
+  await assert.rejects(
+    extractHostPluginArchive(await archive("slip.vdplugin.zip", { "a.vdplugin/../../evil": "" }), dir),
+    /holds an unsafe path/u,
+  );
 });
 
 void test("setPlugins swaps the plugins, keeping core, and keeps them when ids clash", async (t) => {

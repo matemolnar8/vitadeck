@@ -58,13 +58,27 @@ export const corePlugin = defineHostPlugin("core", {
   ),
 });
 
+export const HOST_PLUGIN_SCHEMA_VERSION = 1;
+
+/**
+ * `manifest.json` of a Host Plugin Package, the `<slug>.vdplugin` folder `vitadeck build` writes. `entry` is the
+ * bundled implementation; the package may hold other files next to it, which the code finds through
+ * `import.meta.url`.
+ */
+export type HostPluginManifest = {
+  schemaVersion: typeof HOST_PLUGIN_SCHEMA_VERSION;
+  name: string;
+  version: string;
+  entry: string;
+};
+
 export type HostPluginImplementations<C extends HostCommandMap> = {
   readonly [K in keyof C]: (payload: PayloadOf<C[K]>) => Promise<ResultOf<C[K]>> | ResultOf<C[K]>;
 };
 
 /**
- * A Host Control Plugin with its implementation, as a Host Plugin File default-exports it. The Host Companion
- * checks this shape rather than a class, since every Host Plugin File bundles its own copy of this module.
+ * A Host Control Plugin with its implementation, as a Host Plugin Package's entry default-exports it. The Host
+ * Companion checks this shape rather than a class, since every package bundles its own copy of this module.
  */
 export type ImplementedHostPlugin = {
   readonly id: string;

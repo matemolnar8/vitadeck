@@ -67,7 +67,7 @@ function readBody(request: IncomingMessage): Promise<Buffer | undefined> {
   });
 }
 
-/** Matched by shape, since a Host Plugin File throws its own bundled copy of `HostCommandError`. */
+/** Matched by shape, since a Host Plugin Package throws its own bundled copy of `HostCommandError`. */
 function wireErrorCode(error: unknown): HostControlWireErrorCode | undefined {
   return error instanceof Error && error.name === "HostCommandError" && "code" in error && isWireErrorCode(error.code)
     ? error.code

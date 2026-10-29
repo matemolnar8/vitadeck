@@ -198,11 +198,11 @@ _Avoid_: Remote desktop, PC control, Runtime Upload
 **Host Companion**: The program on a nearby Mac, Windows or Linux computer (`vitadeck-host-companion`, package `@vitadeck/host-companion`) that performs **Host Control Link** and runs commands from the **Host Control Plugins** it loaded. Not the desktop build of VitaDeck, and not the `vitadeck` CLI, which builds Deck Apps.
 _Avoid_: Host Control Companion, desktop app, daemon, host build
 
-**Host Control Plugin**: A named group of typed commands: a registry a **Deck App** imports and a **Host Companion** implementation. Built-in plugins (`core`, `systemStats`) ship in every **Host Companion** and their registries in `@vitadeck/sdk/host-control`; a Deck App brings its own as a **Host Plugin File**. A computer without a plugin answers `unknown_plugin`.
+**Host Control Plugin**: A named group of typed commands: a registry a **Deck App** imports and a **Host Companion** implementation. Built-in plugins (`core`, `systemStats`) ship in every **Host Companion** and their registries in `@vitadeck/sdk/host-control`; a Deck App brings its own as a **Host Plugin Package**. A computer without a plugin answers `unknown_plugin`.
 _Avoid_: Extension, driver, action, Host Control command set
 
-**Host Plugin File**: `<slug>.vdplugin`, one self-contained JavaScript module holding a **Deck App**'s own **Host Control Plugin** implementation. `vitadeck build` writes it next to the **Runtime Upload Archive** from the `hostPlugin` entry in `vitadeck.config.json`; the user installs it with `vitadeck-host-companion install`, and the companion reloads it when it changes. It runs with the user's permissions on the computer.
-_Avoid_: Plugin package, npm plugin, `.vdapp` (that is the **Deck App Package**)
+**Host Plugin Package**: The `<slug>.vdplugin` folder holding a **Deck App**'s own **Host Control Plugin** implementation: `manifest.json`, the bundled `companion.mjs`, and an optional `files/` folder. `vitadeck build` writes it, and its `.vdplugin.zip` archive, next to the **Runtime Upload Archive** from `hostPlugin` in `vitadeck.config.json`. The user installs the archive with `vitadeck-host-companion install`, and the companion reloads a package when it changes. It runs with the user's permissions on the computer.
+_Avoid_: Plugin file, npm plugin, `.vdapp` (that is the **Deck App Package**)
 
 **Host Control Link**: A **Host Companion**, given the address shown on the **Shell Host Control Screen**, tells VitaDeck its id, name and command URL. VitaDeck keeps up to 4 links, newest first, one per companion id, until replaced or forgotten. Addresses only, no credentials; it does not use the **Runtime Upload Listener**.
 _Avoid_: Pairing, Upload Pairing, session, typing the computer's address on the Vita

@@ -1,24 +1,33 @@
-import { statSync, watch } from "node:fs";
-import { copyFile, mkdir, rename, rm } from "node:fs/promises";
+import { watch } from "node:fs";
+import { cp, mkdir, mkdtemp, rename, rm } from "node:fs/promises";
 import { networkInterfaces } from "node:os";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import type { ImplementedHostPlugin } from "@vitadeck/sdk/host-control";
 import { DEFAULT_CONFIG_PATH, installedPluginsDir, isPort, loadConfig, readConfig } from "./config";
 import { linkVita } from "./link";
-import { HOST_PLUGIN_FILE_EXTENSION, hostPluginFilesIn, isHostPluginId, loadHostPluginFile } from "./plugin";
+import {
+  HOST_PLUGIN_ARCHIVE_EXTENSION,
+  HOST_PLUGIN_EXTENSION,
+  extractHostPluginArchive,
+  hostPluginPackagesIn,
+  isHostPluginId,
+  loadHostPluginPackage,
+} from "./plugin";
 import { startHostCompanion } from "./server";
 import { systemStats } from "./system-stats";
 
 const USAGE = `Usage: vitadeck-host-companion <command>
 
-  start [--port N] [--plugin <file.vdplugin|dir>]... [--config <path>]
+  start [--port N] [--plugin <name.vdplugin|dir>]... [--config <path>]
       Serve Host Control commands on 0.0.0.0, port 8797 by default. Loads the built-in plugins, the installed
-      ones, and each --plugin file or every .vdplugin in a --plugin directory, and reloads them when they change.
+      ones, and each --plugin package or every .vdplugin package in a --plugin folder, and reloads them when
+      they change.
   link <vita-address>[:port] [--port N] [--advertise <ip>] [--config <path>]
       Link the VitaDeck showing that address (port 8798 by default) with the running companion.
-  install <file.vdplugin> [--config <path>]
-      Install a Host Plugin File that a Deck App's author built. It runs with your permissions on this computer.
+  install <name.vdplugin.zip|name.vdplugin> [--config <path>]
+      Install a Host Plugin Package that a Deck App's author built. It runs with your permissions on this
+      computer.
   remove <plugin-id> [--config <path>]
       Uninstall a plugin.`;
 
@@ -61,12 +70,13 @@ async function start(values: { port?: string; plugin?: string[] }, configPath: s
   const pluginsDir = installedPluginsDir(configPath);
   await mkdir(pluginsDir, { recursive: true });
   const extra = (values.plugin ?? []).map((given) => path.resolve(userCwd, given));
-  const extraDirs = extra.filter((entry) => statSync(entry, { throwIfNoEntry: false })?.isDirectory() === true);
-  const extraFiles = extra.filter((entry) => !extraDirs.includes(entry));
+  // A path ending in .vdplugin is one package; any other path is a folder of them, like a Deck App's dist/.
+  const extraPackages = extra.filter((entry) => entry.endsWith(HOST_PLUGIN_EXTENSION));
+  const extraDirs = extra.filter((entry) => !entry.endsWith(HOST_PLUGIN_EXTENSION));
   const loadPlugins = async () => {
-    const listed = await Promise.all([pluginsDir, ...extraDirs].map((dir) => hostPluginFilesIn(dir)));
-    // A --plugin file replaces an installed plugin with the same id, so an author can work on one they installed.
-    const loaded = await Promise.all([...listed.flat(), ...extraFiles].map((file) => loadHostPluginFile(file)));
+    const listed = await Promise.all([pluginsDir, ...extraDirs].map((dir) => hostPluginPackagesIn(dir)));
+    // A --plugin package replaces an installed plugin with the same id, so an author can work on one they installed.
+    const loaded = await Promise.all([...listed.flat(), ...extraPackages].map((dir) => loadHostPluginPackage(dir)));
     const custom = new Map(loaded.map((plugin) => [plugin.id, plugin]));
     return [...BUILT_IN_PLUGINS, ...custom.values()];
   };
@@ -90,7 +100,7 @@ async function start(values: { port?: string; plugin?: string[] }, configPath: s
       : "Open Host Control in the VitaDeck Shell, then run: vitadeck-host-companion link <vita-address>",
   );
 
-  // Directories, not files: a rebuild or reinstall may replace a file, which ends a watch on the file itself.
+  // Parent folders, recursively: a rebuild or reinstall replaces the package folder, which ends a watch on it.
   let timer: NodeJS.Timeout | undefined;
   const reload = () => {
     clearTimeout(timer);
@@ -106,39 +116,47 @@ async function start(values: { port?: string; plugin?: string[] }, configPath: s
       })();
     }, RELOAD_QUIET_MS);
   };
-  for (const dir of [pluginsDir, ...extraDirs]) {
-    watch(dir, (_event, name) => {
-      if (name?.endsWith(HOST_PLUGIN_FILE_EXTENSION)) reload();
-    }).on("error", watchFailed(dir));
-  }
-  for (const dir of new Set(extraFiles.map((file) => path.dirname(file)))) {
-    watch(dir, (_event, name) => {
-      if (name !== null && extraFiles.includes(path.join(dir, name))) reload();
+  const watched = [
+    ...[pluginsDir, ...extraDirs].map((dir) => ({ dir, prefix: "" })),
+    ...extraPackages.map((entry) => ({ dir: path.dirname(entry), prefix: path.basename(entry) })),
+  ];
+  for (const { dir, prefix } of watched) {
+    watch(dir, { recursive: true }, (_event, name) => {
+      if (name !== null && name.startsWith(prefix) && name.includes(HOST_PLUGIN_EXTENSION)) reload();
     }).on("error", watchFailed(dir));
   }
 }
 
-async function install(file: string, configPath: string): Promise<void> {
-  const source = path.resolve(userCwd, file);
-  if (!source.endsWith(HOST_PLUGIN_FILE_EXTENSION))
-    throw new Error(`${file} is not a ${HOST_PLUGIN_FILE_EXTENSION} file.`);
-  const plugin = await loadHostPluginFile(source);
-  if (BUILT_IN_IDS.has(plugin.id)) throw new Error(`${plugin.id} is a built-in plugin and cannot be replaced.`);
+async function install(given: string, configPath: string): Promise<void> {
+  const source = path.resolve(userCwd, given);
+  if (!source.endsWith(HOST_PLUGIN_ARCHIVE_EXTENSION) && !source.endsWith(HOST_PLUGIN_EXTENSION)) {
+    throw new Error(`${given} is not a ${HOST_PLUGIN_ARCHIVE_EXTENSION} archive or a ${HOST_PLUGIN_EXTENSION} folder.`);
+  }
   const dir = installedPluginsDir(configPath);
   await mkdir(dir, { recursive: true });
-  // Renamed into place, so a running companion never loads a half-copied file.
-  const temporary = path.join(dir, `.${plugin.id}.${process.pid}.tmp`);
-  await copyFile(source, temporary);
-  await rename(temporary, path.join(dir, `${plugin.id}${HOST_PLUGIN_FILE_EXTENSION}`));
-  console.log(
-    `Installed ${plugin.id} (${[...plugin.commands.keys()].join(", ")}). A running Host Companion loads it now.`,
-  );
+  // Staged in a folder the loader skips, then renamed into place, so a running companion never loads half a package.
+  const staging = await mkdtemp(path.join(dir, ".install-"));
+  try {
+    let staged = path.join(staging, path.basename(source));
+    if (source.endsWith(HOST_PLUGIN_ARCHIVE_EXTENSION)) staged = await extractHostPluginArchive(source, staging);
+    else await cp(source, staged, { recursive: true });
+    const plugin = await loadHostPluginPackage(staged);
+    if (BUILT_IN_IDS.has(plugin.id)) throw new Error(`${plugin.id} is a built-in plugin and cannot be replaced.`);
+    const target = path.join(dir, `${plugin.id}${HOST_PLUGIN_EXTENSION}`);
+    await rm(target, { recursive: true, force: true });
+    await rename(staged, target);
+    console.log(
+      `Installed ${plugin.id} (${[...plugin.commands.keys()].join(", ")}). A running Host Companion loads it now.`,
+    );
+  } finally {
+    await rm(staging, { recursive: true, force: true });
+  }
 }
 
 async function remove(id: string, configPath: string): Promise<void> {
   if (!isHostPluginId(id)) throw new Error(`${id} is not a plugin id.`);
   try {
-    await rm(path.join(installedPluginsDir(configPath), `${id}${HOST_PLUGIN_FILE_EXTENSION}`));
+    await rm(path.join(installedPluginsDir(configPath), `${id}${HOST_PLUGIN_EXTENSION}`), { recursive: true });
   } catch (error) {
     if (error instanceof Error && "code" in error && error.code === "ENOENT") {
       throw new Error(`No plugin ${id} is installed.`, { cause: error });

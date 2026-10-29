@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { pathToFileURL } from "node:url";
+import { unzipSync } from "fflate";
 import {
   cliPath,
   execFileText,
@@ -81,7 +83,7 @@ void test("create --host-plugin scaffolds a Deck App and Host Plugin that typech
     name: "my-app",
     entry: "./src/App.tsx",
     outDir: "./dist",
-    hostPlugin: "./host/companion.ts",
+    hostPlugin: { entry: "./host/companion.ts" },
   });
   const pkg = JSON.parse(await readFile(path.join(projectRoot, "package.json"), "utf8")) as {
     scripts: Record<string, string>;
@@ -98,13 +100,24 @@ void test("create --host-plugin scaffolds a Deck App and Host Plugin that typech
   await execFileText(tscBin, ["-p", "."], { cwd: projectRoot });
   await execFileText(tscBin, ["-p", "host"], { cwd: projectRoot });
 
-  const built = await runCli(projectRoot, ["build", "--no-zip"]);
+  const built = await runCli(projectRoot, ["build"]);
   assert.equal(built.ok, true, built.output);
-  assert.match(built.output, /Wrote dist\/my-app\.vdplugin/u);
-  const source = await readFile(path.join(projectRoot, "dist", "my-app.vdplugin"));
-  assert.doesNotMatch(source.toString("utf8"), /from "@vitadeck\/sdk/u, "the plugin file must be self-contained");
+  assert.match(built.output, /Wrote dist\/my-app\.vdplugin\.zip/u);
+  const pluginDir = path.join(projectRoot, "dist", "my-app.vdplugin");
+  assert.deepEqual(JSON.parse(await readFile(path.join(pluginDir, "manifest.json"), "utf8")), {
+    schemaVersion: 1,
+    name: "my-app",
+    version: "0.1.0",
+    entry: "companion.mjs",
+  });
+  assert.deepEqual(Object.keys(unzipSync(await readFile(`${pluginDir}.zip`))).toSorted(), [
+    "my-app.vdplugin/companion.mjs",
+    "my-app.vdplugin/manifest.json",
+  ]);
+  const source = await readFile(path.join(pluginDir, "companion.mjs"), "utf8");
+  assert.doesNotMatch(source, /from "@vitadeck\/sdk/u, "the entry must be self-contained");
   const plugin = (
-    (await import(`data:text/javascript;base64,${source.toString("base64")}`)) as {
+    (await import(pathToFileURL(path.join(pluginDir, "companion.mjs")).href)) as {
       default: {
         id: string;
         commands: Map<string, { isPayload: (value: unknown) => boolean; run: (payload: unknown) => unknown }>;
@@ -119,17 +132,32 @@ void test("create --host-plugin scaffolds a Deck App and Host Plugin that typech
   assert.deepEqual(await greet.run({ name: "Vita" }), { message: `Hello Vita, this is ${os.hostname()}.` });
 });
 
-void test("build fails clearly when hostPlugin points at a missing file", async (t) => {
+void test("build copies hostPlugin.files into the package and fails clearly on a missing entry", async (t) => {
   const cwd = await makeTempDir(t);
   assert.equal((await runCli(cwd, ["create", "my-app"])).ok, true);
   const projectRoot = path.join(cwd, "my-app");
   const configPath = path.join(projectRoot, "vitadeck.config.json");
   const config = JSON.parse(await readFile(configPath, "utf8")) as Record<string, unknown>;
-  await writeFile(configPath, JSON.stringify({ ...config, hostPlugin: "./host/missing.ts" }));
   await linkSdkBuildDependencies(projectRoot);
   await linkDependency(projectRoot, "react");
+  await mkdir(path.join(projectRoot, "host", "files", "scripts"), { recursive: true });
+  await writeFile(
+    path.join(projectRoot, "host", "companion.mjs"),
+    'export default { id: "x", commands: new Map() };\n',
+  );
+  await writeFile(path.join(projectRoot, "host", "files", "scripts", "hello.sh"), "echo hello\n");
 
-  const built = await runCli(projectRoot, ["build"]);
-  assert.equal(built.ok, false, built.output);
-  assert.match(built.output, /hostPlugin file is missing/u);
+  await writeFile(
+    configPath,
+    JSON.stringify({ ...config, hostPlugin: { entry: "./host/companion.mjs", files: "./host/files" } }),
+  );
+  const built = await runCli(projectRoot, ["build", "--no-zip"]);
+  assert.equal(built.ok, true, built.output);
+  const copied = path.join(projectRoot, "dist", "my-app.vdplugin", "files", "scripts", "hello.sh");
+  assert.equal(await readFile(copied, "utf8"), "echo hello\n");
+
+  await writeFile(configPath, JSON.stringify({ ...config, hostPlugin: { entry: "./host/missing.ts" } }));
+  const missing = await runCli(projectRoot, ["build"]);
+  assert.equal(missing.ok, false, missing.output);
+  assert.match(missing.output, /hostPlugin\.entry file is missing/u);
 });

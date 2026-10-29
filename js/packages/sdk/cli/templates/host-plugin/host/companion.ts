@@ -3,7 +3,7 @@ import { implementHostPlugin } from "@vitadeck/sdk/host-control";
 import { hostPlugin } from "./plugin";
 
 // Runs in the Host Companion on the computer, with Node.js and the permissions of the user who started it.
-// `vitadeck build` bundles it into dist/vitadeck-scaffold-template.vdplugin.
+// `vitadeck build` bundles it into the dist/vitadeck-scaffold-template.vdplugin package.
 export default implementHostPlugin(hostPlugin, {
   greet: ({ name }) => ({ message: `Hello ${name}, this is ${os.hostname()}.` }),
 });

@@ -18,7 +18,7 @@ export type HostCompanionConfig = {
 export const DEFAULT_CONFIG_PATH = path.join(os.homedir(), ".vitadeck", "host-companion.json");
 export const DEFAULT_PORT = 8797;
 
-/** Where `install` puts Host Plugin Files: `plugins/` next to the config file. */
+/** Where `install` puts Host Plugin Packages: `plugins/` next to the config file. */
 export function installedPluginsDir(configPath: string): string {
   return path.join(path.dirname(configPath), "plugins");
 }
