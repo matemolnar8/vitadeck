@@ -212,3 +212,30 @@ void test("watchHostEvents waits again after each answer, passing `next` as `aft
     { protocolVersion: 1, plugin: "core", command: "events", payload: { plugin: "alerts", after: 5 } },
   ]);
 });
+
+void test("watchHostEvents stops at once when a callback stops it", async () => {
+  const alerts = defineHostPlugin("alerts", {}, { fired: event<{ level: number }>() });
+  let requests = 0;
+  const transport: HostTransport = () => {
+    requests++;
+    const events = requests === 1 ? [] : [1, 2].map((level) => ({ seq: level, name: "fired", data: { level } }));
+    return Promise.resolve({
+      status: 200,
+      text: () => Promise.resolve(JSON.stringify({ ok: true, events, next: events.length })),
+    });
+  };
+  const levels: number[] = [];
+  const stop = watchHostEvents(
+    alerts,
+    (fired) => {
+      levels.push(fired.data.level);
+      stop();
+    },
+    { url: COMPANION_URL, transport },
+  );
+  await new Promise((resolve) => {
+    setTimeout(resolve, 50);
+  });
+  assert.deepEqual(levels, [1]);
+  assert.equal(requests, 2);
+});

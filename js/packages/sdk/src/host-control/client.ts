@@ -173,10 +173,15 @@ export function watchHostEvents<C extends HostCommandMap, E extends HostEventMap
     if (batch.ok) {
       after = batch.next;
       // The companion only sends events of this plugin, which emits only the events its registry declares.
-      for (const event of batch.events) onEvent(event as HostEventOf<E>);
+      for (const event of batch.events) {
+        if (stopped) return;
+        onEvent(event as HostEventOf<E>);
+      }
     } else {
       onFailure?.(batch);
     }
+    // `onFailure` may have stopped watching.
+    if (stopped) return;
     const delay = batch.ok ? 0 : batch.code === "timeout" ? EVENT_TIMEOUT_RETRY_MS : EVENT_RETRY_MS;
     timer = setTimeout(() => void wait(), delay);
   };
