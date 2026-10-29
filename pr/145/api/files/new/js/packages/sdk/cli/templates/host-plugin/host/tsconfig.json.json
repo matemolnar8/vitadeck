@@ -1,0 +1,1 @@
+{"path":"js/packages/sdk/cli/templates/host-plugin/host/tsconfig.json","ref":"c0498393dd5911d602c63433160a3a7fa020e308","side":"new","content":"{\n  \"extends\": \"@vitadeck/sdk/tsconfig\",\n  \"compilerOptions\": {\n    \"types\": [\"node\"],\n    \"lib\": [\"es2023\"]\n  },\n  \"include\": [\".\"]\n}\n","language":"json"}

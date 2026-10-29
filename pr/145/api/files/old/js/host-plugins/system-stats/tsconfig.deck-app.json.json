@@ -1,0 +1,1 @@
+{"path":"js/host-plugins/system-stats/tsconfig.deck-app.json","ref":"04760101d68405a97b39f799f3f4f9181fa18778","side":"old","content":"{\n  \"extends\": \"../../tsconfig.json\",\n  \"compilerOptions\": {\n    \"types\": []\n  },\n  \"include\": [\"src/index.ts\"]\n}\n","language":"json"}

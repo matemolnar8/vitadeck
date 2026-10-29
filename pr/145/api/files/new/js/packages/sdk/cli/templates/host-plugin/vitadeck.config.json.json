@@ -1,0 +1,1 @@
+{"path":"js/packages/sdk/cli/templates/host-plugin/vitadeck.config.json","ref":"c0498393dd5911d602c63433160a3a7fa020e308","side":"new","content":"{\n  \"hostPlugin\": \"./host/companion.ts\"\n}\n","language":"json"}
