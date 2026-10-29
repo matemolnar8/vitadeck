@@ -1,6 +1,6 @@
 ---
 name: vitadeck-manual-testing
-description: Guides manual GUI testing of VitaDeck Deck Apps, Shell navigation, Runtime Upload, and walkthrough recording. Use when testing VitaDeck visually, using computerUse with the raylib window, validating Deck App rendering, or producing screenshots/videos for UI changes.
+description: Guides manual GUI testing of VitaDeck Deck Apps, Shell navigation, Runtime Upload, Host Control linking, and walkthrough recording. Use when testing VitaDeck visually, using computerUse with the raylib window, validating Deck App rendering, or producing screenshots/videos for UI changes.
 metadata:
   internal: true
 ---
@@ -22,7 +22,7 @@ metadata:
 
 - **Start / F1** toggles between the running **Deck App** and the **VitaDeck Shell**.
 - In the **VitaDeck Shell**, **Enter** confirms and **Backspace** goes back.
-- The **Shell Home Screen** lists installed **Deck App Packages** plus **Upload**.
+- The **Shell Home Screen** lists installed **Deck App Packages**, then **Upload**, then **Host Control** (the link address and linked computers; Enter on a computer forgets it).
 - Hiding the Shell should reveal the **Active Deck App**.
 - If key input seems ignored, first focus the VitaDeck window; then retry F1/Enter/Backspace.
 
@@ -51,6 +51,16 @@ Only use this when testing upload behavior:
 4. Verify upload actually replaced the package on disk before judging the UI:
    - `out/vitadeck-data/installed-deck-apps/<package>.vdapp/manifest.json`
 5. If curl resets or hangs, inspect the app log. Do not assume the package changed.
+
+## Host Control testing
+
+1. Start a companion from the repo: `pnpm --dir js host-companion start`. Use `--config /tmp/<name>.json` to keep tests out of `~/.vitadeck`, and `--port 8799` for a second computer.
+2. Open **Shell → Host Control**, read the link address (port 8798 or the next free one), then run `pnpm --dir js host-companion link <address> --config <same config>`.
+3. Run `host-control.vdapp` for live gauges and Echo. The companion logs one line per request, which helps to tell a UI bug from a missing call.
+4. For a custom plugin, build its project and pass `--plugin <project>/dist` to `start`. Or `install` the `.vdplugin.zip` with the same `--config`.
+5. Reverse states: stop the companion (the app shows `unreachable` / offline), `remove <id>` (`unknown_plugin`), and forget the computer in the Shell (`not_linked`).
+
+Links persist in `out/vitadeck-data/host-control-links.json`; delete it to start unlinked.
 
 ## Walkthrough recording pattern
 

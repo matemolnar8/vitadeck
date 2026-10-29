@@ -37,7 +37,7 @@ Inside a Deck App project (this repo or elsewhere):
 vitadeck build
 ```
 
-Produces `<outDir>/<name>.vdapp/` and `<outDir>/<name>.vdapp.zip` (e.g. `dist/chat.vdapp.zip`). Use the **`.zip`**, not the unpacked folder.
+Produces `<outDir>/<name>.vdapp/` and `<outDir>/<name>.vdapp.zip` (e.g. `dist/chat.vdapp.zip`). Use the **`.zip`**, not the unpacked folder. A project with a Host Control Plugin also writes `<name>.vdplugin.zip`; that one is never uploaded to the Vita, it is installed on the computer with `vitadeck-host-companion install` (see [vitadeck-host-control](../vitadeck-host-control/SKILL.md)).
 
 ## Vita IP
 

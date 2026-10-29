@@ -13,7 +13,7 @@ metadata:
 
 - Node.js 24.16+ (`.nvmrc`)
 - Dependencies once: `pnpm --dir js install`
-- Produce runtime bundle and example `.vdapp` packages: `pnpm --dir js build` → writes `js/dist/runtime/runtime.js` and `js/examples/*/dist/*.vdapp`
+- Produce runtime bundle and example `.vdapp` packages: `pnpm --dir js build` → writes `js/dist/runtime/runtime.js`, `js/examples/*/dist/*.vdapp`, and the bundled Host Companion bin `js/packages/host-companion/dist/cli.mjs`
 - Typecheck: `pnpm --dir js tsc`; lint/format: `pnpm --dir js lint` / `pnpm --dir js format`
 
 **Host (current machine)** — e.g. macOS:

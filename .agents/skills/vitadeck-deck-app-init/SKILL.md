@@ -1,6 +1,6 @@
 ---
 name: vitadeck-deck-app-init
-description: Scaffolds a standalone VitaDeck Deck App project with npx @vitadeck/sdk create outside the monorepo. Use when the user wants to start a new Deck App, initialize a deck app project, run vitadeck create, or set up @vitadeck/sdk from npm.
+description: Scaffolds a standalone VitaDeck Deck App project, optionally with a Host Control Plugin, or a plugin on its own, with npx @vitadeck/sdk create outside the monorepo. Use when the user wants to start a new Deck App or host plugin, initialize a deck app project, run vitadeck create, or set up @vitadeck/sdk from npm.
 ---
 
 # Initialize a Deck App (standalone)
@@ -55,7 +55,18 @@ The `<slug>` is derived from the project `name` in `vitadeck.config.json` (e.g. 
 | `src/vitadeck-env.d.ts` | TypeScript env for Deck App globals                                    |
 | `tsconfig.json`         | Extends `@vitadeck/sdk/tsconfig`                                       |
 
-Optional `vitadeck.config.json` fields: `version` (overrides `package.json` semver in the built manifest), `fonts` and `images` (named asset files copied into the package and typed under `.vitadeck/`).
+Optional `vitadeck.config.json` fields: `version` (overrides `package.json` semver in the built manifest), `fonts` and `images` (named asset files copied into the package and typed under `.vitadeck/`), and `hostPlugin` (below).
+
+## With a Host Control Plugin
+
+A Deck App that calls the computer next to it can bring its own plugin, or a plugin can stand alone for several Deck Apps:
+
+```sh
+npx @vitadeck/sdk create my-app --host-plugin        # Deck App plus host/
+npx @vitadeck/sdk create lights --host-plugin-only   # host/ only, no src/
+```
+
+Both add `host/plugin.ts` (the commands Deck Apps import), `host/companion.ts` (the implementation the computer runs), `host/tsconfig.json`, `"hostPlugin": { "entry": "./host/companion.ts" }` in `vitadeck.config.json`, and a `host` script. `build` then also writes `dist/<slug>.vdplugin/` and `dist/<slug>.vdplugin.zip`. Typecheck with `npm run tsc`, which covers `host/`. Running, linking and installing plugins: [vitadeck-host-control](../vitadeck-host-control/SKILL.md).
 
 ## After scaffolding
 
@@ -63,7 +74,7 @@ Optional `vitadeck.config.json` fields: `version` (overrides `package.json` semv
 2. **Iterate:** edit `src/App.tsx`, rebuild with `npx @vitadeck/sdk build`
 3. **Skip zip:** `npx @vitadeck/sdk build --no-zip` when only the `.vdapp` folder is needed
 4. **Dev build:** `npx @vitadeck/sdk build --dev` bundles with `NODE_ENV=development` (default is production)
-5. **Deploy to Vita:** upload `dist/*.vdapp.zip` via Runtime Upload — see [vitadeck-vdapp-upload](../vitadeck-vdapp-upload/SKILL.md)
+5. **Deploy to Vita:** upload `dist/*.vdapp.zip` via Runtime Upload — see [vitadeck-vdapp-upload](../vitadeck-vdapp-upload/SKILL.md). A `.vdplugin.zip` goes to the computer instead: `vitadeck-host-companion install`
 
 ## Requirements and constraints
 
@@ -74,6 +85,8 @@ Optional `vitadeck.config.json` fields: `version` (overrides `package.json` semv
 ## Troubleshooting
 
 - **`Usage: vitadeck create <project-name>`** — pass a project folder name: `npx @vitadeck/sdk create my-app`
+- **`Pass --host-plugin or --host-plugin-only, not both`** — pick a Deck App with a plugin, or a plugin alone
+- **`npm install` fails on `@vitadeck/host-companion`** — the companion is not on npm yet; drop that devDependency and run the companion from a VitaDeck checkout (`pnpm --dir js host-companion`)
 - **React version error** — ensure `react` is `18.3.x` in `package.json`, then reinstall
 - **Wrong context** — inside the VitaDeck monorepo, examples live under `js/examples/` and use workspace linking; this skill is for external projects only
 
