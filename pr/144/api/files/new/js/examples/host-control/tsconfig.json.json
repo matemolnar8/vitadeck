@@ -1,1 +1,1 @@
-{"path":"js/examples/host-control/tsconfig.json","ref":"04760101d68405a97b39f799f3f4f9181fa18778","side":"new","content":"{\n  \"extends\": \"@vitadeck/sdk/tsconfig\",\n  \"include\": [\"src\", \".vitadeck/**/*.d.ts\"]\n}\n","language":"json"}
+{"path":"js/examples/host-control/tsconfig.json","ref":"51440f28e10cf982764134aff0b4d94aa23743df","side":"new","content":"{\n  \"extends\": \"@vitadeck/sdk/tsconfig\",\n  \"include\": [\"src\", \".vitadeck/**/*.d.ts\"]\n}\n","language":"json"}

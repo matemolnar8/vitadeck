@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify 04760101d68405a97b39f799f3f4f9181fa18778` in this repository.
+   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify 51440f28e10cf982764134aff0b4d94aa23743df` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,28 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  a447e3b960dc1c5434b9fbc2f45c112b1c630b1f
 
-head               04760101d68405a97b39f799f3f4f9181fa18778
+head               51440f28e10cf982764134aff0b4d94aa23743df
 
-Named refs at pin: a447e3b9 ... HEAD
+Named refs at pin: a447e3b9 ... 51440f28
 
 Read the diff:
 
-git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 04760101d68405a97b39f799f3f4f9181fa18778
+git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 51440f28e10cf982764134aff0b4d94aa23743df
 
 Commits:
+- 51440f28 test(sdk): pin the standalone plugin's peer SDK and exclusive create flags
+- 5820312a docs(sdk): say which SDK copy a linked standalone plugin uses
+- 607fcd29 fix(sdk): standalone plugins take the SDK as a peer dependency
+- c41d480c feat(sdk): Host Plugins can be authored without a Deck App
+- a90a3cf6 fix(sdk): build the plugin package beside the old one and swap it in
+- e069a2f5 fix(host-control): a broken plugin build keeps the last good package
+- a601a6ca feat(host-control): a Deck App's plugin ships as a .vdplugin package and zip
+- 96448b7b fix(host-companion): --plugin takes a directory, so the scaffold survives a renamed app
+- c0498393 fix(host-companion): allow plugin ids as long as a package slug
+- 445f5ef3 fix(host-companion): rename the plugin's module copy into place
+- 966550e1 fix(host-companion): install renames the plugin into place
+- 4139145b fix(host-companion): load plugins from file copies, resolve paths from the cwd
+- 148fceef feat(host-control): built-in plugins, .vdplugin files, vitadeck-host-companion
 - 04760101 fix(host-companion): reject unlinked peers before reading their body
 - eb61ca83 fix(host-control): close a connection accepted while the listener stops
 - 77aad963 fix(host-control): show how to link another computer after a link; help before commands
@@ -56,7 +69,7 @@ Sources:
 
 The title:
 
-Host Control: let Deck Apps call linked computers through plugins
+Host Control: let Deck Apps call linked computers through built-in and custom plugins
 
 The why:
 
@@ -64,7 +77,7 @@ Máté asked for the three Host Control slices, shaped so later Deck Apps can se
 
 The what (very large):
 
-Adds Host Control end to end: the `@vitadeck/sdk/host-control` client and plugin registry, the Host Companion CLI with a read-only `system-stats` plugin, the native link listener and link store with a Shell Host Control screen, and a `host-control` example Deck App.
+Adds Host Control end to end: the `@vitadeck/sdk/host-control` client and plugin API, the `vitadeck-host-companion` CLI with built-in `core` and `systemStats` plugins that installs custom `.vdplugin` packages, SDK CLI support to build those packages with a Deck App or standalone, the native link listener and link store with a Shell Host Control screen, and a `host-control` example Deck App.
 
 Look for:
 - [#109](source:s1) asks for flat command names and an internal `defineHostCommands`. Every request instead names a `plugin`, and `defineHostPlugin` and `command` are public, because the [session](source:s5) left the extension model open and [PR #144](source:s4) chose plugins.
@@ -72,33 +85,34 @@ Look for:
 - [#109](source:s1) asks for a new `test:sdk` script. At head the SDK host-control tests run under the existing `test:cli` glob; no source gives a reason.
 - [#110](source:s2) keeps one `vita` in the companion config. At head `vitas` is an array, since several Vitas can link one companion.
 - [#111](source:s3) describes a `Forget link` action. At head Cross on a linked computer row forgets that one link at once.
-- Credentials stay deferred, as ADR 0004 says, so the only plugins ([PR #144](source:s4)) read information; no acting command ships.
+- Credentials stay deferred, as ADR 0004 says, so the built-in plugins only read information; custom plugins can act on the computer and run with the user's permissions.
+- Not true at head: `@vitadeck/host-companion` is still `private: true`, so a project from `create --host-plugin` or `--host-plugin-only` cannot `npm install` its companion devDependency until the package is published.
 
 ## Review concerns
 
 ### 01 Wire contract and SDK client (`sdk-contract`)
 
-`createHostClient` in `client.ts` turns a `defineHostPlugin` registry from `plugin.ts` into typed methods that POST the `protocol.ts` envelope and map every failure to a `HostResult`, checked against the shared fixtures.
+`createHostClient` in `client.ts` turns a `defineHostPlugin` registry from `plugin.ts` into typed methods that POST the `protocol.ts` envelope and map every failure to a `HostResult`, while `plugin.ts` also gives plugin authors `implementHostPlugin`, `HostCommandError` and the `HostPluginManifest` contract, and `system-stats.ts` holds the built-in `systemStats` registry.
 
 [groups/sdk-contract.md](groups/sdk-contract.md)
 
-### 02 Host Companion CLI (`companion`)
+### 02 Host Companion: vitadeck-host-companion, built-ins and plugin packages (`companion`)
 
-`cli.ts` runs `start`, which serves `POST /command` from `server.ts` over the plugins `plugin.ts` loads, and `link`, which POSTs the link payload from `link.ts` and records the Vita in `config.ts`.
+`cli.ts` runs `start`, which serves `POST /command` from `server.ts` over `core`, the built-in `systemStats` and every `.vdplugin` package `plugin.ts` loads from `~/.vitadeck/plugins/` or `--plugin` (reloading them on change through `setPlugins`), `install`/`remove`, which unpack and delete those packages, and `link`, which POSTs the link payload from `link.ts` and records the Vita in `config.ts`; `rolldown.config.mjs` bundles it with the SDK into one dependency-free `vitadeck-host-companion` bin.
 
 Depends on:
 - 01 Wire contract and SDK client (`sdk-contract`)
 
 [groups/companion.md](groups/companion.md)
 
-### 03 system-stats plugin (`system-stats`)
+### 03 SDK CLI: build Host Plugin packages, with or without a Deck App (`sdk-cli`)
 
-`index.ts` is the registry a Deck App bundles and `companion.ts` implements its one `read` command with `node:os`, reading `vm_stat` on macOS.
+`hostPlugin: { entry, files? }` in `vitadeck.config.json` makes `build` bundle the entry into a staged `<slug>.vdplugin` folder with `manifest.json` and `files/`, swap it in and zip it, `entry` becomes optional so a plugin-only project builds and `dev`s alone, and `create --host-plugin` / `--host-plugin-only` scaffold the two layouts from the `host-plugin` and `host-plugin-only` templates.
 
 Depends on:
-- 02 Host Companion CLI (`companion`)
+- 01 Wire contract and SDK client (`sdk-contract`)
 
-[groups/system-stats.md](groups/system-stats.md)
+[groups/sdk-cli.md](groups/sdk-cli.md)
 
 ### 04 Shared native helpers moved out of upload and storage (`native-shared`)
 
@@ -129,15 +143,15 @@ Depends on:
 
 ### 07 host-control example Deck App (`demo`)
 
-`App.tsx` polls `linkedHosts()` and each host's `systemStats.read`, lists the computers with live CPU, and shows the selected one's capabilities, gauges and an Echo round trip.
+`App.tsx` polls `linkedHosts()` and each host's built-in `systemStats.read`, imported from the SDK, lists the computers with live CPU, and shows the selected one's capabilities, gauges and an Echo round trip.
 
 Depends on:
-- 03 system-stats plugin (`system-stats`)
+- 02 Host Companion: vitadeck-host-companion, built-ins and plugin packages (`companion`)
 
 [groups/demo.md](groups/demo.md)
 
 ### 08 Glossary, ADR and checks (`docs`)
 
-`CONTEXT.md` adds the Host Control Plugin, Link Listener and Shell terms, ADR 0004 is rewritten for plugins and several links, `AGENTS.md` lists the new code, and `agent-check.sh fast` runs `test:host-companion`.
+`CONTEXT.md` adds the Host Control Plugin, Host Plugin Package, Link Listener and Shell terms, ADR 0004 is rewritten for plugins, built-ins, `.vdplugin` packages, standalone plugins, two CLIs and several links, `AGENTS.md` lists the new code, and `agent-check.sh fast` runs `test:host-companion`.
 
 [groups/docs.md](groups/docs.md)
