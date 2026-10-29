@@ -1,1 +1,0 @@
-{"path":"js/packages/host-companion/test/fixtures/greeting.d.cts","ref":"a90a3cf6f48b5e0e53fdcef8946f89a86bcb85a0","side":"new","lines":[{"sha":"4139145bcb037cbc2f9a88822c0387daa4849825","author":"Máté Molnár","timestamp":1793249519,"line":1,"text":"export declare function greeting(name: string): string;"}]}
