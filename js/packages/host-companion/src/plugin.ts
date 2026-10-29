@@ -82,7 +82,8 @@ export async function hostPluginPackagesIn(dir: string): Promise<string[]> {
 
 /** Unpacks a `.vdplugin.zip`, which holds exactly one top-level `.vdplugin` folder, into `intoDir`. */
 export async function extractHostPluginArchive(file: string, intoDir: string): Promise<string> {
-  const entries = Object.entries(unzipSync(await readFile(file)));
+  // macOS archivers add __MACOSX/ resource forks next to the folder.
+  const entries = Object.entries(unzipSync(await readFile(file))).filter(([name]) => !name.startsWith("__MACOSX/"));
   const roots = new Set(entries.map(([name]) => name.split("/")[0]));
   const [root] = roots;
   if (roots.size !== 1 || root === undefined || !root.endsWith(HOST_PLUGIN_EXTENSION)) {

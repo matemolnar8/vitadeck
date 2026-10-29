@@ -156,6 +156,20 @@ void test("build copies hostPlugin.files into the package and fails clearly on a
   const copied = path.join(projectRoot, "dist", "my-app.vdplugin", "files", "scripts", "hello.sh");
   assert.equal(await readFile(copied, "utf8"), "echo hello\n");
 
+  await writeFile(path.join(projectRoot, "host", "companion.mjs"), "export default {\n");
+  const broken = await runCli(projectRoot, ["build", "--no-zip"]);
+  assert.equal(broken.ok, false, broken.output);
+  assert.match(
+    await readFile(path.join(projectRoot, "dist", "my-app.vdplugin", "companion.mjs"), "utf8"),
+    /id: "x"/u,
+    "a broken build keeps the last good package",
+  );
+
+  await writeFile(configPath, JSON.stringify({ ...config, hostPlugin: { entry: "./host/companion.mjs", files: "." } }));
+  const root = await runCli(projectRoot, ["build"]);
+  assert.equal(root.ok, false, root.output);
+  assert.match(root.output, /"hostPlugin\.files" must name a folder inside the project/u);
+
   await writeFile(configPath, JSON.stringify({ ...config, hostPlugin: { entry: "./host/missing.ts" } }));
   const missing = await runCli(projectRoot, ["build"]);
   assert.equal(missing.ok, false, missing.output);

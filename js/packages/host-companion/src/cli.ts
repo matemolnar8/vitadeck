@@ -70,6 +70,8 @@ async function start(values: { port?: string; plugin?: string[] }, configPath: s
   const pluginsDir = installedPluginsDir(configPath);
   await mkdir(pluginsDir, { recursive: true });
   const extra = (values.plugin ?? []).map((given) => path.resolve(userCwd, given));
+  const archive = extra.find((entry) => entry.endsWith(HOST_PLUGIN_ARCHIVE_EXTENSION));
+  if (archive) throw new Error(`--plugin takes a ${HOST_PLUGIN_EXTENSION} folder; install ${archive} instead.`);
   // A path ending in .vdplugin is one package; any other path is a folder of them, like a Deck App's dist/.
   const extraPackages = extra.filter((entry) => entry.endsWith(HOST_PLUGIN_EXTENSION));
   const extraDirs = extra.filter((entry) => !entry.endsWith(HOST_PLUGIN_EXTENSION));

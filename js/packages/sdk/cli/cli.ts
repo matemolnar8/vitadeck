@@ -1,5 +1,5 @@
 import { watch } from "node:fs";
-import { access, copyFile, cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, copyFile, cp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -445,11 +445,19 @@ async function buildHostPlugin(
   outDir: string,
   manifest: Omit<HostPluginManifest, "schemaVersion" | "entry">,
 ): Promise<void> {
-  await rm(outDir, { recursive: true, force: true });
+  // Bundled before the old package is removed, so a broken build leaves the last good one for the companion.
   const bundle = await rolldown({ input: plugin.entry, platform: "node", tsconfig: false });
-  await bundle.write({ file: path.join(outDir, HOST_PLUGIN_ENTRY), format: "esm" });
+  const { output } = await bundle.generate({ format: "esm", codeSplitting: false });
   await bundle.close();
-  if (plugin.files !== undefined) await cp(plugin.files, path.join(outDir, "files"), { recursive: true });
+  const [chunk] = output;
+  if (chunk?.type !== "chunk") throw new Error(`Bundling ${plugin.entry} produced no module.`);
+  await rm(outDir, { recursive: true, force: true });
+  await mkdir(outDir, { recursive: true });
+  await writeFile(path.join(outDir, HOST_PLUGIN_ENTRY), chunk.code);
+  if (plugin.files !== undefined) {
+    // Links are copied as the files they point to, so the zip, which holds only files, matches the folder.
+    await cp(plugin.files, path.join(outDir, "files"), { recursive: true, dereference: true });
+  }
   const full: HostPluginManifest = { schemaVersion: HOST_PLUGIN_SCHEMA_VERSION, ...manifest, entry: HOST_PLUGIN_ENTRY };
   await writeFile(path.join(outDir, "manifest.json"), `${JSON.stringify(full, null, 2)}\n`);
 }
@@ -483,8 +491,16 @@ async function build(projectRoot: string, options: BuildOptions = {}): Promise<B
         };
   if (hostPlugin) {
     await assertFileExists(hostPlugin.entry, "vitadeck.config.json", "hostPlugin.entry");
-    if (hostPlugin.files !== undefined)
-      await assertFileExists(hostPlugin.files, "vitadeck.config.json", "hostPlugin.files");
+    const files = hostPlugin.files;
+    const isFolder =
+      files !== undefined &&
+      (await stat(files).then(
+        (info) => info.isDirectory(),
+        () => false,
+      ));
+    if (files !== undefined && (files === projectRoot || !isFolder)) {
+      throw new Error(`vitadeck.config.json "hostPlugin.files" must name a folder inside the project, not ${files}.`);
+    }
   }
   const generatedDir = path.join(projectRoot, ".vitadeck");
   const generatedEntry = path.join(generatedDir, "package-entry.tsx");

@@ -212,6 +212,8 @@ void test("extracting an archive refuses unsafe paths and anything but one .vdpl
     extractHostPluginArchive(await archive("slip.vdplugin.zip", { "a.vdplugin/../../evil": "" }), dir),
     /holds an unsafe path/u,
   );
+  const mac = await archive("mac.vdplugin.zip", { "a.vdplugin/manifest.json": "{}", "__MACOSX/a.vdplugin/._x": "" });
+  assert.equal(await extractHostPluginArchive(mac, path.join(dir, "out")), path.join(dir, "out", "a.vdplugin"));
 });
 
 void test("setPlugins swaps the plugins, keeping core, and keeps them when ids clash", async (t) => {
