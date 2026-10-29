@@ -7,3 +7,4 @@
 <h2>3. After <code>vitadeck-host-companion install dist/lights.vdplugin.zip</code>, the scaffolded app calls its own plugin, which reads <code>files/motd.txt</code> from its package</h2><img src="06-lights-greet.png">
 <h2>4. Under <code>npm run host</code> (<code>--plugin ./dist</code>), edit host/files/motd.txt and run vitadeck build: the companion reloads with no restart</h2><img src="07-lights-reloaded.png">
 <h2>5. After vitadeck-host-companion remove lights, the app gets unknown_plugin</h2><img src="08-lights-removed.png">
+<h2>6. Standalone: a separate <code>deck</code> app, after <code>npm install ../lights</code> on a <code>--host-plugin-only</code> project and <code>install lights.vdplugin.zip</code>, calls the plugin</h2><img src="09-standalone-deck.png">
