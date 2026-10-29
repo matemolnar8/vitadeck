@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -31,7 +31,10 @@ export async function loadHostPluginFile(file: string): Promise<ImplementedHostP
   let module: unknown;
   try {
     await mkdir(path.dirname(copy), { recursive: true });
-    await writeFile(copy, source);
+    // Renamed into place, so another companion loading the same file never imports a half-written copy.
+    const temporary = `${copy}.${process.pid}.${Date.now()}.tmp`;
+    await writeFile(temporary, source);
+    await rename(temporary, copy);
     module = await import(pathToFileURL(copy).href);
   } catch (error) {
     throw new Error(`${file} failed to load: ${error instanceof Error ? error.message : String(error)}`, {
