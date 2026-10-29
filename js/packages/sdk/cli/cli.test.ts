@@ -192,6 +192,13 @@ void test("create --host-plugin-only scaffolds a standalone plugin that a Deck A
     outDir: "./dist",
     hostPlugin: { entry: "./host/companion.ts" },
   });
+  const pkg = JSON.parse(await readFile(path.join(pluginRoot, "package.json"), "utf8")) as Record<string, unknown>;
+  assert.deepEqual(pkg.exports, { ".": "./host/plugin.ts" });
+  assert.equal(pkg.dependencies, undefined, "the SDK is a peer, so a Deck App and its plugins share one copy");
+  assert.ok("@vitadeck/sdk" in (pkg.peerDependencies as object) && "@vitadeck/sdk" in (pkg.devDependencies as object));
+  const both = await runCli(cwd, ["create", "both", "--host-plugin", "--host-plugin-only"]);
+  assert.equal(both.ok, false);
+  assert.match(both.output, /not both/u);
 
   await linkSdk(pluginRoot);
   await linkDependency(pluginRoot, "@types/node");
