@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 04760101d68405a97b39f799f3f4f9181fa18778` and `git rev-parse --verify c0498393dd5911d602c63433160a3a7fa020e308` in this repository.
+   Run `git rev-parse --verify 04760101d68405a97b39f799f3f4f9181fa18778` and `git rev-parse --verify 96448b7b14c1ae72218b1b92b451d0ca6ed90434` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,16 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  04760101d68405a97b39f799f3f4f9181fa18778
 
-head               c0498393dd5911d602c63433160a3a7fa020e308
+head               96448b7b14c1ae72218b1b92b451d0ca6ed90434
 
-Named refs at pin: 04760101 ... c0498393
+Named refs at pin: 04760101 ... 96448b7b
 
 Read the diff:
 
-git diff --find-renames 04760101d68405a97b39f799f3f4f9181fa18778 c0498393dd5911d602c63433160a3a7fa020e308
+git diff --find-renames 04760101d68405a97b39f799f3f4f9181fa18778 96448b7b14c1ae72218b1b92b451d0ca6ed90434
 
 Commits:
+- 96448b7b fix(host-companion): --plugin takes a directory, so the scaffold survives a renamed app
 - c0498393 fix(host-companion): allow plugin ids as long as a package slug
 - 445f5ef3 fix(host-companion): rename the plugin's module copy into place
 - 966550e1 fix(host-companion): install renames the plugin into place
@@ -43,6 +44,8 @@ Sources:
 - transcript Claude Code session · Oct 29 Máté asks for same-repo plugins, built-ins, easier loading (maybe a .vdplugin), a vitadeck-host-companion bin, and a look at a single vitadeck CLI, then a compromise.
 - pr PR #145 Built-ins first, a .vdplugin per Deck App, install/remove and hot reload, two CLIs; stacked on #144.
   https://github.com/matemolnar8/vitadeck/pull/145
+- pr-comment chatgpt-codex-connector on PR #145
+  https://github.com/matemolnar8/vitadeck/pull/145#discussion_r4408848004
 
 The title:
 
@@ -80,7 +83,7 @@ Depends on:
 
 ### 03 Companion CLI: vitadeck-host-companion install, remove and hot reload (`companion-cli`)
 
-`start` loads the built-ins, every file in `~/.vitadeck/plugins/` and each `--plugin` file, then watches them and calls `setPlugins` after changes, while `install` and `remove` manage that directory and `config.ts` drops the `plugins` list for `installedPluginsDir`.
+`start` loads the built-ins, every file in `~/.vitadeck/plugins/` and each `--plugin` file or directory of `.vdplugin` files, then watches them and calls `setPlugins` after changes, while `install` and `remove` manage that directory and `config.ts` drops the `plugins` list for `installedPluginsDir`.
 
 Depends on:
 - 02 Companion: built-ins and loading Host Plugin Files (`companion-loading`)

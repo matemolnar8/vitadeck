@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 04760101d68405a97b39f799f3f4f9181fa18778` and `git rev-parse --verify c0498393dd5911d602c63433160a3a7fa020e308` in this repository.
+   Run `git rev-parse --verify 04760101d68405a97b39f799f3f4f9181fa18778` and `git rev-parse --verify 96448b7b14c1ae72218b1b92b451d0ca6ed90434` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 04760101d68405a97b39f799f3f4f9181fa18778 c0498393dd5911d602c63433160a3a7fa020e308 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 04760101d68405a97b39f799f3f4f9181fa18778 96448b7b14c1ae72218b1b92b451d0ca6ed90434 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,13 +25,13 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  04760101d68405a97b39f799f3f4f9181fa18778
 
-head               c0498393dd5911d602c63433160a3a7fa020e308
+head               96448b7b14c1ae72218b1b92b451d0ca6ed90434
 
-Named refs at pin: 04760101 ... c0498393
+Named refs at pin: 04760101 ... 96448b7b
 
 Read the diff:
 
-git diff --find-renames 04760101d68405a97b39f799f3f4f9181fa18778 c0498393dd5911d602c63433160a3a7fa020e308
+git diff --find-renames 04760101d68405a97b39f799f3f4f9181fa18778 96448b7b14c1ae72218b1b92b451d0ca6ed90434
 
 Review concern 04 of 06: SDK CLI: build writes the .vdplugin, create --host-plugin scaffolds it (`sdk-cli`)
 
@@ -44,7 +44,7 @@ The what:
 `hostPlugin` in `vitadeck.config.json` makes `build` bundle that entry with rolldown into `<outDir>/<slug>.vdplugin`, and `create --host-plugin` lays the `templates/host-plugin` overlay over the scaffold, merging its JSON files one level deep, with `copy-templates.ts` pinning the companion version.
 
 Look for:
-- The `.vdplugin` is written beside the `.vdapp.zip`, not inside it; `vitadeck dev` rebuilds it every cycle but only uploads the zip, and the companion picks the file up through its `--plugin` watch.
+- The `.vdplugin` is written beside the `.vdapp.zip`, not inside it; `vitadeck dev` rebuilds it every cycle but only uploads the zip, and the scaffold's `host` script runs the companion with `--plugin ./dist`, so the file is picked up whatever the app's slug.
 - The new root devDependency `@vitadeck/sdk` in `js/package.json` exists so the overlay template, which sits outside any workspace package, resolves `@vitadeck/sdk` for the SDK's `tsc` and type-aware lint.
 - The scaffolded plugin id is the project slug, so two Deck Apps scaffolded with the same name collide on one companion.
 
