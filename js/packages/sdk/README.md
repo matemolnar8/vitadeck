@@ -114,9 +114,9 @@ useEffect(
 );
 ```
 
-- It returns a function that stops watching, so it fits a `useEffect` cleanup. A failed wait is retried after 5 s, or 30 s after a `timeout`.
+- It returns a function that stops watching, so it fits a `useEffect` cleanup. A failed wait is retried after 5 s, or 30 s after a `timeout`; a computer without the plugin answers `unknown_plugin`. A throw from your callbacks stops watching and fails the Deck App.
 - `core` emits `notice` for `vitadeck-host-companion notify "Build done"`, so any script on the computer can reach Deck Apps with no plugin of its own.
-- Events are best effort: a companion restart or more than 100 events between two waits drops some.
+- Events are best effort: a companion restart, or more than 100 events of the plugin between two waits, drops some.
 
 ### Your own Host Plugin
 

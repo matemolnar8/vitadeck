@@ -394,7 +394,7 @@ void test("a wait ignores other plugins' events, answers empty when it ends, and
   assert.deepEqual(await core.events({ plugin: "alerts", after: 99 }), { ok: true, events: [], next: 1 });
 });
 
-void test("setPlugins stops the old plugins' lifecycles and drops their later emits; close answers waits", async (t) => {
+void test("setPlugins stops the old lifecycles, drops their emits and unknown plugins; close answers waits", async (t) => {
   const { plugin, lifecycle } = alertsWithEmit();
   const running = await runningCompanion(t, { plugins: [plugin], eventWaitMs: 25_000 });
   const core = createHostClient(corePlugin, { url: `http://127.0.0.1:${running.port}/` });
@@ -402,10 +402,31 @@ void test("setPlugins stops the old plugins' lifecycles and drops their later em
   running.setPlugins([]);
   assert.equal(lifecycle.stopped, true);
   lifecycle.emit(9);
-  const waiting = core.events({ plugin: "alerts", after: 0 });
+  const gone = await core.events({ plugin: "alerts", after: 0 });
+  assert.equal(gone.ok ? "ok" : gone.code, "unknown_plugin", "an unloaded plugin's watchers learn it is missing");
+  const waiting = core.events({ plugin: "core", after: 0 });
   const started = performance.now();
   await sleep(100);
   await running.close();
   assert.deepEqual(await waiting, { ok: true, events: [], next: 0 });
   assert.ok(performance.now() - started < 2000, "closing does not wait out the 25 s wait");
+});
+
+void test("plugin lifecycles start only once the port is bound", async (t) => {
+  const taken = await runningCompanion(t);
+  const { plugin, lifecycle } = alertsWithEmit();
+  let started = false;
+  const watched = {
+    ...plugin,
+    start: (emit: (name: string, data: unknown) => void) => {
+      started = true;
+      return plugin.start?.(emit);
+    },
+  };
+  await assert.rejects(
+    startHostCompanion({ port: taken.port, host: "127.0.0.1", name: "x", plugins: [watched], log: () => {} }),
+    /already in use/u,
+  );
+  assert.equal(started, false);
+  assert.equal(lifecycle.stopped, false);
 });

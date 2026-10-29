@@ -2,11 +2,14 @@ import type { HostEventBatch } from "@vitadeck/sdk/host-control";
 
 /** How long a `core.events` request waits for an event. The Vita's native fetch gives up at 30 s. */
 export const EVENT_WAIT_MS = 25_000;
-const KEPT_EVENTS = 100;
+const KEPT_EVENTS_PER_PLUGIN = 100;
 
 type Waiter = { plugin: string; wake: () => void };
 
-/** The companion's recent events, numbered in order, and the requests waiting for the next one of a plugin. */
+/**
+ * The companion's recent events, numbered in order with up to 100 per plugin, so a chatty plugin cannot push out
+ * another's, and the requests waiting for the next one of a plugin.
+ */
 export function createEventLog(waitMs = EVENT_WAIT_MS) {
   const events: { seq: number; plugin: string; name: string; data: unknown }[] = [];
   const waiters = new Set<Waiter>();
@@ -21,7 +24,12 @@ export function createEventLog(waitMs = EVENT_WAIT_MS) {
   return {
     emit(plugin: string, name: string, data: unknown): void {
       events.push({ seq: ++seq, plugin, name, data });
-      if (events.length > KEPT_EVENTS) events.shift();
+      if (events.filter((event) => event.plugin === plugin).length > KEPT_EVENTS_PER_PLUGIN) {
+        events.splice(
+          events.findIndex((event) => event.plugin === plugin),
+          1,
+        );
+      }
       for (const waiter of waiters) if (waiter.plugin === plugin) waiter.wake();
     },
 

@@ -1,5 +1,6 @@
 import {
   HOST_CONTROL_PROTOCOL_VERSION,
+  HostCommandError,
   corePlugin,
   implementHostPlugin,
   type ImplementedHostPlugin,
@@ -20,7 +21,12 @@ export function implementCorePlugin(
       plugins: loadedPlugins().map((plugin) => ({ id: plugin.id, commands: [...plugin.commands.keys()] })),
     }),
     echo: ({ text }) => ({ text }),
-    events: ({ plugin, after }) => events.wait(plugin, after),
+    events: ({ plugin, after }) => {
+      if (plugin !== corePlugin.id && !loadedPlugins().some((loaded) => loaded.id === plugin)) {
+        throw new HostCommandError("unknown_plugin", `This Host Companion has no plugin ${plugin}.`);
+      }
+      return events.wait(plugin, after);
+    },
     notify: ({ text }) => {
       events.emit(corePlugin.id, "notice", { text });
       return {};

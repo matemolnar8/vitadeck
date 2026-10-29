@@ -115,6 +115,7 @@ export async function startHostCompanion(options: HostCompanionOptions): Promise
       }
     });
     return () => {
+      if (!running) return;
       running = false;
       for (const stop of stops) {
         try {
@@ -126,19 +127,25 @@ export async function startHostCompanion(options: HostCompanionOptions): Promise
     };
   }
 
+  function byId(next: readonly ImplementedHostPlugin[]): Map<string, ImplementedHostPlugin> {
+    const map = new Map([[core.id, core]]);
+    for (const plugin of next) {
+      if (map.has(plugin.id)) throw new Error(`Two loaded plugins share the id ${plugin.id}.`);
+      map.set(plugin.id, plugin);
+    }
+    return map;
+  }
+
+  // Lifecycles start once the port is bound, so a busy port leaves no plugin timer keeping the process alive.
+  plugins = byId(options.plugins ?? []);
   let stopRunning = startPlugins([]);
 
   function setPlugins(next: readonly ImplementedHostPlugin[]): void {
-    const byId = new Map([[core.id, core]]);
-    for (const plugin of next) {
-      if (byId.has(plugin.id)) throw new Error(`Two loaded plugins share the id ${plugin.id}.`);
-      byId.set(plugin.id, plugin);
-    }
+    const loaded = byId(next);
     stopRunning();
-    plugins = byId;
+    plugins = loaded;
     stopRunning = startPlugins(next);
   }
-  setPlugins(options.plugins ?? []);
 
   async function isAllowed(peer: string): Promise<boolean> {
     const linked = await vitas();
@@ -233,6 +240,7 @@ export async function startHostCompanion(options: HostCompanionOptions): Promise
       resolve();
     });
   });
+  stopRunning = startPlugins(options.plugins ?? []);
 
   return {
     port: (server.address() as AddressInfo).port,

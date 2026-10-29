@@ -154,6 +154,7 @@ const EVENT_TIMEOUT_RETRY_MS = 30_000;
 /**
  * Calls `onEvent` for every event the plugin emits on a linked computer from now on, within about one network
  * round trip. Keeps one request waiting at the companion at a time. Returns a function that stops watching.
+ * A throw from `onEvent` or `onFailure` stops watching and fails the Deck App like any unhandled error.
  */
 export function watchHostEvents<C extends HostCommandMap, E extends HostEventMap>(
   plugin: HostPlugin<C, E>,
