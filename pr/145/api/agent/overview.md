@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 04760101d68405a97b39f799f3f4f9181fa18778` and `git rev-parse --verify 96448b7b14c1ae72218b1b92b451d0ca6ed90434` in this repository.
+   Run `git rev-parse --verify 04760101d68405a97b39f799f3f4f9181fa18778` and `git rev-parse --verify a90a3cf6f48b5e0e53fdcef8946f89a86bcb85a0` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,18 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  04760101d68405a97b39f799f3f4f9181fa18778
 
-head               96448b7b14c1ae72218b1b92b451d0ca6ed90434
+head               a90a3cf6f48b5e0e53fdcef8946f89a86bcb85a0
 
-Named refs at pin: 04760101 ... 96448b7b
+Named refs at pin: 04760101 ... a90a3cf6
 
 Read the diff:
 
-git diff --find-renames 04760101d68405a97b39f799f3f4f9181fa18778 96448b7b14c1ae72218b1b92b451d0ca6ed90434
+git diff --find-renames 04760101d68405a97b39f799f3f4f9181fa18778 a90a3cf6f48b5e0e53fdcef8946f89a86bcb85a0
 
 Commits:
+- a90a3cf6 fix(sdk): build the plugin package beside the old one and swap it in
+- e069a2f5 fix(host-control): a broken plugin build keeps the last good package
+- a601a6ca feat(host-control): a Deck App's plugin ships as a .vdplugin package and zip
 - 96448b7b fix(host-companion): --plugin takes a directory, so the scaffold survives a renamed app
 - c0498393 fix(host-companion): allow plugin ids as long as a package slug
 - 445f5ef3 fix(host-companion): rename the plugin's module copy into place
@@ -49,7 +52,7 @@ Sources:
 
 The title:
 
-Deck Apps ship their own host plugin as one .vdplugin file
+Deck Apps ship their own host plugin as a .vdplugin package
 
 The why:
 
@@ -57,10 +60,10 @@ Máté asked that [authors keep the plugin and the Deck App in one repo, without
 
 The what (large):
 
-Host Control Plugins move to two kinds: built-ins (`core`, `systemStats`) inside the Host Companion, and a Deck App's own plugin, which `vitadeck build` bundles from `hostPlugin` into a self-contained `.vdplugin` that `vitadeck-host-companion install` loads and hot-reloads.
+Host Control Plugins move to two kinds: built-ins (`core`, `systemStats`) inside the Host Companion, and a Deck App's own plugin, which `vitadeck build` turns from `hostPlugin` into a `<slug>.vdplugin` package folder and `.vdplugin.zip` that `vitadeck-host-companion install` unpacks and hot-reloads.
 
 Look for:
-- Done differently: [the request](source:s1) suggested a `.vdapp`-like zip, but a `.vdplugin` is a single bundled ES module, not a zip; ADR 0004 says there is nothing besides code to package.
+- Done as asked later in [the session](source:s1): a `.vdplugin` is a vdapp-like package (`manifest.json`, bundled `companion.mjs`, optional `files/`) with a `.vdplugin.zip` whose one top-level entry is that folder; the first commits shipped a single JS file and the format changed in a601a6ca.
 - Considered, not chosen: [the request](source:s1) floated a single `vitadeck` CLI. The companion keeps its own bin, `vitadeck-host-companion`, because a second bin in `@vitadeck/sdk` breaks `npx @vitadeck/sdk` and users would install Babel and rolldown to run a server.
 - Not true at head: `@vitadeck/host-companion` is still `private: true`, so a project from `create --host-plugin` cannot `npm install` its `@vitadeck/host-companion` devDependency until the package is published; [PR #145](source:s2) tests with packed tarballs instead.
 
@@ -68,13 +71,13 @@ Look for:
 
 ### 01 SDK: plugin implementation API and the systemStats registry (`sdk-contract`)
 
-`implementHostPlugin`, `HostCommandError` and `ImplementedHostPlugin` move from the companion into the SDK's `plugin.ts`, and the `systemStatsPlugin` registry moves from `js/host-plugins` into `system-stats.ts`, both re-exported from `index.ts`.
+`implementHostPlugin`, `HostCommandError`, `ImplementedHostPlugin` and the `HostPluginManifest` contract move into the SDK's `plugin.ts`, and the `systemStatsPlugin` registry moves from `js/host-plugins` into `system-stats.ts`, all re-exported from `index.ts`.
 
 [groups/sdk-contract.md](groups/sdk-contract.md)
 
-### 02 Companion: built-ins and loading Host Plugin Files (`companion-loading`)
+### 02 Companion: built-ins and loading Host Plugin Packages (`companion-loading`)
 
-`loadHostPluginFile` imports a `.vdplugin` through a content-hashed `.mjs` copy and checks the default export's shape, and the server's new `setPlugins` swaps every plugin but `core`, while `systemStats` becomes a built-in implementation beside `core`.
+`loadHostPluginPackage` reads a `.vdplugin` folder's manifest and imports its entry by file URL with a content-hash query, `extractHostPluginArchive` unpacks a `.vdplugin.zip`, and the server's new `setPlugins` swaps every plugin but `core`, while `systemStats` becomes a built-in implementation beside `core`.
 
 Depends on:
 - 01 SDK: plugin implementation API and the systemStats registry (`sdk-contract`)
@@ -83,16 +86,16 @@ Depends on:
 
 ### 03 Companion CLI: vitadeck-host-companion install, remove and hot reload (`companion-cli`)
 
-`start` loads the built-ins, every file in `~/.vitadeck/plugins/` and each `--plugin` file or directory of `.vdplugin` files, then watches them and calls `setPlugins` after changes, while `install` and `remove` manage that directory and `config.ts` drops the `plugins` list for `installedPluginsDir`.
+`start` loads the built-ins, every package in `~/.vitadeck/plugins/` and each `--plugin` package or folder of packages, watches those folders recursively and calls `setPlugins` after changes, while `install` stages an archive or folder in `.install-*`, validates it and renames it to `<id>.vdplugin`, and `remove` deletes that folder.
 
 Depends on:
-- 02 Companion: built-ins and loading Host Plugin Files (`companion-loading`)
+- 02 Companion: built-ins and loading Host Plugin Packages (`companion-loading`)
 
 [groups/companion-cli.md](groups/companion-cli.md)
 
-### 04 SDK CLI: build writes the .vdplugin, create --host-plugin scaffolds it (`sdk-cli`)
+### 04 SDK CLI: build writes the .vdplugin package and zip, create --host-plugin scaffolds it (`sdk-cli`)
 
-`hostPlugin` in `vitadeck.config.json` makes `build` bundle that entry with rolldown into `<outDir>/<slug>.vdplugin`, and `create --host-plugin` lays the `templates/host-plugin` overlay over the scaffold, merging its JSON files one level deep, with `copy-templates.ts` pinning the companion version.
+`hostPlugin: { entry, files? }` in `vitadeck.config.json` makes `build` bundle the entry with rolldown into a staged `<slug>.vdplugin` folder with `manifest.json` and a copied `files/`, swap it into `outDir` and zip it like the `.vdapp`, while `create --host-plugin` lays the `templates/host-plugin` overlay over the scaffold, merging its JSON files one level deep.
 
 Depends on:
 - 01 SDK: plugin implementation API and the systemStats registry (`sdk-contract`)

@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 04760101d68405a97b39f799f3f4f9181fa18778` and `git rev-parse --verify 96448b7b14c1ae72218b1b92b451d0ca6ed90434` in this repository.
+   Run `git rev-parse --verify 04760101d68405a97b39f799f3f4f9181fa18778` and `git rev-parse --verify a90a3cf6f48b5e0e53fdcef8946f89a86bcb85a0` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 04760101d68405a97b39f799f3f4f9181fa18778 96448b7b14c1ae72218b1b92b451d0ca6ed90434 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 04760101d68405a97b39f799f3f4f9181fa18778 a90a3cf6f48b5e0e53fdcef8946f89a86bcb85a0 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,13 +25,13 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  04760101d68405a97b39f799f3f4f9181fa18778
 
-head               96448b7b14c1ae72218b1b92b451d0ca6ed90434
+head               a90a3cf6f48b5e0e53fdcef8946f89a86bcb85a0
 
-Named refs at pin: 04760101 ... 96448b7b
+Named refs at pin: 04760101 ... a90a3cf6
 
 Read the diff:
 
-git diff --find-renames 04760101d68405a97b39f799f3f4f9181fa18778 96448b7b14c1ae72218b1b92b451d0ca6ed90434
+git diff --find-renames 04760101d68405a97b39f799f3f4f9181fa18778 a90a3cf6f48b5e0e53fdcef8946f89a86bcb85a0
 
 Review concern 03 of 06: Companion CLI: vitadeck-host-companion install, remove and hot reload (`companion-cli`)
 
@@ -41,16 +41,16 @@ This is the user's side of [simpler plugin loading](source:s1) and the [vitadeck
 
 The what:
 
-`start` loads the built-ins, every file in `~/.vitadeck/plugins/` and each `--plugin` file or directory of `.vdplugin` files, then watches them and calls `setPlugins` after changes, while `install` and `remove` manage that directory and `config.ts` drops the `plugins` list for `installedPluginsDir`.
+`start` loads the built-ins, every package in `~/.vitadeck/plugins/` and each `--plugin` package or folder of packages, watches those folders recursively and calls `setPlugins` after changes, while `install` stages an archive or folder in `.install-*`, validates it and renames it to `<id>.vdplugin`, and `remove` deletes that folder.
 
 Look for:
 - Paths resolve against `INIT_CWD` only when `npm_lifecycle_event` is `host-companion` (the repo's own script); a Deck App's `host` script and a global install resolve against the working directory.
-- A `--plugin` file wins over an installed plugin with the same id, so an author can run a build of a plugin they also installed; a reload that throws logs `Kept the previous plugins` and keeps serving the old set.
+- A `--plugin` package wins over an installed plugin with the same id, so an author can run a build of a plugin they also installed; a reload that throws logs `Kept the previous plugins` and keeps serving the old set.
+- `--plugin` decides by name: a path ending in `.vdplugin` is one package, a `.vdplugin.zip` is refused with a pointer to `install`, and anything else is a folder of packages, which is how the scaffold's `--plugin ./dist` picks up a renamed app, answering [Codex's review](source:s3).
 - An existing config with the old `plugins` field still loads; `readConfig` ignores the field, and `systemStats` is loaded as a built-in anyway.
-- `--plugin` decides once at start whether a path is a directory; a directory argument reloads on any `.vdplugin` written in it, so a renamed Deck App's new `<slug>.vdplugin` is picked up, answering [Codex's review](source:s3).
 
 Depends on:
-- 02 Companion: built-ins and loading Host Plugin Files (`companion-loading`)
+- 02 Companion: built-ins and loading Host Plugin Packages (`companion-loading`)
 
 Hunk refs for this concern:
 - js/packages/host-companion/src/cli.ts
