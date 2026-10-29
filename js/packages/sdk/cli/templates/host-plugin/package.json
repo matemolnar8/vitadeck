@@ -1,7 +1,7 @@
 {
   "scripts": {
     "tsc": "tsc && tsc -p host",
-    "host": "vitadeck build && vitadeck-host-companion start --plugin ./dist/vitadeck-scaffold-template.vdplugin"
+    "host": "vitadeck build && vitadeck-host-companion start --plugin ./dist"
   },
   "devDependencies": {
     "@types/node": "24.19.2",

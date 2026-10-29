@@ -1,4 +1,4 @@
-import { watch } from "node:fs";
+import { statSync, watch } from "node:fs";
 import { copyFile, mkdir, rename, rm } from "node:fs/promises";
 import { networkInterfaces } from "node:os";
 import path from "node:path";
@@ -6,15 +6,15 @@ import { parseArgs } from "node:util";
 import type { ImplementedHostPlugin } from "@vitadeck/sdk/host-control";
 import { DEFAULT_CONFIG_PATH, installedPluginsDir, isPort, loadConfig, readConfig } from "./config";
 import { linkVita } from "./link";
-import { HOST_PLUGIN_FILE_EXTENSION, installedHostPluginFiles, isHostPluginId, loadHostPluginFile } from "./plugin";
+import { HOST_PLUGIN_FILE_EXTENSION, hostPluginFilesIn, isHostPluginId, loadHostPluginFile } from "./plugin";
 import { startHostCompanion } from "./server";
 import { systemStats } from "./system-stats";
 
 const USAGE = `Usage: vitadeck-host-companion <command>
 
-  start [--port N] [--plugin <file.vdplugin>]... [--config <path>]
+  start [--port N] [--plugin <file.vdplugin|dir>]... [--config <path>]
       Serve Host Control commands on 0.0.0.0, port 8797 by default. Loads the built-in plugins, the installed
-      ones, and each --plugin file, and reloads them when the files change.
+      ones, and each --plugin file or every .vdplugin in a --plugin directory, and reloads them when they change.
   link <vita-address>[:port] [--port N] [--advertise <ip>] [--config <path>]
       Link the VitaDeck showing that address (port 8798 by default) with the running companion.
   install <file.vdplugin> [--config <path>]
@@ -60,11 +60,14 @@ async function start(values: { port?: string; plugin?: string[] }, configPath: s
   const config = await loadConfig(configPath);
   const pluginsDir = installedPluginsDir(configPath);
   await mkdir(pluginsDir, { recursive: true });
-  const extraFiles = (values.plugin ?? []).map((file) => path.resolve(userCwd, file));
+  const extra = (values.plugin ?? []).map((given) => path.resolve(userCwd, given));
+  const extraDirs = extra.filter((entry) => statSync(entry, { throwIfNoEntry: false })?.isDirectory() === true);
+  const extraFiles = extra.filter((entry) => !extraDirs.includes(entry));
   const loadPlugins = async () => {
-    const files = [...(await installedHostPluginFiles(pluginsDir)), ...extraFiles];
+    const listed = await Promise.all([pluginsDir, ...extraDirs].map((dir) => hostPluginFilesIn(dir)));
     // A --plugin file replaces an installed plugin with the same id, so an author can work on one they installed.
-    const custom = new Map((await Promise.all(files.map((file) => loadHostPluginFile(file)))).map((p) => [p.id, p]));
+    const loaded = await Promise.all([...listed.flat(), ...extraFiles].map((file) => loadHostPluginFile(file)));
+    const custom = new Map(loaded.map((plugin) => [plugin.id, plugin]));
     return [...BUILT_IN_PLUGINS, ...custom.values()];
   };
 
@@ -103,7 +106,11 @@ async function start(values: { port?: string; plugin?: string[] }, configPath: s
       })();
     }, RELOAD_QUIET_MS);
   };
-  watch(pluginsDir, reload).on("error", watchFailed(pluginsDir));
+  for (const dir of [pluginsDir, ...extraDirs]) {
+    watch(dir, (_event, name) => {
+      if (name?.endsWith(HOST_PLUGIN_FILE_EXTENSION)) reload();
+    }).on("error", watchFailed(dir));
+  }
   for (const dir of new Set(extraFiles.map((file) => path.dirname(file)))) {
     watch(dir, (_event, name) => {
       if (name !== null && extraFiles.includes(path.join(dir, name))) reload();

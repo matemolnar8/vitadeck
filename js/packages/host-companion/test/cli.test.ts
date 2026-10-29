@@ -94,17 +94,13 @@ void test("install loads a Host Plugin File into a running companion, remove unl
   assert.equal(gone.ok ? "ok" : gone.code, "unknown_plugin");
 });
 
-void test("a --plugin file reloads when it is rebuilt, and a broken rebuild keeps the previous one", async (t) => {
+void test("a --plugin directory reloads a rebuilt file, and a broken rebuild keeps the previous one", async (t) => {
   const dir = await tempDir(t);
   const config = path.join(dir, "host-companion.json");
   await mkdir(path.join(dir, "dist"));
   await buildGreeterPluginFile(t, path.join(dir, "dist"));
   const port = await freePort();
-  const waitFor = startCompanion(
-    t,
-    ["--port", String(port), "--config", config, "--plugin", "dist/greeter.vdplugin"],
-    dir,
-  );
+  const waitFor = startCompanion(t, ["--port", String(port), "--config", config, "--plugin", "dist"], dir);
   await waitFor(/^Plugins: core, systemStats, greeter$/u);
   const greeter = createHostClient(greeterPlugin, { url: `http://127.0.0.1:${port}/` });
   assert.deepEqual(await greeter.greet({ name: "Vita" }), { ok: true, greeting: "Hello, Vita!" });

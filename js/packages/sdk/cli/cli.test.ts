@@ -87,7 +87,7 @@ void test("create --host-plugin scaffolds a Deck App and Host Plugin that typech
     scripts: Record<string, string>;
     devDependencies: Record<string, string>;
   };
-  assert.equal(pkg.scripts.host, "vitadeck build && vitadeck-host-companion start --plugin ./dist/my-app.vdplugin");
+  assert.equal(pkg.scripts.host, "vitadeck build && vitadeck-host-companion start --plugin ./dist");
   assert.equal(pkg.scripts.build, "vitadeck build");
   assert.ok("@vitadeck/host-companion" in pkg.devDependencies);
   assert.ok("typescript" in pkg.devDependencies);

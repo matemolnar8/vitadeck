@@ -24,7 +24,7 @@ vitadeck-host-companion link 192.168.1.177
 
 Open Host Control in the VitaDeck Shell and pass the address it shows (add `:port` if it is not 8798). `link` checks that `start` is answering, then tells VitaDeck where to send commands. One Vita can link several computers, and one computer can link several Vitas.
 
-Options: `--port N` (`start` and `link`; use the same one for both), `--plugin <file.vdplugin>` (repeatable, `start` only), `--advertise <ip>` (`link` only), `--config <path>`.
+Options: `--port N` (`start` and `link`; use the same one for both), `--plugin <file.vdplugin or directory>` (repeatable, `start` only; a directory loads every `.vdplugin` in it), `--advertise <ip>` (`link` only), `--config <path>`.
 
 ## Plugins
 
@@ -39,7 +39,7 @@ vitadeck-host-companion remove lights
 
 `install` copies the file to `~/.vitadeck/plugins/`, named by the plugin's id, and a running companion loads it at once. A plugin runs with your permissions on this computer, so install only plugins you trust.
 
-To write one, scaffold a Deck App with `npx @vitadeck/sdk create my-app --host-plugin`; the [SDK README](../sdk/README.md#host-control) explains the files. While you work on it, `start --plugin ./dist/my-app.vdplugin` loads your build, takes precedence over an installed copy, and reloads every time `vitadeck build` or `vitadeck dev` writes it. A broken build keeps the previous version running.
+To write one, scaffold a Deck App with `npx @vitadeck/sdk create my-app --host-plugin`; the [SDK README](../sdk/README.md#host-control) explains the files. While you work on it, `start --plugin ./dist` loads your build, takes precedence over an installed copy, and reloads every time `vitadeck build` or `vitadeck dev` writes it. A broken build keeps the previous version running.
 
 ## Config
 

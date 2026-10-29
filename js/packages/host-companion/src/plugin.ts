@@ -50,8 +50,8 @@ export async function loadHostPluginFile(file: string): Promise<ImplementedHostP
   return module.default;
 }
 
-/** The Host Plugin Files `install` copied into `dir`, by file name. */
-export async function installedHostPluginFiles(dir: string): Promise<string[]> {
+/** The Host Plugin Files in `dir`, by file name. */
+export async function hostPluginFilesIn(dir: string): Promise<string[]> {
   try {
     return (await readdir(dir))
       .filter((name) => name.endsWith(HOST_PLUGIN_FILE_EXTENSION))
