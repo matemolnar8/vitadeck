@@ -7,8 +7,8 @@ import { isRecord, type ImplementedHostPlugin } from "@vitadeck/sdk/host-control
 
 export const HOST_PLUGIN_FILE_EXTENSION = ".vdplugin";
 
-// Ids name the installed file, so they stay plain file names.
-const PLUGIN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,62}$/u;
+// Ids name the installed file, so they stay plain file names, as long as a Deck App Package name allows.
+const PLUGIN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,126}$/u;
 
 export function isHostPluginId(id: string): boolean {
   return PLUGIN_ID_PATTERN.test(id);
