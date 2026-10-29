@@ -136,7 +136,6 @@ export async function startHostCompanion(options: HostCompanionOptions): Promise
     return map;
   }
 
-  // Lifecycles start once the port is bound, so a busy port leaves no plugin timer keeping the process alive.
   plugins = byId(options.plugins ?? []);
   let stopRunning = startPlugins([]);
 
@@ -240,6 +239,7 @@ export async function startHostCompanion(options: HostCompanionOptions): Promise
       resolve();
     });
   });
+  // Lifecycles start once the port is bound, so a busy port leaves no plugin timer keeping the process alive.
   stopRunning = startPlugins(options.plugins ?? []);
 
   return {
