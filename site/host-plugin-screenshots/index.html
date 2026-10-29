@@ -1,0 +1,9 @@
+<!doctype html><meta charset="utf-8"><title>Host Plugin Files: host window run</title>
+<style>body{font-family:system-ui;max-width:1000px;margin:2rem auto;background:#111;color:#eee}img{width:100%;border:1px solid #333;margin-bottom:2rem}</style>
+<h1>Host Plugin Files: external project, run in the macOS host window</h1>
+<p>Both packages are packed. The companion is installed globally with <code>npm i -g</code> into a temp prefix. <code>lights</code> is scaffolded outside the repo with <code>vitadeck create lights --host-plugin</code>.</p>
+<h2>1. The Shell's link hint names the global CLI</h2><img src="02-host-control-screen.png">
+<h2>2. The demo app uses the built-in systemStats; capabilities list the installed lights plugin</h2><img src="04-demo-capabilities.png">
+<h2>3. The scaffolded app calls its own plugin</h2><img src="06-lights-greet.png">
+<h2>4. Edit host/companion.ts, run vitadeck build, and the companion reloads with no restart</h2><img src="07-lights-reloaded.png">
+<h2>5. After vitadeck-host-companion remove lights, the app gets unknown_plugin</h2><img src="08-lights-removed.png">
