@@ -26,8 +26,10 @@ const BUILT_IN_PLUGINS: readonly ImplementedHostPlugin[] = [systemStats];
 const BUILT_IN_IDS = new Set(["core", ...BUILT_IN_PLUGINS.map((plugin) => plugin.id)]);
 const RELOAD_QUIET_MS = 200;
 
-// pnpm runs scripts from js/; INIT_CWD is where the user typed the command.
-const userCwd = process.env.INIT_CWD ?? process.cwd();
+// `pnpm --dir js host-companion` runs from js/, so paths are relative to INIT_CWD, where the user typed it. Anywhere
+// else, a Deck App's `host` script included, they are relative to the working directory.
+const userCwd =
+  process.env.npm_lifecycle_event === "host-companion" ? (process.env.INIT_CWD ?? process.cwd()) : process.cwd();
 
 function parsePort(value: string | undefined): number | undefined {
   if (value === undefined) return undefined;
@@ -42,6 +44,12 @@ function lanUrls(port: number): string[] {
     .filter((info) => info.family === "IPv4" && !info.internal)
     .map((info) => `http://${info.address}:${port}/`);
   return addresses.length > 0 ? addresses : [`http://127.0.0.1:${port}/`];
+}
+
+function watchFailed(dir: string) {
+  return (error: Error) => {
+    console.error(`Stopped watching ${dir} for plugin changes: ${error.message}`);
+  };
 }
 
 function describe(plugins: readonly ImplementedHostPlugin[]): string {
@@ -95,11 +103,11 @@ async function start(values: { port?: string; plugin?: string[] }, configPath: s
       })();
     }, RELOAD_QUIET_MS);
   };
-  watch(pluginsDir, reload);
+  watch(pluginsDir, reload).on("error", watchFailed(pluginsDir));
   for (const dir of new Set(extraFiles.map((file) => path.dirname(file)))) {
     watch(dir, (_event, name) => {
       if (name !== null && extraFiles.includes(path.join(dir, name))) reload();
-    });
+    }).on("error", watchFailed(dir));
   }
 }
 

@@ -169,6 +169,10 @@ void test("rejects a file that is not a Host Plugin File", async (t) => {
     ),
     /has plugin id "\.\.\/x"/u,
   );
+  const digits = await loadHostPluginFile(
+    await writeTempFile(dir, "digits.vdplugin", 'export default { id: "2048", commands: new Map() };\n'),
+  );
+  assert.equal(digits.id, "2048");
 });
 
 void test("setPlugins swaps the plugins, keeping core, and keeps them when ids clash", async (t) => {

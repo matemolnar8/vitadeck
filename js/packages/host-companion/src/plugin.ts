@@ -1,10 +1,14 @@
-import { readdir, readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { isRecord, type ImplementedHostPlugin } from "@vitadeck/sdk/host-control";
 
 export const HOST_PLUGIN_FILE_EXTENSION = ".vdplugin";
 
-const PLUGIN_ID_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,62}$/u;
+// Ids name the installed file, so they stay plain file names.
+const PLUGIN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,62}$/u;
 
 export function isHostPluginId(id: string): boolean {
   return PLUGIN_ID_PATTERN.test(id);
@@ -17,11 +21,18 @@ function isImplementedHostPlugin(value: unknown): value is ImplementedHostPlugin
 /** Loads a Host Plugin File: one self-contained ES module that default-exports `implementHostPlugin(...)`. */
 export async function loadHostPluginFile(file: string): Promise<ImplementedHostPlugin> {
   const source = await readFile(file);
+  // Node imports no .vdplugin, and bundled CommonJS needs a file URL for createRequire(import.meta.url). A copy named
+  // by its content also loads a rebuilt file fresh instead of from the module cache.
+  const copy = path.join(
+    os.tmpdir(),
+    "vitadeck-host-companion",
+    `${createHash("sha256").update(source).digest("hex")}.mjs`,
+  );
   let module: unknown;
   try {
-    // Node imports no unknown extension from a file URL. A data: URL also changes with the content, so a rebuilt
-    // file loads fresh instead of from the module cache.
-    module = await import(`data:text/javascript;base64,${source.toString("base64")}`);
+    await mkdir(path.dirname(copy), { recursive: true });
+    await writeFile(copy, source);
+    module = await import(pathToFileURL(copy).href);
   } catch (error) {
     throw new Error(`${file} failed to load: ${error instanceof Error ? error.message : String(error)}`, {
       cause: error,

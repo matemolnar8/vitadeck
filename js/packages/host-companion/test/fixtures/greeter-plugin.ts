@@ -6,6 +6,7 @@ import {
   isAbsent,
   isRecord,
 } from "@vitadeck/sdk/host-control";
+import { greeting } from "./greeting.cjs";
 
 export const greeterPlugin = defineHostPlugin("greeter", {
   greet: command<{ name: string }, { greeting: string }>(
@@ -16,7 +17,7 @@ export const greeterPlugin = defineHostPlugin("greeter", {
 });
 
 export default implementHostPlugin(greeterPlugin, {
-  greet: ({ name }) => ({ greeting: `Hello, ${name}!` }),
+  greet: ({ name }) => ({ greeting: greeting(name) }),
   crash: () => {
     throw new Error("The greeter fell over.");
   },
