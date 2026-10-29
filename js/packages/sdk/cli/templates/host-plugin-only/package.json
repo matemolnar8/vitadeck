@@ -12,12 +12,13 @@
     "tsc": "tsc -p host",
     "host": "vitadeck build && vitadeck-host-companion start --plugin ./dist"
   },
-  "dependencies": {
-    "@vitadeck/sdk": "workspace:*"
-  },
   "devDependencies": {
     "@types/node": "24.19.2",
     "@vitadeck/host-companion": "workspace:*",
+    "@vitadeck/sdk": "workspace:*",
     "typescript": "7.0.2"
+  },
+  "peerDependencies": {
+    "@vitadeck/sdk": "workspace:*"
   }
 }

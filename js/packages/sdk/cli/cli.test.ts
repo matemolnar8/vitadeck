@@ -233,7 +233,7 @@ export default function App() {
   );
 });
 
-void test("a project needs a Deck App entry, a hostPlugin, or both, and dev needs a URL only for a Deck App", async (t) => {
+void test("a project needs a Deck App entry, a hostPlugin, or both, and dev takes a URL only for a Deck App", async (t) => {
   const cwd = await makeTempDir(t);
   await writeFile(path.join(cwd, "vitadeck.config.json"), JSON.stringify({ name: "x", outDir: "./dist" }));
   const neither = await runCli(cwd, ["build"]);
@@ -244,4 +244,12 @@ void test("a project needs a Deck App entry, a hostPlugin, or both, and dev need
   const dev = await runCli(path.join(cwd, "app"), ["dev"]);
   assert.equal(dev.ok, false);
   assert.match(dev.output, /Usage: vitadeck dev <runtime-upload-url>/u);
+
+  await writeFile(
+    path.join(cwd, "vitadeck.config.json"),
+    JSON.stringify({ name: "x", outDir: "./dist", hostPlugin: { entry: "./plugin.mjs" } }),
+  );
+  const pluginDev = await runCli(cwd, ["dev", "192.168.1.50"]);
+  assert.equal(pluginDev.ok, false);
+  assert.match(pluginDev.output, /no Deck App to upload/u);
 });

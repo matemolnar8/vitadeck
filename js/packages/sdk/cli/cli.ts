@@ -701,10 +701,15 @@ function logCycle(line: string): void {
 }
 
 async function dev(projectRoot: string, rawUrl: string | undefined): Promise<void> {
-  const uploadUrl = rawUrl === undefined ? undefined : parseRuntimeUploadUrl(rawUrl);
-  if (!uploadUrl && (await readConfig(projectRoot)).entry !== undefined) {
-    throw new Error("Usage: vitadeck dev <runtime-upload-url>");
+  const hasDeckApp = (await readConfig(projectRoot)).entry !== undefined;
+  if (hasDeckApp !== (rawUrl !== undefined)) {
+    throw new Error(
+      hasDeckApp
+        ? "Usage: vitadeck dev <runtime-upload-url>"
+        : "This project has no Deck App to upload; run vitadeck dev without a URL.",
+    );
   }
+  const uploadUrl = rawUrl === undefined ? undefined : parseRuntimeUploadUrl(rawUrl);
   const session = new AbortController();
   let outDirRel: string | undefined;
   let running = false;
@@ -809,7 +814,7 @@ const USAGE = `Usage: vitadeck <command> [flags]
 
 Commands:
   build                     Build the Deck App Package, .vdapp.zip and any .vdplugin.zip (default command)
-    --no-zip                Skip the .vdapp.zip archive
+    --no-zip                Skip the .zip archives
     --dev                   Bundle with NODE_ENV=development
   dev <runtime-upload-url>  Watch, rebuild with --dev and upload to a running VitaDeck; a project with only a
                             Host Plugin takes no URL and just rebuilds
@@ -875,6 +880,9 @@ async function main(): Promise<void> {
       return;
     }
     case "create": {
+      if (flags.has("--host-plugin") && flags.has("--host-plugin-only")) {
+        throw new Error("Pass --host-plugin or --host-plugin-only, not both.");
+      }
       if (!arg) throw new Error("Usage: vitadeck create <project-name>");
       await create(arg, {
         force: flags.has("--force"),

@@ -15,8 +15,10 @@ const publishedVersions = { "@vitadeck/sdk": sdkVersion, "@vitadeck/host-compani
 
 /** Template packages depend on the workspace; a scaffolded project gets the published versions. */
 function withPublishedVersions(json: string): string {
-  const pkg = JSON.parse(json) as Partial<Record<"dependencies" | "devDependencies", Record<string, string>>>;
-  for (const deps of [pkg.dependencies, pkg.devDependencies]) {
+  const pkg = JSON.parse(json) as Partial<
+    Record<"dependencies" | "devDependencies" | "peerDependencies", Record<string, string>>
+  >;
+  for (const deps of [pkg.dependencies, pkg.devDependencies, pkg.peerDependencies]) {
     for (const [name, version] of Object.entries(publishedVersions)) {
       if (deps?.[name] === "workspace:*") deps[name] = `^${version}`;
     }
