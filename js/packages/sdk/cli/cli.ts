@@ -12,12 +12,13 @@ import type { DeckAppPackageManifest } from "../src/package-manifest";
 
 type DeckAppConfig = {
   name: string;
-  entry: string;
+  /** The Deck App's root component. A project without one builds only its Host Control Plugin. */
+  entry?: string;
   outDir: string;
   version?: string;
   fonts?: Record<string, string>;
   images?: Record<string, string>;
-  /** The Deck App's own Host Control Plugin, built into the `<outDir>/<slug>.vdplugin` package. */
+  /** A Host Control Plugin, built into the `<outDir>/<slug>.vdplugin` package. */
   hostPlugin?: { entry: string; files?: string };
 };
 
@@ -106,9 +107,9 @@ async function readConfig(projectRoot: string): Promise<DeckAppConfig> {
   const raw = requireObject(await readJson(configPath), configPath);
   const config: DeckAppConfig = {
     name: requireString(raw.name, "name", configPath),
-    entry: requireString(raw.entry, "entry", configPath),
     outDir: requireString(raw.outDir, "outDir", configPath),
   };
+  if (raw.entry !== undefined) config.entry = requireString(raw.entry, "entry", configPath);
   if (raw.version !== undefined) {
     config.version = requireString(raw.version, "version", configPath);
   }
@@ -120,6 +121,9 @@ async function readConfig(projectRoot: string): Promise<DeckAppConfig> {
     if (hostPlugin.files !== undefined) {
       config.hostPlugin.files = requireString(hostPlugin.files, "hostPlugin.files", configPath);
     }
+  }
+  if (config.entry === undefined && config.hostPlugin === undefined) {
+    throw new Error(`${configPath} must define "entry" (a Deck App), "hostPlugin", or both.`);
   }
   return config;
 }
@@ -432,7 +436,12 @@ async function fileExists(filePath: string): Promise<boolean> {
 }
 
 type BuildOptions = { noZip?: boolean; dev?: boolean };
-type BuildOutput = { packageDir: string; archivePath?: string; hostPluginDir?: string; hostPluginArchivePath?: string };
+type BuildOutput = {
+  packageDir?: string;
+  archivePath?: string;
+  hostPluginDir?: string;
+  hostPluginArchivePath?: string;
+};
 
 const HOST_PLUGIN_ENTRY = "companion.mjs";
 
@@ -470,51 +479,44 @@ async function buildHostPlugin(
   }
 }
 
-async function build(projectRoot: string, options: BuildOptions = {}): Promise<BuildOutput> {
-  const config = await readConfig(projectRoot);
-  validateDisplayName(config.name, "vitadeck.config.json");
-  await validateReact(projectRoot);
-  const version = await readPackageVersion(projectRoot, config);
-
-  const entryPath = path.resolve(projectRoot, config.entry);
-  const outDir = path.resolve(projectRoot, config.outDir);
-  const packageFolderName = packageNameFor(config.name);
-  const packageDir = path.join(outDir, packageFolderName);
-  const archivePath = path.join(outDir, `${packageFolderName}.zip`);
-  const hostPlugin =
-    config.hostPlugin === undefined
-      ? undefined
-      : {
-          entry: resolveAssetSourcePath(
-            projectRoot,
-            config.hostPlugin.entry,
-            "vitadeck.config.json",
-            "hostPlugin.entry",
-            SUPPORTED_HOST_PLUGIN_EXTENSIONS,
-          ),
-          files:
-            config.hostPlugin.files === undefined
-              ? undefined
-              : resolveProjectPath(projectRoot, config.hostPlugin.files, "vitadeck.config.json", "hostPlugin.files"),
-        };
-  if (hostPlugin) {
-    await assertFileExists(hostPlugin.entry, "vitadeck.config.json", "hostPlugin.entry");
-    const files = hostPlugin.files;
-    const isFolder =
-      files !== undefined &&
-      (await stat(files).then(
-        (info) => info.isDirectory(),
-        () => false,
-      ));
-    if (files !== undefined && (files === projectRoot || !isFolder)) {
-      throw new Error(`vitadeck.config.json "hostPlugin.files" must name a folder inside the project, not ${files}.`);
-    }
+async function resolveHostPlugin(
+  projectRoot: string,
+  plugin: { entry: string; files?: string },
+): Promise<{ entry: string; files?: string }> {
+  const entry = resolveAssetSourcePath(
+    projectRoot,
+    plugin.entry,
+    "vitadeck.config.json",
+    "hostPlugin.entry",
+    SUPPORTED_HOST_PLUGIN_EXTENSIONS,
+  );
+  await assertFileExists(entry, "vitadeck.config.json", "hostPlugin.entry");
+  if (plugin.files === undefined) return { entry };
+  const files = resolveProjectPath(projectRoot, plugin.files, "vitadeck.config.json", "hostPlugin.files");
+  const isFolder = await stat(files).then(
+    (info) => info.isDirectory(),
+    () => false,
+  );
+  if (files === projectRoot || !isFolder) {
+    throw new Error(`vitadeck.config.json "hostPlugin.files" must name a folder inside the project, not ${files}.`);
   }
+  return { entry, files };
+}
+
+async function buildDeckApp(
+  projectRoot: string,
+  config: DeckAppConfig & { entry: string },
+  version: string,
+  packageDir: string,
+  options: BuildOptions,
+): Promise<void> {
+  await validateReact(projectRoot);
+  const entryPath = path.resolve(projectRoot, config.entry);
   const generatedDir = path.join(projectRoot, ".vitadeck");
   const generatedEntry = path.join(generatedDir, "package-entry.tsx");
 
   await rm(packageDir, { recursive: true, force: true });
-  await rm(archivePath, { force: true });
+  await rm(`${packageDir}.zip`, { force: true });
   await mkdir(packageDir, { recursive: true });
   await mkdir(generatedDir, { recursive: true });
   await writeFontTypes(generatedDir, config.fonts);
@@ -571,20 +573,36 @@ globalThis.vitadeckPackage.register(DeckApp);
   } satisfies DeckAppPackageManifest;
   await writeFile(path.join(packageDir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
   await rm(generatedEntry, { force: true });
+}
 
-  const hostPluginDir = hostPlugin
-    ? path.join(outDir, `${packageFolderName.replace(/\.vdapp$/u, "")}.vdplugin`)
-    : undefined;
-  if (hostPlugin && hostPluginDir) {
-    await buildHostPlugin(hostPlugin, hostPluginDir, { name: config.name, version });
+/** Builds the project's Deck App, its Host Control Plugin, or both, with their archives unless `noZip`. */
+async function build(projectRoot: string, options: BuildOptions = {}): Promise<BuildOutput> {
+  const config = await readConfig(projectRoot);
+  validateDisplayName(config.name, "vitadeck.config.json");
+  const version = await readPackageVersion(projectRoot, config);
+  const outDir = path.resolve(projectRoot, config.outDir);
+  const packageFolderName = packageNameFor(config.name);
+  const hostPlugin = config.hostPlugin && (await resolveHostPlugin(projectRoot, config.hostPlugin));
+  const output: BuildOutput = {};
+
+  const { entry } = config;
+  if (entry !== undefined) {
+    output.packageDir = path.join(outDir, packageFolderName);
+    await buildDeckApp(projectRoot, { ...config, entry }, version, output.packageDir, options);
   }
-
-  if (options.noZip) return { packageDir, hostPluginDir };
-  await writePackageArchive(packageDir, archivePath);
-  if (!hostPluginDir) return { packageDir, archivePath };
-  const hostPluginArchivePath = `${hostPluginDir}.zip`;
-  await writePackageArchive(hostPluginDir, hostPluginArchivePath);
-  return { packageDir, archivePath, hostPluginDir, hostPluginArchivePath };
+  if (hostPlugin) {
+    output.hostPluginDir = path.join(outDir, `${packageFolderName.replace(/\.vdapp$/u, "")}.vdplugin`);
+    await buildHostPlugin(hostPlugin, output.hostPluginDir, { name: config.name, version });
+  }
+  if (options.noZip) return output;
+  if (output.packageDir) output.archivePath = `${output.packageDir}.zip`;
+  if (output.hostPluginDir) output.hostPluginArchivePath = `${output.hostPluginDir}.zip`;
+  await Promise.all(
+    [output.packageDir, output.hostPluginDir]
+      .filter((dir) => dir !== undefined)
+      .map((dir) => writePackageArchive(dir, `${dir}.zip`)),
+  );
+  return output;
 }
 
 const DEFAULT_UPLOAD_PORT = "8787";
@@ -682,8 +700,11 @@ function logCycle(line: string): void {
   console.log(`[${new Date().toLocaleTimeString("en-GB")}] ${line}`);
 }
 
-async function dev(projectRoot: string, rawUrl: string): Promise<void> {
-  const uploadUrl = parseRuntimeUploadUrl(rawUrl);
+async function dev(projectRoot: string, rawUrl: string | undefined): Promise<void> {
+  const uploadUrl = rawUrl === undefined ? undefined : parseRuntimeUploadUrl(rawUrl);
+  if (!uploadUrl && (await readConfig(projectRoot)).entry !== undefined) {
+    throw new Error("Usage: vitadeck dev <runtime-upload-url>");
+  }
   const session = new AbortController();
   let outDirRel: string | undefined;
   let running = false;
@@ -696,8 +717,10 @@ async function dev(projectRoot: string, rawUrl: string): Promise<void> {
       // Known before build() writes into it, so the build's own output does not retrigger the watcher.
       outDirRel = path.relative(projectRoot, path.resolve(projectRoot, (await readConfig(projectRoot)).outDir));
       const output = await build(projectRoot, { dev: true });
-      if (!output.archivePath) throw new Error("Build did not write a Runtime Upload Archive.");
-      logCycle(await uploadArchive(uploadUrl, await readFile(output.archivePath), session.signal));
+      if (output.hostPluginDir) logCycle(`built ${path.relative(projectRoot, output.hostPluginDir)}`);
+      if (uploadUrl && output.archivePath) {
+        logCycle(await uploadArchive(uploadUrl, await readFile(output.archivePath), session.signal));
+      }
     } catch (error) {
       if (!session.signal.aborted) logCycle(error instanceof Error ? error.message : String(error));
     } finally {
@@ -744,7 +767,7 @@ async function dev(projectRoot: string, rawUrl: string): Promise<void> {
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
 
-  console.log(`Watching ${projectRoot}, uploading to ${uploadUrl.href} (Ctrl-C to stop)`);
+  console.log(`Watching ${projectRoot}${uploadUrl ? `, uploading to ${uploadUrl.href}` : ""} (Ctrl-C to stop)`);
   void cycle();
   await stopped;
   if (watchError) throw new Error(`Watching ${projectRoot} failed: ${watchError.message}`, { cause: watchError });
@@ -759,7 +782,10 @@ async function isNonEmptyDir(dir: string): Promise<boolean> {
   }
 }
 
-async function create(projectName: string, options: { force: boolean; hostPlugin: boolean }): Promise<void> {
+async function create(
+  projectName: string,
+  options: { force: boolean; hostPlugin: boolean; hostPluginOnly: boolean },
+): Promise<void> {
   const targetDir = path.resolve(process.cwd(), projectName);
   const slug = packageNameFor(projectName).replace(/\.vdapp$/u, "");
   const templateRoot = fileURLToPath(new URL("./templates/scaffold", import.meta.url));
@@ -767,9 +793,14 @@ async function create(projectName: string, options: { force: boolean; hostPlugin
     throw new Error(`${targetDir} is not empty. Pick another name or pass --force to write into it.`);
   }
   await mkdir(targetDir, { recursive: true });
-  await copyScaffoldDir(templateRoot, targetDir, slug);
-  if (options.hostPlugin) {
-    await applyTemplateOverlay(fileURLToPath(new URL("./templates/host-plugin", import.meta.url)), targetDir, slug);
+  const hostPluginRoot = fileURLToPath(new URL("./templates/host-plugin", import.meta.url));
+  if (options.hostPluginOnly) {
+    // A plugin without a Deck App: the same host/ folder, and a package.json that exports its commands.
+    await copyScaffoldDir(fileURLToPath(new URL("./templates/host-plugin-only", import.meta.url)), targetDir, slug);
+    await copyScaffoldDir(hostPluginRoot, targetDir, slug, "host");
+  } else {
+    await copyScaffoldDir(templateRoot, targetDir, slug);
+    if (options.hostPlugin) await applyTemplateOverlay(hostPluginRoot, targetDir, slug);
   }
   console.log(`Created ${targetDir}`);
 }
@@ -780,10 +811,12 @@ Commands:
   build                     Build the Deck App Package, .vdapp.zip and any .vdplugin.zip (default command)
     --no-zip                Skip the .vdapp.zip archive
     --dev                   Bundle with NODE_ENV=development
-  dev <runtime-upload-url>  Watch, rebuild with --dev and upload to a running VitaDeck
+  dev <runtime-upload-url>  Watch, rebuild with --dev and upload to a running VitaDeck; a project with only a
+                            Host Plugin takes no URL and just rebuilds
   create <project-name>     Scaffold a new Deck App project
     --force                 Write into a non-empty directory
     --host-plugin           Add a Host Plugin: commands the Deck App sends to a computer
+    --host-plugin-only      Scaffold a Host Plugin without a Deck App, for Deck Apps to depend on
 
 Flags:
   --help, -h                Show this help
@@ -792,7 +825,7 @@ Flags:
 const COMMAND_FLAGS = {
   build: ["--no-zip", "--dev"],
   dev: [],
-  create: ["--force", "--host-plugin"],
+  create: ["--force", "--host-plugin", "--host-plugin-only"],
 } as const satisfies Record<string, readonly string[]>;
 
 type Command = keyof typeof COMMAND_FLAGS;
@@ -827,21 +860,27 @@ async function main(): Promise<void> {
   switch (command) {
     case "build": {
       const output = await build(projectRoot, { noZip: flags.has("--no-zip"), dev: flags.has("--dev") });
-      console.log(`Built ${path.relative(projectRoot, output.packageDir)}`);
-      if (output.archivePath) console.log(`Wrote ${path.relative(projectRoot, output.archivePath)}`);
-      if (output.hostPluginDir) console.log(`Built ${path.relative(projectRoot, output.hostPluginDir)}`);
-      if (output.hostPluginArchivePath)
-        console.log(`Wrote ${path.relative(projectRoot, output.hostPluginArchivePath)}`);
+      for (const [verb, file] of [
+        ["Built", output.packageDir],
+        ["Wrote", output.archivePath],
+        ["Built", output.hostPluginDir],
+        ["Wrote", output.hostPluginArchivePath],
+      ] as const) {
+        if (file !== undefined) console.log(`${verb} ${path.relative(projectRoot, file)}`);
+      }
       return;
     }
     case "dev": {
-      if (!arg) throw new Error("Usage: vitadeck dev <runtime-upload-url>");
       await dev(projectRoot, arg);
       return;
     }
     case "create": {
       if (!arg) throw new Error("Usage: vitadeck create <project-name>");
-      await create(arg, { force: flags.has("--force"), hostPlugin: flags.has("--host-plugin") });
+      await create(arg, {
+        force: flags.has("--force"),
+        hostPlugin: flags.has("--host-plugin"),
+        hostPluginOnly: flags.has("--host-plugin-only"),
+      });
     }
   }
 }

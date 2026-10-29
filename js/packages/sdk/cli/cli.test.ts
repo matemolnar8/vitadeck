@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -174,4 +174,74 @@ void test("build copies hostPlugin.files into the package and fails clearly on a
   const missing = await runCli(projectRoot, ["build"]);
   assert.equal(missing.ok, false, missing.output);
   assert.match(missing.output, /hostPlugin\.entry file is missing/u);
+});
+
+void test("create --host-plugin-only scaffolds a standalone plugin that a Deck App can depend on", async (t) => {
+  const cwd = await makeTempDir(t);
+  const created = await runCli(cwd, ["create", "lights", "--host-plugin-only"]);
+  assert.equal(created.ok, true, created.output);
+  const pluginRoot = path.join(cwd, "lights");
+  assert.deepEqual((await readdir(pluginRoot)).toSorted(), [
+    ".gitignore",
+    "host",
+    "package.json",
+    "vitadeck.config.json",
+  ]);
+  assert.deepEqual(JSON.parse(await readFile(path.join(pluginRoot, "vitadeck.config.json"), "utf8")), {
+    name: "lights",
+    outDir: "./dist",
+    hostPlugin: { entry: "./host/companion.ts" },
+  });
+
+  await linkSdk(pluginRoot);
+  await linkDependency(pluginRoot, "@types/node");
+  await execFileText(tscBin, ["-p", "host"], { cwd: pluginRoot });
+  const built = await runCli(pluginRoot, ["build"]);
+  assert.equal(built.ok, true, built.output);
+  assert.match(built.output, /Wrote dist\/lights\.vdplugin\.zip/u);
+  assert.deepEqual((await readdir(path.join(pluginRoot, "dist"))).toSorted(), [
+    "lights.vdplugin",
+    "lights.vdplugin.zip",
+  ]);
+
+  // A separate Deck App imports the plugin's commands through the package's export, as from npm or a local path.
+  assert.equal((await runCli(cwd, ["create", "deck"])).ok, true);
+  const appRoot = path.join(cwd, "deck");
+  await linkSdk(appRoot);
+  await linkSdkBuildDependencies(appRoot);
+  await Promise.all(["react", "@types/react"].map((name) => linkDependency(appRoot, name)));
+  await symlink(pluginRoot, path.join(appRoot, "node_modules", "lights"), "dir");
+  await writeFile(
+    path.join(appRoot, "src", "App.tsx"),
+    `import { createHostClient } from "@vitadeck/sdk/host-control";
+import { hostPlugin } from "lights";
+
+const lights = createHostClient(hostPlugin);
+
+export default function App() {
+  void lights.greet({ name: "Vita" });
+  return null;
+}
+`,
+  );
+  await execFileText(tscBin, ["-p", "."], { cwd: appRoot });
+  const app = await runCli(appRoot, ["build", "--no-zip"]);
+  assert.equal(app.ok, true, app.output);
+  assert.match(
+    await readFile(path.join(appRoot, "dist", "deck.vdapp", "app.js"), "utf8"),
+    /defineHostPlugin\("lights"/u,
+  );
+});
+
+void test("a project needs a Deck App entry, a hostPlugin, or both, and dev needs a URL only for a Deck App", async (t) => {
+  const cwd = await makeTempDir(t);
+  await writeFile(path.join(cwd, "vitadeck.config.json"), JSON.stringify({ name: "x", outDir: "./dist" }));
+  const neither = await runCli(cwd, ["build"]);
+  assert.equal(neither.ok, false);
+  assert.match(neither.output, /must define "entry" \(a Deck App\), "hostPlugin", or both/u);
+
+  assert.equal((await runCli(cwd, ["create", "app"])).ok, true);
+  const dev = await runCli(path.join(cwd, "app"), ["dev"]);
+  assert.equal(dev.ok, false);
+  assert.match(dev.output, /Usage: vitadeck dev <runtime-upload-url>/u);
 });

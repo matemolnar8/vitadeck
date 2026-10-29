@@ -39,7 +39,7 @@ vitadeck-host-companion remove lights
 
 `install` unpacks the archive (or copies a `.vdplugin` folder) into `~/.vitadeck/plugins/`, named by the plugin's id, and a running companion loads it at once. A plugin runs with your permissions on this computer, so install only plugins you trust.
 
-To write one, scaffold a Deck App with `npx @vitadeck/sdk create my-app --host-plugin`; the [SDK README](../sdk/README.md#host-control) explains the files. While you work on it, `start --plugin ./dist` loads your build, takes precedence over an installed copy, and reloads every time `vitadeck build` or `vitadeck dev` writes it. A broken build keeps the previous version running.
+To write one, scaffold a Deck App with `npx @vitadeck/sdk create my-app --host-plugin`, or a plugin on its own with `create my-plugin --host-plugin-only`; the [SDK README](../sdk/README.md#your-own-host-plugin) explains the files. While you work on it, `start --plugin ./dist` loads your build, takes precedence over an installed copy, and reloads every time `vitadeck build` or `vitadeck dev` writes it. A broken build keeps the previous version running.
 
 ## Config
 

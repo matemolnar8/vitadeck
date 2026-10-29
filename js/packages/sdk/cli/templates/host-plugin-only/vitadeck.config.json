@@ -1,0 +1,5 @@
+{
+  "name": "vitadeck-scaffold-template",
+  "outDir": "./dist",
+  "hostPlugin": { "entry": "./host/companion.ts" }
+}

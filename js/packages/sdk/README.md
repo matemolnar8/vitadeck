@@ -39,7 +39,7 @@ npx @vitadeck/sdk create <project-name>
 ```
 
 - `name` (required): display name shown in the VitaDeck Shell. The package folder name is a slug of it (`My Deck App` → `my-deck-app.vdapp`).
-- `entry` (required): the source file whose default export is your root component.
+- `entry`: the source file whose default export is your root component. Required unless the project only builds a Host Plugin (see [Standalone plugins](#standalone-plugins)).
 - `outDir` (required): parent folder for the built `.vdapp` folder and `.vdapp.zip`.
 - `version` (optional): semver written to the package manifest. Defaults to `version` in `package.json`.
 - `fonts` / `images` (optional): name → file path, relative to the project and inside it. Names start with a letter and use letters, digits, `_` or `-` (max 63 characters); `default` is reserved for fonts. Up to 32 of each. Fonts: `.ttf`, `.otf`, `.fnt`, `.bdf`. Images: `.png`, `.jpg`, `.jpeg`, `.bmp`, `.tga`, `.gif`, `.psd`, `.hdr`, `.pic`, `.qoi`. The build copies them into the package and fails if a file is missing.
@@ -102,18 +102,37 @@ else if (stats.code === "not_linked") setHint("Link a computer in the VitaDeck S
 
 ### Your own Host Plugin
 
-When the built-in plugins are not enough, keep a plugin in the Deck App's own project. `create --host-plugin` scaffolds one:
+When the built-in plugins are not enough, write a plugin: in the Deck App's own project, or on its own for several Deck Apps to use (see [Standalone plugins](#standalone-plugins)). `create --host-plugin` scaffolds a Deck App with one:
 
 ```bash
 npx @vitadeck/sdk create my-app --host-plugin
 ```
 
-- `host/plugin.ts` defines the commands with `defineHostPlugin(id, { name: command<Payload, Result>(guard) })`. The Deck App imports it, so it is bundled into the Deck App and must not import Node.js modules. The companion runs `guard` on every payload before your code.
+- `host/plugin.ts` defines the commands with `defineHostPlugin(id, { name: command<Payload, Result>(guard) })`. Deck Apps import it, so it is bundled into them and must not import Node.js modules. The companion runs `guard` on every payload before your code.
 - `host/companion.ts` default-exports `implementHostPlugin(plugin, { name: async (payload) => result })`. It runs in the companion with Node.js. `tsc` fails if a command is missing or returns the wrong type; throw `new HostCommandError("unsupported_platform", "...")` to answer with a specific code.
 - `"hostPlugin": { "entry": "./host/companion.ts" }` in `vitadeck.config.json` makes `build` and `dev` also write `dist/my-app.vdplugin`, a **Host Plugin Package**, and its `dist/my-app.vdplugin.zip`. The package holds `manifest.json` and `companion.mjs`, your implementation bundled with its npm dependencies (pure JavaScript only). Add `"files": "./host/files"` to ship other files too, like scripts or data; read them with `new URL("./files/<name>", import.meta.url)` when a command runs, since a rebuild that changes only `files/` does not re-run your module. The `.vdplugin.zip` keeps no file permissions, so run a shipped script through its interpreter (`execFile("sh", [path])`) rather than directly.
 - `pnpm host` builds and runs a companion with your plugin, reloading it whenever `vitadeck dev` rebuilds. Link it once with `npx vitadeck-host-companion link <address>`.
 
 Users install your plugin with `vitadeck-host-companion install my-app.vdplugin.zip`, so ship the `.vdplugin.zip` next to the `.vdapp.zip`. When they have not, your Deck App gets `unknown_plugin`; tell them what to install.
+
+### Standalone plugins
+
+A plugin does not need a Deck App. `create --host-plugin-only` scaffolds a project with only `host/`, and a `vitadeck.config.json` with `hostPlugin` but no `entry`:
+
+```bash
+npx @vitadeck/sdk create lights --host-plugin-only
+```
+
+`build` writes only `dist/lights.vdplugin` and `dist/lights.vdplugin.zip`, and `dev` rebuilds them on every save without a Runtime Upload URL; `pnpm host` runs them in a companion. The project's `package.json` exports `host/plugin.ts`, so a Deck App adds the project as a dependency (from npm, a git URL, or a local path such as `pnpm add ../lights`) and imports the commands:
+
+```tsx
+import { createHostClient } from "@vitadeck/sdk/host-control";
+import { hostPlugin as lights } from "lights";
+
+const result = await createHostClient(lights).greet({ name: "Vita" });
+```
+
+Its users install `lights.vdplugin.zip` once, and every Deck App that depends on it can call it.
 
 This subpath is bundled into your Deck App, along with any plugin registry you import.
 
