@@ -1,5 +1,5 @@
 import { watch } from "node:fs";
-import { copyFile, mkdir, rm } from "node:fs/promises";
+import { copyFile, mkdir, rename, rm } from "node:fs/promises";
 import { networkInterfaces } from "node:os";
 import path from "node:path";
 import { parseArgs } from "node:util";
@@ -119,7 +119,10 @@ async function install(file: string, configPath: string): Promise<void> {
   if (BUILT_IN_IDS.has(plugin.id)) throw new Error(`${plugin.id} is a built-in plugin and cannot be replaced.`);
   const dir = installedPluginsDir(configPath);
   await mkdir(dir, { recursive: true });
-  await copyFile(source, path.join(dir, `${plugin.id}${HOST_PLUGIN_FILE_EXTENSION}`));
+  // Renamed into place, so a running companion never loads a half-copied file.
+  const temporary = path.join(dir, `.${plugin.id}.${process.pid}.tmp`);
+  await copyFile(source, temporary);
+  await rename(temporary, path.join(dir, `${plugin.id}${HOST_PLUGIN_FILE_EXTENSION}`));
   console.log(
     `Installed ${plugin.id} (${[...plugin.commands.keys()].join(", ")}). A running Host Companion loads it now.`,
   );
