@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify 0ec520145e1ff4657a25cec36682c2b86f5e6c15` in this repository.
+   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify 82350502701f2d0b032d12bca4aea02df9bf4dee` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 0ec520145e1ff4657a25cec36682c2b86f5e6c15 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 82350502701f2d0b032d12bca4aea02df9bf4dee -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,15 +25,15 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  a447e3b960dc1c5434b9fbc2f45c112b1c630b1f
 
-head               0ec520145e1ff4657a25cec36682c2b86f5e6c15
+head               82350502701f2d0b032d12bca4aea02df9bf4dee
 
-Named refs at pin: a447e3b9 ... 0ec52014
+Named refs at pin: a447e3b9 ... 82350502
 
 Read the diff:
 
-git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 0ec520145e1ff4657a25cec36682c2b86f5e6c15
+git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 82350502701f2d0b032d12bca4aea02df9bf4dee
 
-Review concern 05 of 08: Link listener, store and native getter (`native-link`)
+Review concern 06 of 09: Link listener, store and native getter (`native-link`)
 
 The why:
 
@@ -44,7 +44,7 @@ The what:
 `listener.c` accepts one `POST /link` on 8798+, `link.c` validates it and stores up to 4 links through `vd_replace_file`, and `nativeGetHostControlLinks` in `jslib/host_control.c` hands the list to the SDK client.
 
 Depends on:
-- 04 Shared native helpers moved out of upload and storage (`native-shared`)
+- 05 Shared native helpers moved out of upload and storage (`native-shared`)
 
 Hunk refs for this concern:
 - src/host_control/link.c

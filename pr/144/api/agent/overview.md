@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify 0ec520145e1ff4657a25cec36682c2b86f5e6c15` in this repository.
+   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify 82350502701f2d0b032d12bca4aea02df9bf4dee` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,19 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  a447e3b960dc1c5434b9fbc2f45c112b1c630b1f
 
-head               0ec520145e1ff4657a25cec36682c2b86f5e6c15
+head               82350502701f2d0b032d12bca4aea02df9bf4dee
 
-Named refs at pin: a447e3b9 ... 0ec52014
+Named refs at pin: a447e3b9 ... 82350502
 
 Read the diff:
 
-git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 0ec520145e1ff4657a25cec36682c2b86f5e6c15
+git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 82350502701f2d0b032d12bca4aea02df9bf4dee
 
 Commits:
+- 82350502 refactor(host-companion): put the lifecycle comment on the call it explains
+- 18acd4f7 fix(sdk): a watch callback that stops watching ends it at once
+- 7f2c1726 fix(host-companion): start plugin lifecycles after binding the port
+- 20461a88 feat(host-control): computers push events to Deck Apps by long-polling
 - 0ec52014 docs(skills): add vitadeck-host-control and cover Host Control in the others
 - 51440f28 test(sdk): pin the standalone plugin's peer SDK and exclusive create flags
 - 5820312a docs(sdk): say which SDK copy a linked standalone plugin uses
@@ -67,6 +71,7 @@ Sources:
 - pr PR #144 One PR for all three slices; plugins instead of a flat catalogue; several links; demo Deck App.
   https://github.com/matemolnar8/vitadeck/pull/144
 - transcript T3 Code session · Oct 28 Implement all three issues; target use cases shape the design but are not built now; the backend extension model is left to the agent; add a demo Deck App.
+- transcript T3 Code session · Oct 29 Máté asked for a better host→Vita channel than polling and approved long-polling in this PR.
 
 The title:
 
@@ -78,7 +83,7 @@ Máté asked for the three Host Control slices, shaped so later Deck Apps can se
 
 The what (very large):
 
-Adds Host Control end to end: the `@vitadeck/sdk/host-control` client and plugin API, the `vitadeck-host-companion` CLI with built-in `core` and `systemStats` plugins that installs custom `.vdplugin` packages, SDK CLI support to build those packages with a Deck App or standalone, the native link listener and link store with a Shell Host Control screen, and a `host-control` example Deck App.
+Adds Host Control end to end: the `@vitadeck/sdk/host-control` client and plugin API, the `vitadeck-host-companion` CLI with built-in `core` and `systemStats` plugins that installs custom `.vdplugin` packages, SDK CLI support to build those packages with a Deck App or standalone, the native link listener and link store with a Shell Host Control screen, and a `host-control` example Deck App, and events the computer pushes to Deck Apps by long-polling.
 
 Look for:
 - [#109](source:s1) asks for flat command names and an internal `defineHostCommands`. Every request instead names a `plugin`, and `defineHostPlugin` and `command` are public, because the [session](source:s5) left the extension model open and [PR #144](source:s4) chose plugins.
@@ -93,20 +98,30 @@ Look for:
 
 ### 01 Wire contract and SDK client (`sdk-contract`)
 
-`createHostClient` in `client.ts` turns a `defineHostPlugin` registry from `plugin.ts` into typed methods that POST the `protocol.ts` envelope and map every failure to a `HostResult`, while `plugin.ts` also gives plugin authors `implementHostPlugin`, `HostCommandError` and the `HostPluginManifest` contract, and `system-stats.ts` holds the built-in `systemStats` registry.
+`createHostClient` in `client.ts` turns a `defineHostPlugin` registry from `plugin.ts` into typed methods that POST the `protocol.ts` envelope and map every failure to a `HostResult`, and `watchHostEvents` keeps one `core.events` wait open per watcher; `plugin.ts` also gives authors typed `event<D>()` declarations, `implementHostPlugin` with a `start(emit)` lifecycle, `HostCommandError` and the `HostPluginManifest` contract, and `system-stats.ts` holds the built-in `systemStats` registry.
 
 [groups/sdk-contract.md](groups/sdk-contract.md)
 
 ### 02 Host Companion: vitadeck-host-companion, built-ins and plugin packages (`companion`)
 
-`cli.ts` runs `start`, which serves `POST /command` from `server.ts` over `core`, the built-in `systemStats` and every `.vdplugin` package `plugin.ts` loads from `~/.vitadeck/plugins/` or `--plugin` (reloading them on change through `setPlugins`), `install`/`remove`, which unpack and delete those packages, and `link`, which POSTs the link payload from `link.ts` and records the Vita in `config.ts`; `rolldown.config.mjs` bundles it with the SDK into one dependency-free `vitadeck-host-companion` bin.
+`cli.ts` runs `start`, which serves `POST /command` from `server.ts` over `core`, the built-in `systemStats` and every `.vdplugin` package `plugin.ts` loads from `~/.vitadeck/plugins/` or `--plugin` (reloading them on change through `setPlugins`), `install`/`remove`, which unpack and delete those packages, and `link`, which POSTs the link payload from `link.ts` and records the Vita in `config.ts`; `rolldown.config.mjs` bundles it with the SDK into one dependency-free `vitadeck-host-companion` bin. `notify` sends a `core` notice, `core.events` and `core.notify` live in `core.ts`, and the server starts plugin lifecycles once the port is bound and stops them on reload or close.
 
 Depends on:
 - 01 Wire contract and SDK client (`sdk-contract`)
 
 [groups/companion.md](groups/companion.md)
 
-### 03 SDK CLI: build Host Plugin packages, with or without a Deck App (`sdk-cli`)
+### 03 Events from the computer by long-polling (`events`)
+
+`events.ts` numbers each plugin's last 100 events and holds a `core.events` wait until that plugin's next one or 25 s, and `fetch.c` aborts pending fetches through curl's progress callback when a Deck App stops, which `js_limits_harness` proves with a server that never answers.
+
+Depends on:
+- 01 Wire contract and SDK client (`sdk-contract`)
+- 02 Host Companion: vitadeck-host-companion, built-ins and plugin packages (`companion`)
+
+[groups/events.md](groups/events.md)
+
+### 04 SDK CLI: build Host Plugin packages, with or without a Deck App (`sdk-cli`)
 
 `hostPlugin: { entry, files? }` in `vitadeck.config.json` makes `build` bundle the entry into a staged `<slug>.vdplugin` folder with `manifest.json` and `files/`, swap it in and zip it, `entry` becomes optional so a plugin-only project builds and `dev`s alone, and `create --host-plugin` / `--host-plugin-only` scaffold the two layouts from the `host-plugin` and `host-plugin-only` templates.
 
@@ -115,7 +130,7 @@ Depends on:
 
 [groups/sdk-cli.md](groups/sdk-cli.md)
 
-### 04 Shared native helpers moved out of upload and storage (`native-shared`)
+### 05 Shared native helpers moved out of upload and storage (`native-shared`)
 
 Upload's HTTP helpers move to `src/net/http.c`, its LAN address detection to `src/platform/lan_address_*`, jimp and JSON escaping to `src/core/json.c`, and Deck App Storage's replace-file logic to `vd_replace_file` in `src/core/util.c`.
 
@@ -124,35 +139,35 @@ Depends on:
 
 [groups/native-shared.md](groups/native-shared.md)
 
-### 05 Link listener, store and native getter (`native-link`)
+### 06 Link listener, store and native getter (`native-link`)
 
 `listener.c` accepts one `POST /link` on 8798+, `link.c` validates it and stores up to 4 links through `vd_replace_file`, and `nativeGetHostControlLinks` in `jslib/host_control.c` hands the list to the SDK client.
 
 Depends on:
-- 04 Shared native helpers moved out of upload and storage (`native-shared`)
+- 05 Shared native helpers moved out of upload and storage (`native-shared`)
 
 [groups/native-link.md](groups/native-link.md)
 
-### 06 Shell Host Control entry and screen (`shell`)
+### 07 Shell Host Control entry and screen (`shell`)
 
 A Host Control row after Upload opens `VD_SHELL_HOST_CONTROL`, which starts the listener, shows the address, status and linked computers, and stops the listener on a link, Circle, Start or shutdown.
 
 Depends on:
-- 05 Link listener, store and native getter (`native-link`)
+- 06 Link listener, store and native getter (`native-link`)
 
 [groups/shell.md](groups/shell.md)
 
-### 07 host-control example Deck App (`demo`)
+### 08 host-control example Deck App (`demo`)
 
-`App.tsx` polls `linkedHosts()` and each host's built-in `systemStats.read`, imported from the SDK, lists the computers with live CPU, and shows the selected one's capabilities, gauges and an Echo round trip.
+`App.tsx` polls `linkedHosts()` and each host's built-in `systemStats.read`, imported from the SDK, lists the computers with live CPU, and shows the selected one's capabilities, gauges and an Echo round trip, plus the latest `core` notice it watches with `watchHostEvents`.
 
 Depends on:
 - 02 Host Companion: vitadeck-host-companion, built-ins and plugin packages (`companion`)
 
 [groups/demo.md](groups/demo.md)
 
-### 08 Glossary, ADR, agent skills and checks (`docs`)
+### 09 Glossary, ADR, agent skills and checks (`docs`)
 
-`CONTEXT.md` adds the Host Control Plugin, Host Plugin Package, Link Listener and Shell terms, ADR 0004 is rewritten for plugins, built-ins, `.vdplugin` packages, standalone plugins, two CLIs and several links, the new public `vitadeck-host-control` skill and updates to the init, manual-testing, upload and build skills teach agents the feature, `AGENTS.md` lists the new code and skill, and `agent-check.sh fast` runs `test:host-companion`.
+`CONTEXT.md` adds the Host Control Event, Host Control Plugin, Host Plugin Package, Link Listener and Shell terms, ADR 0004 is rewritten for plugins, long-polled events, built-ins, `.vdplugin` packages, standalone plugins, two CLIs and several links, the new public `vitadeck-host-control` skill and updates to the init, manual-testing, upload and build skills teach agents the feature, `AGENTS.md` lists the new code and skill, and `agent-check.sh fast` runs `test:host-companion`.
 
 [groups/docs.md](groups/docs.md)

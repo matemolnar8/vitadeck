@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify 0ec520145e1ff4657a25cec36682c2b86f5e6c15` in this repository.
+   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify 82350502701f2d0b032d12bca4aea02df9bf4dee` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 0ec520145e1ff4657a25cec36682c2b86f5e6c15 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 82350502701f2d0b032d12bca4aea02df9bf4dee -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,15 +25,15 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  a447e3b960dc1c5434b9fbc2f45c112b1c630b1f
 
-head               0ec520145e1ff4657a25cec36682c2b86f5e6c15
+head               82350502701f2d0b032d12bca4aea02df9bf4dee
 
-Named refs at pin: a447e3b9 ... 0ec52014
+Named refs at pin: a447e3b9 ... 82350502
 
 Read the diff:
 
-git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 0ec520145e1ff4657a25cec36682c2b86f5e6c15
+git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 82350502701f2d0b032d12bca4aea02df9bf4dee
 
-Review concern 02 of 08: Host Companion: vitadeck-host-companion, built-ins and plugin packages (`companion`)
+Review concern 02 of 09: Host Companion: vitadeck-host-companion, built-ins and plugin packages (`companion`)
 
 The why:
 
@@ -41,7 +41,7 @@ Slice B: the long-lived listener on the computer that performs the link and runs
 
 The what:
 
-`cli.ts` runs `start`, which serves `POST /command` from `server.ts` over `core`, the built-in `systemStats` and every `.vdplugin` package `plugin.ts` loads from `~/.vitadeck/plugins/` or `--plugin` (reloading them on change through `setPlugins`), `install`/`remove`, which unpack and delete those packages, and `link`, which POSTs the link payload from `link.ts` and records the Vita in `config.ts`; `rolldown.config.mjs` bundles it with the SDK into one dependency-free `vitadeck-host-companion` bin.
+`cli.ts` runs `start`, which serves `POST /command` from `server.ts` over `core`, the built-in `systemStats` and every `.vdplugin` package `plugin.ts` loads from `~/.vitadeck/plugins/` or `--plugin` (reloading them on change through `setPlugins`), `install`/`remove`, which unpack and delete those packages, and `link`, which POSTs the link payload from `link.ts` and records the Vita in `config.ts`; `rolldown.config.mjs` bundles it with the SDK into one dependency-free `vitadeck-host-companion` bin. `notify` sends a `core` notice, `core.events` and `core.notify` live in `core.ts`, and the server starts plugin lifecycles once the port is bound and stops them on reload or close.
 
 Look for:
 - Subtle: `HostCommandError` is matched by `name` and wire `code`, not `instanceof`, because each package bundles its own copy of the class.
@@ -49,6 +49,7 @@ Look for:
 - `install` stages into `.install-*` inside the plugins folder, validates, then renames to `<id>.vdplugin`; the extractor refuses several roots, backslashes, empty segments and `..`, ignores `__MACOSX/`, and keeps no file modes.
 - Paths resolve against `INIT_CWD` only under the repo's own `host-companion` script; elsewhere against the working directory.
 - On macOS `systemStats` counts free, inactive and speculative `vm_stat` pages as available; elsewhere it uses `os.freemem()`, which reads `MemAvailable` on Linux.
+- `core.events` answers `unknown_plugin` for a plugin the companion has not loaded, so a Deck App watching a missing plugin finds out instead of waiting forever.
 
 Depends on:
 - 01 Wire contract and SDK client (`sdk-contract`)

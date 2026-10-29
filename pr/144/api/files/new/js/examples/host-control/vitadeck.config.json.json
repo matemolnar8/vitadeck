@@ -1,1 +1,1 @@
-{"path":"js/examples/host-control/vitadeck.config.json","ref":"0ec520145e1ff4657a25cec36682c2b86f5e6c15","side":"new","content":"{\n  \"name\": \"Host Control\",\n  \"entry\": \"./src/App.tsx\",\n  \"outDir\": \"./dist\"\n}\n","language":"json"}
+{"path":"js/examples/host-control/vitadeck.config.json","ref":"82350502701f2d0b032d12bca4aea02df9bf4dee","side":"new","content":"{\n  \"name\": \"Host Control\",\n  \"entry\": \"./src/App.tsx\",\n  \"outDir\": \"./dist\"\n}\n","language":"json"}

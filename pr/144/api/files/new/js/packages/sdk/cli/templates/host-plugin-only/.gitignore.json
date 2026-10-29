@@ -1,1 +1,1 @@
-{"path":"js/packages/sdk/cli/templates/host-plugin-only/.gitignore","ref":"0ec520145e1ff4657a25cec36682c2b86f5e6c15","side":"new","content":"node_modules/\ndist/\n.DS_Store\n","language":"plaintext"}
+{"path":"js/packages/sdk/cli/templates/host-plugin-only/.gitignore","ref":"82350502701f2d0b032d12bca4aea02df9bf4dee","side":"new","content":"node_modules/\ndist/\n.DS_Store\n","language":"plaintext"}

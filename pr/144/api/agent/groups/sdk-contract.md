@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify 0ec520145e1ff4657a25cec36682c2b86f5e6c15` in this repository.
+   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify 82350502701f2d0b032d12bca4aea02df9bf4dee` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 0ec520145e1ff4657a25cec36682c2b86f5e6c15 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 82350502701f2d0b032d12bca4aea02df9bf4dee -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,15 +25,15 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  a447e3b960dc1c5434b9fbc2f45c112b1c630b1f
 
-head               0ec520145e1ff4657a25cec36682c2b86f5e6c15
+head               82350502701f2d0b032d12bca4aea02df9bf4dee
 
-Named refs at pin: a447e3b9 ... 0ec52014
+Named refs at pin: a447e3b9 ... 82350502
 
 Read the diff:
 
-git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 0ec520145e1ff4657a25cec36682c2b86f5e6c15
+git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 82350502701f2d0b032d12bca4aea02df9bf4dee
 
-Review concern 01 of 08: Wire contract and SDK client (`sdk-contract`)
+Review concern 01 of 09: Wire contract and SDK client (`sdk-contract`)
 
 The why:
 
@@ -41,10 +41,11 @@ Slice A: the contract every other piece speaks, and the client Deck Apps call ([
 
 The what:
 
-`createHostClient` in `client.ts` turns a `defineHostPlugin` registry from `plugin.ts` into typed methods that POST the `protocol.ts` envelope and map every failure to a `HostResult`, while `plugin.ts` also gives plugin authors `implementHostPlugin`, `HostCommandError` and the `HostPluginManifest` contract, and `system-stats.ts` holds the built-in `systemStats` registry.
+`createHostClient` in `client.ts` turns a `defineHostPlugin` registry from `plugin.ts` into typed methods that POST the `protocol.ts` envelope and map every failure to a `HostResult`, and `watchHostEvents` keeps one `core.events` wait open per watcher; `plugin.ts` also gives authors typed `event<D>()` declarations, `implementHostPlugin` with a `start(emit)` lifecycle, `HostCommandError` and the `HostPluginManifest` contract, and `system-stats.ts` holds the built-in `systemStats` registry.
 
 Look for:
 - `implementHostPlugin` and `HostCommandError` sit in the same subpath Deck Apps bundle; rolldown tree-shakes them from apps that never call them.
+- A throw from a `watchHostEvents` callback stops watching and fails the Deck App, like a throw from any other author callback; a `stop()` from a callback ends delivery before the next event or wait.
 
 Hunk refs for this concern:
 - js/packages/sdk/src/host-control/protocol.ts

@@ -1,1 +1,1 @@
-{"path":"js/packages/host-companion/test/fixtures/greeting.d.cts","ref":"0ec520145e1ff4657a25cec36682c2b86f5e6c15","side":"new","content":"export declare function greeting(name: string): string;\n","language":"typescript"}
+{"path":"js/packages/host-companion/test/fixtures/greeting.d.cts","ref":"82350502701f2d0b032d12bca4aea02df9bf4dee","side":"new","content":"export declare function greeting(name: string): string;\n","language":"typescript"}
