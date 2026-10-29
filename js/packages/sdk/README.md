@@ -123,7 +123,7 @@ A plugin does not need a Deck App. `create --host-plugin-only` scaffolds a proje
 npx @vitadeck/sdk create lights --host-plugin-only
 ```
 
-`build` writes only `dist/lights.vdplugin` and `dist/lights.vdplugin.zip`, and `dev` rebuilds them on every save without a Runtime Upload URL; `pnpm host` runs them in a companion. The project's `package.json` exports `host/plugin.ts` and takes `@vitadeck/sdk` as a peer dependency, so a Deck App adds the project as a dependency (a local path such as `pnpm add ../lights`, a git URL, or npm once you remove `"private": true`) and imports the commands with its own copy of the SDK:
+`build` writes only `dist/lights.vdplugin` and `dist/lights.vdplugin.zip`, and `dev` rebuilds them on every save without a Runtime Upload URL; `pnpm host` runs them in a companion. The project's `package.json` exports `host/plugin.ts`, so a Deck App adds the project as a dependency (a local path such as `pnpm add ../lights`, a git URL, or npm once you remove `"private": true`) and imports the commands. Installed from git or npm, the plugin uses the Deck App's `@vitadeck/sdk`, its peer dependency; a linked local path uses the plugin's own copy, which only costs a few bytes in the bundle.
 
 ```tsx
 import { createHostClient } from "@vitadeck/sdk/host-control";
