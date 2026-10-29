@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify 51440f28e10cf982764134aff0b4d94aa23743df` in this repository.
+   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify 0ec520145e1ff4657a25cec36682c2b86f5e6c15` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,16 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  a447e3b960dc1c5434b9fbc2f45c112b1c630b1f
 
-head               51440f28e10cf982764134aff0b4d94aa23743df
+head               0ec520145e1ff4657a25cec36682c2b86f5e6c15
 
-Named refs at pin: a447e3b9 ... 51440f28
+Named refs at pin: a447e3b9 ... 0ec52014
 
 Read the diff:
 
-git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 51440f28e10cf982764134aff0b4d94aa23743df
+git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 0ec520145e1ff4657a25cec36682c2b86f5e6c15
 
 Commits:
+- 0ec52014 docs(skills): add vitadeck-host-control and cover Host Control in the others
 - 51440f28 test(sdk): pin the standalone plugin's peer SDK and exclusive create flags
 - 5820312a docs(sdk): say which SDK copy a linked standalone plugin uses
 - 607fcd29 fix(sdk): standalone plugins take the SDK as a peer dependency
@@ -150,8 +151,8 @@ Depends on:
 
 [groups/demo.md](groups/demo.md)
 
-### 08 Glossary, ADR and checks (`docs`)
+### 08 Glossary, ADR, agent skills and checks (`docs`)
 
-`CONTEXT.md` adds the Host Control Plugin, Host Plugin Package, Link Listener and Shell terms, ADR 0004 is rewritten for plugins, built-ins, `.vdplugin` packages, standalone plugins, two CLIs and several links, `AGENTS.md` lists the new code, and `agent-check.sh fast` runs `test:host-companion`.
+`CONTEXT.md` adds the Host Control Plugin, Host Plugin Package, Link Listener and Shell terms, ADR 0004 is rewritten for plugins, built-ins, `.vdplugin` packages, standalone plugins, two CLIs and several links, the new public `vitadeck-host-control` skill and updates to the init, manual-testing, upload and build skills teach agents the feature, `AGENTS.md` lists the new code and skill, and `agent-check.sh fast` runs `test:host-companion`.
 
 [groups/docs.md](groups/docs.md)
