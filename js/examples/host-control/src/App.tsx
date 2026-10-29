@@ -1,12 +1,13 @@
-import { systemStatsPlugin, type SystemStats } from "@vitadeck/host-plugin-system-stats";
 import { Button, Rect, Screen, Stack, Text, insetContent, useTheme, type Color } from "@vitadeck/sdk";
 import {
   corePlugin,
   createHostClient,
   linkedHosts,
+  systemStatsPlugin,
   type HostCapabilities,
   type HostResult,
   type LinkedHost,
+  type SystemStats,
 } from "@vitadeck/sdk/host-control";
 import React, { useEffect, useState } from "react";
 
@@ -87,11 +88,9 @@ function Gauge({ label, percent, detail }: { label: string; percent: number; det
 
 function failureHint(result: HostResult<object>): string {
   if (result.ok) return "";
-  if (result.code === "unknown_plugin")
-    return "Load @vitadeck/host-plugin-system-stats in that computer's Host Companion.";
   if (result.code === "forbidden") return "This Vita's address changed. Link it again from Host Control in the Shell.";
   if (result.code === "unreachable" || result.code === "timeout")
-    return "Is the Host Companion running? pnpm --dir js host-companion start";
+    return "Is the Host Companion running? vitadeck-host-companion start";
   return "";
 }
 
@@ -214,7 +213,7 @@ export default function HostControlDeckApp() {
           {hosts.length === 0 && (
             <Text fontSize={16} color={theme.outline} width={LIST_W} wrap="word">
               {
-                "No computer is linked.\n\n1. On the computer: pnpm --dir js host-companion start\n2. Press Start, open Host Control in the Shell.\n3. On the computer, run the link command it shows."
+                "No computer is linked.\n\n1. On the computer: vitadeck-host-companion start\n2. Press Start, open Host Control in the Shell.\n3. On the computer, run the link command it shows."
               }
             </Text>
           )}

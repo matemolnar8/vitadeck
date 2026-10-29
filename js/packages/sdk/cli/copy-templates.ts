@@ -8,6 +8,9 @@ const destRoot = path.join(pkgRoot, "dist/templates");
 
 const sdkPkg = JSON.parse(await readFile(path.join(pkgRoot, "package.json"), "utf8")) as { version: string };
 const sdkVersion = sdkPkg.version;
+const companionPkg = JSON.parse(await readFile(path.join(pkgRoot, "../host-companion/package.json"), "utf8")) as {
+  version: string;
+};
 
 function skipTemplateDir(name: string): boolean {
   return name === "node_modules" || name === "dist";
@@ -35,6 +38,10 @@ async function copyTree(rel = ""): Promise<void> {
           if (pkg.dependencies?.["@vitadeck/sdk"] === "workspace:*") {
             pkg.dependencies["@vitadeck/sdk"] = `^${sdkVersion}`;
           }
+          await writeFile(dest, `${JSON.stringify(pkg, null, 2)}\n`);
+        } else if (relPosix === "host-plugin/package.json") {
+          const pkg = JSON.parse(await readFile(src, "utf8")) as { devDependencies: Record<string, string> };
+          pkg.devDependencies["@vitadeck/host-companion"] = `^${companionPkg.version}`;
           await writeFile(dest, `${JSON.stringify(pkg, null, 2)}\n`);
         } else {
           await copyFile(src, dest);

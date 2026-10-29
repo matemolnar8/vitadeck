@@ -3,19 +3,30 @@ import { readFile, readdir } from "node:fs/promises";
 import { networkInterfaces } from "node:os";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { systemStatsPlugin } from "@vitadeck/host-plugin-system-stats";
-import { corePlugin, createHostClient, defineHostPlugin, command, isAbsent } from "@vitadeck/sdk/host-control";
-import { implementHostPlugin } from "../src/index";
-import { loadHostPlugin } from "../src/plugin";
+import {
+  command,
+  corePlugin,
+  createHostClient,
+  defineHostPlugin,
+  implementHostPlugin,
+  isAbsent,
+  systemStatsPlugin,
+} from "@vitadeck/sdk/host-control";
+import { loadHostPluginFile } from "../src/plugin";
 import { MAX_REQUEST_BYTES, startHostCompanion, type HostCompanionOptions } from "../src/server";
+import { systemStats } from "../src/system-stats";
 import { greeterPlugin } from "./fixtures/greeter-plugin";
+import { buildGreeterPluginFile, tempDir, writeTempFile } from "./fixtures/plugin-file";
 
 type Fixture = { request: unknown; status: number; response: unknown };
 
 const fixturesDir = fileURLToPath(new URL("../../../../tests/fixtures/host-control/", import.meta.url));
-const packageDir = fileURLToPath(new URL("..", import.meta.url));
 
 async function companion(t: test.TestContext, options: Partial<HostCompanionOptions> = {}) {
+  return `http://127.0.0.1:${(await runningCompanion(t, options)).port}/`;
+}
+
+async function runningCompanion(t: test.TestContext, options: Partial<HostCompanionOptions> = {}) {
   const running = await startHostCompanion({
     port: 0,
     host: "127.0.0.1",
@@ -25,7 +36,7 @@ async function companion(t: test.TestContext, options: Partial<HostCompanionOpti
     ...options,
   });
   t.after(() => running.close());
-  return `http://127.0.0.1:${running.port}/`;
+  return running;
 }
 
 async function post(url: string, body: string, headers?: Record<string, string>) {
@@ -105,8 +116,7 @@ void test("rejects a wrong method, content type, route, and malformed JSON", asy
 });
 
 void test("serves the SDK client for core and system stats", async (t) => {
-  const plugin = await loadHostPlugin("@vitadeck/host-plugin-system-stats", packageDir);
-  const url = await companion(t, { plugins: [plugin] });
+  const url = await companion(t, { plugins: [systemStats] });
 
   const core = createHostClient(corePlugin, { url });
   assert.deepEqual(await core.echo({ text: "hello" }), { ok: true, text: "hello" });
@@ -117,9 +127,9 @@ void test("serves the SDK client for core and system stats", async (t) => {
     { id: "systemStats", commands: ["read"] },
   ]);
 
-  const systemStats = createHostClient(systemStatsPlugin, { url });
+  const client = createHostClient(systemStatsPlugin, { url });
   // The first read samples the CPU twice; later reads measure since the previous one.
-  for (const stats of [await systemStats.read(), await systemStats.read()]) {
+  for (const stats of [await client.read(), await client.read()]) {
     assert.ok(stats.ok);
     assert.ok(stats.cpuPercent >= 0 && stats.cpuPercent <= 100);
     assert.equal(stats.cpuPercent, Math.round(stats.cpuPercent * 10) / 10);
@@ -129,8 +139,8 @@ void test("serves the SDK client for core and system stats", async (t) => {
   }
 });
 
-void test("loads a plugin from a file path and maps implementation throws", async (t) => {
-  const plugin = await loadHostPlugin("./test/fixtures/greeter-plugin.ts", packageDir);
+void test("loads a bundled Host Plugin File and maps its throws, including its own HostCommandError", async (t) => {
+  const plugin = await loadHostPluginFile(await buildGreeterPluginFile(t));
   const url = await companion(t, { plugins: [plugin] });
   const greeter = createHostClient(greeterPlugin, { url });
 
@@ -143,8 +153,40 @@ void test("loads a plugin from a file path and maps implementation throws", asyn
   });
 });
 
-void test("rejects a module that does not default-export an implementation", async () => {
-  await assert.rejects(loadHostPlugin("./src/core.ts", packageDir), /does not default-export implementHostPlugin/u);
+void test("rejects a file that is not a Host Plugin File", async (t) => {
+  const dir = await tempDir(t);
+  await assert.rejects(
+    loadHostPluginFile(await writeTempFile(dir, "number.vdplugin", "export default 1;\n")),
+    /does not default-export implementHostPlugin/u,
+  );
+  await assert.rejects(
+    loadHostPluginFile(await writeTempFile(dir, "broken.vdplugin", "export default {\n")),
+    /broken\.vdplugin failed to load/u,
+  );
+  await assert.rejects(
+    loadHostPluginFile(
+      await writeTempFile(dir, "escape.vdplugin", 'export default { id: "../x", commands: new Map() };\n'),
+    ),
+    /has plugin id "\.\.\/x"/u,
+  );
+});
+
+void test("setPlugins swaps the plugins, keeping core, and keeps them when ids clash", async (t) => {
+  const running = await runningCompanion(t);
+  const core = createHostClient(corePlugin, { url: `http://127.0.0.1:${running.port}/` });
+  const ids = async () => {
+    const capabilities = await core.capabilities();
+    assert.ok(capabilities.ok);
+    return capabilities.plugins.map((plugin) => plugin.id);
+  };
+
+  assert.deepEqual(await ids(), ["core"]);
+  running.setPlugins([systemStats]);
+  assert.deepEqual(await ids(), ["core", "systemStats"]);
+  assert.throws(() => {
+    running.setPlugins([systemStats, systemStats]);
+  }, /share the id systemStats/u);
+  assert.deepEqual(await ids(), ["core", "systemStats"]);
 });
 
 void test("refuses two plugins with the same id", async () => {

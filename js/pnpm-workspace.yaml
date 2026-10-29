@@ -2,7 +2,6 @@ packages:
   - "packages/*"
   - "packages/sdk/cli/templates/scaffold"
   - "examples/*"
-  - "host-plugins/*"
 
 catalog:
   "@babel/preset-react": 7.29.7

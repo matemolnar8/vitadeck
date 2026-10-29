@@ -3,7 +3,15 @@ import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { cliPath, execFileText, tsxBin } from "./test-project";
+import {
+  cliPath,
+  execFileText,
+  linkDependency,
+  linkSdk,
+  linkSdkBuildDependencies,
+  tscBin,
+  tsxBin,
+} from "./test-project";
 
 async function runCli(cwd: string, args: string[]): Promise<{ ok: boolean; output: string }> {
   try {
@@ -60,4 +68,68 @@ void test("create scaffolds into a new directory", async (t) => {
   const result = await runCli(cwd, ["create", "my-app"]);
   assert.equal(result.ok, true, result.output);
   assert.ok((await readdir(path.join(cwd, "my-app"))).includes("vitadeck.config.json"));
+});
+
+void test("create --host-plugin scaffolds a Deck App and Host Plugin that typecheck, build and run", async (t) => {
+  const cwd = await makeTempDir(t);
+  const created = await runCli(cwd, ["create", "my-app", "--host-plugin"]);
+  assert.equal(created.ok, true, created.output);
+  const projectRoot = path.join(cwd, "my-app");
+
+  const config = JSON.parse(await readFile(path.join(projectRoot, "vitadeck.config.json"), "utf8")) as unknown;
+  assert.deepEqual(config, {
+    name: "my-app",
+    entry: "./src/App.tsx",
+    outDir: "./dist",
+    hostPlugin: "./host/companion.ts",
+  });
+  const pkg = JSON.parse(await readFile(path.join(projectRoot, "package.json"), "utf8")) as {
+    scripts: Record<string, string>;
+    devDependencies: Record<string, string>;
+  };
+  assert.equal(pkg.scripts.host, "vitadeck build && vitadeck-host-companion start --plugin ./dist/my-app.vdplugin");
+  assert.equal(pkg.scripts.build, "vitadeck build");
+  assert.ok("@vitadeck/host-companion" in pkg.devDependencies);
+  assert.ok("typescript" in pkg.devDependencies);
+
+  await linkSdk(projectRoot);
+  await linkSdkBuildDependencies(projectRoot);
+  await Promise.all(["react", "@types/react", "@types/node"].map((name) => linkDependency(projectRoot, name)));
+  await execFileText(tscBin, ["-p", "."], { cwd: projectRoot });
+  await execFileText(tscBin, ["-p", "host"], { cwd: projectRoot });
+
+  const built = await runCli(projectRoot, ["build", "--no-zip"]);
+  assert.equal(built.ok, true, built.output);
+  assert.match(built.output, /Wrote dist\/my-app\.vdplugin/u);
+  const source = await readFile(path.join(projectRoot, "dist", "my-app.vdplugin"));
+  assert.doesNotMatch(source.toString("utf8"), /from "@vitadeck\/sdk/u, "the plugin file must be self-contained");
+  const plugin = (
+    (await import(`data:text/javascript;base64,${source.toString("base64")}`)) as {
+      default: {
+        id: string;
+        commands: Map<string, { isPayload: (value: unknown) => boolean; run: (payload: unknown) => unknown }>;
+      };
+    }
+  ).default;
+  assert.equal(plugin.id, "my-app");
+  const greet = plugin.commands.get("greet");
+  assert.ok(greet);
+  assert.equal(greet.isPayload({ name: "Vita" }), true);
+  assert.equal(greet.isPayload({}), false);
+  assert.deepEqual(await greet.run({ name: "Vita" }), { message: `Hello Vita, this is ${os.hostname()}.` });
+});
+
+void test("build fails clearly when hostPlugin points at a missing file", async (t) => {
+  const cwd = await makeTempDir(t);
+  assert.equal((await runCli(cwd, ["create", "my-app"])).ok, true);
+  const projectRoot = path.join(cwd, "my-app");
+  const configPath = path.join(projectRoot, "vitadeck.config.json");
+  const config = JSON.parse(await readFile(configPath, "utf8")) as Record<string, unknown>;
+  await writeFile(configPath, JSON.stringify({ ...config, hostPlugin: "./host/missing.ts" }));
+  await linkSdkBuildDependencies(projectRoot);
+  await linkDependency(projectRoot, "react");
+
+  const built = await runCli(projectRoot, ["build"]);
+  assert.equal(built.ok, false, built.output);
+  assert.match(built.output, /hostPlugin file is missing/u);
 });

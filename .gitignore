@@ -12,6 +12,7 @@ module/*.suprx
 
 js/dist
 js/packages/sdk/dist
+js/packages/host-companion/dist
 js/examples/*/dist
 js/examples/*/.vitadeck
 js/examples/chat/src/genesys/genesys.local.ts

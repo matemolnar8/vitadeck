@@ -143,7 +143,7 @@ void test("refuses to link before start is running", async (t) => {
   assert.equal(outcome.ok, false);
   assert.match(
     outcome.message,
-    /^No Host Companion answers on port \d+ .*Run `pnpm --dir js host-companion start` first\.$/u,
+    /^No Host Companion answers on port \d+ .*Run `vitadeck-host-companion start` first\.$/u,
   );
 });
 

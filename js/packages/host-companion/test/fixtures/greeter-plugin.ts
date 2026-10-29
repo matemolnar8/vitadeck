@@ -1,5 +1,11 @@
-import { command, defineHostPlugin, isAbsent, isRecord } from "@vitadeck/sdk/host-control";
-import { HostCommandError, implementHostPlugin } from "../../src/index";
+import {
+  HostCommandError,
+  command,
+  defineHostPlugin,
+  implementHostPlugin,
+  isAbsent,
+  isRecord,
+} from "@vitadeck/sdk/host-control";
 
 export const greeterPlugin = defineHostPlugin("greeter", {
   greet: command<{ name: string }, { greeting: string }>(

@@ -5,10 +5,11 @@ import {
   HOST_CONTROL_PROTOCOL_VERSION,
   HOST_CONTROL_WIRE_ERRORS,
   isRecord,
+  isWireErrorCode,
   type HostControlWireErrorCode,
+  type ImplementedHostPlugin,
 } from "@vitadeck/sdk/host-control";
 import { implementCorePlugin } from "./core";
-import { HostCommandError, type ImplementedHostPlugin } from "./plugin";
 
 export const MAX_REQUEST_BYTES = 64 * 1024;
 
@@ -27,6 +28,8 @@ export type HostCompanionOptions = {
 
 export type RunningHostCompanion = {
   port: number;
+  /** Replaces every plugin but `core`, or throws and keeps the current ones. */
+  setPlugins: (plugins: readonly ImplementedHostPlugin[]) => void;
   close: () => Promise<void>;
 };
 
@@ -64,6 +67,13 @@ function readBody(request: IncomingMessage): Promise<Buffer | undefined> {
   });
 }
 
+/** Matched by shape, since a Host Plugin File throws its own bundled copy of `HostCommandError`. */
+function wireErrorCode(error: unknown): HostControlWireErrorCode | undefined {
+  return error instanceof Error && error.name === "HostCommandError" && "code" in error && isWireErrorCode(error.code)
+    ? error.code
+    : undefined;
+}
+
 function parseJson(text: string): unknown {
   try {
     return JSON.parse(text);
@@ -83,16 +93,18 @@ export async function startHostCompanion(options: HostCompanionOptions): Promise
     },
   } = options;
 
-  const loaded: ImplementedHostPlugin[] = [];
-  loaded.push(
-    implementCorePlugin(name, platform, () => loaded),
-    ...(options.plugins ?? []),
-  );
-  const plugins = new Map<string, ImplementedHostPlugin>();
-  for (const plugin of loaded) {
-    if (plugins.has(plugin.id)) throw new Error(`Two loaded plugins share the id ${plugin.id}.`);
-    plugins.set(plugin.id, plugin);
+  let plugins = new Map<string, ImplementedHostPlugin>();
+  const core = implementCorePlugin(name, platform, () => [...plugins.values()]);
+
+  function setPlugins(next: readonly ImplementedHostPlugin[]): void {
+    const byId = new Map([[core.id, core]]);
+    for (const plugin of next) {
+      if (byId.has(plugin.id)) throw new Error(`Two loaded plugins share the id ${plugin.id}.`);
+      byId.set(plugin.id, plugin);
+    }
+    plugins = byId;
   }
+  setPlugins(options.plugins ?? []);
 
   async function isAllowed(peer: string): Promise<boolean> {
     const linked = await vitas();
@@ -146,8 +158,8 @@ export async function startHostCompanion(options: HostCompanionOptions): Promise
       const result = await command.run(envelope.payload);
       return { status: 200, label, outcome: "ok", body: { ...result, ok: true } };
     } catch (error) {
-      if (error instanceof HostCommandError) return fail(label, error.code, error.message);
-      return fail(label, "command_failed", error instanceof Error ? error.message : String(error));
+      const message = error instanceof Error ? error.message : String(error);
+      return fail(label, wireErrorCode(error) ?? "command_failed", message);
     }
   }
 
@@ -190,6 +202,7 @@ export async function startHostCompanion(options: HostCompanionOptions): Promise
 
   return {
     port: (server.address() as AddressInfo).port,
+    setPlugins,
     close: () =>
       new Promise((resolve, reject) => {
         server.close((error) => {

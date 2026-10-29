@@ -1,5 +1,4 @@
-// Bundled into Deck Apps that run on QuickJS: no Node APIs in this file.
-import { command, defineHostPlugin, isAbsent } from "@vitadeck/sdk/host-control";
+import { command, defineHostPlugin, isAbsent } from "./plugin";
 
 export type SystemStats = {
   cpuPercent: number;
@@ -8,7 +7,7 @@ export type SystemStats = {
   uptimeSeconds: number;
 };
 
-/** Read-only gauges of the linked computer. */
+/** Built into every Host Companion: read-only gauges of the computer. */
 export const systemStatsPlugin = defineHostPlugin("systemStats", {
   read: command<undefined, SystemStats>(isAbsent),
 });

@@ -2,19 +2,22 @@
   "name": "@vitadeck/host-companion",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
+  "bin": {
+    "vitadeck-host-companion": "./dist/cli.mjs"
+  },
+  "files": [
+    "dist"
+  ],
   "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  },
   "scripts": {
+    "build": "rolldown -c rolldown.config.mjs",
     "tsc": "tsc -p tsconfig.json"
-  },
-  "dependencies": {
-    "@vitadeck/host-plugin-system-stats": "workspace:*",
-    "@vitadeck/sdk": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "@vitadeck/sdk": "workspace:*",
+    "rolldown": "catalog:",
     "typescript": "catalog:"
   }
 }

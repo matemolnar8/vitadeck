@@ -1,24 +1,45 @@
 # VitaDeck Host Companion
 
-The Host Companion runs on a Mac, Windows or Linux computer near your Vita. A Deck App sends it **Host Control** commands over the LAN, and the companion runs them on the computer. It is not published to npm yet; run it from a VitaDeck checkout with Node.js 24 (`pnpm --dir js install` once).
+The Host Companion runs on a Mac, Windows or Linux computer near your Vita. A Deck App sends it **Host Control** commands over the LAN, and the companion runs them on the computer. It needs Node.js 24.
 
-**Security:** v1 trusts the LAN. There are no credentials: a link exchanges addresses and authorizes nothing, and IP checks can be spoofed. That is why the only plugins so far read information. Plugins that act on the computer (keys, launching apps) wait for the credential decision in [ADR 0004](../../../docs/adr/0004-host-control-sliced-delivery.md).
+```sh
+npm install -g @vitadeck/host-companion
+```
+
+It is not published to npm yet. From a VitaDeck checkout, `pnpm --dir js host-companion <command>` runs the same CLI.
+
+**Security:** v1 trusts the LAN. There are no credentials: a link exchanges addresses and authorizes nothing, and IP checks can be spoofed. That is why the built-in plugins only read information. Plugins that act on the computer (keys, launching apps) wait for the credential decision in [ADR 0004](../../../docs/adr/0004-host-control-sliced-delivery.md).
 
 ## Use
 
 ```sh
-pnpm --dir js host-companion start
+vitadeck-host-companion start
 ```
 
 Serves `POST /command` on every interface, port 8797. The port never moves to a free one, because the Vita stores the URL; if it is busy, `start` exits with an error. It prints its URLs, the loaded plugins, and one line per request (time, peer, `plugin.command`, result, duration). Payloads are never logged.
 
 ```sh
-pnpm --dir js host-companion link 192.168.1.177
+vitadeck-host-companion link 192.168.1.177
 ```
 
 Open Host Control in the VitaDeck Shell and pass the address it shows (add `:port` if it is not 8798). `link` checks that `start` is answering, then tells VitaDeck where to send commands. One Vita can link several computers, and one computer can link several Vitas.
 
-Options: `--port N` (both commands; use the same one for `link` if you started with it), `--plugin <specifier>` (repeatable, `start` only, in addition to the config), `--advertise <ip>` (`link` only), `--config <path>`.
+Options: `--port N` (`start` and `link`; use the same one for both), `--plugin <file.vdplugin>` (repeatable, `start` only), `--advertise <ip>` (`link` only), `--config <path>`.
+
+## Plugins
+
+Every companion has the built-in plugins: `core` (`capabilities`, `echo`) and `systemStats` (`read`: CPU, memory, uptime). A Deck App imports their registries from `@vitadeck/sdk/host-control`.
+
+A Deck App that needs more brings its own plugin as a **Host Plugin File** (`.vdplugin`), which its author ships next to the `.vdapp.zip`:
+
+```sh
+vitadeck-host-companion install lights.vdplugin
+vitadeck-host-companion remove lights
+```
+
+`install` copies the file to `~/.vitadeck/plugins/`, named by the plugin's id, and a running companion loads it at once. A plugin runs with your permissions on this computer, so install only plugins you trust.
+
+To write one, scaffold a Deck App with `npx @vitadeck/sdk create my-app --host-plugin`; the [SDK README](../sdk/README.md#host-control) explains the files. While you work on it, `start --plugin ./dist/my-app.vdplugin` loads your build, takes precedence over an installed copy, and reloads every time `vitadeck build` or `vitadeck dev` writes it. A broken build keeps the previous version running.
 
 ## Config
 
@@ -29,29 +50,14 @@ Options: `--port N` (both commands; use the same one for `link` if you started w
 - `port`: 8797.
 - `advertise`: the IP put in the link URL. `null` uses the interface your computer routes to the Vita, which skips VPN and Docker interfaces.
 - `vitas`: Vita IPs that `link` added. While it is empty, the companion answers everyone; once it is not, only those Vitas, loopback and this computer's own addresses get answers, and everyone else gets `forbidden`.
-- `plugins`: plugins to load next to the built-in `core` plugin. Defaults to `@vitadeck/host-plugin-system-stats`.
 
-## Plugins
-
-A **Host Control Plugin** is a package with two exports:
-
-- `.`: the registry a Deck App imports and passes to `createHostClient`. It is bundled into the Deck App and runs on QuickJS, so it imports only `@vitadeck/sdk/host-control`:
-
-  ```ts
-  export const lightsPlugin = defineHostPlugin("lights", {
-    toggle: command<{ room: string }, { on: boolean }>(isRoom),
-  });
-  ```
-
-- `./companion`: the implementation, which default-exports `implementHostPlugin(registry, implementations)` from `@vitadeck/host-companion`. A missing or mistyped implementation fails `tsc`. Throw `new HostCommandError("unsupported_platform", "...")` to answer with a specific code; any other throw answers `command_failed` with its message.
-
-Since `@vitadeck/host-companion` is not published, plugins live in this workspace under `js/host-plugins/`, with the companion as a `peerDependency`. [`system-stats`](../../host-plugins/system-stats) is the example. To load one, either add it to this package's `dependencies` and put its name in `plugins`, or give a path to its implementation file (relative to where you run the command): `--plugin ./js/host-plugins/lights/src/companion.ts`.
+Installed plugins live in `plugins/` next to the config file, so `--config` gives a second companion its own plugins too.
 
 ## Run in the background
 
-The companion has no installer or tray icon; let the OS start it at login. Replace `/path/to/vitadeck` with your checkout.
+The companion has no tray icon; let the OS start it at login.
 
-**macOS:** save as `~/Library/LaunchAgents/dev.vitadeck.host-companion.plist`, then `launchctl load ~/Library/LaunchAgents/dev.vitadeck.host-companion.plist`. The login shell finds `pnpm` the same way your terminal does.
+**macOS:** save as `~/Library/LaunchAgents/dev.vitadeck.host-companion.plist`, then `launchctl load ~/Library/LaunchAgents/dev.vitadeck.host-companion.plist`. The login shell finds `vitadeck-host-companion` the same way your terminal does.
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -62,7 +68,7 @@ The companion has no installer or tray icon; let the OS start it at login. Repla
   <key>ProgramArguments</key>
   <array>
     <string>/bin/zsh</string><string>-lc</string>
-    <string>pnpm --dir /path/to/vitadeck/js host-companion start</string>
+    <string>vitadeck-host-companion start</string>
   </array>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
@@ -75,7 +81,7 @@ The companion has no installer or tray icon; let the OS start it at login. Repla
 **Windows:** create a scheduled task that starts at log on:
 
 ```bat
-schtasks /Create /SC ONLOGON /TN "VitaDeck Host Companion" /TR "cmd /c pnpm --dir C:\path\to\vitadeck\js host-companion start"
+schtasks /Create /SC ONLOGON /TN "VitaDeck Host Companion" /TR "cmd /c vitadeck-host-companion start"
 ```
 
 **Linux:** save as `~/.config/systemd/user/vitadeck-host-companion.service`, then `systemctl --user enable --now vitadeck-host-companion`.
@@ -85,7 +91,7 @@ schtasks /Create /SC ONLOGON /TN "VitaDeck Host Companion" /TR "cmd /c pnpm --di
 Description=VitaDeck Host Companion
 
 [Service]
-ExecStart=/bin/bash -lc "pnpm --dir /path/to/vitadeck/js host-companion start"
+ExecStart=/bin/bash -lc "vitadeck-host-companion start"
 Restart=on-failure
 
 [Install]

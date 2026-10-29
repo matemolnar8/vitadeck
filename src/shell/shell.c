@@ -501,7 +501,7 @@ static void draw_host_control_screen(VdShell *shell)
     }
     y += SHELL_FONT_BODY + SHELL_SPACE_XS;
     if (host_control_listener_is_running(listener)) {
-        snprintf(line, sizeof(line), "On the computer: pnpm --dir js host-companion link %s", address);
+        snprintf(line, sizeof(line), "On the computer: vitadeck-host-companion link %s", address);
         DrawText(line, SHELL_PADDING, y, SHELL_FONT_CAPTION, (Color){130, 140, 160, 255});
     } else if (!bind_failed) {
         DrawText("To link another computer, go Back and open Host Control again.", SHELL_PADDING, y, SHELL_FONT_CAPTION,

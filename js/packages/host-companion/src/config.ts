@@ -13,12 +13,15 @@ export type HostCompanionConfig = {
   advertise: string | null;
   /** Linked Vita IPs. Once non-empty, only these, loopback and this computer's addresses get answers. */
   vitas: string[];
-  /** Plugin specifiers: a path, or a package name whose `./companion` export is the implementation. */
-  plugins: string[];
 };
 
 export const DEFAULT_CONFIG_PATH = path.join(os.homedir(), ".vitadeck", "host-companion.json");
 export const DEFAULT_PORT = 8797;
+
+/** Where `install` puts Host Plugin Files: `plugins/` next to the config file. */
+export function installedPluginsDir(configPath: string): string {
+  return path.join(path.dirname(configPath), "plugins");
+}
 
 function defaults(): HostCompanionConfig {
   return {
@@ -27,7 +30,6 @@ function defaults(): HostCompanionConfig {
     port: DEFAULT_PORT,
     advertise: null,
     vitas: [],
-    plugins: ["@vitadeck/host-plugin-system-stats"],
   };
 }
 
@@ -45,7 +47,6 @@ const validators: { [K in keyof HostCompanionConfig]: (value: unknown) => value 
   port: isPort,
   advertise: (value): value is string | null => value === null || isNonEmptyString(value),
   vitas: isStringArray,
-  plugins: isStringArray,
 };
 
 /** Reads the config file; missing fields take their defaults, wrongly typed ones throw. */

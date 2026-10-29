@@ -1,3 +1,5 @@
+import type { HostControlWireErrorCode } from "./protocol";
+
 declare const resultType: unique symbol;
 
 /**
@@ -55,3 +57,51 @@ export const corePlugin = defineHostPlugin("core", {
     (value): value is { text: string } => isRecord(value) && typeof value.text === "string",
   ),
 });
+
+export type HostPluginImplementations<C extends HostCommandMap> = {
+  readonly [K in keyof C]: (payload: PayloadOf<C[K]>) => Promise<ResultOf<C[K]>> | ResultOf<C[K]>;
+};
+
+/**
+ * A Host Control Plugin with its implementation, as a Host Plugin File default-exports it. The Host Companion
+ * checks this shape rather than a class, since every Host Plugin File bundles its own copy of this module.
+ */
+export type ImplementedHostPlugin = {
+  readonly id: string;
+  readonly commands: ReadonlyMap<string, ImplementedHostCommand>;
+};
+
+type ImplementedHostCommand = {
+  readonly isPayload: (value: unknown) => boolean;
+  readonly run: (payload: unknown) => Promise<object> | object;
+};
+
+/** Thrown by an implementation to fail with a specific wire code. Any other throw answers `command_failed`. */
+export class HostCommandError extends Error {
+  readonly code: HostControlWireErrorCode;
+
+  constructor(code: HostControlWireErrorCode, message: string) {
+    super(message);
+    this.name = "HostCommandError";
+    this.code = code;
+  }
+}
+
+/** The computer side of a plugin: the default export of the file `hostPlugin` names in `vitadeck.config.json`. */
+export function implementHostPlugin<const C extends HostCommandMap>(
+  plugin: HostPlugin<C>,
+  implementations: HostPluginImplementations<C>,
+): ImplementedHostPlugin {
+  // The companion runs the guard first, so each implementation only sees its own payload type.
+  const runs = implementations as unknown as Record<
+    string,
+    ((payload: unknown) => object | Promise<object>) | undefined
+  >;
+  const commands = new Map<string, ImplementedHostCommand>();
+  for (const [name, definition] of Object.entries(plugin.commands)) {
+    const run = runs[name];
+    if (typeof run !== "function") throw new Error(`Plugin ${plugin.id} has no implementation for ${name}.`);
+    commands.set(name, { isPayload: (value) => definition.isPayload(value), run });
+  }
+  return { id: plugin.id, commands };
+}

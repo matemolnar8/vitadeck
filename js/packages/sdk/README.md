@@ -43,6 +43,7 @@ npx @vitadeck/sdk create <project-name>
 - `outDir` (required): parent folder for the built `.vdapp` folder and `.vdapp.zip`.
 - `version` (optional): semver written to the package manifest. Defaults to `version` in `package.json`.
 - `fonts` / `images` (optional): name → file path, relative to the project and inside it. Names start with a letter and use letters, digits, `_` or `-` (max 63 characters); `default` is reserved for fonts. Up to 32 of each. Fonts: `.ttf`, `.otf`, `.fnt`, `.bdf`. Images: `.png`, `.jpg`, `.jpeg`, `.bmp`, `.tga`, `.gif`, `.psd`, `.hdr`, `.pic`, `.qoi`. The build copies them into the package and fails if a file is missing.
+- `hostPlugin` (optional): the implementation of the Deck App's own Host Control Plugin, relative to the project (`.ts`, `.mts`, `.js` or `.mjs`). The build writes it to `<outDir>/<slug>.vdplugin`; see [Your own Host Plugin](#your-own-host-plugin).
 
 Reference assets by name, never by path: `<Text font="title" …>`, `<Button font="title" fontSize={24} …>`, `<Image image="logo" …>`.
 
@@ -84,20 +85,35 @@ function finish(score: number) {
 
 ## Host Control
 
-`@vitadeck/sdk/host-control` lets a Deck App call a computer on the same LAN that runs the [VitaDeck Host Companion](https://github.com/matemolnar8/vitadeck/tree/main/js/packages/host-companion). The user links computers in the VitaDeck Shell (Host Control); a Deck App never needs their addresses.
+`@vitadeck/sdk/host-control` lets a Deck App call a computer on the same LAN that runs the [VitaDeck Host Companion](https://github.com/matemolnar8/vitadeck/tree/main/js/packages/host-companion) (`vitadeck-host-companion`). The user links computers in the VitaDeck Shell (Host Control); a Deck App never needs their addresses.
 
 ```tsx
-import { host, linkedHosts } from "@vitadeck/sdk/host-control";
+import { createHostClient, systemStatsPlugin } from "@vitadeck/sdk/host-control";
 
-const reply = await host.echo({ text: "hi" });
-if (reply.ok) console.log(reply.text);
-else if (reply.code === "not_linked") setHint("Link a computer in the VitaDeck Shell");
+const stats = await createHostClient(systemStatsPlugin).read();
+if (stats.ok) console.log(`${stats.cpuPercent}% CPU`);
+else if (stats.code === "not_linked") setHint("Link a computer in the VitaDeck Shell");
 ```
 
-- `host` calls the built-in `core` plugin (`capabilities`, `echo`) on the most recently linked computer.
-- Commands come in **Host Control Plugins**. `createHostClient(plugin, { hostId })` returns a typed client for one plugin on one computer; leave out `hostId` for the most recent link. `linkedHosts()` lists the linked computers (`id`, `name`, `url`), newest first, and reflects Shell changes on its next call.
+- Commands come in **Host Control Plugins**. Every companion has the built-in `core` (`capabilities`, `echo`; also exported as `host`) and `systemStats` (`read`) plugins.
+- `createHostClient(plugin, { hostId })` returns a typed client for one plugin on one computer; leave out `hostId` for the most recent link. `linkedHosts()` lists the linked computers (`id`, `name`, `url`), newest first, and reflects Shell changes on its next call.
 - Every method resolves to `{ ok: true, ...result }` or `{ ok: false, code, message }` and never rejects, so TypeScript makes you check `ok`. Besides the companion's codes, the client reports `not_linked`, `unreachable`, `timeout` (5 s by default; the command may still have run) and `bad_response`. A failed command is never retried.
 - `capabilities()` lists the plugins a computer loaded, so a Deck App can tell an `unknown_plugin` apart before calling it.
+
+### Your own Host Plugin
+
+When the built-in plugins are not enough, keep a plugin in the Deck App's own project. `create --host-plugin` scaffolds one:
+
+```bash
+npx @vitadeck/sdk create my-app --host-plugin
+```
+
+- `host/plugin.ts` defines the commands with `defineHostPlugin(id, { name: command<Payload, Result>(guard) })`. The Deck App imports it, so it is bundled into the Deck App and must not import Node.js modules. The companion runs `guard` on every payload before your code.
+- `host/companion.ts` default-exports `implementHostPlugin(plugin, { name: async (payload) => result })`. It runs in the companion with Node.js. `tsc` fails if a command is missing or returns the wrong type; throw `new HostCommandError("unsupported_platform", "...")` to answer with a specific code.
+- `"hostPlugin": "./host/companion.ts"` in `vitadeck.config.json` makes `build` and `dev` also write `dist/my-app.vdplugin`, a **Host Plugin File** that bundles the implementation with its npm dependencies (pure JavaScript only, no native addons).
+- `pnpm host` builds and runs a companion with your plugin, reloading it whenever `vitadeck dev` rebuilds. Link it once with `npx vitadeck-host-companion link <address>`.
+
+Users install your plugin with `vitadeck-host-companion install my-app.vdplugin`, so ship the `.vdplugin` next to the `.vdapp.zip`. When they have not, your Deck App gets `unknown_plugin`; tell them what to install.
 
 This subpath is bundled into your Deck App, along with any plugin registry you import.
 

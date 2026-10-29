@@ -77,7 +77,7 @@ export async function linkVita(vitaAddress: string, options: LinkOptions): Promi
   if (!capabilities.ok) {
     return {
       ok: false,
-      message: `No Host Companion answers on port ${port} (${capabilities.message}). Run \`pnpm --dir js host-companion start\` first.`,
+      message: `No Host Companion answers on port ${port} (${capabilities.message}). Run \`vitadeck-host-companion start\` first.`,
     };
   }
 

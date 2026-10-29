@@ -18,6 +18,7 @@ export const cliPath = fileURLToPath(new URL("cli.ts", import.meta.url));
 const sdkRoot = fileURLToPath(new URL("../", import.meta.url));
 const jsRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const requireFromSdk = createRequire(import.meta.url);
+export const tscBin = path.join(jsRoot, "node_modules", ".bin", process.platform === "win32" ? "tsc.CMD" : "tsc");
 export const tsxBin = path.join(jsRoot, "node_modules", ".bin", process.platform === "win32" ? "tsx.CMD" : "tsx");
 
 export function execFileText(
@@ -44,7 +45,7 @@ export async function writeProjectFile(projectRoot: string, relPath: string, con
   await writeFile(filePath, contents);
 }
 
-async function linkDependency(projectRoot: string, packageName: string): Promise<void> {
+export async function linkDependency(projectRoot: string, packageName: string): Promise<void> {
   const packageRoot = path.dirname(requireFromSdk.resolve(`${packageName}/package.json`));
   const linkPath = path.join(projectRoot, "node_modules", ...packageName.split("/"));
   await mkdir(path.dirname(linkPath), { recursive: true });
@@ -58,7 +59,7 @@ export async function linkSdk(projectRoot: string): Promise<void> {
   await symlink(sdkRoot, linkPath, process.platform === "win32" ? "junction" : "dir");
 }
 
-async function linkSdkBuildDependencies(projectRoot: string): Promise<void> {
+export async function linkSdkBuildDependencies(projectRoot: string): Promise<void> {
   await Promise.all(
     ["@babel/preset-react", "@babel/preset-typescript", "babel-plugin-react-compiler"].map(async (packageName) => {
       await linkDependency(projectRoot, packageName);

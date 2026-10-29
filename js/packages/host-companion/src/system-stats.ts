@@ -1,8 +1,7 @@
 import { execFile } from "node:child_process";
 import os from "node:os";
 import { setTimeout as sleep } from "node:timers/promises";
-import { implementHostPlugin } from "@vitadeck/host-companion";
-import { systemStatsPlugin } from "./index";
+import { implementHostPlugin, systemStatsPlugin } from "@vitadeck/sdk/host-control";
 
 type CpuSample = { idle: number; total: number };
 
@@ -48,7 +47,7 @@ async function availableMemoryBytes(): Promise<number> {
   return (pages("Pages free") + pages("Pages inactive") + pages("Pages speculative")) * pageSize;
 }
 
-export default implementHostPlugin(systemStatsPlugin, {
+export const systemStats = implementHostPlugin(systemStatsPlugin, {
   read: async () => {
     const memoryTotalBytes = os.totalmem();
     return {

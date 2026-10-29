@@ -26,7 +26,7 @@ When this file speaks:
 - `src/shell/` - VitaDeck Shell; `src/upload/` - Runtime Upload listener; `src/host_control/` - Host Control Link Listener and link store; `src/net/` - HTTP request parsing both listeners share; `src/platform/` - threads and LAN address (POSIX vs Vita)
 - `js/packages/sdk/` - `@vitadeck/sdk`: author-facing components, theme, types, and the `vitadeck` CLI (`cli/`, scaffold under `cli/templates/`)
 - `js/packages/runtime/` - the React reconciler bundle the host embeds
-- `js/packages/host-companion/` - the Host Companion CLI (unpublished); `js/host-plugins/` - Host Control Plugins it loads. The wire contract is `js/packages/sdk/src/host-control/` and the fixtures in `tests/fixtures/host-control/`, replayed by the SDK, companion and native tests (ADR 0004)
+- `js/packages/host-companion/` - the Host Companion (`vitadeck-host-companion`, unpublished) with the built-in Host Control Plugins; a Deck App's own plugin is a `.vdplugin` the SDK CLI builds (`hostPlugin` in `vitadeck.config.json`, scaffolded by `create --host-plugin`). The wire contract is `js/packages/sdk/src/host-control/` and the fixtures in `tests/fixtures/host-control/`, replayed by the SDK, companion and native tests (ADR 0004)
 - `js/examples/` - example Deck Apps; the smoke test screenshots every section of `demo`
 - `tests/` - CTest harnesses (`smoke_harness.c`, `deck_app_input_harness.c`, `package_manifest_harness.c`, `package_library_harness.c`, `timer_reload_harness.c`, `upload_parsing_harness.c`, `host_control_link_harness.c`), golden screenshots (`fixtures/golden/`), and benchmark baselines (`bench/baselines/`)
 - `vendor/quickjs` - git submodule; `docker-compose.yml` + `Dockerfile` - Vitasdk and Linux smoke images

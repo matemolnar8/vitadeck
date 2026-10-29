@@ -16,6 +16,8 @@ type DeckAppConfig = {
   version?: string;
   fonts?: Record<string, string>;
   images?: Record<string, string>;
+  /** The Host Plugin's implementation, built into `<outDir>/<slug>.vdplugin`. */
+  hostPlugin?: string;
 };
 
 const PACKAGE_SCHEMA_VERSION = 1;
@@ -34,6 +36,7 @@ const SUPPORTED_IMAGE_EXTENSIONS = new Set([
   ".pic",
   ".qoi",
 ]);
+const SUPPORTED_HOST_PLUGIN_EXTENSIONS = new Set([".ts", ".mts", ".js", ".mjs"]);
 const FONT_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,62}$/u;
 const NATIVE_DISPLAY_NAME_MAX_BYTES = 127;
 const NATIVE_PACKAGE_NAME_MAX_BYTES = 127;
@@ -110,6 +113,9 @@ async function readConfig(projectRoot: string): Promise<DeckAppConfig> {
   }
   config.fonts = readFonts(raw.fonts, configPath);
   config.images = readImages(raw.images, configPath);
+  if (raw.hostPlugin !== undefined) {
+    config.hostPlugin = requireString(raw.hostPlugin, "hostPlugin", configPath);
+  }
   return config;
 }
 
@@ -190,7 +196,7 @@ function resolveAssetSourcePath(
   projectRoot: string,
   assetPath: string,
   sourcePath: string,
-  assetLabel: "font" | "image",
+  assetLabel: "font" | "image" | "hostPlugin",
   supportedExtensions: Set<string>,
 ): string {
   if (path.isAbsolute(assetPath) || path.win32.isAbsolute(assetPath)) {
@@ -366,17 +372,63 @@ async function copyScaffoldDir(templateRoot: string, targetRoot: string, slug: s
         await copyScaffoldDir(templateRoot, targetRoot, slug, childRel);
       } else if (ent.isFile()) {
         await mkdir(path.dirname(dest), { recursive: true });
-        const body = (await readFile(src, "utf8"))
-          .replaceAll("{{slug}}", slug)
-          .replaceAll(SCAFFOLD_TEMPLATE_LABEL, slug);
-        await writeFile(dest, body);
+        await writeFile(dest, fillTemplate(await readFile(src, "utf8"), slug));
       }
     }),
   );
 }
 
+function fillTemplate(body: string, slug: string): string {
+  return body.replaceAll("{{slug}}", slug).replaceAll(SCAFFOLD_TEMPLATE_LABEL, slug);
+}
+
+/** Copies an add-on template over a scaffolded project. Its JSON files are merged into existing ones, one level deep. */
+async function applyTemplateOverlay(overlayRoot: string, targetRoot: string, slug: string): Promise<void> {
+  const entries = await readdir(overlayRoot, { recursive: true, withFileTypes: true });
+  await Promise.all(
+    entries
+      .filter((ent) => ent.isFile())
+      .map(async (ent) => {
+        const rel = path.relative(overlayRoot, path.join(ent.parentPath, ent.name));
+        const dest = path.join(targetRoot, rel);
+        const body = fillTemplate(await readFile(path.join(overlayRoot, rel), "utf8"), slug);
+        await mkdir(path.dirname(dest), { recursive: true });
+        if (!ent.name.endsWith(".json") || !(await fileExists(dest))) {
+          await writeFile(dest, body);
+          return;
+        }
+        const merged = requireObject(await readJson(dest), dest);
+        for (const [key, value] of Object.entries(requireObject(JSON.parse(body), rel))) {
+          const current = merged[key];
+          merged[key] = isPlainObject(current) && isPlainObject(value) ? { ...current, ...value } : value;
+        }
+        await writeFile(dest, `${JSON.stringify(merged, null, 2)}\n`);
+      }),
+  );
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 type BuildOptions = { noZip?: boolean; dev?: boolean };
-type BuildOutput = { packageDir: string; archivePath?: string };
+type BuildOutput = { packageDir: string; archivePath?: string; hostPluginPath?: string };
+
+/** Bundles the Host Plugin's implementation and everything it imports, except Node built-ins, into one module. */
+async function buildHostPlugin(entryPath: string, outPath: string): Promise<void> {
+  const bundle = await rolldown({ input: entryPath, platform: "node", tsconfig: false });
+  await bundle.write({ file: outPath, format: "esm" });
+  await bundle.close();
+}
 
 async function build(projectRoot: string, options: BuildOptions = {}): Promise<BuildOutput> {
   const config = await readConfig(projectRoot);
@@ -389,6 +441,17 @@ async function build(projectRoot: string, options: BuildOptions = {}): Promise<B
   const packageFolderName = packageNameFor(config.name);
   const packageDir = path.join(outDir, packageFolderName);
   const archivePath = path.join(outDir, `${packageFolderName}.zip`);
+  const hostPluginEntry =
+    config.hostPlugin === undefined
+      ? undefined
+      : resolveAssetSourcePath(
+          projectRoot,
+          config.hostPlugin,
+          "vitadeck.config.json",
+          "hostPlugin",
+          SUPPORTED_HOST_PLUGIN_EXTENSIONS,
+        );
+  if (hostPluginEntry) await assertFileExists(hostPluginEntry, "vitadeck.config.json", "hostPlugin");
   const generatedDir = path.join(projectRoot, ".vitadeck");
   const generatedEntry = path.join(generatedDir, "package-entry.tsx");
 
@@ -451,9 +514,15 @@ globalThis.vitadeckPackage.register(DeckApp);
   await writeFile(path.join(packageDir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
   await rm(generatedEntry, { force: true });
 
-  if (options.noZip) return { packageDir };
+  let hostPluginPath: string | undefined;
+  if (hostPluginEntry) {
+    hostPluginPath = path.join(outDir, `${packageFolderName.replace(/\.vdapp$/u, "")}.vdplugin`);
+    await buildHostPlugin(hostPluginEntry, hostPluginPath);
+  }
+
+  if (options.noZip) return { packageDir, hostPluginPath };
   await writeRuntimeUploadArchive(packageDir, archivePath);
-  return { packageDir, archivePath };
+  return { packageDir, archivePath, hostPluginPath };
 }
 
 const DEFAULT_UPLOAD_PORT = "8787";
@@ -628,7 +697,7 @@ async function isNonEmptyDir(dir: string): Promise<boolean> {
   }
 }
 
-async function create(projectName: string, options: { force: boolean }): Promise<void> {
+async function create(projectName: string, options: { force: boolean; hostPlugin: boolean }): Promise<void> {
   const targetDir = path.resolve(process.cwd(), projectName);
   const slug = packageNameFor(projectName).replace(/\.vdapp$/u, "");
   const templateRoot = fileURLToPath(new URL("./templates/scaffold", import.meta.url));
@@ -637,18 +706,22 @@ async function create(projectName: string, options: { force: boolean }): Promise
   }
   await mkdir(targetDir, { recursive: true });
   await copyScaffoldDir(templateRoot, targetDir, slug);
+  if (options.hostPlugin) {
+    await applyTemplateOverlay(fileURLToPath(new URL("./templates/host-plugin", import.meta.url)), targetDir, slug);
+  }
   console.log(`Created ${targetDir}`);
 }
 
 const USAGE = `Usage: vitadeck <command> [flags]
 
 Commands:
-  build                     Build the Deck App Package and .vdapp.zip (default command)
+  build                     Build the Deck App Package, .vdapp.zip and any .vdplugin (default command)
     --no-zip                Skip the .vdapp.zip archive
     --dev                   Bundle with NODE_ENV=development
   dev <runtime-upload-url>  Watch, rebuild with --dev and upload to a running VitaDeck
   create <project-name>     Scaffold a new Deck App project
     --force                 Write into a non-empty directory
+    --host-plugin           Add a Host Plugin: commands the Deck App sends to a computer
 
 Flags:
   --help, -h                Show this help
@@ -657,7 +730,7 @@ Flags:
 const COMMAND_FLAGS = {
   build: ["--no-zip", "--dev"],
   dev: [],
-  create: ["--force"],
+  create: ["--force", "--host-plugin"],
 } as const satisfies Record<string, readonly string[]>;
 
 type Command = keyof typeof COMMAND_FLAGS;
@@ -694,6 +767,7 @@ async function main(): Promise<void> {
       const output = await build(projectRoot, { noZip: flags.has("--no-zip"), dev: flags.has("--dev") });
       console.log(`Built ${path.relative(projectRoot, output.packageDir)}`);
       if (output.archivePath) console.log(`Wrote ${path.relative(projectRoot, output.archivePath)}`);
+      if (output.hostPluginPath) console.log(`Wrote ${path.relative(projectRoot, output.hostPluginPath)}`);
       return;
     }
     case "dev": {
@@ -703,7 +777,7 @@ async function main(): Promise<void> {
     }
     case "create": {
       if (!arg) throw new Error("Usage: vitadeck create <project-name>");
-      await create(arg, { force: flags.has("--force") });
+      await create(arg, { force: flags.has("--force"), hostPlugin: flags.has("--host-plugin") });
     }
   }
 }

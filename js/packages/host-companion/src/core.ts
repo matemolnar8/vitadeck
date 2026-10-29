@@ -1,5 +1,9 @@
-import { HOST_CONTROL_PROTOCOL_VERSION, corePlugin } from "@vitadeck/sdk/host-control";
-import { implementHostPlugin, type ImplementedHostPlugin } from "./plugin";
+import {
+  HOST_CONTROL_PROTOCOL_VERSION,
+  corePlugin,
+  implementHostPlugin,
+  type ImplementedHostPlugin,
+} from "@vitadeck/sdk/host-control";
 
 export function implementCorePlugin(
   name: string,

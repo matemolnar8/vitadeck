@@ -1,77 +1,50 @@
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
-import { isRecord } from "@vitadeck/sdk/host-control";
-import type {
-  HostCommandMap,
-  HostControlWireErrorCode,
-  HostPlugin,
-  PayloadOf,
-  ResultOf,
-} from "@vitadeck/sdk/host-control";
+import { isRecord, type ImplementedHostPlugin } from "@vitadeck/sdk/host-control";
 
-export type HostPluginImplementations<C extends HostCommandMap> = {
-  readonly [K in keyof C]: (payload: PayloadOf<C[K]>) => Promise<ResultOf<C[K]>> | ResultOf<C[K]>;
-};
+export const HOST_PLUGIN_FILE_EXTENSION = ".vdplugin";
 
-type ImplementedCommand = {
-  readonly isPayload: (value: unknown) => boolean;
-  readonly run: (payload: unknown) => Promise<object> | object;
-};
+const PLUGIN_ID_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,62}$/u;
 
-/** A Host Control Plugin with its implementation, ready for the Host Companion to serve. */
-export type ImplementedHostPlugin = {
-  readonly id: string;
-  readonly commands: ReadonlyMap<string, ImplementedCommand>;
-};
-
-/** Thrown by an implementation to fail with a specific wire code. Any other throw answers `command_failed`. */
-export class HostCommandError extends Error {
-  readonly code: HostControlWireErrorCode;
-
-  constructor(code: HostControlWireErrorCode, message: string) {
-    super(message);
-    this.name = "HostCommandError";
-    this.code = code;
-  }
-}
-
-export function implementHostPlugin<const C extends HostCommandMap>(
-  plugin: HostPlugin<C>,
-  implementations: HostPluginImplementations<C>,
-): ImplementedHostPlugin {
-  // The server runs the guard first, so each implementation only sees its own payload type.
-  const runs = implementations as unknown as Record<
-    string,
-    ((payload: unknown) => object | Promise<object>) | undefined
-  >;
-  const commands = new Map<string, ImplementedCommand>();
-  for (const [name, command] of Object.entries(plugin.commands)) {
-    const run = runs[name];
-    if (typeof run !== "function") throw new Error(`Plugin ${plugin.id} has no implementation for ${name}.`);
-    commands.set(name, { isPayload: (value) => command.isPayload(value), run });
-  }
-  return { id: plugin.id, commands };
+export function isHostPluginId(id: string): boolean {
+  return PLUGIN_ID_PATTERN.test(id);
 }
 
 function isImplementedHostPlugin(value: unknown): value is ImplementedHostPlugin {
   return isRecord(value) && typeof value.id === "string" && value.commands instanceof Map;
 }
 
-function isPathSpecifier(specifier: string): boolean {
-  return specifier.startsWith(".") || path.isAbsolute(specifier);
-}
-
-/**
- * Loads a plugin implementation. A path is resolved against `baseDir` and imported as is; a bare package name
- * imports its `./companion` export, resolved from this package.
- */
-export async function loadHostPlugin(specifier: string, baseDir: string): Promise<ImplementedHostPlugin> {
-  const target = isPathSpecifier(specifier)
-    ? pathToFileURL(path.resolve(baseDir, specifier)).href
-    : `${specifier}/companion`;
-  const module: unknown = await import(target);
+/** Loads a Host Plugin File: one self-contained ES module that default-exports `implementHostPlugin(...)`. */
+export async function loadHostPluginFile(file: string): Promise<ImplementedHostPlugin> {
+  const source = await readFile(file);
+  let module: unknown;
+  try {
+    // Node imports no unknown extension from a file URL. A data: URL also changes with the content, so a rebuilt
+    // file loads fresh instead of from the module cache.
+    module = await import(`data:text/javascript;base64,${source.toString("base64")}`);
+  } catch (error) {
+    throw new Error(`${file} failed to load: ${error instanceof Error ? error.message : String(error)}`, {
+      cause: error,
+    });
+  }
   if (!isRecord(module) || !isImplementedHostPlugin(module.default)) {
-    throw new Error(`${specifier} does not default-export implementHostPlugin(...).`);
+    throw new Error(`${file} does not default-export implementHostPlugin(...).`);
+  }
+  if (!isHostPluginId(module.default.id)) {
+    throw new Error(`${file} has plugin id "${module.default.id}"; ids must match ${PLUGIN_ID_PATTERN.toString()}.`);
   }
   return module.default;
+}
+
+/** The Host Plugin Files `install` copied into `dir`, by file name. */
+export async function installedHostPluginFiles(dir: string): Promise<string[]> {
+  try {
+    return (await readdir(dir))
+      .filter((name) => name.endsWith(HOST_PLUGIN_FILE_EXTENSION))
+      .toSorted()
+      .map((name) => path.join(dir, name));
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return [];
+    throw error;
+  }
 }
