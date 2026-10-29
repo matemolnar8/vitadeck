@@ -1,5 +1,5 @@
 import { watch } from "node:fs";
-import { access, copyFile, cp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { access, copyFile, cp, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -445,21 +445,29 @@ async function buildHostPlugin(
   outDir: string,
   manifest: Omit<HostPluginManifest, "schemaVersion" | "entry">,
 ): Promise<void> {
-  // Bundled before the old package is removed, so a broken build leaves the last good one for the companion.
-  const bundle = await rolldown({ input: plugin.entry, platform: "node", tsconfig: false });
-  const { output } = await bundle.generate({ format: "esm", codeSplitting: false });
-  await bundle.close();
-  const [chunk] = output;
-  if (chunk?.type !== "chunk") throw new Error(`Bundling ${plugin.entry} produced no module.`);
-  await rm(outDir, { recursive: true, force: true });
-  await mkdir(outDir, { recursive: true });
-  await writeFile(path.join(outDir, HOST_PLUGIN_ENTRY), chunk.code);
-  if (plugin.files !== undefined) {
-    // Links are copied as the files they point to, so the zip, which holds only files, matches the folder.
-    await cp(plugin.files, path.join(outDir, "files"), { recursive: true, dereference: true });
+  // Written beside the old package and swapped in at the end, so a failed build leaves the last good one.
+  const staging = `${outDir}.tmp`;
+  await rm(staging, { recursive: true, force: true });
+  await mkdir(staging, { recursive: true });
+  try {
+    const bundle = await rolldown({ input: plugin.entry, platform: "node", tsconfig: false });
+    await bundle.write({ file: path.join(staging, HOST_PLUGIN_ENTRY), format: "esm", codeSplitting: false });
+    await bundle.close();
+    if (plugin.files !== undefined) {
+      // Links are copied as the files they point to, so the zip, which holds only files, matches the folder.
+      await cp(plugin.files, path.join(staging, "files"), { recursive: true, dereference: true });
+    }
+    const full: HostPluginManifest = {
+      schemaVersion: HOST_PLUGIN_SCHEMA_VERSION,
+      ...manifest,
+      entry: HOST_PLUGIN_ENTRY,
+    };
+    await writeFile(path.join(staging, "manifest.json"), `${JSON.stringify(full, null, 2)}\n`);
+    await rm(outDir, { recursive: true, force: true });
+    await rename(staging, outDir);
+  } finally {
+    await rm(staging, { recursive: true, force: true });
   }
-  const full: HostPluginManifest = { schemaVersion: HOST_PLUGIN_SCHEMA_VERSION, ...manifest, entry: HOST_PLUGIN_ENTRY };
-  await writeFile(path.join(outDir, "manifest.json"), `${JSON.stringify(full, null, 2)}\n`);
 }
 
 async function build(projectRoot: string, options: BuildOptions = {}): Promise<BuildOutput> {
