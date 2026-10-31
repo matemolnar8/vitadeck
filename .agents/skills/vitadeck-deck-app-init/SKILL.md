@@ -86,7 +86,6 @@ Both add `host/plugin.ts` (the commands Deck Apps import), `host/companion.ts` (
 
 - **`Usage: vitadeck create <project-name>`** — pass a project folder name: `npx @vitadeck/sdk create my-app`
 - **`Pass --host-plugin or --host-plugin-only, not both`** — pick a Deck App with a plugin, or a plugin alone
-- **`npm install` fails on `@vitadeck/host-companion`** — the companion is not on npm yet; drop that devDependency and run the companion from a VitaDeck checkout (`pnpm --dir js host-companion`)
 - **React version error** — ensure `react` is `18.3.x` in `package.json`, then reinstall
 - **Wrong context** — inside the VitaDeck monorepo, examples live under `js/examples/` and use workspace linking; this skill is for external projects only
 

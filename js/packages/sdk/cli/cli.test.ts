@@ -50,6 +50,15 @@ void test("--version prints the SDK version", async (t) => {
   assert.equal(result.output.trim(), sdkPackage.version);
 });
 
+void test("the SDK and the Host Companion share one version, since one release tag publishes both", async () => {
+  const [sdk, companion] = await Promise.all(
+    ["../package.json", "../../host-companion/package.json"].map(
+      async (manifest) => JSON.parse(await readFile(new URL(manifest, import.meta.url), "utf8")) as { version: string },
+    ),
+  );
+  assert.equal(companion?.version, sdk?.version);
+});
+
 void test("create refuses a non-empty directory unless --force is passed", async (t) => {
   const cwd = await makeTempDir(t);
   await writeFile(path.join(cwd, "keep.txt"), "mine\n");

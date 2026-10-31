@@ -6,9 +6,7 @@ The Host Companion runs on a Mac, Windows or Linux computer near your Vita. A De
 npm install -g @vitadeck/host-companion
 ```
 
-It is not published to npm yet. From a VitaDeck checkout, `pnpm --dir js host-companion <command>` runs the same CLI.
-
-**Security:** v1 trusts the LAN. There are no credentials: a link exchanges addresses and authorizes nothing, and IP checks can be spoofed. That is why the built-in plugins only read information. Plugins that act on the computer (keys, launching apps) wait for the credential decision in [ADR 0004](../../../docs/adr/0004-host-control-sliced-delivery.md).
+**Security:** v1 trusts the LAN. There are no credentials: a link exchanges addresses and authorizes nothing, and IP checks can be spoofed. That is why the built-in plugins only read information. Plugins that act on the computer (keys, launching apps) wait for the credential decision in [ADR 0004](https://github.com/matemolnar8/vitadeck/blob/main/docs/adr/0004-host-control-sliced-delivery.md).
 
 ## Use
 
@@ -47,7 +45,7 @@ vitadeck-host-companion remove lights
 
 `install` unpacks the archive (or copies a `.vdplugin` folder) into `~/.vitadeck/plugins/`, named by the plugin's id, and a running companion loads it at once. A plugin runs with your permissions on this computer, so install only plugins you trust.
 
-To write one, scaffold a Deck App with `npx @vitadeck/sdk create my-app --host-plugin`, or a plugin on its own with `create my-plugin --host-plugin-only`; the [SDK README](../sdk/README.md#your-own-host-plugin) explains the files. While you work on it, `start --plugin ./dist` loads your build, takes precedence over an installed copy, and reloads every time `vitadeck build` or `vitadeck dev` writes it. A broken build keeps the previous version running.
+To write one, scaffold a Deck App with `npx @vitadeck/sdk create my-app --host-plugin`, or a plugin on its own with `create my-plugin --host-plugin-only`; the [SDK README](https://github.com/matemolnar8/vitadeck/tree/main/js/packages/sdk#your-own-host-plugin) explains the files. While you work on it, `start --plugin ./dist` loads your build, takes precedence over an installed copy, and reloads every time `vitadeck build` or `vitadeck dev` writes it. A broken build keeps the previous version running.
 
 ## Config
 

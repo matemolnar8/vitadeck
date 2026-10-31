@@ -26,7 +26,7 @@ When this file speaks:
 - `src/shell/` - VitaDeck Shell; `src/net/` - the LAN Listener (Runtime Upload and Host Control Link) and HTTP request parsing; `src/upload/` - archive extraction; `src/host_control/` - link parsing and store; `src/platform/` - threads and LAN address (POSIX vs Vita)
 - `js/packages/sdk/` - `@vitadeck/sdk`: author-facing components, theme, types, and the `vitadeck` CLI (`cli/`, scaffold under `cli/templates/`)
 - `js/packages/runtime/` - the React reconciler bundle the host embeds
-- `js/packages/host-companion/` - the Host Companion (`vitadeck-host-companion`, unpublished) with the built-in Host Control Plugins; a custom plugin is a `.vdplugin` package the SDK CLI builds (`hostPlugin` in `vitadeck.config.json`, scaffolded with a Deck App by `create --host-plugin` or alone by `create --host-plugin-only`). The wire contract is `js/packages/sdk/src/host-control/` and the fixtures in `tests/fixtures/host-control/`, replayed by the SDK, companion and native tests (ADR 0004)
+- `js/packages/host-companion/` - the Host Companion (`vitadeck-host-companion`, published with the SDK at the same version) with the built-in Host Control Plugins; a custom plugin is a `.vdplugin` package the SDK CLI builds (`hostPlugin` in `vitadeck.config.json`, scaffolded with a Deck App by `create --host-plugin` or alone by `create --host-plugin-only`). The wire contract is `js/packages/sdk/src/host-control/` and the fixtures in `tests/fixtures/host-control/`, replayed by the SDK, companion and native tests (ADR 0004)
 - `js/examples/` - example Deck Apps; the smoke test screenshots every section of `demo`
 - `tests/` - CTest harnesses (`smoke_harness.c`, `deck_app_input_harness.c`, `package_manifest_harness.c`, `package_library_harness.c`, `timer_reload_harness.c`, `upload_parsing_harness.c`, `host_control_link_harness.c`), golden screenshots (`fixtures/golden/`), and benchmark baselines (`bench/baselines/`)
 - `vendor/quickjs` - git submodule; `docker-compose.yml` + `Dockerfile` - Vitasdk and Linux smoke images
@@ -56,7 +56,7 @@ When this file speaks:
 The common defect is a change that works on the host and breaks the Vita, or works in one example and breaks the SDK contract.
 
 - **Targets.** Host (macOS/Linux) and Vita share `src/`. Anything touching threads, filesystem, networking, or GL belongs behind `src/platform/` or needs a Vita Docker build to prove it.
-- **Author contract.** `@vitadeck/sdk` is published. A change to its exports, types, CLI flags, scaffold template, or manifest shape is a breaking change for authors. Bump the Deck App Package Schema Version when the manifest shape changes.
+- **Author contract.** `@vitadeck/sdk` and `@vitadeck/host-companion` are published. A change to its exports, types, CLI flags, scaffold template, or manifest shape is a breaking change for authors. Bump the Deck App Package Schema Version when the manifest shape changes.
 - **Inputs.** Vita buttons and host keyboard mappings (F1 Start, Enter confirm, Backspace back) must stay in sync in `src/ui/input.c` and in `CONTEXT.md`.
 - **Reverse states.** Upload needs cancel, install needs removal, Shell open needs Shell close. Check the failure paint, not just success.
 - **Docs.** If a change makes `CONTEXT.md`, an ADR, the SDK README, or a skill inaccurate, fix it in place. Do not append a second account.
