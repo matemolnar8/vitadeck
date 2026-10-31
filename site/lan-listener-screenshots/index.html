@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta charset="utf-8"><title>PR 144: LAN Listener on from startup</title>
+<style>body{font-family:system-ui;margin:2rem auto;max-width:60rem;padding:0 1rem}img{width:100%;border:1px solid #ccc;border-radius:6px}figure{margin:0 0 2.5rem}</style></head><body>
+<h1>PR 144: one LAN Listener, on from startup</h1>
+<p>macOS desktop host, commit f9245aa2. VitaDeck was started with the Host Control demo active, and the Shell was never opened. Then <code>vitadeck-host-companion link 192.168.1.162</code> and a <code>curl</code> upload ran against port 8787.</p>
+<figure><h2>1. Linked without opening the Shell</h2><img src="1-demo-linked.png" alt="Host Control demo showing the linked Mac with live CPU and memory"><figcaption>The demo starts polling the moment the link lands.</figcaption></figure>
+<figure><h2>2. Shell Home after the link</h2><img src="2-home.png" alt="Shell Home with the message Linked to Mates-MacBook-Pro.local"><figcaption>The link that arrived while the Shell was hidden shows as the Shell message.</figcaption></figure>
+<figure><h2>3. Upload and link, listening</h2><img src="3-listener-row.png" alt="Upload and link row in green with http://192.168.1.162:8787/"><figcaption>One URL for <code>vitadeck dev</code> and <code>link</code>.</figcaption></figure>
+<figure><h2>4. Turned off</h2><img src="4-listener-off.png" alt="Upload and link row showing Off. Confirm to listen"><figcaption>Cross turns it off; an upload then gets "connection refused". Cross again turns it back on.</figcaption></figure>
+<figure><h2>5. Host Control screen</h2><img src="6-host-control.png" alt="Host Control screen with the link command and the linked computer"><figcaption>Shows the <code>link</code> command with the listener address, and the linked computers.</figcaption></figure>
+</body></html>
