@@ -13,6 +13,13 @@ The workflow fails before building anything if the tag differs from either packa
 
 ## One-time npm setup
 
-npm authenticates the workflow with Trusted Publishing (OIDC), so the repo has no `NPM_TOKEN` secret. Each package needs a Trusted Publisher with owner `matemolnar8`, repository `vitadeck`, workflow filename `release.yml`: on npmjs.com, open the package → Settings → Trusted Publisher → GitHub Actions, or run `npm trust github <package> --file release.yml --repo matemolnar8/vitadeck --allow-publish` (npm 11.15 or later, 2FA required).
+npm authenticates the workflow with Trusted Publishing (OIDC), so the repo has no `NPM_TOKEN` secret. Each package needs a Trusted Publisher with owner `matemolnar8`, repository `vitadeck`, workflow filename `release.yml`, allowed to run `npm publish` (not only `npm stage publish`): on npmjs.com, open the package → Settings → Trusted Publisher → GitHub Actions, or run `npm trust github <package> --file release.yml --repo matemolnar8/vitadeck --allow-publish` (npm 11.15 or later, 2FA required).
 
-npm only accepts a Trusted Publisher for a package that already exists, so a new package's first version is published by hand from a logged-in machine, then the Trusted Publisher is added. A new Trusted Publisher must publish within 2 days, so add it shortly before pushing the tag.
+npm only accepts a Trusted Publisher for a package that already exists, so a new package's current version is published by hand from a logged-in machine. Build first, because `dist/` is not in git and `npm publish` of a tarball runs no scripts; `pnpm pack` resolves the `workspace:` and `catalog:` versions that a plain `npm publish` would leave in:
+
+```sh
+pnpm --dir js install && pnpm --dir js build
+cd js/packages/host-companion && pnpm pack && npm publish vitadeck-host-companion-*.tgz --access public
+```
+
+Then add the Trusted Publisher and release the next version as above; the workflow cannot publish the version that went out by hand. A new Trusted Publisher must publish within 2 days, so add it shortly before pushing the tag.

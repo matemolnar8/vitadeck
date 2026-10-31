@@ -56,7 +56,7 @@ When this file speaks:
 The common defect is a change that works on the host and breaks the Vita, or works in one example and breaks the SDK contract.
 
 - **Targets.** Host (macOS/Linux) and Vita share `src/`. Anything touching threads, filesystem, networking, or GL belongs behind `src/platform/` or needs a Vita Docker build to prove it.
-- **Author contract.** `@vitadeck/sdk` and `@vitadeck/host-companion` are published. A change to its exports, types, CLI flags, scaffold template, or manifest shape is a breaking change for authors. Bump the Deck App Package Schema Version when the manifest shape changes.
+- **Author contract.** `@vitadeck/sdk` and `@vitadeck/host-companion` are published. A change to either package's exports, types, CLI flags, scaffold template, or manifest shape is a breaking change for authors. Bump the Deck App Package Schema Version when the manifest shape changes.
 - **Inputs.** Vita buttons and host keyboard mappings (F1 Start, Enter confirm, Backspace back) must stay in sync in `src/ui/input.c` and in `CONTEXT.md`.
 - **Reverse states.** Upload needs cancel, install needs removal, Shell open needs Shell close. Check the failure paint, not just success.
 - **Docs.** If a change makes `CONTEXT.md`, an ADR, the SDK README, or a skill inaccurate, fix it in place. Do not append a second account.
