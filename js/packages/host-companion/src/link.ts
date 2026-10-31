@@ -130,7 +130,9 @@ export async function linkVita(vitaAddress: string, options: LinkOptions): Promi
     const code = typeof body.code === "string" ? body.code : "unknown";
     const message = typeof body.message === "string" ? body.message : "No reason given.";
     if (options.relink && code === "unknown_link") {
-      await saveConfig(options.configPath, { ...config, vitas: config.vitas.filter((vita) => vita !== routed.remote) });
+      // Read again: a `link` in another process may have changed the config while this request was out.
+      const latest = await loadConfig(options.configPath);
+      await saveConfig(options.configPath, { ...latest, vitas: latest.vitas.filter((vita) => vita !== routed.remote) });
       return {
         ok: false,
         message: `VitaDeck at ${routed.remote} forgot this computer, so it is no longer a linked Vita here. Run \`vitadeck-host-companion link ${routed.remote}\` to link it again.`,
@@ -140,8 +142,9 @@ export async function linkVita(vitaAddress: string, options: LinkOptions): Promi
     return { ok: false, message: `VitaDeck refused the link (${code}): ${message}`, retry: false };
   }
 
-  if (!config.vitas.includes(routed.remote)) {
-    await saveConfig(options.configPath, { ...config, vitas: [...config.vitas, routed.remote] });
+  const latest = await loadConfig(options.configPath);
+  if (!latest.vitas.includes(routed.remote)) {
+    await saveConfig(options.configPath, { ...latest, vitas: [...latest.vitas, routed.remote] });
   }
   return {
     ok: true,

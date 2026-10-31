@@ -8,6 +8,7 @@ export const HOST_CONTROL_WIRE_ERRORS = {
   forbidden: 403,
   unknown_plugin: 404,
   unknown_command: 404,
+  unknown_link: 404,
   payload_too_large: 413,
   invalid_payload: 422,
   command_failed: 500,

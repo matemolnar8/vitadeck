@@ -65,21 +65,31 @@ function watchFailed(dir: string) {
 }
 
 /**
- * Sends each linked Vita this companion's current URL, so a new IP or port reaches them without `link`. One at a time,
- * since each outcome rewrites the config; a Vita that does not answer is retried until it does.
+ * Sends each linked Vita this companion's current URL, so a new IP or port reaches them without `link`. Attempts,
+ * retries included, run one at a time, since each outcome rewrites the config; a Vita that does not answer is retried
+ * until it does.
  */
-async function relink(vitas: readonly string[], configPath: string, port: number): Promise<void> {
-  const attempt = async (vita: string, retrying: boolean) => {
-    const outcome = await linkVita(vita, { configPath, port, relink: true });
-    if (outcome.ok || !outcome.retry) {
-      console.log(outcome.message);
-      return;
+function relink(vitas: readonly string[], configPath: string, port: number): void {
+  let queue = Promise.resolve();
+  const run = async (vita: string, retrying: boolean) => {
+    try {
+      const outcome = await linkVita(vita, { configPath, port, relink: true });
+      if (outcome.ok || !outcome.retry) {
+        console.log(outcome.message);
+        return;
+      }
+      if (!retrying) console.log(`${outcome.message} Retrying every ${RELINK_RETRY_MS / 1000} s.`);
+      setTimeout(() => {
+        attempt(vita, true);
+      }, RELINK_RETRY_MS);
+    } catch (error) {
+      console.error(`Could not relink ${vita}: ${error instanceof Error ? error.message : String(error)}`);
     }
-    if (!retrying) console.log(`${outcome.message} Retrying every ${RELINK_RETRY_MS / 1000} s.`);
-    setTimeout(() => void attempt(vita, true), RELINK_RETRY_MS);
   };
-  // oxlint-disable-next-line no-await-in-loop -- one at a time, see above
-  for (const vita of vitas) await attempt(vita, false);
+  const attempt = (vita: string, retrying: boolean) => {
+    queue = queue.then(() => run(vita, retrying));
+  };
+  for (const vita of vitas) attempt(vita, false);
 }
 
 function describe(plugins: readonly ImplementedHostPlugin[]): string {
@@ -122,7 +132,7 @@ async function start(values: { port?: string; plugin?: string[] }, configPath: s
       ? `Linked Vitas: ${config.vitas.join(", ")}`
       : "Link a Vita with: vitadeck-host-companion link <vita-address> (the address under Upload and link in the VitaDeck Shell)",
   );
-  void relink(config.vitas, configPath, companion.port);
+  relink(config.vitas, configPath, companion.port);
 
   // Parent folders, recursively: a rebuild or reinstall replaces the package folder, which ends a watch on it.
   let timer: NodeJS.Timeout | undefined;
