@@ -100,7 +100,7 @@ Look for:
 - Credentials stay deferred, as ADR 0004 says, so the built-in plugins only read information; custom plugins can act on the computer and run with the user's permissions.
 - Not true at head: `@vitadeck/host-companion` is still `private: true`, so a project from `create --host-plugin` or `--host-plugin-only` cannot `npm install` its companion devDependency until the package is published.
 - [#111](source:s3) has the Vita listen for links on 8798 only while the Shell Host Control screen is open. At head `POST /link` is a route on the LAN Listener (8787), which also serves Runtime Upload and starts at boot. After testing, Máté found the setup clunky and asked for upload and link to start together and by default ([session](source:s5)). Anyone on the LAN can now upload and link whenever VitaDeck runs.
-- [#110](source:s2) and [#111](source:s3) have the user run `link` again when the callback URL goes stale. At head every companion `start` relinks the Vitas it linked and never re-adds one the user forgot, as Máté asked ([session](source:s5)).
+- Máté asked for automatic relink ([session](source:s5)): every companion `start` now relinks the Vitas it linked, so a stale callback URL no longer needs `link` again, and a Vita that forgot the computer is never linked back.
 
 ## Review concerns
 
