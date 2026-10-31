@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 07001bbdac339a0767b626376cda96d8530a1d37` and `git rev-parse --verify cf5576e78233c37c40a10851974f14c349e764e5` in this repository.
+   Run `git rev-parse --verify 07001bbdac339a0767b626376cda96d8530a1d37` and `git rev-parse --verify 600ca4ec1f763b6662f205fe8cb068bba809c1c1` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 07001bbdac339a0767b626376cda96d8530a1d37 cf5576e78233c37c40a10851974f14c349e764e5 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 07001bbdac339a0767b626376cda96d8530a1d37 600ca4ec1f763b6662f205fe8cb068bba809c1c1 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,13 +25,13 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  07001bbdac339a0767b626376cda96d8530a1d37
 
-head               cf5576e78233c37c40a10851974f14c349e764e5
+head               600ca4ec1f763b6662f205fe8cb068bba809c1c1
 
 Named refs at pin: 07001bbdac339a0767b626376cda96d8530a1d37 ... HEAD
 
 Read the diff:
 
-git diff --find-renames 07001bbdac339a0767b626376cda96d8530a1d37 cf5576e78233c37c40a10851974f14c349e764e5
+git diff --find-renames 07001bbdac339a0767b626376cda96d8530a1d37 600ca4ec1f763b6662f205fe8cb068bba809c1c1
 
 Review concern 02 of 03: Release workflow and runbook (`release`)
 
@@ -41,7 +41,7 @@ One tag has to cut both packages, and the runbook needs the one-time Trusted Pub
 
 The what:
 
-`release.yml` checks the tag against both manifests and publishes the companion before the SDK, and `docs/releasing.md` describes the same flow.
+`release.yml` checks the tag against both manifests and publishes the companion before the SDK, and `docs/releasing.md` describes that flow plus the companion's one-time manual first publish.
 
 Look for:
 - Subtle: the publish steps are not idempotent. If the SDK publish fails after the companion published, re-running the job fails at the companion step because that version already exists.
