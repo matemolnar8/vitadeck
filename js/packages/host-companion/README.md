@@ -22,7 +22,7 @@ Serves `POST /command` on every interface, port 8797. The port never moves to a 
 vitadeck-host-companion link 192.168.1.177
 ```
 
-Open Host Control in the VitaDeck Shell and pass the address it shows (add `:port` if it is not 8798). `link` checks that `start` is answering, then tells VitaDeck where to send commands. One Vita can link several computers, and one computer can link several Vitas.
+Pass the Vita's address: VitaDeck listens from startup, and the VitaDeck Shell shows the address under Upload and link (add `:port` if it is not 8787). `link` checks that `start` is answering, then tells VitaDeck where to send commands. One Vita can link several computers, and one computer can link several Vitas.
 
 ```sh
 vitadeck-host-companion notify "Build done"

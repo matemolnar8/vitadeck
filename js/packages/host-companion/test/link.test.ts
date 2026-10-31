@@ -72,7 +72,7 @@ async function setup(t: test.TestContext, withCompanion = true) {
 }
 
 void test("parses a Vita address with an optional port", () => {
-  assert.deepEqual(parseVitaAddress("192.168.1.177"), { host: "192.168.1.177", port: 8798 });
+  assert.deepEqual(parseVitaAddress("192.168.1.177"), { host: "192.168.1.177", port: 8787 });
   assert.deepEqual(parseVitaAddress("192.168.1.177:9000"), { host: "192.168.1.177", port: 9000 });
   assert.equal(parseVitaAddress("192.168.1.177/link"), undefined);
 });
@@ -132,7 +132,7 @@ void test("reports an unreachable Vita", async (t) => {
   assert.equal(outcome.ok, false);
   assert.match(
     outcome.message,
-    /^Could not reach VitaDeck at http:\/\/127\.0\.0\.1:\d+\/link \(.*\)\. Open Host Control/u,
+    /^Could not reach VitaDeck at http:\/\/127\.0\.0\.1:\d+\/link \(.*\)\. Check that Upload and link is on/u,
   );
 });
 

@@ -10,7 +10,7 @@ Requires VitaDeck Shell → Upload to be active on the device.
 
 Options:
   --ip ADDR    Vita IP (default: $PSVITAIP)
-  --port PORT  Upload listener port (default: 8787)
+  --port PORT  LAN Listener port (default: 8787)
 EOF
 }
 

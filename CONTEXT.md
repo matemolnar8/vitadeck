@@ -83,7 +83,7 @@ _Avoid_: Page, route, viewport
 **System Input**: A Vita input reserved for VitaDeck itself: **Start Input**, and Select, which does nothing yet.
 _Avoid_: App shortcut, global hotkey, hidden button
 
-**Start Input**: Toggles between the **Deck App** and the **VitaDeck Shell**. Hiding the Shell requires an **Active Deck App**; it never stops the **Runtime Upload Listener**.
+**Start Input**: Toggles between the **Deck App** and the **VitaDeck Shell**. Hiding the Shell requires an **Active Deck App**; it never stops the **LAN Listener**.
 _Avoid_: Game menu, global pause, app back button
 
 **Focus**: The one **Deck App** control the D-pad moves between and Cross presses. **Button** and **Text Input** take Focus; a touch press presses directly and clears it. On the host, mouse hover and mouse press move Focus to that **Button**. The D-pad also reaches controls scrolled out of view: a `Scroll` scrolls just enough to show the control the D-pad or `autoFocus` moves Focus to.
@@ -129,16 +129,16 @@ _Avoid_: Flexbox, flex container, layout box, list
 **VitaDeck Shell**: VitaDeck's management UI for choosing and managing installed packages, opened by **System Input**, never by a Deck App.
 _Avoid_: Deck App menu, overlay app, launcher screen
 
-**Shell Home Screen**: The default Shell view: the **Installed Deck App Library** sorted by manifest `name` (case-insensitive, then **Deck App Package Name**), each with its version, plus the **Shell Upload Entry** and the **Shell Host Control Entry**. Confirming a package activates it; confirming the **Active Deck App** is a **Deck App Runtime Restart**. Both hide the Shell.
+**Shell Home Screen**: The default Shell view: the **Installed Deck App Library** sorted by manifest `name` (case-insensitive, then **Deck App Package Name**), each with its version, plus the **Shell Listener Entry** and the **Shell Host Control Entry**. Confirming a package activates it; confirming the **Active Deck App** is a **Deck App Runtime Restart**. Both hide the Shell.
 _Avoid_: Live Area, system settings, account screen
 
-**Shell Upload Entry**: The Upload row at the end of the **Shell Home Screen**. Confirming it starts the **Runtime Upload Listener** and the row shows the **Runtime Upload URL** (or the bind error, with no URL) while the rest of the Shell stays usable. Confirming it again is **Shell Upload Cancel**: it stops the listener without closing the Shell. There is no other cancel shortcut.
-_Avoid_: Hidden gesture, Deck App **Press**, browser bookmark, FTP client
+**Shell Listener Entry**: The `Upload and link` row after the packages on the **Shell Home Screen**. It shows the **Runtime Upload URL** while the **LAN Listener** runs, and `Off` otherwise. Confirming it stops or starts the listener without closing the Shell; a bind failure shows as the Shell message.
+_Avoid_: Upload screen, server toggle, hidden gesture, FTP client
 
-**Shell Host Control Entry**: The Host Control row after the **Shell Upload Entry**, captioned with the newest linked computer or `Not linked`. Confirming it opens the **Shell Host Control Screen**.
+**Shell Host Control Entry**: The Host Control row after the **Shell Listener Entry**, captioned with the newest linked computer or `Not linked`. Confirming it opens the **Shell Host Control Screen**.
 _Avoid_: Settings, network menu
 
-**Shell Host Control Screen**: The Shell view that runs the **Host Control Link Listener** and shows its address, the link status, and the linked computers. Confirming a computer forgets its link at once. Circle returns to the **Shell Home Screen**; leaving the screen by Circle or **Start Input** stops the listener.
+**Shell Host Control Screen**: The Shell view that shows the `link` command with the **LAN Listener** address, and the linked computers. Confirming a computer forgets its link at once. Circle returns to the **Shell Home Screen**.
 _Avoid_: Pairing screen, connection wizard
 
 ## Runtime Upload
@@ -146,8 +146,8 @@ _Avoid_: Pairing screen, connection wizard
 **Runtime Upload**: Installing a **Runtime Upload Archive** over the LAN into the **Installed Deck App Library**. It does not activate the package unless none is active.
 _Avoid_: Hot reload, live edit
 
-**Runtime Upload Listener**: The VitaDeck-owned HTTP server (`src/upload/`) that serves the **Runtime Upload Web UI** and accepts uploads. Binds on all interfaces at port 8787, falling forward up to 10 ports; if none binds, it does not run. It runs from **Shell Upload Entry** until **Shell Upload Cancel** or exit, through Shell hides, active app changes, and both successful and failed uploads.
-_Avoid_: Public API, always-on LAN service, background upload daemon
+**LAN Listener**: The VitaDeck-owned HTTP server (`src/net/lan_listener.c`) that serves **Runtime Upload** and accepts **Host Control Links**. Binds on all interfaces at port 8787, falling forward up to 10 ports; if none binds, it does not run. It starts with VitaDeck and runs until the **Shell Listener Entry** turns it off or VitaDeck exits, through Shell hides, active app changes, uploads and links. Anyone on the LAN can upload and link while it runs; there are no credentials yet.
+_Avoid_: Runtime Upload Listener, Host Control Link Listener, public API, background upload daemon
 
 **Runtime Upload URL**: The `http://IP:PORT/` address of the Web UI, using a LAN-reachable IP and the port actually bound.
 _Avoid_: FTP URL, deep link, marketplace URL
@@ -155,7 +155,7 @@ _Avoid_: FTP URL, deep link, marketplace URL
 **Runtime Upload Web UI**: The browser page at `GET /` for picking and uploading an archive, showing the JSON result.
 _Avoid_: Deck App UI, store frontend, CDN-hosted site
 
-**Runtime Upload POST**: `POST /upload`, taking one archive as `multipart/form-data` (field `archive`) or `application/zip`, answering JSON: `ok: true` with `packageName` and `version`, or `ok: false` with `code` and `message` and a status reflecting the error class. One ingest at a time; a concurrent one gets 409. Other paths 404, wrong methods on `/upload` 405; there is no other endpoint.
+**Runtime Upload POST**: `POST /upload`, taking one archive as `multipart/form-data` (field `archive`) or `application/zip`, answering JSON: `ok: true` with `packageName` and `version`, or `ok: false` with `code` and `message` and a status reflecting the error class. One ingest at a time; a concurrent one gets 409. Other paths 404, wrong methods on `/upload` 405; the only other endpoint is `POST /link` (**Host Control Link**).
 _Avoid_: GraphQL mutation, WebSocket upload, chunked multi-file APIs
 
 **Runtime Upload Limits**: Caps on archive size, unpacked size and entry count (16 MB, 64 MB, 256 entries). Over-limit uploads install nothing.
@@ -170,7 +170,7 @@ _Avoid_: Cache, download folder, build output
 **Runtime Upload Replacement**: An upload whose **Deck App Package Name** matches an installed package overwrites it in place. If it is the **Active Deck App**, a **Deck App Runtime Restart** follows.
 _Avoid_: Uninstall, rollback, package rename
 
-**Upload Pairing**: A possible future ephemeral credential for the listener. Initial Runtime Upload trusts the LAN.
+**Upload Pairing**: A possible future ephemeral credential for the **LAN Listener**. Runtime Upload and **Host Control Links** trust the LAN until then.
 _Avoid_: Login, account, DRM
 
 ## SDK and runtime
@@ -207,11 +207,8 @@ _Avoid_: Plugin file, npm plugin, `.vdapp` (that is the **Deck App Package**)
 **Host Control Event**: A named, typed message a **Host Control Plugin**'s implementation emits on the computer, which a **Deck App** watching that plugin receives within about one network round trip (`watchHostEvents`). The Vita keeps one request waiting at the companion, which answers it when the event happens (long-polling); the computer never connects to the Vita. `core` emits `notice` for `vitadeck-host-companion notify`.
 _Avoid_: Push notification, websocket, subscription, callback
 
-**Host Control Link**: A **Host Companion**, given the address shown on the **Shell Host Control Screen**, tells VitaDeck its id, name and command URL. VitaDeck keeps up to 4 links, newest first, one per companion id, until replaced or forgotten. Addresses only, no credentials; it does not use the **Runtime Upload Listener**.
+**Host Control Link**: A **Host Companion**, given the Vita's **LAN Listener** address, tells VitaDeck its id, name and command URL with `POST /link`. VitaDeck keeps up to 4 links, newest first, one per companion id, until replaced or forgotten. Addresses only, no credentials.
 _Avoid_: Pairing, Upload Pairing, session, typing the computer's address on the Vita
-
-**Host Control Link Listener**: The VitaDeck-owned HTTP endpoint (`POST /link`, `src/host_control/`) that accepts a **Host Control Link**. Binds on all interfaces at port 8798, falling forward up to 10 ports. It runs only while the **Shell Host Control Screen** is open and stops after a successful link.
-_Avoid_: Host Control server, always-on LAN service, Runtime Upload Listener
 
 ## Host mappings
 

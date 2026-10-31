@@ -663,9 +663,12 @@ async function postArchive(uploadUrl: URL, archive: Uint8Array, signal: AbortSig
     if (signal.aborted) throw error;
     const code = errorCode(error);
     if (code === "ECONNREFUSED") {
-      throw new Error(`Nothing is listening at ${uploadUrl.origin}. Open the VitaDeck Shell and confirm Upload.`, {
-        cause: error,
-      });
+      throw new Error(
+        `Nothing is listening at ${uploadUrl.origin}. Check the address under Upload and link in the VitaDeck Shell, and that it is on.`,
+        {
+          cause: error,
+        },
+      );
     }
     // The listener may close the socket on a rejected upload without reading the body (#79).
     if (code === "ECONNRESET" || code === "EPIPE" || code === "UND_ERR_SOCKET") return { kind: "busy" };

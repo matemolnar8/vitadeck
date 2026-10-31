@@ -31,7 +31,7 @@ cmake --preset default && ninja -C out run
 
 `run` stages every example into `out/vitadeck-data/installed-deck-apps`; open the VitaDeck Shell with F1 and activate VitaDeck Demo.
 
-On a Vita (or the desktop host), open the Shell, confirm **Upload**, and point `vitadeck dev` at the URL it shows:
+On a Vita (or the desktop host), open the Shell and point `vitadeck dev` at the URL under **Upload and link**:
 
 ```bash
 cd js/examples/demo

@@ -8,7 +8,7 @@ import {
 } from "@vitadeck/sdk/host-control";
 import { loadConfig, saveConfig } from "./config";
 
-export const DEFAULT_VITA_LINK_PORT = 8798;
+export const DEFAULT_VITA_LINK_PORT = 8787;
 const LINK_TIMEOUT_MS = 5000;
 
 export type LinkOptions = {
@@ -67,7 +67,7 @@ async function postLink(url: string, request: HostControlLinkRequest): Promise<{
 export async function linkVita(vitaAddress: string, options: LinkOptions): Promise<LinkOutcome> {
   const target = parseVitaAddress(vitaAddress);
   if (!target)
-    return { ok: false, message: `${vitaAddress} is not an address like 192.168.1.177 or 192.168.1.177:8798.` };
+    return { ok: false, message: `${vitaAddress} is not an address like 192.168.1.177 or 192.168.1.177:8787.` };
 
   const config = await loadConfig(options.configPath);
   const port = options.port ?? config.port;
@@ -104,7 +104,7 @@ export async function linkVita(vitaAddress: string, options: LinkOptions): Promi
     const reason = error instanceof Error && error.cause instanceof Error ? error.cause.message : String(error);
     return {
       ok: false,
-      message: `Could not reach VitaDeck at ${linkUrl} (${reason}). Open Host Control in the VitaDeck Shell on the Vita, then check the address it shows.`,
+      message: `Could not reach VitaDeck at ${linkUrl} (${reason}). Check that Upload and link is on in the VitaDeck Shell, and that the address matches the one it shows.`,
     };
   }
 

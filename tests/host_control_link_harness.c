@@ -3,7 +3,7 @@
 #include "core/package_library.h"
 #include "core/util.h"
 #include "host_control/link.h"
-#include "host_control/listener.h"
+#include "net/lan_listener.h"
 #include "platform/socket.h"
 #include "platform/thread.h"
 
@@ -269,9 +269,9 @@ static void test_store(void)
     free(json);
 }
 
-static int listener_port(const VdHostControlListener *listener)
+static int listener_port(VdLanListener *listener)
 {
-    const char *colon = strrchr(host_control_listener_address(listener), ':');
+    const char *colon = strrchr(lan_listener_address(listener), ':');
     return colon ? atoi(colon + 1) : 0;
 }
 
@@ -316,16 +316,16 @@ static const char *response_body(const char *response)
 static void test_loopback(void)
 {
     expect(host_control_links_init(g_root), "the store should init for the loopback test");
-    VdHostControlListener listener;
-    host_control_listener_init(&listener);
+    VdLanListener listener;
+    lan_listener_init(&listener);
     char error[256] = "";
-    if (!host_control_listener_start(&listener, error, sizeof(error))) {
+    if (!lan_listener_start(&listener, error, sizeof(error))) {
         expect(false, error);
-        host_control_listener_destroy(&listener);
+        lan_listener_destroy(&listener);
         return;
     }
     int port = listener_port(&listener);
-    expect(port >= 8798 && port <= 8807, "the listener should bind in 8798-8807");
+    expect(port >= 8787 && port <= 8796, "the listener should bind in 8787-8796");
 
     char response[4096];
     exchange(port, "GET /nope HTTP/1.1\r\nhost: 127.0.0.1\r\n\r\n", response, sizeof(response));
@@ -357,7 +357,10 @@ static void test_loopback(void)
     expect(strncmp(response, "HTTP/1.1 413 ", 13) == 0 && strstr(response, "\"code\":\"payload_too_large\""),
            "a body over 64 KiB should get 413 payload_too_large");
 
-    expect(host_control_listener_is_running(&listener), "rejected requests should keep the listener running");
+    char message[256];
+    expect(lan_listener_take_message(&listener, message, sizeof(message)) &&
+               strncmp(message, "Link rejected: ", 15) == 0,
+           "a rejected link should leave a message for the Shell");
     expect(links_are(NULL, 0), "rejected requests should store nothing");
 
     Fixture ok;
@@ -370,16 +373,14 @@ static void test_loopback(void)
         expect(false, "could not load link-ok.json");
     }
 
-    for (int i = 0; i < 200 && host_control_listener_is_running(&listener); i++)
-        vd_sleep_ms(10);
-    expect(!host_control_listener_is_running(&listener), "the listener should stop after a link");
+    expect(lan_listener_is_running(&listener), "the listener should keep running after a link");
     expect(links_are((const char *[]){"3f0c9a52-6f1e-4c55-9d0b-0a8f4c1e7b21"}, 1), "the link should be stored");
-    VdHostControlLink taken;
-    expect(host_control_listener_take_link(&listener, &taken) && strcmp(taken.name, "Studio Mac") == 0,
-           "the Shell should be able to take the new link");
-    expect(!host_control_listener_take_link(&listener, &taken), "a link should be taken once");
+    expect(lan_listener_take_message(&listener, message, sizeof(message)) &&
+               strncmp(message, "Linked to Studio Mac at ", 24) == 0,
+           "the Shell should hear about the new link");
+    expect(!lan_listener_take_message(&listener, message, sizeof(message)), "a message should be taken once");
 
-    host_control_listener_destroy(&listener);
+    lan_listener_destroy(&listener);
 }
 
 int main(void)

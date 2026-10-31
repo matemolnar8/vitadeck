@@ -148,6 +148,6 @@ void test("dev explains a refused connection", async (t) => {
   await once(server, "close");
   const dev = await startDev(t, `http://127.0.0.1:${port}/`);
 
-  await dev.waitFor(/Open the VitaDeck Shell and confirm Upload/u);
+  await dev.waitFor(/Check the address under Upload and link in the VitaDeck Shell/u);
   assert.equal(await dev.stop(), 0, dev.output());
 });

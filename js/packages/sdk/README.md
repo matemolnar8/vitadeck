@@ -167,7 +167,7 @@ npx @vitadeck/sdk build
 
 ## Develop on a Vita
 
-Open the VitaDeck Shell on the Vita (or the desktop host), confirm **Upload**, and copy the Runtime Upload URL it shows. Then, from the Deck App root:
+VitaDeck listens for uploads from startup. Open the VitaDeck Shell on the Vita (or the desktop host) and copy the URL under **Upload and link**. Then, from the Deck App root:
 
 ```bash
 npx @vitadeck/sdk dev http://192.168.1.50:8787/
@@ -180,7 +180,7 @@ npx @vitadeck/sdk dev http://192.168.1.50:8787/
 [14:02:40] 422 invalid_package: manifest.json is missing "entry"
 ```
 
-Activate the Deck App once in the Shell. After that, each upload replaces the Active Deck App and restarts it with fresh state (a restart, not hot reload). Build errors are printed and watching continues; Ctrl-C stops. "Nothing is listening" means Upload is not open in the Shell or the address is wrong.
+Activate the Deck App once in the Shell. After that, each upload replaces the Active Deck App and restarts it with fresh state (a restart, not hot reload). Build errors are printed and watching continues; Ctrl-C stops. "Nothing is listening" means the address is wrong or **Upload and link** was turned off in the Shell.
 
 ## Text
 

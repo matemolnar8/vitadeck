@@ -32,6 +32,7 @@ int main(int argc, char *argv[])
         return_defer(1);
     }
     bench_init();
+    shell_start_listener(&shell);
     if (!package_library_has_active_deck_app() && !bench_active()) shell_show_home(&shell);
 
     if (!bootstrap_open_window(&bootstrap, "VitaDeck", NULL, init_error, sizeof(init_error))) {

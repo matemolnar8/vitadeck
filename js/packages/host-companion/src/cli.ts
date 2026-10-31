@@ -24,7 +24,7 @@ const USAGE = `Usage: vitadeck-host-companion <command>
       ones, and each --plugin package or every .vdplugin package in a --plugin folder, and reloads them when
       they change.
   link <vita-address>[:port] [--port N] [--advertise <ip>] [--config <path>]
-      Link the VitaDeck showing that address (port 8798 by default) with the running companion.
+      Link the VitaDeck showing that address (port 8787 by default) with the running companion.
   install <name.vdplugin.zip|name.vdplugin> [--config <path>]
       Install a Host Plugin Package that a Deck App's author built. It runs with your permissions on this
       computer.
@@ -101,7 +101,7 @@ async function start(values: { port?: string; plugin?: string[] }, configPath: s
   console.log(
     config.vitas.length > 0
       ? `Linked Vitas: ${config.vitas.join(", ")}`
-      : "Open Host Control in the VitaDeck Shell, then run: vitadeck-host-companion link <vita-address>",
+      : "Link a Vita with: vitadeck-host-companion link <vita-address> (the address under Upload and link in the VitaDeck Shell)",
   );
 
   // Parent folders, recursively: a rebuild or reinstall replaces the package folder, which ends a watch on it.

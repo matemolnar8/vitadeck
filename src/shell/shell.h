@@ -3,8 +3,7 @@
 
 #include <stdbool.h>
 #include "core/package_library.h"
-#include "host_control/listener.h"
-#include "upload/http_server.h"
+#include "net/lan_listener.h"
 
 #define VD_SHELL_REMOVE_LABEL_MAX 192
 
@@ -19,11 +18,8 @@ typedef struct {
     char remove_confirm_package[VD_PACKAGE_NAME_MAX];
     char remove_confirm_label[VD_SHELL_REMOVE_LABEL_MAX];
     char message[256];
-    VdUploadServer upload_server;
-    VdHostControlListener host_control_listener;
+    VdLanListener listener;
     int host_control_focus;
-    char host_control_error[256];
-    char host_control_status[VD_HOST_CONTROL_NAME_MAX + VD_HOST_CONTROL_URL_MAX + 32];
 } VdShell;
 
 // System Input and Shell navigation pressed this frame.
@@ -32,6 +28,8 @@ typedef struct {
 } VdShellInput;
 
 void shell_init(VdShell *shell);
+// Starts the LAN Listener; a bind failure shows as the Shell message.
+void shell_start_listener(VdShell *shell);
 void shell_show_home(VdShell *shell);
 void shell_shutdown(VdShell *shell);
 bool shell_is_visible(const VdShell *shell);

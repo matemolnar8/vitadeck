@@ -179,10 +179,9 @@ set(VITADECK_CORE_SOURCES
     src/core/event_queue.c
     src/shell/shell.c
     src/upload/archive.c
-    src/upload/http_server.c
     src/net/http.c
     src/host_control/link.c
-    src/host_control/listener.c
+    src/net/lan_listener.c
     ${PLATFORM_SOURCES}
 )
 

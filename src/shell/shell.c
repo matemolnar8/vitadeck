@@ -5,6 +5,7 @@
 #include <string.h>
 #include "core/bootstrap.h"
 #include "core/package_library.h"
+#include "host_control/link.h"
 #include "ui/input.h"
 
 #define SHELL_INSET 24
@@ -55,7 +56,7 @@ static void draw_checkmark(int cx, int cy, Color c)
     DrawLine(cx - 1, cy + 6, cx + 10, cy - 8, c);
 }
 
-// The Home rows: the packages, then the Shell Upload Entry, then the Shell Host Control Entry.
+// The Home rows: the packages, then the Shell Listener Entry, then the Shell Host Control Entry.
 #define SHELL_ENTRY_ROWS 2
 
 static int shell_row_count(void)
@@ -65,7 +66,7 @@ static int shell_row_count(void)
     return n + SHELL_ENTRY_ROWS;
 }
 
-static bool row_is_upload(int row, int package_count)
+static bool row_is_listener(int row, int package_count)
 {
     return row == package_count;
 }
@@ -130,25 +131,26 @@ static void clear_remove_confirm(VdShell *shell)
     shell->remove_confirm_row = -1;
 }
 
-static bool start_upload_server(VdShell *shell)
+static bool start_listener(VdShell *shell)
 {
     char error[256];
-    if (!upload_server_start(&shell->upload_server, error, sizeof(error))) {
+    if (!lan_listener_start(&shell->listener, error, sizeof(error))) {
         snprintf(shell->message, sizeof(shell->message), "%s", error);
         return false;
     }
-    snprintf(shell->message, sizeof(shell->message), "Upload server started.");
     return true;
 }
 
-static void toggle_upload_server(VdShell *shell)
+static void toggle_listener(VdShell *shell)
 {
-    if (upload_server_is_running(&shell->upload_server)) {
-        upload_server_stop(&shell->upload_server);
-        snprintf(shell->message, sizeof(shell->message), "Upload server stopped.");
+    if (lan_listener_is_running(&shell->listener)) {
+        lan_listener_stop(&shell->listener);
+        snprintf(shell->message, sizeof(shell->message), "Stopped listening for uploads and links.");
         return;
     }
-    start_upload_server(shell);
+    if (start_listener(shell)) {
+        snprintf(shell->message, sizeof(shell->message), "Listening for uploads and links.");
+    }
 }
 
 static void open_host_control(VdShell *shell)
@@ -156,19 +158,10 @@ static void open_host_control(VdShell *shell)
     shell->state = VD_SHELL_HOST_CONTROL;
     shell->host_control_focus = 0;
     shell->message[0] = '\0';
-    if (host_control_listener_start(&shell->host_control_listener, shell->host_control_error,
-                                    sizeof(shell->host_control_error))) {
-        shell->host_control_error[0] = '\0';
-        snprintf(shell->host_control_status, sizeof(shell->host_control_status),
-                 "Waiting for a Host Companion to link.");
-    } else {
-        snprintf(shell->host_control_status, sizeof(shell->host_control_status), "Not listening for links.");
-    }
 }
 
 static void close_host_control(VdShell *shell)
 {
-    host_control_listener_stop(&shell->host_control_listener);
     shell->state = VD_SHELL_HOME;
     shell->message[0] = '\0';
     shell->focus_row = shell_row_count() - 1;
@@ -203,7 +196,6 @@ static void apply_host_control_input(VdShell *shell, const VdShellInput *input)
 
 static void hide_shell_to_deck(VdShell *shell)
 {
-    host_control_listener_stop(&shell->host_control_listener);
     shell->state = VD_SHELL_HIDDEN;
     clear_remove_confirm(shell);
     shell->message[0] = '\0';
@@ -242,8 +234,12 @@ void shell_init(VdShell *shell)
     memset(shell, 0, sizeof(*shell));
     shell->state = VD_SHELL_HIDDEN;
     shell->remove_confirm_row = -1;
-    upload_server_init(&shell->upload_server);
-    host_control_listener_init(&shell->host_control_listener);
+    lan_listener_init(&shell->listener);
+}
+
+void shell_start_listener(VdShell *shell)
+{
+    start_listener(shell);
 }
 
 void shell_show_home(VdShell *shell)
@@ -256,10 +252,7 @@ void shell_show_home(VdShell *shell)
 
 void shell_shutdown(VdShell *shell)
 {
-    upload_server_stop(&shell->upload_server);
-    vd_mutex_destroy(shell->upload_server.mutex);
-    shell->upload_server.mutex = NULL;
-    host_control_listener_destroy(&shell->host_control_listener);
+    lan_listener_destroy(&shell->listener);
 }
 
 bool shell_is_visible(const VdShell *shell)
@@ -270,27 +263,15 @@ bool shell_is_visible(const VdShell *shell)
 void shell_update(VdShell *shell, bool *request_runtime_restart)
 {
     char message[256];
-    if (upload_server_take_message(&shell->upload_server, message, sizeof(message))) {
+    if (lan_listener_take_message(&shell->listener, message, sizeof(message))) {
         snprintf(shell->message, sizeof(shell->message), "%s", message);
     }
 
     bool restart_active = false;
     VdPackageInfo info;
-    if (upload_server_take_success(&shell->upload_server, &restart_active, &info)) {
+    if (lan_listener_take_success(&shell->listener, &restart_active, &info)) {
         snprintf(shell->message, sizeof(shell->message), "Installed %s %s.", info.display_name, info.version);
         if (restart_active) *request_runtime_restart = true;
-    }
-
-    if (host_control_listener_take_message(&shell->host_control_listener, message, sizeof(message))) {
-        snprintf(shell->message, sizeof(shell->message), "%s", message);
-    }
-
-    VdHostControlLink link;
-    if (host_control_listener_take_link(&shell->host_control_listener, &link)) {
-        host_control_listener_stop(&shell->host_control_listener);
-        snprintf(shell->host_control_status, sizeof(shell->host_control_status), "Linked to %s at %s", link.name,
-                 link.url);
-        shell->host_control_focus = 0;
     }
 }
 
@@ -369,8 +350,8 @@ void shell_apply_system_input(VdShell *shell, const VdShellInput *input, bool *r
 
     if (!input->confirm) return;
 
-    if (row_is_upload(shell->focus_row, package_count)) {
-        toggle_upload_server(shell);
+    if (row_is_listener(shell->focus_row, package_count)) {
+        toggle_listener(shell);
         return;
     }
     if (row_is_host_control(shell->focus_row, package_count)) {
@@ -487,29 +468,17 @@ static void draw_host_control_screen(VdShell *shell)
 {
     DrawText("Host Control", SHELL_PADDING, SHELL_SECTION_Y, SHELL_FONT_BODY, GRAY);
 
-    const VdHostControlListener *listener = &shell->host_control_listener;
-    const char *address = host_control_listener_address(listener);
-    bool bind_failed = shell->host_control_error[0] != '\0';
     int y = SHELL_LIST_Y;
-    char line[160];
-    if (bind_failed) {
-        DrawText(shell->host_control_error, SHELL_PADDING, y, SHELL_FONT_BODY, (Color){230, 120, 120, 255});
+    if (lan_listener_is_running(&shell->listener)) {
+        char line[160];
+        snprintf(line, sizeof(line), "On the computer: vitadeck-host-companion link %s",
+                 lan_listener_address(&shell->listener));
+        DrawText(line, SHELL_PADDING, y, SHELL_FONT_BODY, GREEN);
     } else {
-        snprintf(line, sizeof(line), "Link address: %s", address);
-        DrawText(line, SHELL_PADDING, y, SHELL_FONT_BODY,
-                 host_control_listener_is_running(listener) ? GREEN : RAYWHITE);
+        DrawText("Not listening. Turn on Upload and link on the Home screen.", SHELL_PADDING, y, SHELL_FONT_BODY,
+                 RAYWHITE);
     }
-    y += SHELL_FONT_BODY + SHELL_SPACE_XS;
-    if (host_control_listener_is_running(listener)) {
-        snprintf(line, sizeof(line), "On the computer: vitadeck-host-companion link %s", address);
-        DrawText(line, SHELL_PADDING, y, SHELL_FONT_CAPTION, (Color){130, 140, 160, 255});
-    } else if (!bind_failed) {
-        DrawText("To link another computer, go Back and open Host Control again.", SHELL_PADDING, y, SHELL_FONT_CAPTION,
-                 (Color){130, 140, 160, 255});
-    }
-    y += SHELL_FONT_CAPTION + SHELL_SPACE_XS;
-    DrawText(shell->host_control_status, SHELL_PADDING, y, SHELL_FONT_CAPTION, (Color){150, 160, 180, 255});
-    y += SHELL_FONT_CAPTION + SHELL_SPACE_MD;
+    y += SHELL_FONT_BODY + SHELL_SPACE_MD;
 
     DrawText("Linked computers", SHELL_PADDING, y, SHELL_FONT_BODY, GRAY);
     y += SHELL_FONT_BODY + SHELL_SPACE_SM;
@@ -558,11 +527,11 @@ void shell_render(VdShell *shell)
         int hint_y = SHELL_SECTION_Y + SHELL_FONT_BODY + SHELL_SPACE_XS;
         DrawText("No Deck Apps installed yet.", SHELL_PADDING, hint_y, SHELL_FONT_CAPTION, (Color){150, 160, 180, 255});
         hint_y += SHELL_FONT_CAPTION + SHELL_SPACE_XS;
-        DrawText("Select Upload, confirm to start the server, then open the URL shown below on", SHELL_PADDING, hint_y,
+        DrawText("Open the URL under Upload and link on another device on this network", SHELL_PADDING, hint_y,
                  SHELL_FONT_CAPTION, (Color){130, 140, 160, 255});
         hint_y += SHELL_FONT_CAPTION + SHELL_SPACE_XS;
-        DrawText("another device on this network and upload a zip containing one .vdapp folder.", SHELL_PADDING, hint_y,
-                 SHELL_FONT_CAPTION, (Color){130, 140, 160, 255});
+        DrawText("and upload a zip containing one .vdapp folder.", SHELL_PADDING, hint_y, SHELL_FONT_CAPTION,
+                 (Color){130, 140, 160, 255});
         list_top = hint_y + SHELL_FONT_CAPTION + SHELL_SPACE_MD;
     }
 
@@ -578,15 +547,15 @@ void shell_render(VdShell *shell)
     int end_row = shell->scroll_row;
     for (int row = shell->scroll_row; row < row_count; row++) {
         bool row_focus = row == shell->focus_row && shell->remove_confirm_package[0] == '\0';
-        bool upload_row = row_is_upload(row, package_count);
-        bool upload_running = upload_row && upload_server_is_running(&shell->upload_server);
+        bool listener_row = row_is_listener(row, package_count);
+        bool listening = listener_row && lan_listener_is_running(&shell->listener);
 
         int row_w = VD_SCREEN_WIDTH - SHELL_PADDING - SHELL_PADDING;
         int band_h = row_band_height(row, package_count);
         int bottom_reserve = row + 1 < row_count ? SHELL_OVERFLOW_ROW_STEP : 0;
         if (row_top + band_h + bottom_reserve > SHELL_LIST_BOTTOM) break;
         Color band_color = row_focus ? (Color){42, 52, 72, 255} : (Color){28, 34, 44, 255};
-        if (upload_running) band_color = row_focus ? (Color){34, 64, 58, 255} : (Color){24, 48, 44, 255};
+        if (listening) band_color = row_focus ? (Color){34, 64, 58, 255} : (Color){24, 48, 44, 255};
         DrawRectangle(SHELL_PADDING, row_top, row_w, band_h, band_color);
 
         int text_y = shell_text_baseline_y(row_top, SHELL_FONT_BODY);
@@ -594,15 +563,14 @@ void shell_render(VdShell *shell)
 
         if (row_is_host_control(row, package_count)) {
             draw_host_control_entry(text_y);
-        } else if (upload_row) {
+        } else if (listener_row) {
             int pad = SHELL_SPACE_MD;
-            DrawText("Upload", SHELL_NAME_X + pad, text_y, SHELL_FONT_BODY, upload_running ? GREEN : RAYWHITE);
+            DrawText("Upload and link", SHELL_NAME_X + pad, text_y, SHELL_FONT_BODY, listening ? GREEN : RAYWHITE);
             int sub_y = text_y + SHELL_FONT_BODY + SHELL_SPACE_XS;
-            if (upload_running) {
-                DrawText(upload_server_url(&shell->upload_server), SHELL_NAME_X + pad, sub_y, SHELL_FONT_CAPTION,
-                         GREEN);
+            if (listening) {
+                DrawText(lan_listener_url(&shell->listener), SHELL_NAME_X + pad, sub_y, SHELL_FONT_CAPTION, GREEN);
             } else {
-                DrawText("Confirm to start server", SHELL_NAME_X + pad, sub_y, SHELL_FONT_CAPTION,
+                DrawText("Off. Confirm to listen", SHELL_NAME_X + pad, sub_y, SHELL_FONT_CAPTION,
                          (Color){130, 140, 160, 255});
             }
         } else {
