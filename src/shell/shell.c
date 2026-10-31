@@ -125,9 +125,8 @@ static void ensure_focus_row_visible(VdShell *shell, int package_count, int row_
 }
 
 // The packages' first row, or with none the Host Control row, so a first Cross does not stop the listener.
-static int home_first_row(void)
+static int home_first_row(int rows)
 {
-    int rows = shell_row_count();
     return rows == SHELL_ENTRY_ROWS ? rows - 1 : 0;
 }
 
@@ -262,8 +261,9 @@ void shell_start_listener(VdShell *shell)
 void shell_show_home(VdShell *shell)
 {
     shell->state = VD_SHELL_HOME;
-    shell->focus_row = home_first_row();
-    shell->home_package_count = shell_row_count() - SHELL_ENTRY_ROWS;
+    int rows = shell_row_count();
+    shell->focus_row = home_first_row(rows);
+    shell->home_package_count = rows - SHELL_ENTRY_ROWS;
     shell->scroll_row = 0;
     shell->focus_col = 0;
 }
