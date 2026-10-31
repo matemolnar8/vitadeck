@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify 82350502701f2d0b032d12bca4aea02df9bf4dee` in this repository.
+   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify 70e9ba2bb5603104bab02541ecf29a039796344b` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,17 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  a447e3b960dc1c5434b9fbc2f45c112b1c630b1f
 
-head               82350502701f2d0b032d12bca4aea02df9bf4dee
+head               70e9ba2bb5603104bab02541ecf29a039796344b
 
-Named refs at pin: a447e3b9 ... 82350502
+Named refs at pin: a447e3b9 ... 70e9ba2b
 
 Read the diff:
 
-git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 82350502701f2d0b032d12bca4aea02df9bf4dee
+git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 70e9ba2bb5603104bab02541ecf29a039796344b
 
 Commits:
+- 70e9ba2b fix(shell): an empty Shell focuses Host Control so Cross keeps listening
+- f9245aa2 feat(shell): one LAN Listener for upload and link, on from startup
 - 82350502 refactor(host-companion): put the lifecycle comment on the call it explains
 - 18acd4f7 fix(sdk): a watch callback that stops watching ends it at once
 - 7f2c1726 fix(host-companion): start plugin lifecycles after binding the port
@@ -83,7 +85,7 @@ Máté asked for the three Host Control slices, shaped so later Deck Apps can se
 
 The what (very large):
 
-Adds Host Control end to end: the `@vitadeck/sdk/host-control` client and plugin API, the `vitadeck-host-companion` CLI with built-in `core` and `systemStats` plugins that installs custom `.vdplugin` packages, SDK CLI support to build those packages with a Deck App or standalone, the native link listener and link store with a Shell Host Control screen, and a `host-control` example Deck App, and events the computer pushes to Deck Apps by long-polling.
+Adds Host Control end to end: the `@vitadeck/sdk/host-control` client and plugin API, the `vitadeck-host-companion` CLI with built-in `core` and `systemStats` plugins that installs custom `.vdplugin` packages, SDK CLI support to build those packages with a Deck App or standalone, a LAN Listener that VitaDeck starts at boot for both Runtime Upload and links, a link store and a Shell Host Control screen, and a `host-control` example Deck App, and events the computer pushes to Deck Apps by long-polling.
 
 Look for:
 - [#109](source:s1) asks for flat command names and an internal `defineHostCommands`. Every request instead names a `plugin`, and `defineHostPlugin` and `command` are public, because the [session](source:s5) left the extension model open and [PR #144](source:s4) chose plugins.
@@ -93,6 +95,7 @@ Look for:
 - [#111](source:s3) describes a `Forget link` action. At head Cross on a linked computer row forgets that one link at once.
 - Credentials stay deferred, as ADR 0004 says, so the built-in plugins only read information; custom plugins can act on the computer and run with the user's permissions.
 - Not true at head: `@vitadeck/host-companion` is still `private: true`, so a project from `create --host-plugin` or `--host-plugin-only` cannot `npm install` its companion devDependency until the package is published.
+- [#111](source:s3) has the Vita listen for links on 8798 only while the Shell Host Control screen is open. At head `POST /link` is a route on the LAN Listener (8787), which also serves Runtime Upload and starts at boot. After testing, Máté found the setup clunky and asked for upload and link to start together and by default ([session](source:s5)). Anyone on the LAN can now upload and link whenever VitaDeck runs.
 
 ## Review concerns
 
@@ -104,7 +107,7 @@ Look for:
 
 ### 02 Host Companion: vitadeck-host-companion, built-ins and plugin packages (`companion`)
 
-`cli.ts` runs `start`, which serves `POST /command` from `server.ts` over `core`, the built-in `systemStats` and every `.vdplugin` package `plugin.ts` loads from `~/.vitadeck/plugins/` or `--plugin` (reloading them on change through `setPlugins`), `install`/`remove`, which unpack and delete those packages, and `link`, which POSTs the link payload from `link.ts` and records the Vita in `config.ts`; `rolldown.config.mjs` bundles it with the SDK into one dependency-free `vitadeck-host-companion` bin. `notify` sends a `core` notice, `core.events` and `core.notify` live in `core.ts`, and the server starts plugin lifecycles once the port is bound and stops them on reload or close.
+`cli.ts` runs `start`, which serves `POST /command` from `server.ts` over `core`, the built-in `systemStats` and every `.vdplugin` package `plugin.ts` loads from `~/.vitadeck/plugins/` or `--plugin` (reloading them on change through `setPlugins`), `install`/`remove`, which unpack and delete those packages, and `link`, which POSTs the link payload from `link.ts` to the Vita LAN Listener (port 8787 by default) and records the Vita in `config.ts`; `rolldown.config.mjs` bundles it with the SDK into one dependency-free `vitadeck-host-companion` bin. `notify` sends a `core` notice, `core.events` and `core.notify` live in `core.ts`, and the server starts plugin lifecycles once the port is bound and stops them on reload or close.
 
 Depends on:
 - 01 Wire contract and SDK client (`sdk-contract`)
@@ -139,21 +142,21 @@ Depends on:
 
 [groups/native-shared.md](groups/native-shared.md)
 
-### 06 Link listener, store and native getter (`native-link`)
+### 06 LAN Listener, link store and native getter (`native-link`)
 
-`listener.c` accepts one `POST /link` on 8798+, `link.c` validates it and stores up to 4 links through `vd_replace_file`, and `nativeGetHostControlLinks` in `jslib/host_control.c` hands the list to the SDK client.
+`src/net/lan_listener.c`, the former `src/upload/http_server.c`, adds a `POST /link` route next to `/upload` on 8787+ and `main.c` starts it at boot; `link.c` validates a link and stores up to 4 through `vd_replace_file`, and `nativeGetHostControlLinks` in `jslib/host_control.c` hands the list to the SDK client.
 
 Depends on:
 - 05 Shared native helpers moved out of upload and storage (`native-shared`)
 
 [groups/native-link.md](groups/native-link.md)
 
-### 07 Shell Host Control entry and screen (`shell`)
+### 07 Shell listener toggle and Host Control screen (`shell`)
 
-A Host Control row after Upload opens `VD_SHELL_HOST_CONTROL`, which starts the listener, shows the address, status and linked computers, and stops the listener on a link, Circle, Start or shutdown.
+The Upload row becomes `Upload and link`, showing the LAN Listener URL and toggling it, and the Host Control row opens `VD_SHELL_HOST_CONTROL`, which shows the `link` command with the listener address and the linked computers without touching the listener.
 
 Depends on:
-- 06 Link listener, store and native getter (`native-link`)
+- 06 LAN Listener, link store and native getter (`native-link`)
 
 [groups/shell.md](groups/shell.md)
 
@@ -168,6 +171,6 @@ Depends on:
 
 ### 09 Glossary, ADR, agent skills and checks (`docs`)
 
-`CONTEXT.md` adds the Host Control Event, Host Control Plugin, Host Plugin Package, Link Listener and Shell terms, ADR 0004 is rewritten for plugins, long-polled events, built-ins, `.vdplugin` packages, standalone plugins, two CLIs and several links, the new public `vitadeck-host-control` skill and updates to the init, manual-testing, upload and build skills teach agents the feature, `AGENTS.md` lists the new code and skill, and `agent-check.sh fast` runs `test:host-companion`.
+`CONTEXT.md` adds the Host Control Event, Host Control Plugin, Host Plugin Package, LAN Listener and Shell terms, ADR 0004 is rewritten for plugins, long-polled events, built-ins, `.vdplugin` packages, standalone plugins, two CLIs, several links and the LAN Listener on from startup, the new public `vitadeck-host-control` skill and updates to the init, manual-testing, upload and build skills teach agents the feature, `AGENTS.md` lists the new code and skill, and `agent-check.sh fast` runs `test:host-companion`.
 
 [groups/docs.md](groups/docs.md)

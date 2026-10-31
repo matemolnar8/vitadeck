@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify 82350502701f2d0b032d12bca4aea02df9bf4dee` in this repository.
+   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify 70e9ba2bb5603104bab02541ecf29a039796344b` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 82350502701f2d0b032d12bca4aea02df9bf4dee -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 70e9ba2bb5603104bab02541ecf29a039796344b -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,13 +25,13 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  a447e3b960dc1c5434b9fbc2f45c112b1c630b1f
 
-head               82350502701f2d0b032d12bca4aea02df9bf4dee
+head               70e9ba2bb5603104bab02541ecf29a039796344b
 
-Named refs at pin: a447e3b9 ... 82350502
+Named refs at pin: a447e3b9 ... 70e9ba2b
 
 Read the diff:
 
-git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 82350502701f2d0b032d12bca4aea02df9bf4dee
+git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 70e9ba2bb5603104bab02541ecf29a039796344b
 
 Review concern 04 of 09: SDK CLI: build Host Plugin packages, with or without a Deck App (`sdk-cli`)
 
@@ -63,13 +63,13 @@ Hunk refs for this concern:
 - js/packages/sdk/cli/cli.ts@232+252
 - js/packages/sdk/cli/cli.ts@366+387
 - js/packages/sdk/cli/cli.ts@450+573
-- js/packages/sdk/cli/cli.ts@551+700
-- js/packages/sdk/cli/cli.ts@565+722
-- js/packages/sdk/cli/cli.ts@613+772
-- js/packages/sdk/cli/cli.ts@628+787
-- js/packages/sdk/cli/cli.ts@636+798
-- js/packages/sdk/cli/cli.ts@657+830
-- js/packages/sdk/cli/cli.ts@692+865
+- js/packages/sdk/cli/cli.ts@551+703
+- js/packages/sdk/cli/cli.ts@565+725
+- js/packages/sdk/cli/cli.ts@613+775
+- js/packages/sdk/cli/cli.ts@628+790
+- js/packages/sdk/cli/cli.ts@636+801
+- js/packages/sdk/cli/cli.ts@657+833
+- js/packages/sdk/cli/cli.ts@692+868
 - js/packages/sdk/cli/copy-templates.ts@8+8
 - js/packages/sdk/cli/copy-templates.ts@27+44
 - js/packages/sdk/cli/templates/host-plugin-only/.gitignore
@@ -81,3 +81,5 @@ Hunk refs for this concern:
 - js/packages/sdk/cli/templates/host-plugin/package.json
 - js/packages/sdk/cli/templates/host-plugin/src/App.tsx
 - js/packages/sdk/cli/templates/host-plugin/vitadeck.config.json
+- js/packages/sdk/cli/cli.ts@514+663
+- js/packages/sdk/cli/dev.test.ts

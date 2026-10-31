@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify 82350502701f2d0b032d12bca4aea02df9bf4dee` in this repository.
+   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify 70e9ba2bb5603104bab02541ecf29a039796344b` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 82350502701f2d0b032d12bca4aea02df9bf4dee -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 70e9ba2bb5603104bab02541ecf29a039796344b -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,13 +25,13 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  a447e3b960dc1c5434b9fbc2f45c112b1c630b1f
 
-head               82350502701f2d0b032d12bca4aea02df9bf4dee
+head               70e9ba2bb5603104bab02541ecf29a039796344b
 
-Named refs at pin: a447e3b9 ... 82350502
+Named refs at pin: a447e3b9 ... 70e9ba2b
 
 Read the diff:
 
-git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 82350502701f2d0b032d12bca4aea02df9bf4dee
+git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 70e9ba2bb5603104bab02541ecf29a039796344b
 
 Review concern 05 of 09: Shared native helpers moved out of upload and storage (`native-shared`)
 
@@ -53,7 +53,6 @@ Depends on:
 Hunk refs for this concern:
 - src/net/http.c
 - src/net/http.h
-- src/upload/http_server.c
 - src/upload/http_parse.c
 - src/upload/http_parse.h
 - src/platform/lan_address.h
@@ -66,4 +65,3 @@ Hunk refs for this concern:
 - src/core/util.h
 - src/core/deck_app_storage.c
 - tests/upload_parsing_harness.c
-- tests/upload_single_flight_harness.c
