@@ -36,6 +36,7 @@ const USAGE = `Usage: vitadeck-host-companion <command>
 const BUILT_IN_PLUGINS: readonly ImplementedHostPlugin[] = [systemStats];
 const BUILT_IN_IDS = new Set(["core", ...BUILT_IN_PLUGINS.map((plugin) => plugin.id)]);
 const RELOAD_QUIET_MS = 200;
+const RELINK_RETRY_MS = 30_000;
 
 // `pnpm --dir js host-companion` runs from js/, so paths are relative to INIT_CWD, where the user typed it. Anywhere
 // else, a Deck App's `host` script included, they are relative to the working directory.
@@ -61,6 +62,24 @@ function watchFailed(dir: string) {
   return (error: Error) => {
     console.error(`Stopped watching ${dir} for plugin changes: ${error.message}`);
   };
+}
+
+/**
+ * Sends each linked Vita this companion's current URL, so a new IP or port reaches them without `link`. One at a time,
+ * since each outcome rewrites the config; a Vita that does not answer is retried until it does.
+ */
+async function relink(vitas: readonly string[], configPath: string, port: number): Promise<void> {
+  const attempt = async (vita: string, retrying: boolean) => {
+    const outcome = await linkVita(vita, { configPath, port, relink: true });
+    if (outcome.ok || !outcome.retry) {
+      console.log(outcome.message);
+      return;
+    }
+    if (!retrying) console.log(`${outcome.message} Retrying every ${RELINK_RETRY_MS / 1000} s.`);
+    setTimeout(() => void attempt(vita, true), RELINK_RETRY_MS);
+  };
+  // oxlint-disable-next-line no-await-in-loop -- one at a time, see above
+  for (const vita of vitas) await attempt(vita, false);
 }
 
 function describe(plugins: readonly ImplementedHostPlugin[]): string {
@@ -103,6 +122,7 @@ async function start(values: { port?: string; plugin?: string[] }, configPath: s
       ? `Linked Vitas: ${config.vitas.join(", ")}`
       : "Link a Vita with: vitadeck-host-companion link <vita-address> (the address under Upload and link in the VitaDeck Shell)",
   );
+  void relink(config.vitas, configPath, companion.port);
 
   // Parent folders, recursively: a rebuild or reinstall replaces the package folder, which ends a watch on it.
   let timer: NodeJS.Timeout | undefined;

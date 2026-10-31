@@ -14,6 +14,9 @@ static const VdHostControlLinkReply LINK_MALFORMED = {
     "Link request must be a JSON object with a number protocolVersion and string id, name and url."};
 static const VdHostControlLinkReply LINK_UNSUPPORTED_VERSION = {400, "unsupported_protocol_version",
                                                                 "VitaDeck speaks Host Control protocol version 1."};
+static const VdHostControlLinkReply LINK_UNKNOWN = {404, "unknown_link",
+                                                    "VitaDeck has no link from this computer. Link it again."};
+static const VdHostControlLinkReply LINK_SAVE_FAILED = {500, "command_failed", "VitaDeck could not save the link."};
 static const VdHostControlLinkReply LINK_INVALID = {
     422, "invalid_payload", "Link needs an id, a name of 1 to 64 bytes, and an http:// url of at most 255 bytes."};
 
@@ -41,6 +44,7 @@ typedef struct {
     bool version_seen;
     double version;
     bool id_valid, name_valid, url_valid;
+    bool relink;
 } LinkFields;
 
 // Parses one link object. False when it is not an object of the right member types.
@@ -64,6 +68,9 @@ static bool parse_link_object(Jimp *jimp, VdHostControlLink *out, LinkFields *fi
             if (ok && fields->url_valid) {
                 fields->url_valid = strncmp(out->url, "http://", 7) == 0 && out->url[7] != '\0';
             }
+        } else if (strcmp(jimp->string, "relink") == 0) {
+            ok = jimp_bool(jimp);
+            fields->relink = ok && jimp->boolean;
         } else {
             ok = json_skip_value(jimp);
         }
@@ -77,7 +84,7 @@ static bool link_fields_valid(const LinkFields *fields)
     return fields->id_valid && fields->name_valid && fields->url_valid;
 }
 
-VdHostControlLinkReply host_control_link_parse(const char *json, VdHostControlLink *out)
+VdHostControlLinkReply host_control_link_parse(const char *json, VdHostControlLink *out, bool *relink)
 {
     Jimp jimp = {0};
     jimp_begin(&jimp, "link request", json, strlen(json));
@@ -88,6 +95,7 @@ VdHostControlLinkReply host_control_link_parse(const char *json, VdHostControlLi
     if (!parsed) return LINK_MALFORMED;
     if (!fields.version_seen || fields.version != VD_HOST_CONTROL_PROTOCOL_VERSION) return LINK_UNSUPPORTED_VERSION;
     if (!link_fields_valid(&fields)) return LINK_INVALID;
+    *relink = fields.relink;
     return LINK_OK;
 }
 
@@ -175,6 +183,30 @@ bool host_control_links_save(const VdHostControlLink *link)
     }
     vd_mutex_unlock(g_mutex);
     return ok;
+}
+
+VdHostControlLinkReply host_control_links_relink(const VdHostControlLink *link, bool *changed)
+{
+    VdHostControlLinkReply reply = LINK_UNKNOWN;
+    *changed = false;
+    vd_mutex_lock(g_mutex);
+    for (int i = 0; i < g_count; i++) {
+        if (strcmp(g_links[i].id, link->id) != 0) continue;
+        reply = LINK_OK;
+        if (strcmp(g_links[i].name, link->name) == 0 && strcmp(g_links[i].url, link->url) == 0) break;
+        VdHostControlLink next[VD_HOST_CONTROL_MAX_LINKS];
+        memcpy(next, g_links, sizeof(next[0]) * (size_t)g_count);
+        next[i] = *link;
+        if (persist(next, g_count)) {
+            g_links[i] = *link;
+            *changed = true;
+        } else {
+            reply = LINK_SAVE_FAILED;
+        }
+        break;
+    }
+    vd_mutex_unlock(g_mutex);
+    return reply;
 }
 
 bool host_control_links_forget(const char *id)

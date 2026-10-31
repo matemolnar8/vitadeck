@@ -24,13 +24,15 @@ typedef struct {
     const char *message;
 } VdHostControlLinkReply;
 
-// Validates a NUL-terminated `POST /link` body. Pure; `out` is only meaningful when the status is 200.
-VdHostControlLinkReply host_control_link_parse(const char *json, VdHostControlLink *out);
+// Validates a NUL-terminated `POST /link` body. Pure; `out` and `relink` are only meaningful when the status is 200.
+VdHostControlLinkReply host_control_link_parse(const char *json, VdHostControlLink *out, bool *relink);
 
 // The Host Control Links, newest first, kept in <data root>/host-control-links.json. Safe from any thread.
 bool host_control_links_init(const char *data_root);
 // Puts the link first, replacing the entry with its id or else dropping the oldest past the cap, and persists.
 bool host_control_links_save(const VdHostControlLink *link);
+// Updates the link with this id in place, persisting only a change: 200, 404 unknown_link, or 500 command_failed.
+VdHostControlLinkReply host_control_links_relink(const VdHostControlLink *link, bool *changed);
 bool host_control_links_forget(const char *id);
 int host_control_links_list(VdHostControlLink *out, int max);
 // The list as a malloc'd JSON array of {id,name,url}, newest first, or NULL when out of memory.

@@ -17,9 +17,12 @@ export type LinkOptions = {
   port?: number;
   /** The IP to advertise. Defaults to the config's, then to the interface routed to the Vita. */
   advertise?: string;
+  /** Update an existing link only. A Vita that no longer has it is dropped from the config. */
+  relink?: boolean;
 };
 
-export type LinkOutcome = { ok: boolean; message: string };
+/** `retry` is true when the Vita did not answer, e.g. because it is off. */
+export type LinkOutcome = { ok: true; message: string } | { ok: false; message: string; retry: boolean };
 
 export function parseVitaAddress(address: string): { host: string; port: number } | undefined {
   let url: URL;
@@ -67,7 +70,11 @@ async function postLink(url: string, request: HostControlLinkRequest): Promise<{
 export async function linkVita(vitaAddress: string, options: LinkOptions): Promise<LinkOutcome> {
   const target = parseVitaAddress(vitaAddress);
   if (!target)
-    return { ok: false, message: `${vitaAddress} is not an address like 192.168.1.177 or 192.168.1.177:8787.` };
+    return {
+      ok: false,
+      message: `${vitaAddress} is not an address like 192.168.1.177 or 192.168.1.177:8787.`,
+      retry: false,
+    };
 
   const config = await loadConfig(options.configPath);
   const port = options.port ?? config.port;
@@ -78,6 +85,7 @@ export async function linkVita(vitaAddress: string, options: LinkOptions): Promi
     return {
       ok: false,
       message: `No Host Companion answers on port ${port} (${capabilities.message}). Run \`vitadeck-host-companion start\` first.`,
+      retry: false,
     };
   }
 
@@ -85,7 +93,7 @@ export async function linkVita(vitaAddress: string, options: LinkOptions): Promi
   try {
     routed = await route(target.host, target.port);
   } catch (error) {
-    return { ok: false, message: `Cannot reach ${target.host}: ${String(error)}` };
+    return { ok: false, message: `Cannot reach ${target.host}: ${String(error)}`, retry: true };
   }
 
   const advertised = options.advertise ?? config.advertise ?? routed.local;
@@ -94,6 +102,7 @@ export async function linkVita(vitaAddress: string, options: LinkOptions): Promi
     id: config.id,
     name: config.name,
     url: `http://${advertised}:${port}/`,
+    ...(options.relink && { relink: true }),
   };
   const linkUrl = `http://${routed.remote}:${target.port}/link`;
 
@@ -105,17 +114,30 @@ export async function linkVita(vitaAddress: string, options: LinkOptions): Promi
     return {
       ok: false,
       message: `Could not reach VitaDeck at ${linkUrl} (${reason}). Check that Upload and link is on in the VitaDeck Shell, and that the address matches the one it shows.`,
+      retry: true,
     };
   }
 
   const { body } = answer;
   if (!isRecord(body) || typeof body.ok !== "boolean") {
-    return { ok: false, message: `${linkUrl} answered HTTP ${answer.status} without a Host Control result.` };
+    return {
+      ok: false,
+      message: `${linkUrl} answered HTTP ${answer.status} without a Host Control result.`,
+      retry: false,
+    };
   }
   if (!body.ok) {
     const code = typeof body.code === "string" ? body.code : "unknown";
     const message = typeof body.message === "string" ? body.message : "No reason given.";
-    return { ok: false, message: `VitaDeck refused the link (${code}): ${message}` };
+    if (options.relink && code === "unknown_link") {
+      await saveConfig(options.configPath, { ...config, vitas: config.vitas.filter((vita) => vita !== routed.remote) });
+      return {
+        ok: false,
+        message: `VitaDeck at ${routed.remote} forgot this computer, so it is no longer a linked Vita here. Run \`vitadeck-host-companion link ${routed.remote}\` to link it again.`,
+        retry: false,
+      };
+    }
+    return { ok: false, message: `VitaDeck refused the link (${code}): ${message}`, retry: false };
   }
 
   if (!config.vitas.includes(routed.remote)) {
@@ -123,6 +145,6 @@ export async function linkVita(vitaAddress: string, options: LinkOptions): Promi
   }
   return {
     ok: true,
-    message: `Linked "${config.name}" with VitaDeck at ${routed.remote}. It will send commands to ${request.url}`,
+    message: `${options.relink ? "Relinked" : "Linked"} "${config.name}" with VitaDeck at ${routed.remote}. It will send commands to ${request.url}`,
   };
 }

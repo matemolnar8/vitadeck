@@ -207,7 +207,7 @@ _Avoid_: Plugin file, npm plugin, `.vdapp` (that is the **Deck App Package**)
 **Host Control Event**: A named, typed message a **Host Control Plugin**'s implementation emits on the computer, which a **Deck App** watching that plugin receives within about one network round trip (`watchHostEvents`). The Vita keeps one request waiting at the companion, which answers it when the event happens (long-polling); the computer never connects to the Vita. `core` emits `notice` for `vitadeck-host-companion notify`.
 _Avoid_: Push notification, websocket, subscription, callback
 
-**Host Control Link**: A **Host Companion**, given the Vita's **LAN Listener** address, tells VitaDeck its id, name and command URL with `POST /link`. VitaDeck keeps up to 4 links, newest first, one per companion id, until replaced or forgotten. Addresses only, no credentials.
+**Host Control Link**: A **Host Companion**, given the Vita's **LAN Listener** address, tells VitaDeck its id, name and command URL with `POST /link`. VitaDeck keeps up to 4 links, newest first, one per companion id, until replaced or forgotten. Each companion `start` relinks: it updates the URL of a link VitaDeck still has and never re-adds a forgotten one. Addresses only, no credentials.
 _Avoid_: Pairing, Upload Pairing, session, typing the computer's address on the Vita
 
 ## Host mappings

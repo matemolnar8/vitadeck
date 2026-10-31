@@ -268,20 +268,25 @@ static void handle_link(HandlerArg *arg)
     }
 
     VdHostControlLink link;
-    VdHostControlLinkReply reply = host_control_link_parse((const char *)body, &link);
+    bool relink = false;
+    VdHostControlLinkReply reply = host_control_link_parse((const char *)body, &link, &relink);
+    bool changed = true;
+    if (reply.status == 200 && relink) {
+        reply = host_control_links_relink(&link, &changed);
+    } else if (reply.status == 200 && !host_control_links_save(&link)) {
+        reply = (VdHostControlLinkReply){500, "command_failed", "VitaDeck could not save the link."};
+    }
     if (reply.status != 200) {
         reject_link(listener, arg->fd, reply.status, reply.code, reply.message);
         goto done;
     }
-    if (!host_control_links_save(&link)) {
-        reject_link(listener, arg->fd, 500, "command_failed", "VitaDeck could not save the link.");
-        goto done;
-    }
 
     http_send_response(arg->fd, 200, "OK", "application/json", "{\"ok\":true}");
-    char line[sizeof(listener->last_message)];
-    snprintf(line, sizeof(line), "Linked to %s at %s", link.name, link.url);
-    set_last_message(listener, line);
+    if (changed) {
+        char line[sizeof(listener->last_message)];
+        snprintf(line, sizeof(line), "%s %s at %s", relink ? "Relinked" : "Linked to", link.name, link.url);
+        set_last_message(listener, line);
+    }
 
 done:
     arena_free(&arena);

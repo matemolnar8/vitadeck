@@ -40,6 +40,8 @@ export type HostControlLinkRequest = {
   id: string;
   name: string;
   url: string;
+  /** Update this id's existing link only; VitaDeck answers 404 `unknown_link` when it has none, e.g. after the user forgot it. */
+  relink?: boolean;
 };
 
 export function isWireErrorCode(code: unknown): code is HostControlWireErrorCode {

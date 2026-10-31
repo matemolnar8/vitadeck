@@ -104,6 +104,14 @@ static void expect_reply(const char *case_name, VdHostControlLinkReply reply, in
     }
 }
 
+static VdHostControlLinkReply parse_link(const char *json, VdHostControlLink *link)
+{
+    bool relink = false;
+    return host_control_link_parse(json, link, &relink);
+}
+
+#define LINK_JSON(url, extra) "{\"protocolVersion\":1,\"id\":\"a\",\"name\":\"n\",\"url\":\"" url "\"" extra "}"
+
 static void test_fixtures(void)
 {
     const char *names[] = {"link-ok.json", "link-invalid-url.json", "link-version-mismatch.json"};
@@ -114,7 +122,7 @@ static void test_fixtures(void)
             continue;
         }
         VdHostControlLink link;
-        VdHostControlLinkReply reply = host_control_link_parse(fixture.request, &link);
+        VdHostControlLinkReply reply = parse_link(fixture.request, &link);
         expect_reply(names[i], reply, fixture.status, fixture.status == 200 ? NULL : fixture.code,
                      fixture.status == 200 ? NULL : fixture.message);
         if (fixture.status == 200) {
@@ -129,66 +137,67 @@ static void test_fixtures(void)
 static void test_parse_edges(void)
 {
     VdHostControlLink link;
-    expect_reply("not JSON", host_control_link_parse("{\"protocolVersion\":1,", &link), 400, "malformed_request", NULL);
-    expect_reply("an array", host_control_link_parse("[]", &link), 400, "malformed_request", NULL);
-    expect_reply(
-        "a number name",
-        host_control_link_parse("{\"protocolVersion\":1,\"id\":\"a\",\"name\":5,\"url\":\"http://h/\"}", &link), 400,
-        "malformed_request", NULL);
-    expect_reply(
-        "a string protocolVersion",
-        host_control_link_parse("{\"protocolVersion\":\"1\",\"id\":\"a\",\"name\":\"n\",\"url\":\"http://h/\"}", &link),
-        400, "malformed_request", NULL);
+    bool relink = true;
+    expect_reply("a plain link", host_control_link_parse(LINK_JSON("http://h/", ""), &link, &relink), 200, NULL, NULL);
+    expect(!relink, "a link without relink should not be a relink");
+    expect_reply("a relink", host_control_link_parse(LINK_JSON("http://h/", ",\"relink\":true"), &link, &relink), 200,
+                 NULL, NULL);
+    expect(relink, "relink: true should be a relink");
+    expect_reply("a string relink",
+                 host_control_link_parse(LINK_JSON("http://h/", ",\"relink\":\"yes\""), &link, &relink), 400,
+                 "malformed_request", NULL);
+    expect_reply("not JSON", parse_link("{\"protocolVersion\":1,", &link), 400, "malformed_request", NULL);
+    expect_reply("an array", parse_link("[]", &link), 400, "malformed_request", NULL);
+    expect_reply("a number name",
+                 parse_link("{\"protocolVersion\":1,\"id\":\"a\",\"name\":5,\"url\":\"http://h/\"}", &link), 400,
+                 "malformed_request", NULL);
+    expect_reply("a string protocolVersion",
+                 parse_link("{\"protocolVersion\":\"1\",\"id\":\"a\",\"name\":\"n\",\"url\":\"http://h/\"}", &link),
+                 400, "malformed_request", NULL);
     expect_reply("the version comes before the fields",
-                 host_control_link_parse("{\"url\":\"ftp://h/\",\"protocolVersion\":2}", &link), 400,
-                 "unsupported_protocol_version", NULL);
-    expect_reply("a missing protocolVersion",
-                 host_control_link_parse("{\"id\":\"a\",\"name\":\"n\",\"url\":\"http://h/\"}", &link), 400,
-                 "unsupported_protocol_version", NULL);
+                 parse_link("{\"url\":\"ftp://h/\",\"protocolVersion\":2}", &link), 400, "unsupported_protocol_version",
+                 NULL);
+    expect_reply("a missing protocolVersion", parse_link("{\"id\":\"a\",\"name\":\"n\",\"url\":\"http://h/\"}", &link),
+                 400, "unsupported_protocol_version", NULL);
     expect_reply("unknown members are ignored",
-                 host_control_link_parse("{\"protocolVersion\":1,\"extra\":{\"a\":[null,true]},\"id\":\"a\","
-                                         "\"name\":\"Den PC\",\"url\":\"http://h/\"}",
-                                         &link),
+                 parse_link("{\"protocolVersion\":1,\"extra\":{\"a\":[null,true]},\"id\":\"a\","
+                            "\"name\":\"Den PC\",\"url\":\"http://h/\"}",
+                            &link),
                  200, NULL, NULL);
-    expect_reply("a missing name",
-                 host_control_link_parse("{\"protocolVersion\":1,\"id\":\"a\",\"url\":\"http://h/\"}", &link), 422,
+    expect_reply("a missing name", parse_link("{\"protocolVersion\":1,\"id\":\"a\",\"url\":\"http://h/\"}", &link), 422,
                  "invalid_payload", NULL);
-    expect_reply(
-        "an id with a space",
-        host_control_link_parse("{\"protocolVersion\":1,\"id\":\"a b\",\"name\":\"n\",\"url\":\"http://h/\"}", &link),
-        422, "invalid_payload", NULL);
-    expect_reply(
-        "a url with a space",
-        host_control_link_parse("{\"protocolVersion\":1,\"id\":\"a\",\"name\":\"n\",\"url\":\"http://h /\"}", &link),
-        422, "invalid_payload", NULL);
-    expect_reply(
-        "a name with a control byte",
-        host_control_link_parse("{\"protocolVersion\":1,\"id\":\"a\",\"name\":\"a\\tb\",\"url\":\"http://h/\"}", &link),
-        422, "invalid_payload", NULL);
-    expect_reply(
-        "a bare scheme",
-        host_control_link_parse("{\"protocolVersion\":1,\"id\":\"a\",\"name\":\"n\",\"url\":\"http://\"}", &link), 422,
-        "invalid_payload", NULL);
+    expect_reply("an id with a space",
+                 parse_link("{\"protocolVersion\":1,\"id\":\"a b\",\"name\":\"n\",\"url\":\"http://h/\"}", &link), 422,
+                 "invalid_payload", NULL);
+    expect_reply("a url with a space",
+                 parse_link("{\"protocolVersion\":1,\"id\":\"a\",\"name\":\"n\",\"url\":\"http://h /\"}", &link), 422,
+                 "invalid_payload", NULL);
+    expect_reply("a name with a control byte",
+                 parse_link("{\"protocolVersion\":1,\"id\":\"a\",\"name\":\"a\\tb\",\"url\":\"http://h/\"}", &link),
+                 422, "invalid_payload", NULL);
+    expect_reply("a bare scheme",
+                 parse_link("{\"protocolVersion\":1,\"id\":\"a\",\"name\":\"n\",\"url\":\"http://\"}", &link), 422,
+                 "invalid_payload", NULL);
 
     char json[1024];
     char name[VD_HOST_CONTROL_NAME_MAX + 2];
     memset(name, 'n', sizeof(name) - 1);
     name[sizeof(name) - 1] = '\0';
     snprintf(json, sizeof(json), "{\"protocolVersion\":1,\"id\":\"a\",\"name\":\"%s\",\"url\":\"http://h/\"}", name);
-    expect_reply("a 65-byte name", host_control_link_parse(json, &link), 422, "invalid_payload", NULL);
+    expect_reply("a 65-byte name", parse_link(json, &link), 422, "invalid_payload", NULL);
     name[VD_HOST_CONTROL_NAME_MAX] = '\0';
     snprintf(json, sizeof(json), "{\"protocolVersion\":1,\"id\":\"a\",\"name\":\"%s\",\"url\":\"http://h/\"}", name);
-    expect_reply("a 64-byte name", host_control_link_parse(json, &link), 200, NULL, NULL);
+    expect_reply("a 64-byte name", parse_link(json, &link), 200, NULL, NULL);
 
     char url[VD_HOST_CONTROL_URL_MAX + 2];
     memset(url, 'u', sizeof(url) - 1);
     memcpy(url, "http://", 7);
     url[sizeof(url) - 1] = '\0';
     snprintf(json, sizeof(json), "{\"protocolVersion\":1,\"id\":\"a\",\"name\":\"n\",\"url\":\"%s\"}", url);
-    expect_reply("a 256-byte url", host_control_link_parse(json, &link), 422, "invalid_payload", NULL);
+    expect_reply("a 256-byte url", parse_link(json, &link), 422, "invalid_payload", NULL);
     url[VD_HOST_CONTROL_URL_MAX] = '\0';
     snprintf(json, sizeof(json), "{\"protocolVersion\":1,\"id\":\"a\",\"name\":\"n\",\"url\":\"%s\"}", url);
-    expect_reply("a 255-byte url", host_control_link_parse(json, &link), 200, NULL, NULL);
+    expect_reply("a 255-byte url", parse_link(json, &link), 200, NULL, NULL);
 }
 
 static VdHostControlLink make_link(const char *id, const char *name)
@@ -357,6 +366,19 @@ static void test_loopback(void)
     expect(strncmp(response, "HTTP/1.1 413 ", 13) == 0 && strstr(response, "\"code\":\"payload_too_large\""),
            "a body over 64 KiB should get 413 payload_too_large");
 
+    Fixture unknown;
+    if (load_fixture("link-relink-unknown.json", &unknown)) {
+        post_link(port, unknown.request, response, sizeof(response));
+        char expected[512];
+        snprintf(expected, sizeof(expected), "{\"ok\":false,\"code\":\"%s\",\"message\":\"%s\"}", unknown.code,
+                 unknown.message);
+        expect(strncmp(response, "HTTP/1.1 404 ", 13) == 0 && strcmp(response_body(response), expected) == 0,
+               "a relink without a stored link should answer the link-relink-unknown fixture");
+        free(unknown.request);
+    } else {
+        expect(false, "could not load link-relink-unknown.json");
+    }
+
     char message[256];
     expect(lan_listener_take_message(&listener, message, sizeof(message)) &&
                strncmp(message, "Link rejected: ", 15) == 0,
@@ -379,6 +401,24 @@ static void test_loopback(void)
                strncmp(message, "Linked to Studio Mac at ", 24) == 0,
            "the Shell should hear about the new link");
     expect(!lan_listener_take_message(&listener, message, sizeof(message)), "a message should be taken once");
+
+    const VdHostControlLink den = {"den", "Den PC", "http://192.168.1.21:8797/"};
+    expect(host_control_links_save(&den), "could not save a second link");
+    const char *moved = "{\"protocolVersion\":1,\"id\":\"3f0c9a52-6f1e-4c55-9d0b-0a8f4c1e7b21\",\"name\":"
+                        "\"Studio Mac\",\"url\":\"http://192.168.1.30:8797/\",\"relink\":true}";
+    post_link(port, moved, response, sizeof(response));
+    VdHostControlLink links[VD_HOST_CONTROL_MAX_LINKS];
+    expect(strncmp(response, "HTTP/1.1 200 ", 13) == 0 &&
+               host_control_links_list(links, VD_HOST_CONTROL_MAX_LINKS) == 2 &&
+               strcmp(links[1].url, "http://192.168.1.30:8797/") == 0,
+           "a relink should update the stored URL in place, without moving the link first");
+    expect(lan_listener_take_message(&listener, message, sizeof(message)) &&
+               strcmp(message, "Relinked Studio Mac at http://192.168.1.30:8797/") == 0,
+           "a relink that changes the URL should tell the Shell");
+    post_link(port, moved, response, sizeof(response));
+    expect(strncmp(response, "HTTP/1.1 200 ", 13) == 0 &&
+               !lan_listener_take_message(&listener, message, sizeof(message)),
+           "an unchanged relink should answer 200 and stay quiet");
 
     lan_listener_destroy(&listener);
 }

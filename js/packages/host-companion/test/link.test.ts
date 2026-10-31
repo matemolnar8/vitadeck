@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { loadConfig } from "../src/config";
+import { loadConfig, saveConfig } from "../src/config";
 import { linkVita, parseVitaAddress } from "../src/link";
 import { startHostCompanion } from "../src/server";
 
@@ -121,15 +121,41 @@ void test("reports a protocol version mismatch and saves nothing", async (t) => 
     ok: false,
     message:
       "VitaDeck refused the link (unsupported_protocol_version): VitaDeck speaks Host Control protocol version 1.",
+    retry: false,
   });
   assert.deepEqual((await loadConfig(configPath)).vitas, []);
+});
+
+void test("a relink asks VitaDeck to update its link only, and keeps the Vita", async (t) => {
+  const { configPath, config, port } = await setup(t);
+  await saveConfig(configPath, { ...config, vitas: ["127.0.0.1"] });
+  const vita = await stubVita(t, await fixture("link-ok"));
+
+  const outcome = await linkVita(`127.0.0.1:${vita.port}`, { configPath, port, relink: true });
+
+  assert.ok(outcome.ok, outcome.message);
+  assert.match(outcome.message, /^Relinked /u);
+  assert.equal(vita.received[0]?.body.relink, true);
+  assert.deepEqual((await loadConfig(configPath)).vitas, ["127.0.0.1"]);
+});
+
+void test("a Vita that forgot this computer is dropped on relink", async (t) => {
+  const { configPath, config, port } = await setup(t);
+  await saveConfig(configPath, { ...config, vitas: ["127.0.0.1", "192.168.1.50"] });
+  const vita = await stubVita(t, await fixture("link-relink-unknown"));
+
+  const outcome = await linkVita(`127.0.0.1:${vita.port}`, { configPath, port, relink: true });
+
+  assert.ok(!outcome.ok && !outcome.retry);
+  assert.match(outcome.message, /forgot this computer/u);
+  assert.deepEqual((await loadConfig(configPath)).vitas, ["192.168.1.50"]);
 });
 
 void test("reports an unreachable Vita", async (t) => {
   const { configPath, port } = await setup(t);
   const outcome = await linkVita(`127.0.0.1:${await freePort()}`, { configPath, port });
 
-  assert.equal(outcome.ok, false);
+  assert.ok(!outcome.ok && outcome.retry);
   assert.match(
     outcome.message,
     /^Could not reach VitaDeck at http:\/\/127\.0\.0\.1:\d+\/link \(.*\)\. Check that Upload and link is on/u,

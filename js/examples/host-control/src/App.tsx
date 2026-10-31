@@ -118,16 +118,17 @@ function HostDetails({ host, stats }: { host: LinkedHost; stats: HostResult<Syst
     [host.id],
   );
 
+  // By URL, so a relink that moves the computer asks again.
   useEffect(() => {
     let stopped = false;
     void (async () => {
-      const result = await createHostClient(corePlugin, { hostId: host.id }).capabilities();
+      const result = await createHostClient(corePlugin, { url: host.url }).capabilities();
       if (!stopped) setCapabilities(result);
     })();
     return () => {
       stopped = true;
     };
-  }, [host.id]);
+  }, [host.url]);
 
   const sendEcho = async () => {
     const started = getTime();

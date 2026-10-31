@@ -24,6 +24,8 @@ vitadeck-host-companion link 192.168.1.177
 
 Pass the Vita's address: VitaDeck listens from startup, and the VitaDeck Shell shows the address under Upload and link (add `:port` if it is not 8787). `link` checks that `start` is answering, then tells VitaDeck where to send commands. One Vita can link several computers, and one computer can link several Vitas.
 
+Each `start` relinks every Vita this computer linked, so a new IP or `--port` reaches them without running `link` again. A Vita that is off is retried every 30 s; one that forgot this computer in the Shell is dropped from the config instead of being linked again. A Vita whose Upload and link listener moved off port 8787 needs `link` again.
+
 ```sh
 vitadeck-host-companion notify "Build done"
 ```

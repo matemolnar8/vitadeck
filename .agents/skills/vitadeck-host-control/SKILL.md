@@ -70,7 +70,7 @@ The SDK README section [Your own Host Plugin](https://github.com/matemolnar8/vit
 | Code or message | Meaning |
 | --- | --- |
 | `not_linked` | No computer is linked, or `hostId` was forgotten in the Shell. Link again. |
-| `unreachable`, `timeout` | The companion is not running, the firewall blocks 8797, or the computer's IP changed (link again). |
+| `unreachable`, `timeout` | The companion is not running, or the firewall blocks 8797. After the computer's IP changes, restarting the companion relinks the Vitas it linked. |
 | `unknown_plugin` | That computer has not installed the plugin. Tell the user which `.vdplugin.zip` to install. |
 | `forbidden` | The Vita's IP is not the one the companion linked. Link again from the Shell. |
 | `invalid_payload` | The payload failed the command's guard. |
