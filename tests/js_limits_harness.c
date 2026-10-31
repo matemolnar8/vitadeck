@@ -8,6 +8,10 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <time.h>
 
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
@@ -84,6 +88,51 @@ static int expect_fetch(const char *name, const char *file, const char *expected
     return expect_failure(name, source, expected);
 }
 
+// A server that accepts connections but never answers, like a Host Companion holding an event wait. Stopping the
+// JS thread must abort the pending fetch instead of waiting out curl's 30 s timeout.
+static int expect_stop_cancels_fetch(void)
+{
+    int server = socket(AF_INET, SOCK_STREAM, 0);
+    struct sockaddr_in addr = {.sin_family = AF_INET, .sin_addr.s_addr = htonl(INADDR_LOOPBACK)};
+    socklen_t len = sizeof(addr);
+    if (server < 0 || bind(server, (struct sockaddr *)&addr, sizeof(addr)) != 0 || listen(server, 4) != 0 ||
+        getsockname(server, (struct sockaddr *)&addr, &len) != 0) {
+        perror("fetch cancel: listen");
+        if (server >= 0) close(server);
+        return 1;
+    }
+
+    char source[512];
+    snprintf(source, sizeof(source),
+             DECK_APP_PRELUDE "nativeFetch('http://127.0.0.1:%d/', 'GET');"
+                              "setTimeout(() => nativeReportDeckAppError('waiting'), 200);\n",
+             ntohs(addr.sin_port));
+    if (!write_file("js/runtime.js", source, strlen(source))) {
+        close(server);
+        return 1;
+    }
+    VdJsRuntime runtime;
+    js_runtime_init(&runtime);
+    if (!js_runtime_start(&runtime)) {
+        close(server);
+        return 1;
+    }
+    for (int waited = 0; !js_runtime_failed(&runtime) && waited < WAIT_TIMEOUT_MS; waited++)
+        vd_sleep_ms(1);
+
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    js_runtime_stop(&runtime);
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    close(server);
+    double seconds = (double)(end.tv_sec - start.tv_sec) + (double)(end.tv_nsec - start.tv_nsec) / 1e9;
+    if (seconds > 3.0) {
+        fprintf(stderr, "fetch cancel: stopping waited %.1f s for a pending fetch\n", seconds);
+        return 1;
+    }
+    return 0;
+}
+
 int main(void)
 {
     SetTraceLogLevel(LOG_NONE);
@@ -110,6 +159,7 @@ int main(void)
     failures += expect_fetch("fetch at limit", "at-limit.txt", "resolved 4194304");
     failures +=
         expect_fetch("fetch over limit", "over-limit.txt", "rejected: fetch response body exceeds the 4 MiB limit");
+    failures += expect_stop_cancels_fetch();
     failures += expect_failure("unhandled rejection", DECK_APP_PRELUDE "Promise.reject(new Error('boom'));\n", "boom");
     failures += expect_failure("unhandled rejection in timer",
                                DECK_APP_PRELUDE "setTimeout(() => { Promise.reject(new Error('late boom')); }, 0);\n",

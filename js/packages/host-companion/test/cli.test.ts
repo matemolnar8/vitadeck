@@ -1,0 +1,162 @@
+import assert from "node:assert/strict";
+import { execFile, spawn } from "node:child_process";
+import { access, readdir } from "node:fs/promises";
+import { createServer } from "node:net";
+import path from "node:path";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+import { corePlugin, createHostClient } from "@vitadeck/sdk/host-control";
+import { greeterPlugin } from "./fixtures/greeter-plugin";
+import { buildGreeterPackage, tempDir, writePackage, zipPackage } from "./fixtures/plugin-package";
+
+const cliPath = fileURLToPath(new URL("../src/cli.ts", import.meta.url));
+const tsxBin = fileURLToPath(new URL("../../../node_modules/.bin/tsx", import.meta.url));
+
+function runCli(args: string[], cwd: string): Promise<{ code: number; output: string }> {
+  return new Promise((resolve) => {
+    execFile(tsxBin, [cliPath, ...args], { cwd, env: { ...process.env, INIT_CWD: cwd } }, (error, stdout, stderr) => {
+      resolve({ code: error ? Number(error.code ?? 1) : 0, output: `${stdout}${stderr}` });
+    });
+  });
+}
+
+function freePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const { port } = server.address() as { port: number };
+      server.close(() => {
+        resolve(port);
+      });
+    });
+  });
+}
+
+/** Starts `start` and returns a function that waits for a line of its output matching `pattern`. */
+function startCompanion(t: test.TestContext, args: string[], cwd: string) {
+  const child = spawn(tsxBin, [cliPath, "start", ...args], { cwd, env: { ...process.env, INIT_CWD: cwd } });
+  t.after(() => {
+    child.kill();
+  });
+  let output = "";
+  let waiter: (() => void) | undefined;
+  const onData = (chunk: Buffer) => {
+    output += chunk.toString();
+    waiter?.();
+  };
+  child.stdout.on("data", onData);
+  child.stderr.on("data", onData);
+  return (pattern: RegExp) =>
+    new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`No line matched ${pattern.toString()} in:\n${output}`));
+      }, 10_000);
+      waiter = () => {
+        if (!output.split("\n").some((line) => pattern.test(line))) return;
+        output = "";
+        waiter = undefined;
+        clearTimeout(timer);
+        resolve();
+      };
+      waiter();
+    });
+}
+
+function exists(file: string): Promise<boolean> {
+  return access(file).then(
+    () => true,
+    () => false,
+  );
+}
+
+void test("install loads a .vdplugin.zip into a running companion, remove unloads it", async (t) => {
+  const dir = await tempDir(t);
+  const config = path.join(dir, "home", "host-companion.json");
+  await zipPackage(await buildGreeterPackage(t, path.join(dir, "build")));
+  const port = await freePort();
+  const waitFor = startCompanion(t, ["--port", String(port), "--config", config], dir);
+  await waitFor(/^Plugins: core, systemStats$/u);
+  const greeter = createHostClient(greeterPlugin, { url: `http://127.0.0.1:${port}/` });
+
+  const installed = await runCli(["install", "build/greeter.vdplugin.zip", "--config", config], dir);
+  assert.equal(installed.code, 0, installed.output);
+  assert.match(installed.output, /Installed greeter \(greet, crash, launch\)/u);
+  assert.deepEqual(await readdir(path.join(dir, "home", "plugins")), ["greeter.vdplugin"]);
+  await waitFor(/^Reloaded plugins: core, systemStats, greeter$/u);
+  assert.deepEqual(await greeter.greet({ name: "Máté" }), { ok: true, greeting: "Hello, Máté!" });
+
+  const removed = await runCli(["remove", "greeter", "--config", config], dir);
+  assert.equal(removed.code, 0, removed.output);
+  assert.equal(await exists(path.join(dir, "home", "plugins", "greeter.vdplugin")), false);
+  await waitFor(/^Reloaded plugins: core, systemStats$/u);
+  const gone = await greeter.greet({ name: "Máté" });
+  assert.equal(gone.ok ? "ok" : gone.code, "unknown_plugin");
+});
+
+void test("a --plugin folder reloads a rebuilt package, and a broken rebuild keeps the previous one", async (t) => {
+  const dir = await tempDir(t);
+  const config = path.join(dir, "host-companion.json");
+  await buildGreeterPackage(t, path.join(dir, "dist"));
+  const port = await freePort();
+  const waitFor = startCompanion(t, ["--port", String(port), "--config", config, "--plugin", "dist"], dir);
+  await waitFor(/^Plugins: core, systemStats, greeter$/u);
+  const greeter = createHostClient(greeterPlugin, { url: `http://127.0.0.1:${port}/` });
+  assert.deepEqual(await greeter.greet({ name: "Vita" }), { ok: true, greeting: "Hello, Vita!" });
+
+  await writePackage(
+    path.join(dir, "dist"),
+    "greeter",
+    `export default {
+  id: "greeter",
+  commands: new Map([["greet", { isPayload: () => true, run: ({ name }) => ({ greeting: "Hi again, " + name }) }]]),
+};
+`,
+  );
+  await waitFor(/^Reloaded plugins: core, systemStats, greeter$/u);
+  assert.deepEqual(await greeter.greet({ name: "Vita" }), { ok: true, greeting: "Hi again, Vita" });
+
+  await writePackage(path.join(dir, "dist"), "greeter", "export default {\n");
+  await waitFor(/^Kept the previous plugins: .*greeter\.vdplugin failed to load/u);
+  assert.deepEqual(await greeter.greet({ name: "Vita" }), { ok: true, greeting: "Hi again, Vita" });
+});
+
+void test("install refuses a built-in id and anything but a .vdplugin.zip or .vdplugin folder", async (t) => {
+  const dir = await tempDir(t);
+  const config = path.join(dir, "host-companion.json");
+  await writePackage(dir, "stats", 'export default { id: "systemStats", commands: new Map() };\n');
+
+  const builtIn = await runCli(["install", "stats.vdplugin", "--config", config], dir);
+  assert.equal(builtIn.code, 1);
+  assert.match(builtIn.output, /systemStats is a built-in plugin/u);
+  const wrongExtension = await runCli(["install", "plugin.js", "--config", config], dir);
+  assert.equal(wrongExtension.code, 1);
+  assert.match(wrongExtension.output, /is not a \.vdplugin\.zip archive or a \.vdplugin folder/u);
+  const unknown = await runCli(["remove", "nothing", "--config", config], dir);
+  assert.equal(unknown.code, 1);
+  assert.match(unknown.output, /No plugin nothing is installed/u);
+});
+
+void test("notify reaches a Deck App's waiting core.events within a moment", async (t) => {
+  const dir = await tempDir(t);
+  const config = path.join(dir, "host-companion.json");
+  const port = await freePort();
+  const waitFor = startCompanion(t, ["--port", String(port), "--config", config], dir);
+  await waitFor(/^Plugins: core, systemStats$/u);
+  const core = createHostClient(corePlugin, { url: `http://127.0.0.1:${port}/`, timeoutMs: 30_000 });
+  const start = await core.events({ plugin: "core" });
+  assert.ok(start.ok);
+
+  const waiting = core.events({ plugin: "core", after: start.next });
+  const sent = await runCli(["notify", "Build done", "--port", String(port), "--config", config], dir);
+  assert.equal(sent.code, 0, sent.output);
+  assert.deepEqual(await waiting, {
+    ok: true,
+    events: [{ seq: start.next + 1, name: "notice", data: { text: "Build done" } }],
+    next: start.next + 1,
+  });
+
+  const nobody = await runCli(["notify", "lost", "--port", String(await freePort()), "--config", config], dir);
+  assert.equal(nobody.code, 1);
+  assert.match(nobody.output, /No Host Companion took the notice/u);
+});

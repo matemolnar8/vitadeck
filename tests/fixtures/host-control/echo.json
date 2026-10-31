@@ -1,0 +1,15 @@
+{
+  "request": {
+    "protocolVersion": 1,
+    "plugin": "core",
+    "command": "echo",
+    "payload": {
+      "text": "hi"
+    }
+  },
+  "status": 200,
+  "response": {
+    "ok": true,
+    "text": "hi"
+  }
+}

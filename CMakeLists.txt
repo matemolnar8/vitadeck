@@ -137,9 +137,9 @@ if(DEFINED ENV{VITASDK})
 endif()
 
 if(DEFINED ENV{VITASDK})
-  set(PLATFORM_SOURCES src/platform/thread_vita.c src/platform/text_input_vita.c)
+  set(PLATFORM_SOURCES src/platform/thread_vita.c src/platform/text_input_vita.c src/platform/lan_address_vita.c)
 else()
-  set(PLATFORM_SOURCES src/platform/thread_posix.c src/platform/text_input_host.c)
+  set(PLATFORM_SOURCES src/platform/thread_posix.c src/platform/text_input_host.c src/platform/lan_address_posix.c)
 endif()
 
 set(JSLIB_SOURCES
@@ -151,6 +151,7 @@ set(JSLIB_SOURCES
     src/jslib/fetch.c
     src/jslib/error.c
     src/jslib/storage.c
+    src/jslib/host_control.c
 )
 
 # Everything but main.c, so the app and the test harnesses compile each source once.
@@ -160,6 +161,7 @@ set(VITADECK_CORE_SOURCES
     src/core/bootstrap.c
     src/core/deck_app_storage.c
     src/core/js_runtime.c
+    src/core/json.c
     src/core/package_manifest.c
     src/core/package_library.c
     src/core/util.c
@@ -177,8 +179,9 @@ set(VITADECK_CORE_SOURCES
     src/core/event_queue.c
     src/shell/shell.c
     src/upload/archive.c
-    src/upload/http_parse.c
-    src/upload/http_server.c
+    src/net/http.c
+    src/host_control/link.c
+    src/net/lan_listener.c
     ${PLATFORM_SOURCES}
 )
 
@@ -284,12 +287,14 @@ if(NOT DEFINED ENV{VITASDK})
   if(BUILD_TESTING)
     foreach(harness
       timer_reload package_manifest package_library upload_parsing storage event_queue snapshot_swap hit_test
-      scroll_math input upload_single_flight shell_input js_limits input_budget
+      scroll_math input upload_single_flight shell_input js_limits input_budget host_control_link
     )
       add_executable(${harness}_harness tests/${harness}_harness.c)
       target_link_libraries(${harness}_harness ${VITADECK_CORE_LIBRARIES})
       add_test(NAME ${harness}_harness COMMAND ${harness}_harness)
     endforeach()
+    # Reads the Host Control wire fixtures in tests/fixtures/host-control.
+    target_compile_definitions(host_control_link_harness PRIVATE VD_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 
     add_executable(layout_harness tests/layout_harness.c)
     target_link_libraries(layout_harness ${VITADECK_CORE_LIBRARIES})

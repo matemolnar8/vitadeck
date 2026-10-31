@@ -1,0 +1,13 @@
+{
+  "request": {
+    "protocolVersion": 1,
+    "plugin": "lights",
+    "command": "toggle"
+  },
+  "status": 404,
+  "response": {
+    "ok": false,
+    "code": "unknown_plugin",
+    "message": "This Host Companion has no plugin lights."
+  }
+}

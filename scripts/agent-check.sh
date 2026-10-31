@@ -8,7 +8,7 @@ usage() {
     cat <<'EOF'
 usage: scripts/agent-check.sh [fast|host|smoke|full]
 
-fast   JS install and build, JS typecheck, CLI tests, JS lint, JS and C formatting checks
+fast   JS install and build, JS typecheck, CLI and Host Companion tests, JS lint, JS and C formatting checks
 host   JS install and build, host configure/build, and non-smoke CTest
        (VITADECK_SANITIZE=address,undefined builds the host with sanitizers)
 smoke  Dockerized Linux visual smoke CTest
@@ -68,6 +68,9 @@ run_fast() {
 
     step "Test SDK CLI"
     pnpm --dir js test:cli
+
+    step "Test Host Companion"
+    pnpm --dir js test:host-companion
 
     step "Lint JS"
     pnpm --dir js lint

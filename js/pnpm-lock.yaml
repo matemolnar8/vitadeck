@@ -241,6 +241,9 @@ importers:
       '@types/react-reconciler':
         specifier: 'catalog:'
         version: 0.28.9(@types/react@18.3.31)
+      '@vitadeck/sdk':
+        specifier: workspace:*
+        version: link:packages/sdk
       babel-plugin-react-compiler:
         specifier: 'catalog:'
         version: 1.0.0
@@ -307,6 +310,22 @@ importers:
         specifier: 'catalog:'
         version: 7.0.2
 
+  examples/host-control:
+    dependencies:
+      '@vitadeck/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+      react:
+        specifier: 'catalog:'
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: 'catalog:'
+        version: 18.3.31
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
   examples/minesweeper:
     dependencies:
       '@vitadeck/sdk':
@@ -335,6 +354,24 @@ importers:
       '@types/react':
         specifier: 'catalog:'
         version: 18.3.31
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
+  packages/host-companion:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      '@vitadeck/sdk':
+        specifier: workspace:*
+        version: link:../sdk
+      fflate:
+        specifier: 'catalog:'
+        version: 0.8.3
+      rolldown:
+        specifier: 'catalog:'
+        version: 1.2.15
       typescript:
         specifier: 'catalog:'
         version: 7.0.2

@@ -3,47 +3,30 @@
 #include "core/package_library.h"
 #include "core/util.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 
 typedef struct {
     char dir[VD_PATH_MAX];
     char file[VD_PATH_MAX];
-    char temp[VD_PATH_MAX];
-    char backup[VD_PATH_MAX];
 } StoragePaths;
 
 static bool storage_paths(const char *data_root, const char *package_name, StoragePaths *paths)
 {
     if (!vd_safe_package_name(package_name)) return false;
     char data_dir[VD_PATH_MAX];
-    if (!vd_join_path(data_dir, sizeof(data_dir), data_root, "deck-app-data") ||
-        !vd_join_path(paths->dir, sizeof(paths->dir), data_dir, package_name) ||
-        !vd_join_path(paths->file, sizeof(paths->file), paths->dir, "storage.json")) {
-        return false;
-    }
-    // temp and backup are file plus a suffix, so they fit whenever it does.
-    int temp_len = snprintf(paths->temp, sizeof(paths->temp), "%s.tmp", paths->file);
-    int backup_len = snprintf(paths->backup, sizeof(paths->backup), "%s.bak", paths->file);
-    return temp_len > 0 && (size_t)temp_len < sizeof(paths->temp) && backup_len > 0 &&
-           (size_t)backup_len < sizeof(paths->backup);
-}
-
-static bool file_exists(const char *path)
-{
-    struct stat st;
-    return stat(path, &st) == 0;
+    return vd_join_path(data_dir, sizeof(data_dir), data_root, "deck-app-data") &&
+           vd_join_path(paths->dir, sizeof(paths->dir), data_dir, package_name) &&
+           vd_join_path(paths->file, sizeof(paths->file), paths->dir, "storage.json");
 }
 
 char *deck_app_storage_read(const char *data_root, const char *package_name, size_t *out_len)
 {
     StoragePaths paths;
     if (!storage_paths(data_root, package_name, &paths)) return NULL;
-    // The backup only outlives a write that crashed before the new file was in place.
-    const char *source = file_exists(paths.file) ? paths.file : file_exists(paths.backup) ? paths.backup : NULL;
-    if (source) return vd_read_file(source, out_len);
+    bool found = false;
+    char *json = vd_read_replaced_file(paths.file, out_len, &found);
+    if (found) return json;
 
     char *empty = malloc(3);
     if (!empty) return NULL;
@@ -67,30 +50,7 @@ bool deck_app_storage_write(const char *data_root, const char *package_name, con
         return fail(error, error_size, "Invalid Deck App Storage path.");
     }
     if (!vd_mkdir_p(paths.dir)) return fail(error, error_size, "Could not create Deck App Storage directory.");
-
-    FILE *f = fopen(paths.temp, "wb");
-    if (!f) return fail(error, error_size, "Could not write Deck App Storage.");
-    bool written = fwrite(json, 1, len, f) == len;
-    if (fclose(f) != 0 || !written) {
-        remove(paths.temp);
-        return fail(error, error_size, "Could not write Deck App Storage.");
-    }
-
-    // The Vita's rename does not replace an existing file, so the old store moves aside first and
-    // stays readable as the backup until the new one is in place.
-    if (file_exists(paths.file)) {
-        remove(paths.backup);
-        if (rename(paths.file, paths.backup) != 0) {
-            remove(paths.temp);
-            return fail(error, error_size, "Could not replace Deck App Storage.");
-        }
-    }
-    if (rename(paths.temp, paths.file) != 0) {
-        rename(paths.backup, paths.file);
-        remove(paths.temp);
-        return fail(error, error_size, "Could not replace Deck App Storage.");
-    }
-    remove(paths.backup);
+    if (!vd_replace_file(paths.file, json, len)) return fail(error, error_size, "Could not write Deck App Storage.");
     return true;
 }
 

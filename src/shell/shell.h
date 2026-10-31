@@ -3,22 +3,25 @@
 
 #include <stdbool.h>
 #include "core/package_library.h"
-#include "upload/http_server.h"
+#include "net/lan_listener.h"
 
 #define VD_SHELL_REMOVE_LABEL_MAX 192
 
-typedef enum { VD_SHELL_HIDDEN, VD_SHELL_HOME } VdShellState;
+typedef enum { VD_SHELL_HIDDEN, VD_SHELL_HOME, VD_SHELL_HOST_CONTROL } VdShellState;
 
 typedef struct {
     VdShellState state;
     int focus_row;
     int scroll_row;
     int focus_col;
+    // Packages listed when Home last looked, so an upload can keep focus on the entry row it was on.
+    int home_package_count;
     int remove_confirm_row;
     char remove_confirm_package[VD_PACKAGE_NAME_MAX];
     char remove_confirm_label[VD_SHELL_REMOVE_LABEL_MAX];
     char message[256];
-    VdUploadServer upload_server;
+    VdLanListener listener;
+    int host_control_focus;
 } VdShell;
 
 // System Input and Shell navigation pressed this frame.
@@ -27,6 +30,8 @@ typedef struct {
 } VdShellInput;
 
 void shell_init(VdShell *shell);
+// Starts the LAN Listener; a bind failure shows as the Shell message.
+void shell_start_listener(VdShell *shell);
 void shell_show_home(VdShell *shell);
 void shell_shutdown(VdShell *shell);
 bool shell_is_visible(const VdShell *shell);

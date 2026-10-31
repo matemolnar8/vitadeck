@@ -39,10 +39,11 @@ npx @vitadeck/sdk create <project-name>
 ```
 
 - `name` (required): display name shown in the VitaDeck Shell. The package folder name is a slug of it (`My Deck App` → `my-deck-app.vdapp`).
-- `entry` (required): the source file whose default export is your root component.
+- `entry`: the source file whose default export is your root component. Required unless the project only builds a Host Plugin (see [Standalone plugins](#standalone-plugins)).
 - `outDir` (required): parent folder for the built `.vdapp` folder and `.vdapp.zip`.
 - `version` (optional): semver written to the package manifest. Defaults to `version` in `package.json`.
 - `fonts` / `images` (optional): name → file path, relative to the project and inside it. Names start with a letter and use letters, digits, `_` or `-` (max 63 characters); `default` is reserved for fonts. Up to 32 of each. Fonts: `.ttf`, `.otf`, `.fnt`, `.bdf`. Images: `.png`, `.jpg`, `.jpeg`, `.bmp`, `.tga`, `.gif`, `.psd`, `.hdr`, `.pic`, `.qoi`. The build copies them into the package and fails if a file is missing.
+- `hostPlugin` (optional): the Deck App's own Host Control Plugin. `entry` is its implementation (`.ts`, `.mts`, `.js` or `.mjs`); `files` (optional) is a folder copied into the package as `files/`. Both are relative to the project. The build writes the `<outDir>/<slug>.vdplugin` package and `<slug>.vdplugin.zip`; see [Your own Host Plugin](#your-own-host-plugin).
 
 Reference assets by name, never by path: `<Text font="title" …>`, `<Button font="title" fontSize={24} …>`, `<Image image="logo" …>`.
 
@@ -82,6 +83,78 @@ function finish(score: number) {
 
 `getItem(key)` returns `null` for a missing key. `setItem` and `removeItem` return once the change is on disk. Each Deck App gets 1 MiB; a `setItem` that would go past it throws a `RangeError` and keeps the previous value. Reinstalling the Deck App over Runtime Upload keeps its storage; removing it in the VitaDeck Shell deletes it.
 
+## Host Control
+
+`@vitadeck/sdk/host-control` lets a Deck App call a computer on the same LAN that runs the [VitaDeck Host Companion](https://github.com/matemolnar8/vitadeck/tree/main/js/packages/host-companion) (`vitadeck-host-companion`). The user links computers in the VitaDeck Shell (Host Control); a Deck App never needs their addresses.
+
+```tsx
+import { createHostClient, systemStatsPlugin } from "@vitadeck/sdk/host-control";
+
+const stats = await createHostClient(systemStatsPlugin).read();
+if (stats.ok) console.log(`${stats.cpuPercent}% CPU`);
+else if (stats.code === "not_linked") setHint("Link a computer in the VitaDeck Shell");
+```
+
+- Commands come in **Host Control Plugins**. Every companion has the built-in `core` (`capabilities`, `echo`; also exported as `host`) and `systemStats` (`read`) plugins.
+- `createHostClient(plugin, { hostId })` returns a typed client for one plugin on one computer; leave out `hostId` for the most recent link. `linkedHosts()` lists the linked computers (`id`, `name`, `url`), newest first, and reflects Shell changes on its next call.
+- Every method resolves to `{ ok: true, ...result }` or `{ ok: false, code, message }` and never rejects, so TypeScript makes you check `ok`. Besides the companion's codes, the client reports `not_linked`, `unreachable`, `timeout` (5 s by default; the command may still have run) and `bad_response`. A failed command is never retried.
+- `capabilities()` lists the plugins a computer loaded, so a Deck App can tell an `unknown_plugin` apart before calling it.
+
+### Events from the computer
+
+A plugin can also send **events** to a Deck App as soon as something happens on the computer, instead of the Deck App polling for it. `watchHostEvents` keeps one request waiting at the companion, which answers it the moment an event is emitted, or after 25 s with nothing, when it simply waits again:
+
+```tsx
+import { corePlugin, watchHostEvents } from "@vitadeck/sdk/host-control";
+
+useEffect(
+  () =>
+    watchHostEvents(corePlugin, (event) => setNotice(event.data.text), { hostId, onFailure: (f) => setHint(f.code) }),
+  [hostId],
+);
+```
+
+- It returns a function that stops watching, so it fits a `useEffect` cleanup. A failed wait is retried after 5 s, or 30 s after a `timeout`; a computer without the plugin answers `unknown_plugin`. A throw from your callbacks stops watching and fails the Deck App.
+- `core` emits `notice` for `vitadeck-host-companion notify "Build done"`, so any script on the computer can reach Deck Apps with no plugin of its own.
+- Events are best effort: a companion restart, or more than 100 events of the plugin between two waits, drops some.
+
+### Your own Host Plugin
+
+When the built-in plugins are not enough, write a plugin: in the Deck App's own project, or on its own for several Deck Apps to use (see [Standalone plugins](#standalone-plugins)). `create --host-plugin` scaffolds a Deck App with one:
+
+```bash
+npx @vitadeck/sdk create my-app --host-plugin
+```
+
+- `host/plugin.ts` defines the commands with `defineHostPlugin(id, { name: command<Payload, Result>(guard) })`. Deck Apps import it, so it is bundled into them and must not import Node.js modules. The companion runs `guard` on every payload before your code.
+- `host/companion.ts` default-exports `implementHostPlugin(plugin, { name: async (payload) => result })`. It runs in the companion with Node.js. `tsc` fails if a command is missing or returns the wrong type; throw `new HostCommandError("unsupported_platform", "...")` to answer with a specific code.
+- `"hostPlugin": { "entry": "./host/companion.ts" }` in `vitadeck.config.json` makes `build` and `dev` also write `dist/my-app.vdplugin`, a **Host Plugin Package**, and its `dist/my-app.vdplugin.zip`. The package holds `manifest.json` and `companion.mjs`, your implementation bundled with its npm dependencies (pure JavaScript only). Add `"files": "./host/files"` to ship other files too, like scripts or data; read them with `new URL("./files/<name>", import.meta.url)` when a command runs, since a rebuild that changes only `files/` does not re-run your module. The `.vdplugin.zip` keeps no file permissions, so run a shipped script through its interpreter (`execFile("sh", [path])`) rather than directly.
+- To send events, declare them as a third argument, `defineHostPlugin("lights", { toggle: ... }, { changed: event<{ room: string; on: boolean }>() })`, and emit them from a lifecycle in `host/companion.ts`: `implementHostPlugin(lightsPlugin, { toggle: ... }, { start: (emit) => { const stop = watchLights((room, on) => emit("changed", { room, on })); return stop; } })`. `start` runs when the companion loads the plugin, and the function it returns runs when it unloads or reloads. `emit` only accepts the declared events and their data.
+- `pnpm host` builds and runs a companion with your plugin, reloading it whenever `vitadeck dev` rebuilds. Link it once with `npx vitadeck-host-companion link <address>`.
+
+Users install your plugin with `vitadeck-host-companion install my-app.vdplugin.zip`, so ship the `.vdplugin.zip` next to the `.vdapp.zip`. When they have not, your Deck App gets `unknown_plugin`; tell them what to install.
+
+### Standalone plugins
+
+A plugin does not need a Deck App. `create --host-plugin-only` scaffolds a project with only `host/`, and a `vitadeck.config.json` with `hostPlugin` but no `entry`:
+
+```bash
+npx @vitadeck/sdk create lights --host-plugin-only
+```
+
+`build` writes only `dist/lights.vdplugin` and `dist/lights.vdplugin.zip`, and `dev` rebuilds them on every save without a Runtime Upload URL; `pnpm host` runs them in a companion. The project's `package.json` exports `host/plugin.ts`, so a Deck App adds the project as a dependency (a local path such as `pnpm add ../lights`, a git URL, or npm once you remove `"private": true`) and imports the commands. Installed from git or npm, the plugin uses the Deck App's `@vitadeck/sdk`, its peer dependency; a linked local path uses the plugin's own copy, which only costs a few bytes in the bundle.
+
+```tsx
+import { createHostClient } from "@vitadeck/sdk/host-control";
+import { hostPlugin as lights } from "lights";
+
+const result = await createHostClient(lights).greet({ name: "Vita" });
+```
+
+Its users install `lights.vdplugin.zip` once, and every Deck App that depends on it can call it.
+
+This subpath is bundled into your Deck App, along with any plugin registry you import.
+
 ## Build
 
 From the root of a Deck App (with `vitadeck.config.json`):
@@ -94,7 +167,7 @@ npx @vitadeck/sdk build
 
 ## Develop on a Vita
 
-Open the VitaDeck Shell on the Vita (or the desktop host), confirm **Upload**, and copy the Runtime Upload URL it shows. Then, from the Deck App root:
+VitaDeck listens for uploads from startup. Open the VitaDeck Shell on the Vita (or the desktop host) and copy the URL under **Upload and link**. Then, from the Deck App root:
 
 ```bash
 npx @vitadeck/sdk dev http://192.168.1.50:8787/
@@ -107,7 +180,7 @@ npx @vitadeck/sdk dev http://192.168.1.50:8787/
 [14:02:40] 422 invalid_package: manifest.json is missing "entry"
 ```
 
-Activate the Deck App once in the Shell. After that, each upload replaces the Active Deck App and restarts it with fresh state (a restart, not hot reload). Build errors are printed and watching continues; Ctrl-C stops. "Nothing is listening" means Upload is not open in the Shell or the address is wrong.
+Activate the Deck App once in the Shell. After that, each upload replaces the Active Deck App and restarts it with fresh state (a restart, not hot reload). Build errors are printed and watching continues; Ctrl-C stops. "Nothing is listening" means the address is wrong or **Upload and link** was turned off in the Shell.
 
 ## Text
 

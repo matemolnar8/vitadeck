@@ -1,0 +1,24 @@
+{
+  "name": "vitadeck-scaffold-template",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./host/plugin.ts"
+  },
+  "scripts": {
+    "build": "vitadeck build",
+    "dev": "vitadeck dev",
+    "tsc": "tsc -p host",
+    "host": "vitadeck build && vitadeck-host-companion start --plugin ./dist"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "@vitadeck/host-companion": "workspace:*",
+    "@vitadeck/sdk": "workspace:*",
+    "typescript": "7.0.2"
+  },
+  "peerDependencies": {
+    "@vitadeck/sdk": "workspace:*"
+  }
+}

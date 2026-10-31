@@ -1,5 +1,6 @@
 #include "upload/archive.h"
-#include "upload/http_parse.h"
+#include "core/json.h"
+#include "net/http.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -19,7 +20,7 @@ static void failf(const char *case_name, const char *message)
 static void expect_header(const char *case_name, const char *headers, const char *name, const char *expected)
 {
     char value[256];
-    bool found = upload_header_value(headers, name, value, sizeof(value));
+    bool found = http_header_value(headers, name, value, sizeof(value));
     if (!expected) {
         if (found) failf(case_name, "header should not be found");
         return;
@@ -39,16 +40,16 @@ static void test_headers(void)
                             "content-length: 42\r\n"
                             "\r\n";
     expect_header("lowercase content-type", lowercase, "Content-Type", "application/zip");
-    if (upload_content_length(lowercase) != 42) failf("lowercase content-length", "expected 42");
+    if (http_content_length(lowercase) != 42) failf("lowercase content-length", "expected 42");
 
     const char *nested = "POST /upload HTTP/1.1\r\n"
                          "X-Note: Content-Length: 999, content-type: application/zip\r\n"
                          "Content-Length: 5\r\n"
                          "\r\n";
-    if (upload_content_length(nested) != 5) failf("header name inside value", "matched inside another value");
+    if (http_content_length(nested) != 5) failf("header name inside value", "matched inside another value");
     expect_header("header name inside value", nested, "Content-Type", NULL);
 
-    if (upload_content_length("POST / HTTP/1.1\r\nContent-Length: 12abc\r\n\r\n") != -1) {
+    if (http_content_length("POST / HTTP/1.1\r\nContent-Length: 12abc\r\n\r\n") != -1) {
         failf("non-numeric content-length", "expected -1");
     }
 }
@@ -56,7 +57,7 @@ static void test_headers(void)
 static void expect_escape(const char *case_name, const char *in, size_t out_size, const char *expected)
 {
     char out[256];
-    upload_json_escape(out, out_size, in);
+    json_escape(out, out_size, in);
     if (strcmp(out, expected) != 0) failf(case_name, out);
 }
 

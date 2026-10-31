@@ -1,0 +1,16 @@
+{
+  "request": {
+    "protocolVersion": 1,
+    "plugin": "core",
+    "command": "echo",
+    "payload": {
+      "text": 42
+    }
+  },
+  "status": 422,
+  "response": {
+    "ok": false,
+    "code": "invalid_payload",
+    "message": "Invalid payload for core.echo."
+  }
+}

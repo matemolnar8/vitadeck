@@ -1,0 +1,24 @@
+{
+  "name": "@vitadeck/host-companion",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "bin": {
+    "vitadeck-host-companion": "./dist/cli.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "scripts": {
+    "build": "rolldown -c rolldown.config.mjs",
+    "tsc": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@vitadeck/sdk": "workspace:*",
+    "fflate": "catalog:",
+    "rolldown": "catalog:",
+    "typescript": "catalog:"
+  }
+}

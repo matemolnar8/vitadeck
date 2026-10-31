@@ -1,6 +1,6 @@
 ---
 name: vitadeck-manual-testing
-description: Guides manual GUI testing of VitaDeck Deck Apps, Shell navigation, Runtime Upload, and walkthrough recording. Use when testing VitaDeck visually, using computerUse with the raylib window, validating Deck App rendering, or producing screenshots/videos for UI changes.
+description: Guides manual GUI testing of VitaDeck Deck Apps, Shell navigation, Runtime Upload, Host Control linking, and walkthrough recording. Use when testing VitaDeck visually, using computerUse with the raylib window, validating Deck App rendering, or producing screenshots/videos for UI changes.
 metadata:
   internal: true
 ---
@@ -22,7 +22,7 @@ metadata:
 
 - **Start / F1** toggles between the running **Deck App** and the **VitaDeck Shell**.
 - In the **VitaDeck Shell**, **Enter** confirms and **Backspace** goes back.
-- The **Shell Home Screen** lists installed **Deck App Packages** plus **Upload**.
+- The **Shell Home Screen** lists installed **Deck App Packages**, then **Upload and link** (the LAN Listener, on from startup; Enter turns it off or on), then **Host Control** (the linked computers; Enter on a computer forgets it).
 - Hiding the Shell should reveal the **Active Deck App**.
 - If key input seems ignored, first focus the VitaDeck window; then retry F1/Enter/Backspace.
 
@@ -44,13 +44,22 @@ Checklist:
 
 Only use this when testing upload behavior:
 
-1. Open the **Shell** with F1.
-2. Select **Upload** and confirm.
-3. Prefer the known local endpoint while the upload screen is active:
+1. VitaDeck listens from startup; open the **Shell** with F1 to read the URL under **Upload and link**.
+2. Prefer the known local endpoint:
    - `curl -X POST http://localhost:8787/upload -F archive=@js/examples/chat/dist/chat.vdapp.zip`
-4. Verify upload actually replaced the package on disk before judging the UI:
+3. Verify upload actually replaced the package on disk before judging the UI:
    - `out/vitadeck-data/installed-deck-apps/<package>.vdapp/manifest.json`
-5. If curl resets or hangs, inspect the app log. Do not assume the package changed.
+4. If curl resets or hangs, inspect the app log. Do not assume the package changed.
+
+## Host Control testing
+
+1. Start a companion from the repo: `pnpm --dir js host-companion start`. Use `--config /tmp/<name>.json` to keep tests out of `~/.vitadeck`, and `--port 8799` for a second computer.
+2. Run `pnpm --dir js host-companion link <address> --config <same config>` with the address the Shell shows under **Upload and link** (or **Shell → Host Control**). That screen lists the linked computers.
+3. Run `host-control.vdapp` for live gauges and Echo. The companion logs one line per request, which helps to tell a UI bug from a missing call.
+4. For a custom plugin, build its project and pass `--plugin <project>/dist` to `start`. Or `install` the `.vdplugin.zip` with the same `--config`.
+5. Reverse states: stop the companion (the app shows `unreachable` / offline), `remove <id>` (`unknown_plugin`), and forget the computer in the Shell (`not_linked`).
+
+Links persist in `out/vitadeck-data/host-control-links.json`; delete it to start unlinked.
 
 ## Walkthrough recording pattern
 
@@ -67,5 +76,5 @@ Only use this when testing upload behavior:
 - Running from the repo root makes `vitadeck` miss `js/runtime.js`; always run from `out/`.
 - `pnpm --dir js build` rebuilds example `.vdapp` packages; it does not automatically update `out/vitadeck-data`.
 - A visible old UI usually means the installed package was not replaced or the app was not restarted.
-- The listener falls forward to 8788-8796 when 8787 is busy; read the port from the URL on the Shell Upload Screen before curling.
+- The listener falls forward to 8788-8796 when 8787 is busy; read the port from the URL under **Upload and link** in the Shell before curling or linking.
 - Do not keep failed walkthrough recordings as artifacts.

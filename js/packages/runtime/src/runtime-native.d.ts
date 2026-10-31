@@ -278,6 +278,8 @@ declare global {
   function nativeReadDeckAppStorage(): string;
   function nativeWriteDeckAppStorage(json: string): void;
   function nativeReportDeckAppError(message: string, stack: string): void;
+  // Called by the Host Control client in @vitadeck/sdk: a JSON array of {id, name, url}, newest first.
+  function nativeGetHostControlLinks(): string;
 
   function nativeFetch(
     url: string,

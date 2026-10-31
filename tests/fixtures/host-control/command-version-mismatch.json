@@ -1,0 +1,16 @@
+{
+  "request": {
+    "protocolVersion": 2,
+    "plugin": "core",
+    "command": "echo",
+    "payload": {
+      "text": "hi"
+    }
+  },
+  "status": 400,
+  "response": {
+    "ok": false,
+    "code": "unsupported_protocol_version",
+    "message": "This Host Companion speaks Host Control protocol version 1."
+  }
+}

@@ -48,7 +48,7 @@ Start is Enter here, not F1 as in the host build.
 - Click the Vita3K window once before sending keys. Keys sent while it is merely frontmost are dropped.
 - Hold each key for about 60 ms. Longer holds trigger VitaDeck's D-pad repeat and overshoot the focus.
 - The VitaDeck log is in the terminal as `export_sceClibVprintf` lines. An access violation at `0x80` logged at startup is harmless.
-- Runtime Upload works: open Upload in the Shell, then `vitadeck dev http://127.0.0.1:8787/` or `curl -X POST http://127.0.0.1:8787/upload -F archive=@<app>.vdapp.zip` from the same machine.
+- Runtime Upload works: VitaDeck listens from startup, so `vitadeck dev http://127.0.0.1:8787/` or `curl -X POST http://127.0.0.1:8787/upload -F archive=@<app>.vdapp.zip` from the same machine.
 
 ## Known emulator gaps
 

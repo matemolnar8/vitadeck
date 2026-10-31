@@ -8,6 +8,23 @@ const destRoot = path.join(pkgRoot, "dist/templates");
 
 const sdkPkg = JSON.parse(await readFile(path.join(pkgRoot, "package.json"), "utf8")) as { version: string };
 const sdkVersion = sdkPkg.version;
+const companionPkg = JSON.parse(await readFile(path.join(pkgRoot, "../host-companion/package.json"), "utf8")) as {
+  version: string;
+};
+const publishedVersions = { "@vitadeck/sdk": sdkVersion, "@vitadeck/host-companion": companionPkg.version };
+
+/** Template packages depend on the workspace; a scaffolded project gets the published versions. */
+function withPublishedVersions(json: string): string {
+  const pkg = JSON.parse(json) as Partial<
+    Record<"dependencies" | "devDependencies" | "peerDependencies", Record<string, string>>
+  >;
+  for (const deps of [pkg.dependencies, pkg.devDependencies, pkg.peerDependencies]) {
+    for (const [name, version] of Object.entries(publishedVersions)) {
+      if (deps?.[name] === "workspace:*") deps[name] = `^${version}`;
+    }
+  }
+  return `${JSON.stringify(pkg, null, 2)}\n`;
+}
 
 function skipTemplateDir(name: string): boolean {
   return name === "node_modules" || name === "dist";
@@ -27,15 +44,8 @@ async function copyTree(rel = ""): Promise<void> {
         await copyTree(childRel);
       } else if (ent.isFile()) {
         await mkdir(path.dirname(dest), { recursive: true });
-        const relPosix = childRel.split(path.sep).join("/");
-        const isScaffoldPkg = ent.name === "package.json" && relPosix === "scaffold/package.json";
-        if (isScaffoldPkg) {
-          const raw = await readFile(src, "utf8");
-          const pkg = JSON.parse(raw) as { dependencies?: Record<string, string> };
-          if (pkg.dependencies?.["@vitadeck/sdk"] === "workspace:*") {
-            pkg.dependencies["@vitadeck/sdk"] = `^${sdkVersion}`;
-          }
-          await writeFile(dest, `${JSON.stringify(pkg, null, 2)}\n`);
+        if (ent.name === "package.json") {
+          await writeFile(dest, withPublishedVersions(await readFile(src, "utf8")));
         } else {
           await copyFile(src, dest);
         }

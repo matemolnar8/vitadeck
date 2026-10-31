@@ -109,6 +109,77 @@ char *vd_read_file(const char *path, size_t *out_len)
     return buffer;
 }
 
+typedef struct {
+    char temp[VD_PATH_MAX];
+    char backup[VD_PATH_MAX];
+} ReplacePaths;
+
+static bool replace_paths(const char *path, ReplacePaths *paths)
+{
+    int temp_len = snprintf(paths->temp, sizeof(paths->temp), "%s.tmp", path);
+    int backup_len = snprintf(paths->backup, sizeof(paths->backup), "%s.bak", path);
+    return temp_len > 0 && (size_t)temp_len < sizeof(paths->temp) && backup_len > 0 &&
+           (size_t)backup_len < sizeof(paths->backup);
+}
+
+static bool file_exists(const char *path)
+{
+    struct stat st;
+    return stat(path, &st) == 0;
+}
+
+bool vd_replace_file(const char *path, const char *data, size_t len)
+{
+    ReplacePaths paths;
+    if (!replace_paths(path, &paths)) return false;
+
+    FILE *f = fopen(paths.temp, "wb");
+    if (!f) return false;
+    bool written = fwrite(data, 1, len, f) == len;
+    if (fclose(f) != 0 || !written) {
+        remove(paths.temp);
+        return false;
+    }
+
+    // The Vita's rename does not replace an existing file, so the old file moves aside first and stays readable as
+    // the backup until the new one is in place.
+    if (file_exists(path)) {
+        remove(paths.backup);
+        if (rename(path, paths.backup) != 0) {
+            remove(paths.temp);
+            return false;
+        }
+    }
+    if (rename(paths.temp, path) != 0) {
+        rename(paths.backup, path);
+        remove(paths.temp);
+        return false;
+    }
+    remove(paths.backup);
+    return true;
+}
+
+char *vd_read_replaced_file(const char *path, size_t *out_len, bool *found)
+{
+    ReplacePaths paths;
+    *found = false;
+    if (!replace_paths(path, &paths)) return NULL;
+    // The backup only outlives a replace that crashed before the new file was in place.
+    const char *source = file_exists(path) ? path : file_exists(paths.backup) ? paths.backup : NULL;
+    if (!source) return NULL;
+    *found = true;
+    return vd_read_file(source, out_len);
+}
+
+bool vd_remove_replaced_file(const char *path)
+{
+    ReplacePaths paths;
+    if (!replace_paths(path, &paths)) return false;
+    remove(paths.temp);
+    remove(paths.backup);
+    return remove(path) == 0 || errno == ENOENT;
+}
+
 bool vd_write_text_file(const char *path, const char *contents)
 {
     FILE *f = fopen(path, "wb");

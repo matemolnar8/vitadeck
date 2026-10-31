@@ -1,0 +1,3 @@
+{
+  "hostPlugin": { "entry": "./host/companion.ts" }
+}

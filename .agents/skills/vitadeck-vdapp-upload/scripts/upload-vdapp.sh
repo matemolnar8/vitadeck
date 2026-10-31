@@ -6,11 +6,11 @@ usage() {
 Usage: upload-vdapp.sh [--ip ADDR] [--port PORT] ARCHIVE.zip
 
 Upload a Runtime Upload Archive to VitaDeck on a Vita.
-Requires VitaDeck Shell → Upload to be active on the device.
+Requires VitaDeck running with Upload and link on (the default) in the Shell.
 
 Options:
   --ip ADDR    Vita IP (default: $PSVITAIP)
-  --port PORT  Upload listener port (default: 8787)
+  --port PORT  LAN Listener port (default: 8787)
 EOF
 }
 

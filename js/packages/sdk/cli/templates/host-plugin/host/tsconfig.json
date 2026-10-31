@@ -1,0 +1,8 @@
+{
+  "extends": "@vitadeck/sdk/tsconfig",
+  "compilerOptions": {
+    "types": ["node"],
+    "lib": ["es2023"]
+  },
+  "include": ["."]
+}

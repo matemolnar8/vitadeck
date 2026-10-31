@@ -1,0 +1,14 @@
+{
+  "request": {
+    "protocolVersion": 2,
+    "id": "3f0c9a52-6f1e-4c55-9d0b-0a8f4c1e7b21",
+    "name": "Studio Mac",
+    "url": "http://192.168.1.20:8797/"
+  },
+  "status": 400,
+  "response": {
+    "ok": false,
+    "code": "unsupported_protocol_version",
+    "message": "VitaDeck speaks Host Control protocol version 1."
+  }
+}
