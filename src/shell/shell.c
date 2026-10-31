@@ -124,6 +124,13 @@ static void ensure_focus_row_visible(VdShell *shell, int package_count, int row_
     shell->scroll_row = clamp_scroll_row(shell->scroll_row, row_count);
 }
 
+// The packages' first row, or with none the Host Control row, so a first Cross does not stop the listener.
+static int home_first_row(void)
+{
+    int rows = shell_row_count();
+    return rows == SHELL_ENTRY_ROWS ? rows - 1 : 0;
+}
+
 static void clear_remove_confirm(VdShell *shell)
 {
     shell->remove_confirm_package[0] = '\0';
@@ -245,7 +252,7 @@ void shell_start_listener(VdShell *shell)
 void shell_show_home(VdShell *shell)
 {
     shell->state = VD_SHELL_HOME;
-    shell->focus_row = 0;
+    shell->focus_row = home_first_row();
     shell->scroll_row = 0;
     shell->focus_col = 0;
 }

@@ -457,17 +457,12 @@ void lan_listener_stop(VdLanListener *listener)
         listener->thread = NULL;
     }
 
-    int pending_fds[VD_LAN_MAX_OPEN_CLIENTS];
-    int pending_n = 0;
     vd_mutex_lock(listener->mutex);
-    pending_n = listener->open_client_count;
-    for (int i = 0; i < pending_n; i++)
-        pending_fds[i] = listener->open_client_fds[i];
+    // Under the lock, so a handler cannot close its fd and let a new socket reuse the number first.
+    for (int i = 0; i < listener->open_client_count; i++)
+        (void)shutdown(listener->open_client_fds[i], SHUT_RDWR);
     listener->open_client_count = 0;
     vd_mutex_unlock(listener->mutex);
-    for (int i = 0; i < pending_n; i++) {
-        if (pending_fds[i] >= 0) (void)shutdown(pending_fds[i], SHUT_RDWR);
-    }
 
     for (int i = 0; i < VD_LAN_MAX_OPEN_CLIENTS; i++) {
         if (!listener->handlers[i].thread) continue;

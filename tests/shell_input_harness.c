@@ -188,6 +188,19 @@ static void test_host_control(VdShell *shell)
     expect(lan_listener_is_running(&shell->listener), "Host Control should leave the listener running");
 }
 
+// Runs before anything is installed; the Active Deck App cannot be removed, so only a fresh library is empty.
+static void test_empty_library_focus(VdShell *shell)
+{
+    press(shell, START);
+    expect(shell->focus_row == 1, "an empty Shell should focus Host Control, not Upload and link");
+    press(shell, CONFIRM);
+    expect(shell->state == VD_SHELL_HOST_CONTROL && lan_listener_is_running(&shell->listener),
+           "the first Cross on an empty Shell should keep the listener running");
+    press(shell, BACK);
+    press(shell, BACK);
+    expect(shell_is_visible(shell), "without an Active Deck App the Shell should stay open");
+}
+
 int main(void)
 {
     char root[] = "/tmp/vitadeck-shell-input-XXXXXX";
@@ -201,14 +214,16 @@ int main(void)
         vd_remove_tree(root);
         return 1;
     }
+    VdShell shell;
+    shell_init(&shell);
+    shell_start_listener(&shell);
+    test_empty_library_focus(&shell);
+
     // Rows sort by display name: Alpha, Beta, then the Shell Listener Entry. Alpha is active.
     publish("a.vdapp", "Alpha");
     publish("b.vdapp", "Beta");
     expect(active_is("a.vdapp"), "the first publish should activate it");
-
-    VdShell shell;
-    shell_init(&shell);
-    shell_start_listener(&shell);
+    expect(!press(&shell, START) && !shell_is_visible(&shell), "Start should hide the Shell once a Deck App is active");
 
     // Each test leaves the Shell hidden and builds on the library the one before left: activating makes b active so
     // a can be removed, and the upload and Host Control tests run with b alone.

@@ -57,4 +57,4 @@ The Vita parses exactly one new kind of request: a small JSON link POST with `Co
 
 **Considered options:** rebase #16 (rejected: four months stale, and it couldn't be reviewed as one change). Topology A, where the user types the computer's address on the Vita (rejected: wrong pairing direction, and it needs a Shell text editor). Topology B (see the alternative above). A second HTTP client on `sceHttp` (rejected: `fetch()` already covers it). A fixed command catalogue or a shell-command endpoint (rejected: see plugins above).
 
-**Consequences:** the Runtime Upload lifecycle and its glossary entries stay as they are. If option B is chosen instead, rewrite this ADR and the HTTP parsing recommendation together.
+**Consequences:** Runtime Upload now runs from startup on the **LAN Listener**, which replaced the Runtime Upload Listener and Host Control Link Listener glossary entries. If option B is chosen instead, rewrite this ADR and the HTTP parsing recommendation together.
