@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify 70e9ba2bb5603104bab02541ecf29a039796344b` in this repository.
+   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify fbb6af02ce01caf22a295e56ad95c7aacba7f803` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,17 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  a447e3b960dc1c5434b9fbc2f45c112b1c630b1f
 
-head               70e9ba2bb5603104bab02541ecf29a039796344b
+head               fbb6af02ce01caf22a295e56ad95c7aacba7f803
 
-Named refs at pin: a447e3b9 ... 70e9ba2b
+Named refs at pin: a447e3b9 ... fbb6af02
 
 Read the diff:
 
-git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f 70e9ba2bb5603104bab02541ecf29a039796344b
+git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f fbb6af02ce01caf22a295e56ad95c7aacba7f803
 
 Commits:
+- fbb6af02 refactor(shell): read the row count once when Home opens
+- df415e34 fix(shell): an install keeps Home focus on the entry row it was on
 - 70e9ba2b fix(shell): an empty Shell focuses Host Control so Cross keeps listening
 - f9245aa2 feat(shell): one LAN Listener for upload and link, on from startup
 - 82350502 refactor(host-companion): put the lifecycle comment on the call it explains
