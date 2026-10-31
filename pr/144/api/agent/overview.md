@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify fbb6af02ce01caf22a295e56ad95c7aacba7f803` in this repository.
+   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify ae5083caa9370b5f5985de1de0aa147a1afecc2e` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,17 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  a447e3b960dc1c5434b9fbc2f45c112b1c630b1f
 
-head               fbb6af02ce01caf22a295e56ad95c7aacba7f803
+head               ae5083caa9370b5f5985de1de0aa147a1afecc2e
 
-Named refs at pin: a447e3b9 ... fbb6af02
+Named refs at pin: a447e3b9 ... ae5083ca
 
 Read the diff:
 
-git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f fbb6af02ce01caf22a295e56ad95c7aacba7f803
+git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f ae5083caa9370b5f5985de1de0aa147a1afecc2e
 
 Commits:
+- ae5083ca fix(host-companion): relink attempts run one at a time and re-read the config
+- 2a18bdfe feat(host-control): the companion relinks its Vitas on every start
 - fbb6af02 refactor(shell): read the row count once when Home opens
 - df415e34 fix(shell): an install keeps Home focus on the entry row it was on
 - 70e9ba2b fix(shell): an empty Shell focuses Host Control so Cross keeps listening
@@ -98,6 +100,7 @@ Look for:
 - Credentials stay deferred, as ADR 0004 says, so the built-in plugins only read information; custom plugins can act on the computer and run with the user's permissions.
 - Not true at head: `@vitadeck/host-companion` is still `private: true`, so a project from `create --host-plugin` or `--host-plugin-only` cannot `npm install` its companion devDependency until the package is published.
 - [#111](source:s3) has the Vita listen for links on 8798 only while the Shell Host Control screen is open. At head `POST /link` is a route on the LAN Listener (8787), which also serves Runtime Upload and starts at boot. After testing, Máté found the setup clunky and asked for upload and link to start together and by default ([session](source:s5)). Anyone on the LAN can now upload and link whenever VitaDeck runs.
+- [#110](source:s2) and [#111](source:s3) have the user run `link` again when the callback URL goes stale. At head every companion `start` relinks the Vitas it linked and never re-adds one the user forgot, as Máté asked ([session](source:s5)).
 
 ## Review concerns
 
@@ -109,7 +112,7 @@ Look for:
 
 ### 02 Host Companion: vitadeck-host-companion, built-ins and plugin packages (`companion`)
 
-`cli.ts` runs `start`, which serves `POST /command` from `server.ts` over `core`, the built-in `systemStats` and every `.vdplugin` package `plugin.ts` loads from `~/.vitadeck/plugins/` or `--plugin` (reloading them on change through `setPlugins`), `install`/`remove`, which unpack and delete those packages, and `link`, which POSTs the link payload from `link.ts` to the Vita LAN Listener (port 8787 by default) and records the Vita in `config.ts`; `rolldown.config.mjs` bundles it with the SDK into one dependency-free `vitadeck-host-companion` bin. `notify` sends a `core` notice, `core.events` and `core.notify` live in `core.ts`, and the server starts plugin lifecycles once the port is bound and stops them on reload or close.
+`cli.ts` runs `start`, which serves `POST /command` from `server.ts` over `core`, the built-in `systemStats` and every `.vdplugin` package `plugin.ts` loads from `~/.vitadeck/plugins/` or `--plugin` (reloading them on change through `setPlugins`), `install`/`remove`, which unpack and delete those packages, and `link`, which POSTs the link payload from `link.ts` to the Vita LAN Listener (port 8787 by default) and records the Vita in `config.ts`; every `start` relinks the recorded Vitas with `relink: true`, one at a time, retrying an unanswering one every 30 s and dropping one that answers `unknown_link`; `rolldown.config.mjs` bundles it with the SDK into one dependency-free `vitadeck-host-companion` bin. `notify` sends a `core` notice, `core.events` and `core.notify` live in `core.ts`, and the server starts plugin lifecycles once the port is bound and stops them on reload or close.
 
 Depends on:
 - 01 Wire contract and SDK client (`sdk-contract`)
@@ -146,7 +149,7 @@ Depends on:
 
 ### 06 LAN Listener, link store and native getter (`native-link`)
 
-`src/net/lan_listener.c`, the former `src/upload/http_server.c`, adds a `POST /link` route next to `/upload` on 8787+ and `main.c` starts it at boot; `link.c` validates a link and stores up to 4 through `vd_replace_file`, and `nativeGetHostControlLinks` in `jslib/host_control.c` hands the list to the SDK client.
+`src/net/lan_listener.c`, the former `src/upload/http_server.c`, adds a `POST /link` route next to `/upload` on 8787+ and `main.c` starts it at boot; `link.c` validates a link and stores up to 4 through `vd_replace_file`, and `host_control_links_relink` updates an existing link in place for a `relink: true` request or answers 404 `unknown_link`, and `nativeGetHostControlLinks` in `jslib/host_control.c` hands the list to the SDK client.
 
 Depends on:
 - 05 Shared native helpers moved out of upload and storage (`native-shared`)

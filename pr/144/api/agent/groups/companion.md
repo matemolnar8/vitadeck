@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify fbb6af02ce01caf22a295e56ad95c7aacba7f803` in this repository.
+   Run `git rev-parse --verify a447e3b960dc1c5434b9fbc2f45c112b1c630b1f` and `git rev-parse --verify ae5083caa9370b5f5985de1de0aa147a1afecc2e` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f fbb6af02ce01caf22a295e56ad95c7aacba7f803 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f ae5083caa9370b5f5985de1de0aa147a1afecc2e -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,13 +25,13 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  a447e3b960dc1c5434b9fbc2f45c112b1c630b1f
 
-head               fbb6af02ce01caf22a295e56ad95c7aacba7f803
+head               ae5083caa9370b5f5985de1de0aa147a1afecc2e
 
-Named refs at pin: a447e3b9 ... fbb6af02
+Named refs at pin: a447e3b9 ... ae5083ca
 
 Read the diff:
 
-git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f fbb6af02ce01caf22a295e56ad95c7aacba7f803
+git diff --find-renames a447e3b960dc1c5434b9fbc2f45c112b1c630b1f ae5083caa9370b5f5985de1de0aa147a1afecc2e
 
 Review concern 02 of 09: Host Companion: vitadeck-host-companion, built-ins and plugin packages (`companion`)
 
@@ -41,7 +41,7 @@ Slice B: the long-lived listener on the computer that performs the link and runs
 
 The what:
 
-`cli.ts` runs `start`, which serves `POST /command` from `server.ts` over `core`, the built-in `systemStats` and every `.vdplugin` package `plugin.ts` loads from `~/.vitadeck/plugins/` or `--plugin` (reloading them on change through `setPlugins`), `install`/`remove`, which unpack and delete those packages, and `link`, which POSTs the link payload from `link.ts` to the Vita LAN Listener (port 8787 by default) and records the Vita in `config.ts`; `rolldown.config.mjs` bundles it with the SDK into one dependency-free `vitadeck-host-companion` bin. `notify` sends a `core` notice, `core.events` and `core.notify` live in `core.ts`, and the server starts plugin lifecycles once the port is bound and stops them on reload or close.
+`cli.ts` runs `start`, which serves `POST /command` from `server.ts` over `core`, the built-in `systemStats` and every `.vdplugin` package `plugin.ts` loads from `~/.vitadeck/plugins/` or `--plugin` (reloading them on change through `setPlugins`), `install`/`remove`, which unpack and delete those packages, and `link`, which POSTs the link payload from `link.ts` to the Vita LAN Listener (port 8787 by default) and records the Vita in `config.ts`; every `start` relinks the recorded Vitas with `relink: true`, one at a time, retrying an unanswering one every 30 s and dropping one that answers `unknown_link`; `rolldown.config.mjs` bundles it with the SDK into one dependency-free `vitadeck-host-companion` bin. `notify` sends a `core` notice, `core.events` and `core.notify` live in `core.ts`, and the server starts plugin lifecycles once the port is bound and stops them on reload or close.
 
 Look for:
 - Subtle: `HostCommandError` is matched by `name` and wire `code`, not `instanceof`, because each package bundles its own copy of the class.
@@ -50,6 +50,7 @@ Look for:
 - Paths resolve against `INIT_CWD` only under the repo's own `host-companion` script; elsewhere against the working directory.
 - On macOS `systemStats` counts free, inactive and speculative `vm_stat` pages as available; elsewhere it uses `os.freemem()`, which reads `MemAvailable` on Linux.
 - `core.events` answers `unknown_plugin` for a plugin the companion has not loaded, so a Deck App watching a missing plugin finds out instead of waiting forever.
+- A relink always targets port 8787 on the stored Vita IP, because the config keeps IPs only (they double as the answer allowlist); a Vita whose listener fell forward to another port needs `link` again.
 
 Depends on:
 - 01 Wire contract and SDK client (`sdk-contract`)
