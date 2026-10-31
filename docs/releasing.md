@@ -9,7 +9,7 @@ A release is a GitHub Release with `vitadeck.vpk` attached plus the matching `@v
    git tag 0.6.0 && git push origin 0.6.0
    ```
 
-The workflow fails before building anything if the tag differs from either package version. Otherwise it builds the VPK (version `XX.YY` from the tag, patch dropped), publishes the companion and then the SDK with npm provenance, and creates the release with notes generated from the merged PR titles. While the major version is 0, the release is marked as a pre-release.
+The workflow fails before building anything if the tag differs from either package version. Otherwise it builds the VPK (version `XX.YY` from the tag, patch dropped), publishes the companion and then the SDK with npm provenance, skipping a version already on npm so a failed run can be re-run, and creates the release with notes generated from the merged PR titles. While the major version is 0, the release is marked as a pre-release.
 
 ## One-time npm setup
 

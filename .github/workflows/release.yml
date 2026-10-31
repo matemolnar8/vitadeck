@@ -71,18 +71,18 @@ jobs:
         run: pnpm --dir js build
 
       # pnpm pack resolves `catalog:` and `workspace:` versions; npm publish authenticates over OIDC.
-      # The companion goes first because the SDK scaffold depends on it.
-      - name: Publish @vitadeck/host-companion
-        working-directory: js/packages/host-companion
+      # The companion goes first because the SDK scaffold depends on it. A version already on npm
+      # is skipped, so a failed release can be re-run.
+      - name: Publish to npm
         run: |
-          pnpm pack --pack-destination "$RUNNER_TEMP/host-companion"
-          npm publish "$RUNNER_TEMP"/host-companion/*.tgz --provenance --access public
-
-      - name: Publish @vitadeck/sdk
-        working-directory: js/packages/sdk
-        run: |
-          pnpm pack --pack-destination "$RUNNER_TEMP/sdk"
-          npm publish "$RUNNER_TEMP"/sdk/*.tgz --provenance --access public
+          for pkg in host-companion sdk; do
+            if [[ -n "$(npm view "@vitadeck/$pkg@$GITHUB_REF_NAME" version 2>/dev/null)" ]]; then
+              echo "@vitadeck/$pkg@$GITHUB_REF_NAME is already on npm"
+              continue
+            fi
+            (cd "js/packages/$pkg" && pnpm pack --pack-destination "$RUNNER_TEMP/$pkg")
+            npm publish "$RUNNER_TEMP/$pkg"/*.tgz --provenance --access public
+          done
 
       - uses: actions/download-artifact@v8
         with:
