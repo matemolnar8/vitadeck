@@ -39,7 +39,7 @@ There is no schema library, since one would ship inside every Deck App bundle. T
 
 Considered for custom plugins: npm packages the companion resolves by name (rejected: an author would publish a package per Deck App, and a global companion cannot resolve packages installed elsewhere); one bundled JavaScript file (rejected: it cannot carry anything but code); and serving the implementation from the Vita at link time (rejected: the Vita would push code that the computer runs).
 
-**Two CLIs, one per machine role.** `@vitadeck/sdk`'s `vitadeck` builds Deck Apps and Host Plugin Packages; `@vitadeck/host-companion`'s `vitadeck-host-companion` runs on any computer a Vita controls. A single `vitadeck host ...` would make every user install the Deck App build toolchain (Babel, rolldown) to run a server. A second bin in the SDK would also break `npx @vitadeck/sdk`, which works only while the package has exactly one bin. The companion bundles the SDK code it needs and has no dependencies.
+**Two CLIs, one per machine role.** `@vitadeck/sdk`'s `vitadeck` builds Deck Apps and Host Plugin Packages; `@vitadeck/host-companion`'s `vitadeck-host-companion` runs on any computer a Vita controls. A single `vitadeck host ...` would make every user install the Deck App build toolchain (Babel, rolldown) to run a server. A second bin in the SDK would also break `npx @vitadeck/sdk`, which works only while the package has exactly one bin. The companion bundles the SDK code it needs and has no dependencies. Both packages share one version and one release tag publishes them together, since `create --host-plugin` scaffolds a devDependency on the companion at the SDK's version.
 
 ## HTTP parsing
 
@@ -50,7 +50,6 @@ The Vita parses exactly one new kind of request: a small JSON link POST with `Co
 ## Deferred
 
 - **Credentials.** v1 trusts the LAN, like **Runtime Upload**. A linked companion answers only its Vitas, loopback and its own addresses, but IPs can be spoofed. That is harmless for reading stats, but not for typing keys or launching apps, so a credential decision must come before the first plugin that acts on the computer.
-- **Publishing.** `@vitadeck/host-companion` is built as a dependency-free package but stays private until its first release; until then `pnpm --dir js host-companion` runs it from a checkout.
 - **Internet or account pairing.** Host Control is LAN only.
 
 **Host Control Link** is not **Upload Pairing**. A link exchanges an address and authorizes nothing. **Upload Pairing** is a future, ephemeral credential for the **LAN Listener**, so it would guard links as well as uploads. Commands sent to the companion need their own credential; the likely shape is the same idea, a short-lived code shown on the Vita and entered on the companion. At that point, either widen **Upload Pairing** to cover both directions or add a sibling term. Decide then; do not overload the term now.

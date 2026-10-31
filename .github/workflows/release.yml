@@ -1,6 +1,7 @@
 # Releases are cut by hand and nothing here creates tags: bump `version` in
-# js/packages/sdk/package.json in a PR, merge it, then push the matching tag
-# (`git tag 0.6.0 && git push origin 0.6.0`). See docs/releasing.md.
+# js/packages/sdk/package.json and js/packages/host-companion/package.json in a
+# PR, merge it, then push the matching tag (`git tag 0.6.0 && git push origin 0.6.0`).
+# See docs/releasing.md.
 name: Release
 
 on:
@@ -17,13 +18,17 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Tag matches SDK version
+      - name: Tag matches package versions
         run: |
-          version="$(node -p 'require("./js/packages/sdk/package.json").version')"
-          if [[ "$GITHUB_REF_NAME" != "$version" ]]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match js/packages/sdk/package.json version $version"
-            exit 1
-          fi
+          status=0
+          for manifest in js/packages/sdk/package.json js/packages/host-companion/package.json; do
+            version="$(node -p "require('./$manifest').version")"
+            if [[ "$GITHUB_REF_NAME" != "$version" ]]; then
+              echo "::error::Tag $GITHUB_REF_NAME does not match $manifest version $version"
+              status=1
+            fi
+          done
+          exit "$status"
 
   vpk:
     needs: check-version
@@ -65,7 +70,14 @@ jobs:
       - name: Build JS
         run: pnpm --dir js build
 
-      # pnpm pack resolves `catalog:` versions; npm publish authenticates over OIDC
+      # pnpm pack resolves `catalog:` and `workspace:` versions; npm publish authenticates over OIDC.
+      # The companion goes first because the SDK scaffold depends on it.
+      - name: Publish @vitadeck/host-companion
+        working-directory: js/packages/host-companion
+        run: |
+          pnpm pack --pack-destination "$RUNNER_TEMP/host-companion"
+          npm publish "$RUNNER_TEMP"/host-companion/*.tgz --provenance --access public
+
       - name: Publish @vitadeck/sdk
         working-directory: js/packages/sdk
         run: |

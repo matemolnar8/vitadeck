@@ -14,7 +14,7 @@ The Vita calls the computer over the LAN. There are no credentials yet, so treat
 
 ## Run and link a computer
 
-1. Install the companion with Node.js 24: `npm install -g @vitadeck/host-companion`. It is not on npm yet; from a VitaDeck checkout, `pnpm --dir js host-companion <command>` runs the same CLI.
+1. Install the companion with Node.js 24: `npm install -g @vitadeck/host-companion`. From a VitaDeck checkout, `pnpm --dir js host-companion <command>` runs the same CLI.
 2. Start it with `vitadeck-host-companion start`, which serves port 8797, and allow incoming connections at the firewall prompt.
 3. On VitaDeck, press Start (F1 on the desktop host) and note the address under **Upload and link**. VitaDeck listens from startup on port 8787, for uploads and links alike.
 4. On the computer, run `vitadeck-host-companion link <address>`. Link more computers the same way; VitaDeck keeps up to 4. **Host Control** in the Shell lists them and forgets one on Cross.

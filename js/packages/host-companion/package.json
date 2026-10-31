@@ -1,8 +1,23 @@
 {
   "name": "@vitadeck/host-companion",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.5.0",
+  "keywords": [
+    "host-control",
+    "playstation-vita",
+    "ps-vita",
+    "vita",
+    "vitadeck"
+  ],
+  "homepage": "https://github.com/matemolnar8/vitadeck/tree/main/js/packages/host-companion",
+  "bugs": {
+    "url": "https://github.com/matemolnar8/vitadeck/issues"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matemolnar8/vitadeck.git",
+    "directory": "js/packages/host-companion"
+  },
   "bin": {
     "vitadeck-host-companion": "./dist/cli.mjs"
   },
@@ -10,6 +25,9 @@
     "dist"
   ],
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "rolldown -c rolldown.config.mjs",
     "tsc": "tsc -p tsconfig.json"
@@ -20,5 +38,8 @@
     "fflate": "catalog:",
     "rolldown": "catalog:",
     "typescript": "catalog:"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }
