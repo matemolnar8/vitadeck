@@ -131,6 +131,14 @@ static int home_first_row(void)
     return rows == SHELL_ENTRY_ROWS ? rows - 1 : 0;
 }
 
+// Uploads add package rows above the entries; keep focus on the entry it was on.
+static void keep_entry_focus(VdShell *shell)
+{
+    int count = shell_row_count() - SHELL_ENTRY_ROWS;
+    if (shell->focus_row >= shell->home_package_count) shell->focus_row += count - shell->home_package_count;
+    shell->home_package_count = count;
+}
+
 static void clear_remove_confirm(VdShell *shell)
 {
     shell->remove_confirm_package[0] = '\0';
@@ -171,7 +179,9 @@ static void close_host_control(VdShell *shell)
 {
     shell->state = VD_SHELL_HOME;
     shell->message[0] = '\0';
-    shell->focus_row = shell_row_count() - 1;
+    int rows = shell_row_count();
+    shell->focus_row = rows - 1;
+    shell->home_package_count = rows - SHELL_ENTRY_ROWS;
     shell->focus_col = 0;
 }
 
@@ -253,6 +263,7 @@ void shell_show_home(VdShell *shell)
 {
     shell->state = VD_SHELL_HOME;
     shell->focus_row = home_first_row();
+    shell->home_package_count = shell_row_count() - SHELL_ENTRY_ROWS;
     shell->scroll_row = 0;
     shell->focus_col = 0;
 }
@@ -280,6 +291,7 @@ void shell_update(VdShell *shell, bool *request_runtime_restart)
         snprintf(shell->message, sizeof(shell->message), "Installed %s %s.", info.display_name, info.version);
         if (restart_active) *request_runtime_restart = true;
     }
+    if (shell->state == VD_SHELL_HOME) keep_entry_focus(shell);
 }
 
 void shell_poll_system_input(VdShell *shell, bool *request_runtime_restart)

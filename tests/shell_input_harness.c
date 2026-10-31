@@ -188,7 +188,7 @@ static void test_host_control(VdShell *shell)
     expect(lan_listener_is_running(&shell->listener), "Host Control should leave the listener running");
 }
 
-// Runs before anything is installed; the Active Deck App cannot be removed, so only a fresh library is empty.
+// Runs before anything is installed, since the Active Deck App cannot be removed; installs Alpha, which activates.
 static void test_empty_library_focus(VdShell *shell)
 {
     press(shell, START);
@@ -197,8 +197,13 @@ static void test_empty_library_focus(VdShell *shell)
     expect(shell->state == VD_SHELL_HOST_CONTROL && lan_listener_is_running(&shell->listener),
            "the first Cross on an empty Shell should keep the listener running");
     press(shell, BACK);
-    press(shell, BACK);
-    expect(shell_is_visible(shell), "without an Active Deck App the Shell should stay open");
+    expect(shell->state == VD_SHELL_HOME && shell->focus_row == 1, "Circle should return to Host Control on Home");
+
+    publish("a.vdapp", "Alpha");
+    bool restart = false;
+    shell_update(shell, &restart);
+    expect(shell->focus_row == 2, "an install should keep focus on Host Control, below the new package row");
+    expect(!press(shell, START) && !shell_is_visible(shell), "Start should hide the Shell once a Deck App is active");
 }
 
 int main(void)
@@ -220,10 +225,8 @@ int main(void)
     test_empty_library_focus(&shell);
 
     // Rows sort by display name: Alpha, Beta, then the Shell Listener Entry. Alpha is active.
-    publish("a.vdapp", "Alpha");
     publish("b.vdapp", "Beta");
     expect(active_is("a.vdapp"), "the first publish should activate it");
-    expect(!press(&shell, START) && !shell_is_visible(&shell), "Start should hide the Shell once a Deck App is active");
 
     // Each test leaves the Shell hidden and builds on the library the one before left: activating makes b active so
     // a can be removed, and the upload and Host Control tests run with b alone.

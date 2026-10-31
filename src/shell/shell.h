@@ -14,6 +14,8 @@ typedef struct {
     int focus_row;
     int scroll_row;
     int focus_col;
+    // Packages listed when Home last looked, so an upload can keep focus on the entry row it was on.
+    int home_package_count;
     int remove_confirm_row;
     char remove_confirm_package[VD_PACKAGE_NAME_MAX];
     char remove_confirm_label[VD_SHELL_REMOVE_LABEL_MAX];
