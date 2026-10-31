@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 07001bbdac339a0767b626376cda96d8530a1d37` and `git rev-parse --verify 600ca4ec1f763b6662f205fe8cb068bba809c1c1` in this repository.
+   Run `git rev-parse --verify 07001bbdac339a0767b626376cda96d8530a1d37` and `git rev-parse --verify c6cdbb511a0bd82162585a020ae783cf37b12006` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,16 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  07001bbdac339a0767b626376cda96d8530a1d37
 
-head               600ca4ec1f763b6662f205fe8cb068bba809c1c1
+head               c6cdbb511a0bd82162585a020ae783cf37b12006
 
 Named refs at pin: 07001bbdac339a0767b626376cda96d8530a1d37 ... HEAD
 
 Read the diff:
 
-git diff --find-renames 07001bbdac339a0767b626376cda96d8530a1d37 600ca4ec1f763b6662f205fe8cb068bba809c1c1
+git diff --find-renames 07001bbdac339a0767b626376cda96d8530a1d37 c6cdbb511a0bd82162585a020ae783cf37b12006
 
 Commits:
+- c6cdbb51 docs(release): first manual publish uses pnpm publish
 - 600ca4ec docs(release): spell out the companion's first manual publish
 - cf5576e7 build(release): publish @vitadeck/host-companion with the SDK
 
