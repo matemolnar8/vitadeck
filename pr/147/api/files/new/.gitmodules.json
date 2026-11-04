@@ -1,1 +1,0 @@
-{"path":".gitmodules","ref":"4968a00c087f538de9251d93c083192cee84bddf","side":"new","content":"[submodule \"vendor/quickjs\"]\n\tpath = vendor/quickjs\n\turl = https://github.com/matemolnar8/quickjs.git\n[submodule \"vendor/miniaudio\"]\n\tpath = vendor/miniaudio\n\turl = https://github.com/mackron/miniaudio.git\n\tshallow = true\n","language":"plaintext"}
