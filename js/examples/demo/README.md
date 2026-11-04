@@ -7,6 +7,7 @@ A tour of `@vitadeck/sdk`, one section per feature. L and R (keys L and R on the
 | [Rect & theme](src/sections/RectSection.tsx)      | `Screen`, `useTheme`, `Rect` fill and outline variants, `borderRadius`                                   |
 | [Text](src/sections/TextSection.tsx)              | `align`, `wrap`, `lineHeight`, `fontSize`, a Deck App Font, Hungarian accents, emoji, CJK                |
 | [Image](src/sections/ImageSection.tsx)            | A Deck App Image sized by width, height, or both                                                         |
+| [Sound](src/sections/SoundSection.tsx)            | `playSound` for a WAV chime, `playSound` with `loop` and `stopSound` for an MP3                          |
 | [Button](src/sections/ButtonSection.tsx)          | `onPress`, `onPressStart`/`onPressEnd`, `focusColor`, `autoFocus`, `onFocus`/`onBlur`, `font`/`fontSize` |
 | [Pad Buttons](src/sections/PadButtonSection.tsx)  | `usePadButton` for Circle, Triangle and Square; [App.tsx](src/App.tsx) uses L and R                      |
 | [Stack](src/sections/StackSection.tsx)            | Column and row, `gap`, `padding`, `align`, nesting                                                       |

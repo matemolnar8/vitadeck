@@ -65,6 +65,7 @@ static void expect_success_minimal(void)
         if (strcmp(manifest.entry, "app.js") != 0) failf(case_name, "entry mismatch");
         if (manifest.font_count != 0) failf(case_name, "unexpected fonts");
         if (manifest.image_count != 0) failf(case_name, "unexpected images");
+        if (manifest.sound_count != 0) failf(case_name, "unexpected sounds");
     }
 
     vd_remove_tree(root);
@@ -72,7 +73,7 @@ static void expect_success_minimal(void)
 
 static void expect_success_assets(void)
 {
-    const char *case_name = "valid manifest with fonts and images";
+    const char *case_name = "valid manifest with fonts, images and sounds";
     char root[VD_PATH_MAX];
     char package_path[VD_PATH_MAX];
     if (!make_package_root(root, sizeof(root), package_path, sizeof(package_path))) {
@@ -85,12 +86,15 @@ static void expect_success_assets(void)
                            "\"version\":\"2.0.0\","
                            "\"entry\":\"app.js\","
                            "\"fonts\":{\"body\":\"fonts/body.ttf\"},"
-                           "\"images\":{\"logo\":\"images/logo.png\"}"
+                           "\"images\":{\"logo\":\"images/logo.png\"},"
+                           "\"sounds\":{\"chime\":\"sounds/chime.WAV\",\"theme\":\"sounds/theme.mp3\"}"
                            "}";
     write_package_file(package_path, "manifest.json", manifest);
     write_package_file(package_path, "app.js", "app\n");
     write_package_file(package_path, "fonts/body.ttf", "font\n");
     write_package_file(package_path, "images/logo.png", "image\n");
+    write_package_file(package_path, "sounds/chime.WAV", "sound\n");
+    write_package_file(package_path, "sounds/theme.mp3", "sound\n");
 
     char error[256] = "";
     VdPackageManifest parsed;
@@ -104,6 +108,11 @@ static void expect_success_assets(void)
         if (parsed.image_count != 1 || strcmp(parsed.images[0].name, "logo") != 0 ||
             strcmp(parsed.images[0].path, "images/logo.png") != 0) {
             failf(case_name, "image declaration mismatch");
+        }
+        if (parsed.sound_count != 2 || strcmp(parsed.sounds[0].name, "chime") != 0 ||
+            strcmp(parsed.sounds[0].path, "sounds/chime.WAV") != 0 || strcmp(parsed.sounds[1].name, "theme") != 0 ||
+            strcmp(parsed.sounds[1].path, "sounds/theme.mp3") != 0) {
+            failf(case_name, "sound declaration mismatch");
         }
     }
 
@@ -178,6 +187,18 @@ int main(void)
                                 "{\"schemaVersion\":1,\"name\":\"Sample\",\"version\":\"1.2.3\",\"entry\":\"app.js\","
                                 "\"images\":{\"logo\":\"images/logo.png\"}}",
                                 "Deck App Package Image is missing.");
+    expect_missing_file_failure("invalid sound name",
+                                "{\"schemaVersion\":1,\"name\":\"Sample\",\"version\":\"1.2.3\",\"entry\":\"app.js\","
+                                "\"sounds\":{\"_chime\":\"sounds/chime.wav\"}}",
+                                "Deck App Package declares an invalid sound name.");
+    expect_missing_file_failure("unsupported sound extension",
+                                "{\"schemaVersion\":1,\"name\":\"Sample\",\"version\":\"1.2.3\",\"entry\":\"app.js\","
+                                "\"sounds\":{\"chime\":\"sounds/chime.ogg\"}}",
+                                "Deck App Package declares an invalid sound path.");
+    expect_missing_file_failure("missing declared sound",
+                                "{\"schemaVersion\":1,\"name\":\"Sample\",\"version\":\"1.2.3\",\"entry\":\"app.js\","
+                                "\"sounds\":{\"chime\":\"sounds/chime.wav\"}}",
+                                "Deck App Package Sound is missing.");
 
     return failures == 0 ? 0 : 1;
 }

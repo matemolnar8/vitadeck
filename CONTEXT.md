@@ -13,7 +13,7 @@ _Avoid_: Plugin file, component file
 **Deck App Component**: The default-exported React component of a **Deck App**. It renders **Screen**; it never calls registration APIs.
 _Avoid_: Render function, bootstrap
 
-**Deck App Manifest**: `vitadeck.config.json` in a Deck App project: `name`, `entry`, `outDir`, optional `version`, `fonts`, `images`. `outDir` is the parent of the generated `.vdapp` directory.
+**Deck App Manifest**: `vitadeck.config.json` in a Deck App project: `name`, `entry`, `outDir`, optional `version`, `fonts`, `images`, `sounds`. `outDir` is the parent of the generated `.vdapp` directory.
 _Avoid_: Package file, plugin config
 
 **Deck App Package**: The built, portable unit the SDK produces and VitaDeck consumes. It holds compiled Deck App code and assets, not the runtime or React.
@@ -25,7 +25,7 @@ _Avoid_: Archive, bundle folder, dist folder
 **Deck App Package Name**: The SDK-generated filesystem-safe name of a package. It identifies a package in the **Installed Deck App Library** and keys **Deck App Storage**.
 _Avoid_: Output directory, package path, app title
 
-**Deck App Package Manifest**: `manifest.json` inside the package, validated natively in `src/core/package_manifest.c` and emitted by the SDK CLI. Carries the **Deck App Package Schema Version**, the **Deck App Package Version**, the display name, the entry path, and declared fonts and images.
+**Deck App Package Manifest**: `manifest.json` inside the package, validated natively in `src/core/package_manifest.c` and emitted by the SDK CLI. Carries the **Deck App Package Schema Version**, the **Deck App Package Version**, the display name, the entry path, and declared fonts, images and sounds.
 _Avoid_: Source manifest, npm package metadata, config file
 
 **Deck App Package Schema Version**: The `schemaVersion` field that versions the manifest shape VitaDeck reads. Bump it when the shape changes.
@@ -45,6 +45,9 @@ _Avoid_: Raw font path, system font, hardcoded font
 
 **Deck App Image**: An image file shipped in a package and declared in the manifest; author code references it by declared name.
 _Avoid_: Raw image path, texture path, sprite sheet path
+
+**Deck App Sound**: A `.wav`, `.mp3` or `.flac` file shipped in a package and declared in the manifest; author code plays it by declared name with `playSound`. Every sound stops when the Deck App stops.
+_Avoid_: Audio clip, sample, music track, raw sound path
 
 **Runtime Default Font**: VitaDeck's bundled DejaVu Sans, used when no font is requested and as the first fallback. A build that could not download it uses raylib's built-in font.
 _Avoid_: Built-in Raylib font, implicit app font, serif default

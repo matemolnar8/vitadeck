@@ -12,6 +12,7 @@ type TestDeckAppConfig = {
   version?: string;
   fonts?: Record<string, string>;
   images?: Record<string, string>;
+  sounds?: Record<string, string>;
 };
 
 export const cliPath = fileURLToPath(new URL("cli.ts", import.meta.url));

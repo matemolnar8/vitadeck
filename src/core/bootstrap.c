@@ -6,6 +6,7 @@
 #include "core/event_queue.h"
 #include "core/package_library.h"
 #include "core/package_manifest.h"
+#include "audio/sounds.h"
 #include "host_control/link.h"
 #include "ui/fonts.h"
 #include "ui/images.h"
@@ -27,11 +28,13 @@ static bool load_active_package_assets(VdBootstrap *bootstrap, char *error, size
         if (ok) active_manifest = &manifest;
     }
     ok = ok && font_registry_load_package(package_path, active_manifest, error, error_size) &&
-         image_registry_load_package(package_path, active_manifest, error, error_size);
+         image_registry_load_package(package_path, active_manifest, error, error_size) &&
+         sound_registry_load_package(package_path, active_manifest, error, error_size);
     if (!ok) {
         js_runtime_fail(&bootstrap->js_runtime, error, NULL);
         font_registry_load_package(NULL, NULL, NULL, 0);
         image_registry_load_package(NULL, NULL, NULL, 0);
+        sound_registry_load_package(NULL, NULL, NULL, 0);
     }
     return ok;
 }
@@ -157,6 +160,7 @@ void bootstrap_draw_deck_canvas(const VdBootstrap *bootstrap)
 void bootstrap_shutdown(VdBootstrap *bootstrap)
 {
     js_runtime_stop(&bootstrap->js_runtime);
+    sound_registry_shutdown();
     image_registry_shutdown();
     font_registry_shutdown();
     event_queue_shutdown();

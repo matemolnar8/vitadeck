@@ -11,6 +11,7 @@
 #define VD_PACKAGE_ASSET_NAME_MAX 64
 #define VD_PACKAGE_FONT_MAX 32
 #define VD_PACKAGE_IMAGE_MAX 32
+#define VD_PACKAGE_SOUND_MAX 32
 
 typedef struct {
     char name[VD_PACKAGE_ASSET_NAME_MAX];
@@ -26,6 +27,8 @@ typedef struct {
     int font_count;
     VdPackageAsset images[VD_PACKAGE_IMAGE_MAX];
     int image_count;
+    VdPackageAsset sounds[VD_PACKAGE_SOUND_MAX];
+    int sound_count;
 } VdPackageManifest;
 
 bool package_manifest_read(const char *package_path, const char *package_name, VdPackageManifest *out_manifest,

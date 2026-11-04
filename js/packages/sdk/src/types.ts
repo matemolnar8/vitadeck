@@ -9,6 +9,10 @@ export interface VitaDeckImageMap {}
 export type FontName = Extract<keyof VitaDeckFontMap, string>;
 export type ImageName = [keyof VitaDeckImageMap] extends [never] ? string : Extract<keyof VitaDeckImageMap, string>;
 
+export interface VitaDeckSoundMap {}
+
+export type SoundName = [keyof VitaDeckSoundMap] extends [never] ? string : Extract<keyof VitaDeckSoundMap, string>;
+
 export type ColorName =
   | "LIGHTGRAY"
   | "GRAY"

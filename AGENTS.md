@@ -23,19 +23,20 @@ When this file speaks:
 - `src/core/` - bootstrap, QuickJS runtime, event queue, package library and manifest parsing (vendored `vendor/jimp/jimp.h` behind `json.c`, see ADR 0003), Benchmark Mode (`bench.c`, see ADR 0005)
 - `src/jslib/` - native functions exposed to JS: instances, timers, fetch, log, colors
 - `src/ui/` - instance tree, rendering, fonts, images, input, scroll
+- `src/audio/` - Deck App Sounds on miniaudio (`vendor/miniaudio` submodule, `dev-0.12` for its Vita backend, see ADR 0006)
 - `src/shell/` - VitaDeck Shell; `src/net/` - the LAN Listener (Runtime Upload and Host Control Link) and HTTP request parsing; `src/upload/` - archive extraction; `src/host_control/` - link parsing and store; `src/platform/` - threads and LAN address (POSIX vs Vita)
 - `js/packages/sdk/` - `@vitadeck/sdk`: author-facing components, theme, types, and the `vitadeck` CLI (`cli/`, scaffold under `cli/templates/`)
 - `js/packages/runtime/` - the React reconciler bundle the host embeds
 - `js/packages/host-companion/` - the Host Companion (`vitadeck-host-companion`, published with the SDK at the same version) with the built-in Host Control Plugins; a custom plugin is a `.vdplugin` package the SDK CLI builds (`hostPlugin` in `vitadeck.config.json`, scaffolded with a Deck App by `create --host-plugin` or alone by `create --host-plugin-only`). The wire contract is `js/packages/sdk/src/host-control/` and the fixtures in `tests/fixtures/host-control/`, replayed by the SDK, companion and native tests (ADR 0004)
 - `js/examples/` - example Deck Apps; the smoke test screenshots every section of `demo`
 - `tests/` - CTest harnesses (`smoke_harness.c`, `deck_app_input_harness.c`, `package_manifest_harness.c`, `package_library_harness.c`, `timer_reload_harness.c`, `upload_parsing_harness.c`, `host_control_link_harness.c`), golden screenshots (`fixtures/golden/`), and benchmark baselines (`bench/baselines/`)
-- `vendor/quickjs` - git submodule; `docker-compose.yml` + `Dockerfile` - Vitasdk and Linux smoke images
+- `vendor/quickjs`, `vendor/miniaudio` - git submodules; `docker-compose.yml` + `Dockerfile` - Vitasdk and Linux smoke images
 - `.agents/skills/` - repo skills (`vitadeck-build`, `vitadeck-emulator`, `vitadeck-smoke`, `vitadeck-bench`, `vitadeck-manual-testing`, `vitadeck-vdapp-upload`, `vitadeck-deck-app-init`, `vitadeck-host-control`) plus `comprehende` installed from `matemolnar8/comprehende` via the `skills` CLI (`skills-lock.json`) and `pages`, a repo-owned skill with its own publish script. `.claude/skills` symlinks here. Published via `npx skills add matemolnar8/vitadeck`.
 
 ## Setup
 
 - Node.js 24.16+ (`.nvmrc`; `fnm use` picks it up, and `scripts/agent-check.sh` switches to it through fnm on its own) and pnpm (pinned by `packageManager` in `js/package.json`). `pnpm --dir js install` once. Older Node bundles a corepack that cannot launch pnpm 11+ and fails with `Cannot find module .../bin/pnpm.cjs`.
-- `git submodule update --init --recursive` if `vendor/quickjs/quickjs.c` is missing.
+- `git submodule update --init --recursive` if `vendor/quickjs/quickjs.c` or `vendor/miniaudio/miniaudio.c` is missing.
 - Host build needs CMake, Ninja, raylib 5.5, curl, OpenSSL, zlib (`brew install ninja raylib` on macOS; Ninja, raylib + OpenGL/X11 dev packages on Linux). Configure `out/` with `cmake --preset default`. A build directory keeps the generator it was configured with; delete an old Make `out/` before configuring it with a preset.
 - Vita build and Linux smoke run in Docker. Start Docker Desktop first.
 - The first CMake configure downloads the pinned runtime fonts and Twemoji images ([cmake/fonts.cmake](cmake/fonts.cmake), [cmake/twemoji.cmake](cmake/twemoji.cmake)) into the gitignored `assets/fonts/` and `assets/emoji/`; offline it warns, builds anyway with fallbacks (raylib's built-in font, missing-glyph boxes for CJK and Korean, a fallback glyph for emoji), and the next configure retries.
@@ -50,6 +51,7 @@ When this file speaks:
 3. **Platform goldens.** `tests/fixtures/golden/Linux/` holds the only canonical goldens (ADR 0002). Refresh it only with `scripts/smoke-docker.sh update-golden`, never from a macOS run. Do not re-enable the `smoke` CTest label in the macOS ctest step.
 4. **Secrets in examples.** `js/examples/chat/src/genesys/genesys.local.ts` is gitignored and holds real credentials. Never commit it, never paste its contents, and never "fix" imports by renaming it.
 5. **Running from the wrong cwd.** The host resolves `vitadeck-data/` relative to the working directory (or `VITADECK_DATA_ROOT`). Run `./vitadeck` from `out/`, not the repo root.
+6. **Probing the Vita.** A bare connection such as `nc -z`, or a scan of VitaShell FTP (1337) and vitacompanion (1338), crashes those servers until the Vita restarts. Ask for the IP and wait until VitaShell's FTP server is running, then upload with curl. The `echo … | nc` lines in the `upload_vita` target and `scripts/bench.sh` send vitacompanion commands; they are not a probe.
 
 ## Hit every surface
 

@@ -7,6 +7,7 @@ import { ImageSection } from "./sections/ImageSection";
 import { PadButtonSection } from "./sections/PadButtonSection";
 import { RectSection } from "./sections/RectSection";
 import { ScrollSection } from "./sections/ScrollSection";
+import { SoundSection } from "./sections/SoundSection";
 import { StackSection } from "./sections/StackSection";
 import { StorageSection } from "./sections/StorageSection";
 import { TextInputSection } from "./sections/TextInputSection";
@@ -18,6 +19,7 @@ const SECTIONS = [
   { name: "Rect & theme", Content: RectSection },
   { name: "Text", Content: TextSection },
   { name: "Image", Content: ImageSection },
+  { name: "Sound", Content: SoundSection },
   { name: "Button", Content: ButtonSection },
   { name: "Pad Buttons", Content: PadButtonSection },
   { name: "Stack", Content: StackSection },
@@ -68,7 +70,7 @@ export default function DemoDeckApp() {
               <Button
                 key={section.name}
                 width={NAV_WIDTH}
-                height={31}
+                height={28}
                 label={section.name}
                 align="left"
                 fontSize={16}

@@ -76,20 +76,22 @@ if(NOT DEFINED ENV{VITASDK})
   find_package(ZLIB REQUIRED)
 endif()
 
-if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/quickjs/quickjs.c")
-  find_package(Git QUIET)
-  if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
-    message(STATUS "QuickJS submodule is missing; initializing vendor/quickjs")
-    execute_process(
-      COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive vendor/quickjs
-      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-      RESULT_VARIABLE QUICKJS_SUBMODULE_RESULT
-    )
+foreach(submodule_file quickjs/quickjs.c miniaudio/miniaudio.c)
+  get_filename_component(submodule_dir ${submodule_file} DIRECTORY)
+  if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/${submodule_file}")
+    find_package(Git QUIET)
+    if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
+      message(STATUS "${submodule_dir} submodule is missing; initializing vendor/${submodule_dir}")
+      execute_process(
+        COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive vendor/${submodule_dir}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      )
+    endif()
+    if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/${submodule_file}")
+      message(FATAL_ERROR "Missing vendor/${submodule_dir}. Run `git submodule update --init --recursive vendor/${submodule_dir}` and re-run CMake.")
+    endif()
   endif()
-  if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/quickjs/quickjs.c")
-    message(FATAL_ERROR "Missing vendor/quickjs. Run `git submodule update --init --recursive vendor/quickjs` and re-run CMake.")
-  endif()
-endif()
+endforeach()
 
 # Set up include directories
 set(VITADECK_INCLUDE_DIRS src)
@@ -136,6 +138,16 @@ if(DEFINED ENV{VITASDK})
     target_compile_definitions(quickjs PRIVATE __vita__)
 endif()
 
+# miniaudio's dev-0.12 branch, the first with a Vita backend (sceAudioOut). Its own library, like QuickJS, so its
+# warnings stay out of ours. The host's raylib embeds miniaudio 0.11 for raudio, which VitaDeck never initializes.
+add_library(miniaudio STATIC vendor/miniaudio/miniaudio.c)
+target_compile_options(miniaudio PRIVATE -w)
+if(DEFINED ENV{VITASDK})
+  target_compile_definitions(miniaudio PRIVATE __vita__)
+else()
+  target_link_libraries(miniaudio PUBLIC ${CMAKE_DL_LIBS} pthread)
+endif()
+
 if(DEFINED ENV{VITASDK})
   set(PLATFORM_SOURCES src/platform/thread_vita.c src/platform/text_input_vita.c src/platform/lan_address_vita.c)
 else()
@@ -152,6 +164,7 @@ set(JSLIB_SOURCES
     src/jslib/error.c
     src/jslib/storage.c
     src/jslib/host_control.c
+    src/jslib/sound.c
 )
 
 # Everything but main.c, so the app and the test harnesses compile each source once.
@@ -177,6 +190,7 @@ set(VITADECK_CORE_SOURCES
     src/ui/input.c
     src/ui/focus_nav.c
     src/ui/scroll.c
+    src/audio/sounds.c
     src/core/event_queue.c
     src/shell/shell.c
     src/upload/archive.c
@@ -236,9 +250,9 @@ endif()
 
 add_library(vitadeck_core STATIC ${VITADECK_CORE_SOURCES})
 target_link_libraries(vitadeck_core PUBLIC ${VITADECK_LIBRARIES})
-# QuickJS links next to vitadeck_core rather than into it: a link dependency would make Make compile them one after
-# the other.
-set(VITADECK_CORE_LIBRARIES vitadeck_core quickjs)
+# QuickJS and miniaudio link next to vitadeck_core rather than into it: a link dependency would make Make compile
+# them one after the other.
+set(VITADECK_CORE_LIBRARIES vitadeck_core quickjs miniaudio)
 
 add_executable(${PROJECT_NAME} src/main.c)
 target_link_libraries(${PROJECT_NAME} ${VITADECK_CORE_LIBRARIES})

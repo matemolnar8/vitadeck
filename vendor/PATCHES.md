@@ -2,7 +2,7 @@
 
 Every place where `vendor/` differs from its upstream. Keep this list complete: add an entry with the patch, and remove it when the patch goes. Patches inside single headers are marked with a `VitaDeck:` comment where the diff allows one.
 
-Unpatched, byte for byte upstream: `arena.h` ([tsoding/arena](https://github.com/tsoding/arena) `ab625dd`), `raylib.h` ([raysan5/raylib](https://github.com/raysan5/raylib) tag `5.5`), `stb_truetype.h` ([nothings/stb](https://github.com/nothings/stb) v1.26, `6e9f34d`).
+Unpatched, byte for byte upstream: `arena.h` ([tsoding/arena](https://github.com/tsoding/arena) `ab625dd`), `raylib.h` ([raysan5/raylib](https://github.com/raysan5/raylib) tag `5.5`), `stb_truetype.h` ([nothings/stb](https://github.com/nothings/stb) v1.26, `6e9f34d`), and the `miniaudio` submodule ([mackron/miniaudio](https://github.com/mackron/miniaudio) branch `dev-0.12` at `245bbb8`, see ADR 0006).
 
 ## stb_ds.h: hash maps stop advancing the global seed
 

@@ -34,7 +34,8 @@ npx @vitadeck/sdk create <project-name>
   "outDir": "./dist",
   "version": "1.2.0",
   "fonts": { "title": "./assets/Title.ttf" },
-  "images": { "logo": "./assets/logo.png" }
+  "images": { "logo": "./assets/logo.png" },
+  "sounds": { "chime": "./assets/chime.wav" }
 }
 ```
 
@@ -42,10 +43,10 @@ npx @vitadeck/sdk create <project-name>
 - `entry`: the source file whose default export is your root component. Required unless the project only builds a Host Plugin (see [Standalone plugins](#standalone-plugins)).
 - `outDir` (required): parent folder for the built `.vdapp` folder and `.vdapp.zip`.
 - `version` (optional): semver written to the package manifest. Defaults to `version` in `package.json`.
-- `fonts` / `images` (optional): name → file path, relative to the project and inside it. Names start with a letter and use letters, digits, `_` or `-` (max 63 characters); `default` is reserved for fonts. Up to 32 of each. Fonts: `.ttf`, `.otf`, `.fnt`, `.bdf`. Images: `.png`, `.jpg`, `.jpeg`, `.bmp`, `.tga`, `.gif`, `.psd`, `.hdr`, `.pic`, `.qoi`. The build copies them into the package and fails if a file is missing.
+- `fonts` / `images` / `sounds` (optional): name → file path, relative to the project and inside it. Names start with a letter and use letters, digits, `_` or `-` (max 63 characters); `default` is reserved for fonts. Up to 32 of each. Fonts: `.ttf`, `.otf`, `.fnt`, `.bdf`. Images: `.png`, `.jpg`, `.jpeg`, `.bmp`, `.tga`, `.gif`, `.psd`, `.hdr`, `.pic`, `.qoi`. Sounds: `.wav`, `.mp3`, `.flac`. The build copies them into the package and fails if a file is missing.
 - `hostPlugin` (optional): the Deck App's own Host Control Plugin. `entry` is its implementation (`.ts`, `.mts`, `.js` or `.mjs`); `files` (optional) is a folder copied into the package as `files/`. Both are relative to the project. The build writes the `<outDir>/<slug>.vdplugin` package and `<slug>.vdplugin.zip`; see [Your own Host Plugin](#your-own-host-plugin).
 
-Reference assets by name, never by path: `<Text font="title" …>`, `<Button font="title" fontSize={24} …>`, `<Image image="logo" …>`.
+Reference assets by name, never by path: `<Text font="title" …>`, `<Button font="title" fontSize={24} …>`, `<Image image="logo" …>`, `playSound("chime")`.
 
 Text, Button and TextInput take any `fontSize` in pixels, and text is UTF-8. Without `font` they use the runtime's DejaVu Sans. Characters a `.ttf` or `.otf` font lacks render in DejaVu Sans, then in Droid Sans Fallback Full (Chinese and Japanese) or Noto Sans KR (Korean); a character none of them has renders as a box. `.fnt` and `.bdf` fonts have no fallback.
 
@@ -64,7 +65,21 @@ Extend the SDK preset and include the generated types:
 
 Add `/// <reference types="@vitadeck/sdk/deck-app-env" />` in a `.d.ts` file (the scaffold uses `src/vitadeck-env.d.ts`) to type the globals VitaDeck provides: timers, `getTime`, `fetch`, and `console`.
 
-Each build writes `.vitadeck/font-names.d.ts` and `.vitadeck/image-names.d.ts`, which add your declared names to `VitaDeckFontMap` and `VitaDeckImageMap`. After that, `font` and `image` props only accept declared names. Before the first build, `font` only accepts `"default"` and `image` accepts any string, so build once after adding assets. The folder is regenerated on every build; you can gitignore it.
+Each build writes `.vitadeck/font-names.d.ts`, `.vitadeck/image-names.d.ts` and `.vitadeck/sound-names.d.ts`, which add your declared names to `VitaDeckFontMap`, `VitaDeckImageMap` and `VitaDeckSoundMap`. After that, `font` and `image` props and `playSound` only accept declared names. Before the first build, `font` only accepts `"default"` and `image` and sound names accept any string, so build once after adding assets. The folder is regenerated on every build; you can gitignore it.
+
+## Sound
+
+`playSound` plays a declared sound from its start; `stopSound` stops it.
+
+```tsx
+import { playSound, stopSound } from "@vitadeck/sdk";
+
+<Button label="Ding" onPress={() => playSound("chime")} />;
+playSound("music", { loop: true });
+stopSound("music");
+```
+
+Playing a sound that is already playing restarts it; different sounds mix. A sound keeps playing until it ends, `stopSound`, or the Deck App stops: switching Deck Apps or restarting one stops every sound. An undeclared name throws a `RangeError`. VitaDeck keeps each file in memory as it is and decodes it while it plays, so long music costs its file size, not its decoded size.
 
 ## Storage
 

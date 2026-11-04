@@ -115,6 +115,7 @@ void register_js_lib(JSContext *ctx)
     register_instance_tree(ctx);
     register_js_storage(ctx);
     register_js_host_control(ctx);
+    register_js_sound(ctx);
 
     js_set_global_function(ctx, "getTime", js_get_time, 0);
     js_set_global_function(ctx, "nativeEvalActiveDeckAppEntry", js_native_eval_active_deck_app_entry, 0);

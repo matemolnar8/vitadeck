@@ -25,7 +25,7 @@ Emulator config and storage live in `~/.vitadeck/vita3k` (`VITADECK_VITA3K_HOME`
    - Linux: download the AppImage, `chmod +x` it, and set `VITA3K` to it.
 3. Install `libshacccg.suprx`. vitaGL compiles its shaders at runtime with Sony's shader compiler, which can't be redistributed, so it isn't in the repo and the script won't launch without it. Use one of:
    - Copy it from a machine that already runs VitaDeck in Vita3K: `scp <machine>:.vitadeck/vita3k/fs/ur0/data/libshacccg.suprx /tmp/ && scripts/vita3k.sh shacccg /tmp/libshacccg.suprx`.
-   - Download it from the Vita: run [ShaRKBR33D](https://github.com/Rinnegatamante/ShaRKBR33D) on the Vita once (it extracts the decrypted module to `ur0:data/libshacccg.suprx`), start VitaShell's FTP server, then `PSVITAIP=<ip> scripts/vita3k.sh shacccg`.
+   - Download it from the Vita: run [ShaRKBR33D](https://github.com/Rinnegatamante/ShaRKBR33D) on the Vita once (it extracts the decrypted module to `ur0:data/libshacccg.suprx`), start VitaShell's FTP server, then `PSVITAIP=<ip> scripts/vita3k.sh shacccg`. Pass the IP; a bare `nc` connection crashes VitaShell's FTP until the Vita restarts.
 4. Optional: install the firmware. VitaDeck runs without it; it only provides the CA list that `fetch` reads (fetch still fails, see below). `Vita3K --firmware PSVUPDAT.PUP` installs into Vita3K's default storage and ignores our config, so move `os0` and `vs0` from there into `~/.vitadeck/vita3k/fs/` afterwards. On macOS that is `~/Library/Application Support/Vita3K/Vita3K/fs`.
 5. `scripts/vita3k.sh`. The first launch installs the VPK; the Demo Deck App should appear.
 

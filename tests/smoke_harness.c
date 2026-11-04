@@ -17,28 +17,29 @@
 #define SETTLE_SEC 0.5
 #define MAX_PIXEL_MISMATCH 128
 
-// The demo Deck App's sections in order, each matched by the "N/12 · name" its header shows.
+// The demo Deck App's sections in order, each matched by the "N/13 · name" its header shows.
 typedef struct {
     const char *slug;
     const char *header;
 } Page;
 
 static const Page PAGES[] = {
-    {"01-rect-theme", "1/12 · Rect & theme"},
-    {"02-text", "2/12 · Text"},
-    {"03-image", "3/12 · Image"},
-    {"04-button", "4/12 · Button"},
-    {"05-pad-buttons", "5/12 · Pad Buttons"},
-    {"06-stack", "6/12 · Stack"},
-    {"07-scroll", "7/12 · Scroll"},
-    {"08-text-input", "8/12 · Text Input"},
-    {"09-storage", "9/12 · Storage"},
-    {"10-timers", "10/12 · Timers"},
-    {"11-fetch", "11/12 · fetch"},
-    {"12-failure-section", "12/12 · Failure Screen"},
+    {"01-rect-theme", "1/13 · Rect & theme"},
+    {"02-text", "2/13 · Text"},
+    {"03-image", "3/13 · Image"},
+    {"04-sound", "4/13 · Sound"},
+    {"05-button", "5/13 · Button"},
+    {"06-pad-buttons", "6/13 · Pad Buttons"},
+    {"07-stack", "7/13 · Stack"},
+    {"08-scroll", "8/13 · Scroll"},
+    {"09-text-input", "9/13 · Text Input"},
+    {"10-storage", "10/13 · Storage"},
+    {"11-timers", "11/13 · Timers"},
+    {"12-fetch", "12/13 · fetch"},
+    {"13-failure-section", "13/13 · Failure Screen"},
 };
 
-#define FAILURE_SCREEN_SLUG "13-failure-screen"
+#define FAILURE_SCREEN_SLUG "14-failure-screen"
 
 static void fail(const char *message)
 {
