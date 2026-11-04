@@ -18,8 +18,8 @@
 #define WAIT_TIMEOUT_SEC 5.0
 #define WATCHDOG_SEC 10
 #define SETTLE_FRAMES 3
-// Each round ends with L, R, R, one demo section on, so 12 rounds press every Pad Button on every demo section.
-#define ROUNDS 12
+// Each round ends with L, R, R, one demo section on, so 13 rounds press every Pad Button on every demo section.
+#define ROUNDS 13
 
 static const PadButton ROUND[] = {PAD_CIRCLE, PAD_TRIANGLE, PAD_SQUARE, PAD_L, PAD_R, PAD_R};
 

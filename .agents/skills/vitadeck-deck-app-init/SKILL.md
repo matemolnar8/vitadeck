@@ -55,7 +55,7 @@ The `<slug>` is derived from the project `name` in `vitadeck.config.json` (e.g. 
 | `src/vitadeck-env.d.ts` | TypeScript env for Deck App globals                                    |
 | `tsconfig.json`         | Extends `@vitadeck/sdk/tsconfig`                                       |
 
-Optional `vitadeck.config.json` fields: `version` (overrides `package.json` semver in the built manifest), `fonts` and `images` (named asset files copied into the package and typed under `.vitadeck/`), and `hostPlugin` (below).
+Optional `vitadeck.config.json` fields: `version` (overrides `package.json` semver in the built manifest), `fonts`, `images` and `sounds` (named asset files copied into the package and typed under `.vitadeck/`), and `hostPlugin` (below).
 
 ## With a Host Control Plugin
 

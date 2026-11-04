@@ -51,7 +51,7 @@ static const BenchScenario SCENARIOS[] = {
     {"demo-text", "vitadeck-demo.vdapp", "r", NULL},
     // Focus moves from the section list into the Scroll section's list, which then glides down and up under the
     // left stick: native scrolling with no React work.
-    {"demo-scroll", "vitadeck-demo.vdapp", "rrrrrrv>", "++++++++++----------"},
+    {"demo-scroll", "vitadeck-demo.vdapp", "rrrrrrrv>", "++++++++++----------"},
 };
 #define SCENARIO_COUNT ((int)(sizeof(SCENARIOS) / sizeof(SCENARIOS[0])))
 
