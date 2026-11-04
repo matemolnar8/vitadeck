@@ -1,4 +1,5 @@
-# Colour emoji images: Twemoji's 72px PNGs, downloaded once at configure time into the gitignored assets/emoji.
+# Colour emoji images: Twemoji's 72px PNGs, downloaded once at configure time into one zip in the gitignored
+# assets/emoji, since the Vita installs and uploads thousands of small files slowly.
 set(VITADECK_TWEMOJI_VERSION 17.0.3)
 vitadeck_fetch_asset(Twemoji
   URL "https://github.com/jdecked/twemoji/archive/refs/tags/v${VITADECK_TWEMOJI_VERSION}.zip"
@@ -8,4 +9,5 @@ vitadeck_fetch_asset(Twemoji
   EXTRACT "twemoji-${VITADECK_TWEMOJI_VERSION}/assets/72x72/*.png"
   # The emoji loader names images with U+FE0F left out.
   STRIP "-fe0f"
+  PACK twemoji.zip
 )

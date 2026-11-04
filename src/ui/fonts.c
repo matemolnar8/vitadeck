@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "core/util.h"
+#include "emoji_pack.h"
 #include "text.h"
 
 #define VD_BITMAP_FONT_LOAD_SIZE 64
@@ -12,7 +13,7 @@
 #define VD_DEFAULT_FONT_PATH "assets/fonts/DejaVuSans.ttf"
 #define VD_CJK_FONT_PATH "assets/fonts/DroidSansFallbackFull.ttf"
 #define VD_KOREAN_FONT_PATH "assets/fonts/NotoSansKR-Regular.otf"
-#define VD_EMOJI_DIR "assets/emoji"
+#define VD_EMOJI_PACK_PATH "assets/emoji/twemoji.zip"
 
 _Static_assert(VD_FONT_MAX >= VD_PACKAGE_FONT_MAX, "font registry must hold every manifest font");
 
@@ -27,6 +28,8 @@ static VdGlyphFont *g_cjk_font = NULL;
 static VdGlyphFont *g_korean_font = NULL;
 static VdLoadedFont g_package_fonts[VD_FONT_MAX];
 static int g_package_font_count = 0;
+static VdEmojiPack *g_emoji_pack = NULL;
+static bool g_emoji_pack_opened = false;
 
 static void unload_font(VdFont *font)
 {
@@ -71,22 +74,29 @@ static bool load_font_file(const char *path, VdFont *out, char *error, size_t er
     return true;
 }
 
-// Twemoji names an image by its lowercase hex codepoints joined by '-', like 1f468-200d-1f469.png.
+// Twemoji names an image by its lowercase hex codepoints joined by '-', like 1f468-200d-1f469.png. The pack opens on
+// the first emoji drawn.
 static unsigned char *load_emoji_image(const VdEmojiSequence *sequence, int *width, int *height)
 {
-    char path[VD_PATH_MAX];
-    size_t used = (size_t)snprintf(path, sizeof(path), "%s/", VD_EMOJI_DIR);
-    for (int i = 0; i < sequence->length && used < sizeof(path); i++) {
-        used += (size_t)snprintf(path + used, sizeof(path) - used, i == 0 ? "%x" : "-%x",
+    if (!g_emoji_pack_opened) {
+        g_emoji_pack_opened = true;
+        g_emoji_pack = emoji_pack_open(VD_EMOJI_PACK_PATH);
+        if (!g_emoji_pack) TraceLog(LOG_WARNING, "FONT: Could not open the emoji images in %s", VD_EMOJI_PACK_PATH);
+    }
+    if (!g_emoji_pack) return NULL;
+
+    char name[VD_EMOJI_SEQUENCE_MAX * 9 + sizeof(".png")];
+    size_t used = 0;
+    for (int i = 0; i < sequence->length; i++) {
+        used += (size_t)snprintf(name + used, sizeof(name) - used, i == 0 ? "%x" : "-%x",
                                  (unsigned)sequence->codepoints[i]);
     }
-    if (used < sizeof(path)) used += (size_t)snprintf(path + used, sizeof(path) - used, ".png");
-    if (used >= sizeof(path)) return NULL;
+    snprintf(name + used, sizeof(name) - used, ".png");
 
     size_t length = 0;
-    char *data = vd_read_file(path, &length);
+    unsigned char *data = emoji_pack_read(g_emoji_pack, name, &length);
     if (!data) return NULL;
-    Image image = LoadImageFromMemory(".png", (const unsigned char *)data, (int)length);
+    Image image = LoadImageFromMemory(".png", data, (int)length);
     free(data);
     if (!IsImageValid(image)) return NULL;
     ImageFormat(&image, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
@@ -182,6 +192,9 @@ void font_registry_shutdown(void)
     glyph_font_free(g_cjk_font);
     glyph_font_free(g_korean_font);
     g_cjk_font = g_korean_font = NULL;
+    emoji_pack_close(g_emoji_pack);
+    g_emoji_pack = NULL;
+    g_emoji_pack_opened = false;
 }
 
 const VdFont *font_registry_get(const char *name)
