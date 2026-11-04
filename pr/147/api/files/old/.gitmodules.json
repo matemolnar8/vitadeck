@@ -1,0 +1,1 @@
+{"path":".gitmodules","ref":"05cd3b580fb6c9be2272de4548816decc5f3de40","side":"old","content":"[submodule \"vendor/quickjs\"]\n\tpath = vendor/quickjs\n\turl = https://github.com/matemolnar8/quickjs.git\n","language":"plaintext"}
