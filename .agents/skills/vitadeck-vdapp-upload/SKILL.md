@@ -58,7 +58,7 @@ curl -X POST "http://${PSVITAIP}:8787/upload" \
 
 ## Troubleshooting
 
-- **Connection refused** — wrong IP, VitaDeck not running, or **Upload and link** turned off in the Shell.
+- **Connection refused** — wrong IP, VitaDeck not running, or **Upload and link** turned off in the Shell. Ask for the IP. A bare connection such as `nc -z` crashes VitaShell's FTP and vitacompanion until the Vita restarts; this upload talks to the LAN Listener with curl.
 - **409** — Another upload in progress; wait and retry (`dev` retries once, then on the next save).
 - **422** — Bad archive layout; zip must contain exactly one top-level `*.vdapp` directory.
 - After upload, pick the package on **Shell Home Screen** (Enter) if it did not become active automatically.
