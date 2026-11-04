@@ -18,6 +18,7 @@ type DeckAppConfig = {
   version?: string;
   fonts?: Record<string, string>;
   images?: Record<string, string>;
+  sounds?: Record<string, string>;
   /** A Host Control Plugin, built into the `<outDir>/<slug>.vdplugin` package. */
   hostPlugin?: { entry: string; files?: string };
 };
@@ -25,21 +26,17 @@ type DeckAppConfig = {
 const PACKAGE_SCHEMA_VERSION = 1;
 const SUPPORTED_REACT_PREFIX = "18.3.";
 const RESERVED_FONT_NAMES = new Set(["default"]);
-const SUPPORTED_FONT_EXTENSIONS = new Set([".ttf", ".otf", ".fnt", ".bdf"]);
-const SUPPORTED_IMAGE_EXTENSIONS = new Set([
-  ".png",
-  ".jpg",
-  ".jpeg",
-  ".bmp",
-  ".tga",
-  ".gif",
-  ".psd",
-  ".hdr",
-  ".pic",
-  ".qoi",
-]);
+type AssetKind = "font" | "image" | "sound";
+const ASSET_KINDS = {
+  font: { extensions: new Set([".ttf", ".otf", ".fnt", ".bdf"]), typeMap: "VitaDeckFontMap" },
+  image: {
+    extensions: new Set([".png", ".jpg", ".jpeg", ".bmp", ".tga", ".gif", ".psd", ".hdr", ".pic", ".qoi"]),
+    typeMap: "VitaDeckImageMap",
+  },
+  sound: { extensions: new Set([".wav", ".mp3", ".flac"]), typeMap: "VitaDeckSoundMap" },
+} satisfies Record<AssetKind, { extensions: Set<string>; typeMap: string }>;
 const SUPPORTED_HOST_PLUGIN_EXTENSIONS = new Set([".ts", ".mts", ".js", ".mjs"]);
-const FONT_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,62}$/u;
+const ASSET_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,62}$/u;
 const NATIVE_DISPLAY_NAME_MAX_BYTES = 127;
 const NATIVE_PACKAGE_NAME_MAX_BYTES = 127;
 const NATIVE_PACKAGE_VERSION_MAX_BYTES = 63;
@@ -71,35 +68,22 @@ function requireString(value: unknown, field: string, sourcePath: string): strin
   return value;
 }
 
-function readFonts(value: unknown, sourcePath: string): Record<string, string> | undefined {
+function readAssets(value: unknown, sourcePath: string, kind: AssetKind): Record<string, string> | undefined {
   if (value === undefined) return undefined;
-  const raw = requireObject(value, `${sourcePath} "fonts"`);
-  validateAssetCount(raw, "fonts", sourcePath);
-  const fonts: Record<string, string> = {};
-  for (const [name, fontPath] of Object.entries(raw)) {
-    if (!FONT_NAME_PATTERN.test(name)) {
-      throw new Error(`${sourcePath} font name "${name}" must match ${FONT_NAME_PATTERN.toString()}.`);
+  const field = `${kind}s` as const;
+  const raw = requireObject(value, `${sourcePath} "${field}"`);
+  validateAssetCount(raw, field, sourcePath);
+  const assets: Record<string, string> = {};
+  for (const [name, assetPath] of Object.entries(raw)) {
+    if (!ASSET_NAME_PATTERN.test(name)) {
+      throw new Error(`${sourcePath} ${kind} name "${name}" must match ${ASSET_NAME_PATTERN.toString()}.`);
     }
-    if (RESERVED_FONT_NAMES.has(name)) {
+    if (kind === "font" && RESERVED_FONT_NAMES.has(name)) {
       throw new Error(`${sourcePath} font name "${name}" is reserved by VitaDeck.`);
     }
-    fonts[name] = requireString(fontPath, `fonts.${name}`, sourcePath);
+    assets[name] = requireString(assetPath, `${field}.${name}`, sourcePath);
   }
-  return fonts;
-}
-
-function readImages(value: unknown, sourcePath: string): Record<string, string> | undefined {
-  if (value === undefined) return undefined;
-  const raw = requireObject(value, `${sourcePath} "images"`);
-  validateAssetCount(raw, "images", sourcePath);
-  const images: Record<string, string> = {};
-  for (const [name, imagePath] of Object.entries(raw)) {
-    if (!FONT_NAME_PATTERN.test(name)) {
-      throw new Error(`${sourcePath} image name "${name}" must match ${FONT_NAME_PATTERN.toString()}.`);
-    }
-    images[name] = requireString(imagePath, `images.${name}`, sourcePath);
-  }
-  return images;
+  return assets;
 }
 
 async function readConfig(projectRoot: string): Promise<DeckAppConfig> {
@@ -113,8 +97,9 @@ async function readConfig(projectRoot: string): Promise<DeckAppConfig> {
   if (raw.version !== undefined) {
     config.version = requireString(raw.version, "version", configPath);
   }
-  config.fonts = readFonts(raw.fonts, configPath);
-  config.images = readImages(raw.images, configPath);
+  config.fonts = readAssets(raw.fonts, configPath, "font");
+  config.images = readAssets(raw.images, configPath, "image");
+  config.sounds = readAssets(raw.sounds, configPath, "sound");
   if (raw.hostPlugin !== undefined) {
     const hostPlugin = requireObject(raw.hostPlugin, `${configPath} "hostPlugin"`);
     config.hostPlugin = { entry: requireString(hostPlugin.entry, "hostPlugin.entry", configPath) };
@@ -190,7 +175,7 @@ function validatePackageName(packageName: string): void {
   }
 }
 
-function validateAssetCount(raw: Record<string, unknown>, label: "fonts" | "images", sourcePath: string): void {
+function validateAssetCount(raw: Record<string, unknown>, label: `${AssetKind}s`, sourcePath: string): void {
   const count = Object.keys(raw).length;
   if (count > NATIVE_PACKAGE_ASSET_MAX) {
     throw new Error(`${sourcePath} declares ${count} ${label}; VitaDeck packages support at most 32.`);
@@ -216,7 +201,7 @@ function resolveAssetSourcePath(
   projectRoot: string,
   assetPath: string,
   sourcePath: string,
-  assetLabel: "font" | "image" | "hostPlugin.entry",
+  assetLabel: AssetKind | "hostPlugin.entry",
   supportedExtensions: Set<string>,
 ): string {
   resolveProjectPath(projectRoot, assetPath, sourcePath, assetLabel);
@@ -227,7 +212,7 @@ function resolveAssetSourcePath(
   return path.resolve(projectRoot, assetPath);
 }
 
-async function assertFileExists(filePath: string, sourcePath: string, assetLabel = "font"): Promise<void> {
+async function assertFileExists(filePath: string, sourcePath: string, assetLabel: string): Promise<void> {
   try {
     await access(filePath);
   } catch (error) {
@@ -279,49 +264,38 @@ async function writePackageArchive(packageDir: string, zipOutPath: string): Prom
   await writeFile(zipOutPath, zipped);
 }
 
-async function writeFontTypes(generatedDir: string, fonts: Record<string, string> | undefined): Promise<void> {
-  const names = Object.keys(fonts ?? {}).toSorted();
+async function writeAssetTypes(
+  generatedDir: string,
+  kind: AssetKind,
+  assets: Record<string, string> | undefined,
+): Promise<void> {
+  const names = Object.keys(assets ?? {}).toSorted();
   const declarations =
     names.length === 0 ? "" : names.map((name) => `    ${JSON.stringify(name)}: true;`).join("\n") + "\n";
   await writeFile(
-    path.join(generatedDir, "font-names.d.ts"),
+    path.join(generatedDir, `${kind}-names.d.ts`),
     `import "@vitadeck/sdk/types";
 
 declare module "@vitadeck/sdk/types" {
-  interface VitaDeckFontMap {
+  interface ${ASSET_KINDS[kind].typeMap} {
 ${declarations}  }
 }
 `,
   );
 }
 
-async function writeImageTypes(generatedDir: string, images: Record<string, string> | undefined): Promise<void> {
-  const names = Object.keys(images ?? {}).toSorted();
-  const declarations =
-    names.length === 0 ? "" : names.map((name) => `    ${JSON.stringify(name)}: true;`).join("\n") + "\n";
-  await writeFile(
-    path.join(generatedDir, "image-names.d.ts"),
-    `import "@vitadeck/sdk/types";
-
-declare module "@vitadeck/sdk/types" {
-  interface VitaDeckImageMap {
-${declarations}  }
-}
-`,
-  );
-}
-
-async function copyImages(
+async function copyAssets(
   projectRoot: string,
   packageDir: string,
-  images: Record<string, string> | undefined,
+  kind: AssetKind,
+  assets: Record<string, string> | undefined,
 ): Promise<Record<string, string> | undefined> {
-  const entries = Object.entries(images ?? {});
+  const entries = Object.entries(assets ?? {});
   if (entries.length === 0) return undefined;
 
-  const manifestImages: Record<string, string> = {};
-  const outImagesDir = path.join(packageDir, "images");
-  await mkdir(outImagesDir, { recursive: true });
+  const manifestAssets: Record<string, string> = {};
+  const outDir = `${kind}s`;
+  await mkdir(path.join(packageDir, outDir), { recursive: true });
 
   await Promise.all(
     entries.map(async ([name, sourceRel]) => {
@@ -329,48 +303,17 @@ async function copyImages(
         projectRoot,
         sourceRel,
         "vitadeck.config.json",
-        "image",
-        SUPPORTED_IMAGE_EXTENSIONS,
+        kind,
+        ASSET_KINDS[kind].extensions,
       );
-      await assertFileExists(sourceAbs, "vitadeck.config.json", "image");
-      const packageRel = `images/${name}${path.extname(sourceRel).toLowerCase()}`;
+      await assertFileExists(sourceAbs, "vitadeck.config.json", kind);
+      const packageRel = `${outDir}/${name}${path.extname(sourceRel).toLowerCase()}`;
       await copyFile(sourceAbs, path.join(packageDir, packageRel));
-      manifestImages[name] = packageRel;
+      manifestAssets[name] = packageRel;
     }),
   );
 
-  return manifestImages;
-}
-
-async function copyFonts(
-  projectRoot: string,
-  packageDir: string,
-  fonts: Record<string, string> | undefined,
-): Promise<Record<string, string> | undefined> {
-  const entries = Object.entries(fonts ?? {});
-  if (entries.length === 0) return undefined;
-
-  const manifestFonts: Record<string, string> = {};
-  const outFontsDir = path.join(packageDir, "fonts");
-  await mkdir(outFontsDir, { recursive: true });
-
-  await Promise.all(
-    entries.map(async ([name, sourceRel]) => {
-      const sourceAbs = resolveAssetSourcePath(
-        projectRoot,
-        sourceRel,
-        "vitadeck.config.json",
-        "font",
-        SUPPORTED_FONT_EXTENSIONS,
-      );
-      await assertFileExists(sourceAbs, "vitadeck.config.json");
-      const packageRel = `fonts/${name}${path.extname(sourceRel).toLowerCase()}`;
-      await copyFile(sourceAbs, path.join(packageDir, packageRel));
-      manifestFonts[name] = packageRel;
-    }),
-  );
-
-  return manifestFonts;
+  return manifestAssets;
 }
 
 async function copyScaffoldDir(templateRoot: string, targetRoot: string, slug: string, rel = ""): Promise<void> {
@@ -519,8 +462,9 @@ async function buildDeckApp(
   await rm(`${packageDir}.zip`, { force: true });
   await mkdir(packageDir, { recursive: true });
   await mkdir(generatedDir, { recursive: true });
-  await writeFontTypes(generatedDir, config.fonts);
-  await writeImageTypes(generatedDir, config.images);
+  await writeAssetTypes(generatedDir, "font", config.fonts);
+  await writeAssetTypes(generatedDir, "image", config.images);
+  await writeAssetTypes(generatedDir, "sound", config.sounds);
 
   await writeFile(
     generatedEntry,
@@ -560,8 +504,9 @@ globalThis.vitadeckPackage.register(DeckApp);
     },
   });
   await bundle.close();
-  const manifestFonts = await copyFonts(projectRoot, packageDir, config.fonts);
-  const manifestImages = await copyImages(projectRoot, packageDir, config.images);
+  const manifestFonts = await copyAssets(projectRoot, packageDir, "font", config.fonts);
+  const manifestImages = await copyAssets(projectRoot, packageDir, "image", config.images);
+  const manifestSounds = await copyAssets(projectRoot, packageDir, "sound", config.sounds);
 
   const manifest = {
     schemaVersion: PACKAGE_SCHEMA_VERSION,
@@ -570,6 +515,7 @@ globalThis.vitadeckPackage.register(DeckApp);
     entry: "app.js",
     ...(manifestFonts ? { fonts: manifestFonts } : {}),
     ...(manifestImages ? { images: manifestImages } : {}),
+    ...(manifestSounds ? { sounds: manifestSounds } : {}),
   } satisfies DeckAppPackageManifest;
   await writeFile(path.join(packageDir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
   await rm(generatedEntry, { force: true });

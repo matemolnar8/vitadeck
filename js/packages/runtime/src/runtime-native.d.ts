@@ -277,6 +277,9 @@ declare global {
   // Called by `storage` in @vitadeck/sdk.
   function nativeReadDeckAppStorage(): string;
   function nativeWriteDeckAppStorage(json: string): void;
+  // Called by `playSound` and `stopSound` in @vitadeck/sdk; both throw a RangeError for an undeclared name.
+  function nativePlaySound(name: string, loop: boolean): void;
+  function nativeStopSound(name: string): void;
   function nativeReportDeckAppError(message: string, stack: string): void;
   // Called by the Host Control client in @vitadeck/sdk: a JSON array of {id, name, url}, newest first.
   function nativeGetHostControlLinks(): string;

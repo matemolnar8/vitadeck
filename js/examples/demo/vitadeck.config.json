@@ -7,5 +7,9 @@
   },
   "images": {
     "logo": "./assets/images/logo.png"
+  },
+  "sounds": {
+    "chime": "./assets/sounds/chime.wav",
+    "loop": "./assets/sounds/loop.mp3"
   }
 }

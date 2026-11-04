@@ -26,5 +26,6 @@ void register_js_fetch(JSContext *ctx);
 void register_instance_tree(JSContext *ctx);
 void register_js_storage(JSContext *ctx);
 void register_js_host_control(JSContext *ctx);
+void register_js_sound(JSContext *ctx);
 
 #endif /* JSLIB_INTERNAL_H */

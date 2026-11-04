@@ -103,54 +103,84 @@ static bool validate_asset_file(const char *package_path, const char *rel_path, 
     return true;
 }
 
-static bool parse_asset_object(Jimp *jimp, const char *package_path, VdPackageAsset *assets, int *out_count,
-                               int max_count, bool is_font, char *error, size_t error_size)
-{
-    static const char *font_extensions[] = {".ttf", ".otf", ".fnt", ".bdf"};
-    static const char *image_extensions[] = {".png", ".jpg", ".jpeg", ".bmp", ".tga",
-                                             ".gif", ".psd", ".hdr",  ".pic", ".qoi"};
+typedef struct {
+    const char *invalid_object;
+    const char *too_many;
+    const char *invalid_name;
+    const char *invalid_path;
+    const char *missing;
+    const char *const *extensions;
+    int extension_count;
+    bool allow_default_name;
+} VdAssetKind;
 
+static const char *const font_extensions[] = {".ttf", ".otf", ".fnt", ".bdf"};
+static const char *const image_extensions[] = {".png", ".jpg", ".jpeg", ".bmp", ".tga",
+                                               ".gif", ".psd", ".hdr",  ".pic", ".qoi"};
+static const char *const sound_extensions[] = {".wav", ".mp3", ".flac"};
+
+static const VdAssetKind font_kind = {
+    "Deck App Package Manifest fonts are invalid.",
+    "Deck App Package declares too many fonts.",
+    "Deck App Package declares an invalid font name.",
+    "Deck App Package declares an invalid font path.",
+    "Deck App Package Font is missing.",
+    font_extensions,
+    (int)(sizeof(font_extensions) / sizeof(font_extensions[0])),
+    false,
+};
+
+static const VdAssetKind image_kind = {
+    "Deck App Package Manifest images are invalid.",
+    "Deck App Package declares too many images.",
+    "Deck App Package declares an invalid image name.",
+    "Deck App Package declares an invalid image path.",
+    "Deck App Package Image is missing.",
+    image_extensions,
+    (int)(sizeof(image_extensions) / sizeof(image_extensions[0])),
+    true,
+};
+
+static const VdAssetKind sound_kind = {
+    "Deck App Package Manifest sounds are invalid.",
+    "Deck App Package declares too many sounds.",
+    "Deck App Package declares an invalid sound name.",
+    "Deck App Package declares an invalid sound path.",
+    "Deck App Package Sound is missing.",
+    sound_extensions,
+    (int)(sizeof(sound_extensions) / sizeof(sound_extensions[0])),
+    true,
+};
+
+static bool parse_asset_object(Jimp *jimp, const char *package_path, const VdAssetKind *kind, VdPackageAsset *assets,
+                               int *out_count, int max_count, char *error, size_t error_size)
+{
     *out_count = 0;
     if (!jimp_object_begin(jimp)) {
-        vd_set_error(error, error_size,
-                     is_font ? "Deck App Package Manifest fonts are invalid."
-                             : "Deck App Package Manifest images are invalid.");
+        vd_set_error(error, error_size, kind->invalid_object);
         return false;
     }
 
     while (jimp_object_member(jimp)) {
         if (*out_count >= max_count) {
-            vd_set_error(error, error_size,
-                         is_font ? "Deck App Package declares too many fonts."
-                                 : "Deck App Package declares too many images.");
+            vd_set_error(error, error_size, kind->too_many);
             return false;
         }
 
         char name[VD_PACKAGE_ASSET_NAME_MAX];
-        if (!copy_string(name, sizeof(name), jimp->string) || !safe_asset_name(name, !is_font)) {
-            vd_set_error(error, error_size,
-                         is_font ? "Deck App Package declares an invalid font name."
-                                 : "Deck App Package declares an invalid image name.");
+        if (!copy_string(name, sizeof(name), jimp->string) || !safe_asset_name(name, kind->allow_default_name)) {
+            vd_set_error(error, error_size, kind->invalid_name);
             return false;
         }
 
         char rel_path[VD_PATH_MAX];
-        const char *const *extensions = is_font ? font_extensions : image_extensions;
-        int extension_count = is_font ? (int)(sizeof(font_extensions) / sizeof(font_extensions[0]))
-                                      : (int)(sizeof(image_extensions) / sizeof(image_extensions[0]));
         if (!read_json_string(jimp, rel_path, sizeof(rel_path)) || !safe_relative_path(rel_path) ||
-            !supported_path_extension(rel_path, extensions, extension_count)) {
-            vd_set_error(error, error_size,
-                         is_font ? "Deck App Package declares an invalid font path."
-                                 : "Deck App Package declares an invalid image path.");
+            !supported_path_extension(rel_path, kind->extensions, kind->extension_count)) {
+            vd_set_error(error, error_size, kind->invalid_path);
             return false;
         }
 
-        if (!validate_asset_file(package_path, rel_path,
-                                 is_font ? "Deck App Package declares an invalid font path."
-                                         : "Deck App Package declares an invalid image path.",
-                                 is_font ? "Deck App Package Font is missing." : "Deck App Package Image is missing.",
-                                 error, error_size)) {
+        if (!validate_asset_file(package_path, rel_path, kind->invalid_path, kind->missing, error, error_size)) {
             return false;
         }
 
@@ -160,9 +190,7 @@ static bool parse_asset_object(Jimp *jimp, const char *package_path, VdPackageAs
     }
 
     if (!jimp_object_end(jimp)) {
-        vd_set_error(error, error_size,
-                     is_font ? "Deck App Package Manifest fonts are invalid."
-                             : "Deck App Package Manifest images are invalid.");
+        vd_set_error(error, error_size, kind->invalid_object);
         return false;
     }
     return true;
@@ -229,11 +257,14 @@ bool package_manifest_read(const char *package_path, const char *package_name, V
             ok = read_json_string(&jimp, out_manifest->entry, sizeof(out_manifest->entry));
             saw_entry = ok;
         } else if (strcmp(key, "fonts") == 0) {
-            ok = parse_asset_object(&jimp, package_path, out_manifest->fonts, &out_manifest->font_count,
-                                    VD_PACKAGE_FONT_MAX, true, error, error_size);
+            ok = parse_asset_object(&jimp, package_path, &font_kind, out_manifest->fonts, &out_manifest->font_count,
+                                    VD_PACKAGE_FONT_MAX, error, error_size);
         } else if (strcmp(key, "images") == 0) {
-            ok = parse_asset_object(&jimp, package_path, out_manifest->images, &out_manifest->image_count,
-                                    VD_PACKAGE_IMAGE_MAX, false, error, error_size);
+            ok = parse_asset_object(&jimp, package_path, &image_kind, out_manifest->images, &out_manifest->image_count,
+                                    VD_PACKAGE_IMAGE_MAX, error, error_size);
+        } else if (strcmp(key, "sounds") == 0) {
+            ok = parse_asset_object(&jimp, package_path, &sound_kind, out_manifest->sounds, &out_manifest->sound_count,
+                                    VD_PACKAGE_SOUND_MAX, error, error_size);
         } else {
             ok = json_skip_value(&jimp);
         }

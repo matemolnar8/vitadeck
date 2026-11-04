@@ -32,12 +32,15 @@ void test("build writes native-compatible manifest asset paths", async (t) => {
   const projectRoot = await makeDeckAppProject({
     fonts: { body: "assets/fonts/body.OTF" },
     images: { logo: "assets/images/logo.JPEG" },
+    sounds: { chime: "assets/sounds/chime.WAV", theme: "assets/sounds/theme.mp3" },
   });
   t.after(async () => {
     await rm(projectRoot, { recursive: true, force: true });
   });
   await writeProjectFile(projectRoot, "assets/fonts/body.OTF", "font\n");
   await writeProjectFile(projectRoot, "assets/images/logo.JPEG", "image\n");
+  await writeProjectFile(projectRoot, "assets/sounds/chime.WAV", "sound\n");
+  await writeProjectFile(projectRoot, "assets/sounds/theme.mp3", "sound\n");
 
   const result = await runBuild(projectRoot);
   assert.equal(result.ok, true, buildOutput(result));
@@ -50,6 +53,7 @@ void test("build writes native-compatible manifest asset paths", async (t) => {
     entry: "app.js",
     fonts: { body: "fonts/body.otf" },
     images: { logo: "images/logo.jpeg" },
+    sounds: { chime: "sounds/chime.wav", theme: "sounds/theme.mp3" },
   });
 });
 
@@ -177,4 +181,16 @@ export default function App() {
   const appJs = await readFile(path.join(projectRoot, "dist/sample-deck.vdapp/app.js"), "utf8");
   assert.match(appJs, /nativeGetHostControlLinks/u);
   assert.doesNotMatch(appJs, /@vitadeck\/sdk\/host-control/u);
+});
+
+void test("build rejects sound formats VitaDeck cannot decode", async (t) => {
+  const projectRoot = await makeDeckAppProject({ sounds: { theme: "assets/sounds/theme.ogg" } });
+  t.after(async () => {
+    await rm(projectRoot, { recursive: true, force: true });
+  });
+  await writeProjectFile(projectRoot, "assets/sounds/theme.ogg", "sound\n");
+
+  const result = await runBuild(projectRoot);
+  assert.equal(result.ok, false, buildOutput(result));
+  assert.match(buildOutput(result), /sound path "assets\/sounds\/theme\.ogg" must use a supported sound extension/u);
 });

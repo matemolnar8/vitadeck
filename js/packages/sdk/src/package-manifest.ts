@@ -6,4 +6,5 @@ export type DeckAppPackageManifest = {
   entry: "app.js";
   fonts?: Record<string, string>;
   images?: Record<string, string>;
+  sounds?: Record<string, string>;
 };
