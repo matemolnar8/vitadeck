@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 05cd3b580fb6c9be2272de4548816decc5f3de40` and `git rev-parse --verify 92759426382c6cafaf057cbe8556ffe04ec30dd4` in this repository.
+   Run `git rev-parse --verify 5fbdbe10b4830a6e343e9abe46f88aad89d5284a` and `git rev-parse --verify 4968a00c087f538de9251d93c083192cee84bddf` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -22,25 +22,27 @@ When no question follows this paste, explain this change.
 Repository: vitadeck
 Origin: git@github.com:matemolnar8/vitadeck.git
 
-base (merge-base)  05cd3b580fb6c9be2272de4548816decc5f3de40
+base (merge-base)  5fbdbe10b4830a6e343e9abe46f88aad89d5284a
 
-head               92759426382c6cafaf057cbe8556ffe04ec30dd4
+head               4968a00c087f538de9251d93c083192cee84bddf
 
-Named refs at pin: 05cd3b58 ... 92759426
+Named refs at pin: origin/t3/emoji-pack ... t3/audio-playback
 
 Read the diff:
 
-git diff --find-renames 05cd3b580fb6c9be2272de4548816decc5f3de40 92759426382c6cafaf057cbe8556ffe04ec30dd4
+git diff --find-renames 5fbdbe10b4830a6e343e9abe46f88aad89d5284a 4968a00c087f538de9251d93c083192cee84bddf
 
 Commits:
-- 92759426 fix: count the Sound section in the demo benchmark and input harness
-- d589ff0b feat: Deck App Sounds with playSound and stopSound
-- 643c8abc build: vendor miniaudio dev-0.12 for its Vita audio backend
+- 4968a00c docs: warn that probing the Vita with nc crashes it
+- ba91e892 fix: count the Sound section in the demo benchmark and input harness
+- 6a1e22c5 feat: Deck App Sounds with playSound and stopSound
+- 258a40a5 build: vendor miniaudio dev-0.12 for its Vita audio backend
 
 Sources:
 - pr PR #147 Sounds declared in vitadeck.config.json, played by name on host and Vita via miniaudio dev-0.12; demo Sound section; host PipeWire capture as proof.
   https://github.com/matemolnar8/vitadeck/pull/147
 - transcript Claude Code session · Nov 4 Add audio support so the SDK can play audio files from assets, add a demo section, use miniaudio.h after checking PS Vita support.
+- commit docs: warn that probing the Vita with nc crashes it
 
 The title:
 
@@ -52,7 +54,7 @@ Máté asked that [the SDK can play audio files from assets](source:s2), with a 
 
 The what (large):
 
-Deck Apps declare `sounds` like images and play them with `playSound` and `stopSound`, through a vendored miniaudio `dev-0.12` on the host and the Vita, and the demo gets a Sound section.
+Deck Apps declare `sounds` like images and play them with `playSound` and `stopSound`, through a vendored miniaudio `dev-0.12` on the host and the Vita, and the demo gets a Sound section. It also carries a docs-only warning against probing the Vita with `nc`.
 
 Look for:
 - The request asks for [miniaudio.h, checked for PS Vita support](source:s2). Released miniaudio has no Vita backend, so `vendor/miniaudio` is a submodule pinned to the unreleased `dev-0.12` branch, not a released single header; ADR 0006 gives the reason.
@@ -119,3 +121,9 @@ Depends on:
 - 05 Demo Sound section and the tests that count sections (`demo`)
 
 [groups/mechanical.md](groups/mechanical.md)
+
+### 07 Warning against probing the Vita (`probe-docs`)
+
+A new AGENTS.md footgun and matching lines in three skills tell agents to ask for the Vita IP and upload with curl instead of probing ports.
+
+[groups/probe-docs.md](groups/probe-docs.md)
