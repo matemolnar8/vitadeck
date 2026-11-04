@@ -1,16 +1,21 @@
-# vitadeck_fetch_asset(<name> URL <url> SHA256 <hash> DIR <dir> FALLBACK <text> [EXTRACT <glob>] [STRIP <text>])
+# vitadeck_fetch_asset(<name> URL <url> SHA256 <hash> DIR <dir> FALLBACK <text> [EXTRACT <glob>] [STRIP <text>]
+#                      [PACK <zip>])
 #
 # Downloads a pinned file once at configure time into the gitignored <dir> and checks its SHA-256. With EXTRACT the
 # download is an archive and the members matching <glob> land in <dir> without their archive folders; without it the
-# download itself lands as <dir>/<url's file name>. STRIP removes <text> from each landed file name.
+# download itself lands as <dir>/<url's file name>. STRIP removes <text> from each landed file name. PACK lands the
+# files as one zip, <dir>/<zip>, for targets that are slow with many small files.
 # A stamp in the gitignored assets/.downloads lists the landed files, so a changed pin replaces them and an unchanged
 # one does not download again; <dir> holds only what ships. Sets <name>_FOUND in the caller. A failed download only
 # warns with FALLBACK, what the build does without the file, so offline builds still succeed.
 function(vitadeck_fetch_asset name)
-  cmake_parse_arguments(PARSE_ARGV 1 arg "" "URL;SHA256;DIR;FALLBACK;EXTRACT;STRIP" "")
+  cmake_parse_arguments(PARSE_ARGV 1 arg "" "URL;SHA256;DIR;FALLBACK;EXTRACT;STRIP;PACK" "")
   set(dir "${arg_DIR}")
   set(state "${CMAKE_SOURCE_DIR}/assets/.downloads")
   set(stamp "${state}/${name}-${arg_SHA256}")
+  if(arg_PACK)
+    string(APPEND stamp "-${arg_PACK}")
+  endif()
   set(${name}_FOUND OFF PARENT_SCOPE)
   if(EXISTS "${stamp}")
     file(STRINGS "${stamp}" stamped_files)
@@ -76,19 +81,41 @@ function(vitadeck_fetch_asset name)
     file(REMOVE "${previous_stamp}")
   endforeach()
 
+  set(landing "${dir}")
+  if(arg_PACK)
+    set(landing "${staging}/pack")
+    file(MAKE_DIRECTORY "${landing}")
+  endif()
   set(landed "")
   foreach(file IN LISTS files)
     get_filename_component(landed_name "${file}" NAME)
     if(arg_STRIP)
       string(REPLACE "${arg_STRIP}" "" landed_name "${landed_name}")
     endif()
-    file(RENAME "${file}" "${dir}/${landed_name}")
+    file(RENAME "${file}" "${landing}/${landed_name}")
     string(APPEND landed "${landed_name}\n")
   endforeach()
+  if(arg_PACK)
+    file(WRITE "${staging}/members" "${landed}")
+    execute_process(
+      COMMAND "${CMAKE_COMMAND}" -E tar cf "${dir}/${arg_PACK}" --format=zip "--files-from=${staging}/members"
+      WORKING_DIRECTORY "${landing}"
+      RESULT_VARIABLE pack_result
+    )
+    if(NOT pack_result EQUAL 0)
+      file(REMOVE_RECURSE "${staging}" "${dir}/${arg_PACK}")
+      message(WARNING "${name} could not be packed into ${arg_PACK}. ${arg_FALLBACK} Reconfigure to retry.")
+      return()
+    endif()
+    set(landed "${arg_PACK}\n")
+  endif()
   file(REMOVE_RECURSE "${staging}")
   file(WRITE "${stamp}" "${landed}")
   list(LENGTH files count)
   file(RELATIVE_PATH relative_dir "${CMAKE_SOURCE_DIR}" "${dir}")
+  if(arg_PACK)
+    string(APPEND relative_dir "/${arg_PACK}")
+  endif()
   message(STATUS "${name}: ${count} file(s) in ${relative_dir}")
   set(${name}_FOUND ON PARENT_SCOPE)
 endfunction()

@@ -159,8 +159,7 @@ vita_result_written() {
 }
 
 # Prints curl config lines uploading the files in a local asset directory that the Vita lacks. The assets are pinned
-# downloads, so a name already on the Vita is the same file. VitaShell's FTP has no NLST, so this parses LIST. The first
-# run uploads about 4000 emoji, which takes most of an hour as VitaShell slows down with the directory's size.
+# downloads, so a name already on the Vita is the same file. VitaShell's FTP has no NLST, so this parses LIST.
 missing_asset_uploads() {
   local dir="$ROOT_DIR/assets/$1" remote="ftp://$PSVITAIP:1337/ux0:/app/$TITLE_ID/assets/$1"
   [[ -d "$dir" ]] || return 0

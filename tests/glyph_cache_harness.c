@@ -1,8 +1,8 @@
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
+#include "ui/emoji_pack.h"
 #include "ui/glyph_cache.h"
 
-#include <dirent.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,6 +13,7 @@
 #define ASCII_FONT_PATH VD_SOURCE_DIR "/tests/fixtures/DejaVuSans-ascii.ttf"
 #define FALLBACK_FONT_PATH VD_SOURCE_DIR "/assets/fonts/DroidSansFallbackFull.ttf"
 #define KOREAN_FONT_PATH VD_SOURCE_DIR "/assets/fonts/NotoSansKR-Regular.otf"
+#define EMOJI_PACK_PATH VD_SOURCE_DIR "/assets/emoji/twemoji.zip"
 
 static int failures = 0;
 
@@ -467,11 +468,6 @@ static void test_emoji(const VdGlyphFont *font)
 
     glyph_cache_set_emoji_loader(NULL);
     glyph_cache_reset();
-#ifdef VD_TWEMOJI_DOWNLOADED
-    FILE *asset = fopen(VD_SOURCE_DIR "/assets/emoji/1f3f3-200d-1f308.png", "rb");
-    expect(asset != NULL, "the Twemoji download names images without U+FE0F");
-    if (asset) fclose(asset);
-#endif
 }
 
 // A text-style symbol no font has draws its emoji image; one without an image keeps the missing-glyph box.
@@ -490,8 +486,6 @@ static void test_symbol_without_glyph(const VdGlyphFont *ascii)
     glyph_cache_reset();
 }
 
-#define EMOJI_DIR VD_SOURCE_DIR "/assets/emoji"
-
 // Names an image as load_emoji_image in src/ui/fonts.c does; false when it does not fit.
 static bool emoji_file_name(const VdEmojiSequence *sequence, char *name, size_t size)
 {
@@ -503,17 +497,18 @@ static bool emoji_file_name(const VdEmojiSequence *sequence, char *name, size_t 
 }
 
 static int file_loader_found = 0;
+static VdEmojiPack *file_loader_pack = NULL;
 
-// Reads only whether the image exists: an opaque 1x1 image when it does.
+// Reads only whether the image is in the pack: an opaque 1x1 image when it is.
 static unsigned char *file_emoji_loader(const VdEmojiSequence *sequence, int *width, int *height)
 {
     char name[128];
-    char path[sizeof(EMOJI_DIR) + sizeof(name) + 8];
-    if (!emoji_file_name(sequence, name, sizeof(name))) return NULL;
-    snprintf(path, sizeof(path), "%s/%s.png", EMOJI_DIR, name);
-    FILE *file = fopen(path, "rb");
-    if (!file) return NULL;
-    fclose(file);
+    if (!emoji_file_name(sequence, name, sizeof(name) - 4)) return NULL;
+    strcat(name, ".png");
+    size_t size = 0;
+    unsigned char *image = emoji_pack_read(file_loader_pack, name, &size);
+    if (!image) return NULL;
+    free(image);
     file_loader_found = sequence->length;
     *width = *height = 1;
     unsigned char *pixels = malloc(4);
@@ -569,9 +564,9 @@ static bool draws_image(const VdGlyphFont *font, int size, const char *text, con
 // codepoint does without U+FE0F too, from the font that lacks it.
 static void test_twemoji_files(const VdGlyphFont *ascii)
 {
-    DIR *dir = opendir(EMOJI_DIR);
-    if (!dir) {
-        printf("glyph_cache_harness: skipping Twemoji file cases, %s is missing\n", EMOJI_DIR);
+    file_loader_pack = emoji_pack_open(EMOJI_PACK_PATH);
+    if (!file_loader_pack) {
+        printf("glyph_cache_harness: skipping Twemoji file cases, %s is missing\n", EMOJI_PACK_PATH);
         return;
     }
     glyph_cache_reset();
@@ -580,12 +575,13 @@ static void test_twemoji_files(const VdGlyphFont *ascii)
     glyph_cache_set_emoji_loader(file_emoji_loader);
 
     int files = 0;
-    for (struct dirent *entry; (entry = readdir(dir)) != NULL;) {
-        size_t length = strlen(entry->d_name);
-        if (length < 5 || strcmp(entry->d_name + length - 4, ".png") != 0) continue;
+    for (int index = 0; index < emoji_pack_count(file_loader_pack); index++) {
+        const char *file = emoji_pack_name(file_loader_pack, index);
+        size_t length = strlen(file);
+        if (length < 5 || strcmp(file + length - 4, ".png") != 0) continue;
         files++;
         char stem[128];
-        snprintf(stem, sizeof(stem), "%.*s", (int)(length - 4), entry->d_name);
+        snprintf(stem, sizeof(stem), "%.*s", (int)(length - 4), file);
 
         VdEmojiSequence sequence = {0};
         bool parsed = true;
@@ -598,7 +594,7 @@ static void test_twemoji_files(const VdGlyphFont *ascii)
         }
         char name[128];
         if (!parsed || !emoji_file_name(&sequence, name, sizeof(name)) || strcmp(name, stem) != 0) {
-            fprintf(stderr, "glyph_cache_harness: %s\n", entry->d_name);
+            fprintf(stderr, "glyph_cache_harness: %s\n", file);
             expect(false, "a Twemoji image is named by its lowercase hex codepoints, as the loader names it");
             continue;
         }
@@ -615,21 +611,20 @@ static void test_twemoji_files(const VdGlyphFont *ascii)
             if (!component && !(next >= 0x1f3fb && next <= 0x1f3ff)) used = append_utf8(text, used, 0xfe0f);
         }
         if (!draws_image(ascii, 4, text, &sequence)) {
-            fprintf(stderr, "glyph_cache_harness: %s\n", entry->d_name);
+            fprintf(stderr, "glyph_cache_harness: %s\n", file);
             expect(false, "fully qualified text draws its Twemoji image");
         }
 
         char bare[8] = {0};
         append_utf8(bare, 0, sequence.codepoints[0]);
         if (sequence.length == 1 && !draws_image(ascii, 5, bare, &sequence)) {
-            fprintf(stderr, "glyph_cache_harness: %s\n", entry->d_name);
+            fprintf(stderr, "glyph_cache_harness: %s\n", file);
             expect(false, "a single codepoint without U+FE0F draws its Twemoji image when no font has it");
         }
     }
-    closedir(dir);
 
     if (files == 0) {
-        printf("glyph_cache_harness: skipping Twemoji file cases, %s has no images\n", EMOJI_DIR);
+        printf("glyph_cache_harness: skipping Twemoji file cases, %s has no images\n", EMOJI_PACK_PATH);
     } else {
         struct {
             const char *text;
@@ -651,6 +646,26 @@ static void test_twemoji_files(const VdGlyphFont *ascii)
     }
     glyph_cache_set_emoji_loader(NULL);
     glyph_cache_reset();
+    emoji_pack_close(file_loader_pack);
+    file_loader_pack = NULL;
+}
+
+static void test_emoji_pack(void)
+{
+    expect(emoji_pack_open(VD_SOURCE_DIR "/tests/fixtures/missing.zip") == NULL, "a missing pack does not open");
+    expect(emoji_pack_open(VD_SOURCE_DIR "/CMakeLists.txt") == NULL, "a file that is not a zip does not open");
+    VdEmojiPack *pack = emoji_pack_open(EMOJI_PACK_PATH);
+#ifdef VD_TWEMOJI_DOWNLOADED
+    expect(pack != NULL, "the Twemoji download is one pack");
+#endif
+    if (!pack) return;
+    size_t size = 0;
+    unsigned char *image = emoji_pack_read(pack, "1f3f3-200d-1f308.png", &size);
+    expect(image != NULL, "the Twemoji download names images without U+FE0F");
+    expect(image && size > 8 && memcmp(image, "\x89PNG\r\n\x1a\n", 8) == 0, "a packed image reads back as a PNG");
+    free(image);
+    expect(emoji_pack_read(pack, "0.png", &size) == NULL, "a name the pack lacks reads nothing");
+    emoji_pack_close(pack);
 }
 
 // assets/emoji without images, as after a failed Twemoji download.
@@ -749,6 +764,7 @@ static bool file_exists(const char *path)
 int main(void)
 {
     test_utf8();
+    test_emoji_pack();
     test_emoji_clusters();
     test_blocks();
 
