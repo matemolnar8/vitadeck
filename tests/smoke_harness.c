@@ -5,14 +5,13 @@
 #include <string.h>
 #include <unistd.h>
 
-#define STB_DS_IMPLEMENTATION
-#include "stb_ds.h"
 #include "core/bootstrap.h"
 #include "core/js_runtime.h"
 #include "core/package_library.h"
 #include "shell/shell.h"
 #include "ui/input.h"
 #include "ui/instance_tree.h"
+#include "demo_sections.h"
 
 #define WAIT_TIMEOUT_SEC 5.0
 #define SETTLE_SEC 0.5
@@ -39,6 +38,7 @@ static const Page PAGES[] = {
     {"12-fetch", "12/13 · fetch"},
     {"13-failure-section", "13/13 · Failure Screen"},
 };
+_Static_assert(sizeof(PAGES) / sizeof(PAGES[0]) == DEMO_SECTION_COUNT, "PAGES needs one entry per demo section");
 
 #define FAILURE_SCREEN_SLUG "14-failure-screen"
 #define SHELL_HOME_SLUG "15-shell-home"

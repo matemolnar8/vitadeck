@@ -120,6 +120,8 @@ function gitFailure(args: string[], failure: ExecFailure): GitError {
 export const PAGES_BRANCH = "gh-pages";
 export const DEFAULT_TTL_DAYS = 30;
 export const PUBLISHED_FILE = "published.json";
+/** Screenshots a PR body links to. A republish keeps them, since a refreshed review export does not carry them. */
+export const EVIDENCE_DIR = "evidence";
 
 const PR_FOLDER = /^[1-9][0-9]*$/;
 const NAME_FOLDER = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
@@ -252,8 +254,12 @@ export async function publishPagesReview(opts: PublishPagesOpts): Promise<PagesR
     const pages = requirePages(pagesDir);
     const pushed = await applyAndPush(pages, ctx, publishMessage(dest), async () => {
       const folder = destDir(pages, dest);
-      await rm(folder, { recursive: true, force: true });
       await mkdir(folder, { recursive: true });
+      for (const entry of await readdir(folder)) {
+        if (entry !== EVIDENCE_DIR) {
+          await rm(join(folder, entry), { recursive: true, force: true });
+        }
+      }
       await cp(opts.dir, folder, { recursive: true });
       await writeFile(join(folder, PUBLISHED_FILE), `${JSON.stringify(meta)}\n`);
       await writeScaffold(pages);

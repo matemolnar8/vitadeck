@@ -2,7 +2,6 @@
 #define VD_TESTS_INSTANCE_FIXTURE_H
 
 // Builds back-tree instances the way src/jslib/instance.c does, without QuickJS.
-// The including harness defines STB_DS_IMPLEMENTATION.
 
 #include <stdlib.h>
 #include <string.h>

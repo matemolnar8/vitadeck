@@ -1,5 +1,3 @@
-#define STB_DS_IMPLEMENTATION
-#include "stb_ds.h"
 #include "ui/emoji_pack.h"
 #include "ui/glyph_cache.h"
 

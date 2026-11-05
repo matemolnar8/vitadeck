@@ -6,20 +6,20 @@
 #include <string.h>
 #include <unistd.h>
 
-#define STB_DS_IMPLEMENTATION
-#include "stb_ds.h"
 #include "core/bootstrap.h"
 #include "core/event_queue.h"
 #include "core/js_runtime.h"
 #include "core/package_library.h"
 #include "ui/input.h"
 #include "ui/scroll.h"
+#include "demo_sections.h"
 
 #define WAIT_TIMEOUT_SEC 5.0
 #define WATCHDOG_SEC 10
 #define SETTLE_FRAMES 3
-// Each round ends with L, R, R, one demo section on, so 13 rounds press every Pad Button on every demo section.
-#define ROUNDS 13
+// Each round ends with L, R, R, one demo section on, so one round per section presses every Pad Button on every demo
+// section.
+#define ROUNDS DEMO_SECTION_COUNT
 
 static const PadButton ROUND[] = {PAD_CIRCLE, PAD_TRIANGLE, PAD_SQUARE, PAD_L, PAD_R, PAD_R};
 

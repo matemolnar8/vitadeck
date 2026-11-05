@@ -32,9 +32,19 @@ step() {
   printf '\n==> %s\n' "$1"
 }
 
+# Hands everything the container wrote back to the host user, also when a step fails, so the next host
+# `pnpm build` or CMake build can replace it.
+restore_ownership() {
+  if [[ -n "${LOCAL_UID:-}" && -n "${LOCAL_GID:-}" ]]; then
+    chown -R "$LOCAL_UID:$LOCAL_GID" "$BUILD_DIR" js/dist js/packages/*/dist js/examples/*/dist js/examples/*/.vitadeck \
+      assets/.downloads assets/emoji assets/fonts tests/fixtures/golden 2>/dev/null || true
+  fi
+}
+
 run_inside() {
   local mode="$1"
   cd /build/git
+  trap restore_ownership EXIT
 
   export PNPM_HOME=/pnpm
   export PATH="$PNPM_HOME:$PATH"
@@ -80,10 +90,6 @@ run_inside() {
       exit 2
       ;;
   esac
-
-  if [[ -n "${LOCAL_UID:-}" && -n "${LOCAL_GID:-}" ]]; then
-    chown -R "$LOCAL_UID:$LOCAL_GID" "$BUILD_DIR" js/dist js/examples/*/dist assets/.downloads assets/emoji assets/fonts tests/fixtures/golden 2>/dev/null || true
-  fi
 }
 
 run_outside() {

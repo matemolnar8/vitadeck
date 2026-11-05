@@ -1,5 +1,3 @@
-#define STB_DS_IMPLEMENTATION
-#include "stb_ds.h"
 #include "core/package_library.h"
 #include "core/util.h"
 #include "host_control/link.h"

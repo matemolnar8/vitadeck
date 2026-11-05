@@ -1,6 +1,4 @@
 #include <raylib.h>
-#define STB_DS_IMPLEMENTATION
-#include "stb_ds.h"
 #include "core/bench.h"
 #include "core/bootstrap.h"
 #include "core/js_runtime.h"

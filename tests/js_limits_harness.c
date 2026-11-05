@@ -13,8 +13,6 @@
 #include <sys/socket.h>
 #include <time.h>
 
-#define STB_DS_IMPLEMENTATION
-#include "stb_ds.h"
 #include "core/event_queue.h"
 #include "core/js_runtime.h"
 #include "platform/thread.h"

@@ -47,7 +47,10 @@ Start is Enter here, not F1 as in the host build.
 
 - Click the Vita3K window once before sending keys. Keys sent while it is merely frontmost are dropped.
 - Hold each key for about 60 ms. Longer holds trigger VitaDeck's D-pad repeat and overshoot the focus.
-- The VitaDeck log is in the terminal as `export_sceClibVprintf` lines. An access violation at `0x80` logged at startup is harmless.
+- The VitaDeck log is in the terminal as `export_sceClibVprintf` lines. Vita3K garbles their format arguments, so they show control flow, not values. An access violation at `0x80` logged at startup is harmless.
+- Pick the Deck App it opens by writing its package name to `~/.vitadeck/vita3k/fs/ux0/data/vitadeck/active-package.txt`; the launch stages the examples but keeps the previous choice.
+- The launch rewrites `~/.vitadeck/vita3k/config.yml` from `write_config` in `scripts/vita3k.sh` every time, so a setting only sticks there.
+- Run it on a Mac with a logged-in console. On ubuntu-pc it boots under Xvfb but stalls in raylib's `InitWindow` (Vulkan), and the OpenGL renderer fails with `GLXBadFBConfig`. From there, run it on the MacBook Pro over SSH (`machines` skill), which has `libshacccg.suprx` installed.
 - Runtime Upload works: VitaDeck listens from startup, so `vitadeck dev http://127.0.0.1:8787/` or `curl -X POST http://127.0.0.1:8787/upload -F archive=@<app>.vdapp.zip` from the same machine.
 
 ## Known emulator gaps

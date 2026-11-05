@@ -28,21 +28,21 @@ When this file speaks:
 - `js/packages/sdk/` - `@vitadeck/sdk`: author-facing components, theme, types, and the `vitadeck` CLI (`cli/`, scaffold under `cli/templates/`)
 - `js/packages/runtime/` - the React reconciler bundle the host embeds
 - `js/packages/host-companion/` - the Host Companion (`vitadeck-host-companion`, published with the SDK at the same version) with the built-in Host Control Plugins; a custom plugin is a `.vdplugin` package the SDK CLI builds (`hostPlugin` in `vitadeck.config.json`, scaffolded with a Deck App by `create --host-plugin` or alone by `create --host-plugin-only`). The wire contract is `js/packages/sdk/src/host-control/` and the fixtures in `tests/fixtures/host-control/`, replayed by the SDK, companion and native tests (ADR 0004)
-- `js/examples/` - example Deck Apps; the smoke test screenshots every section of `demo`
+- `js/examples/` - example Deck Apps; the smoke test screenshots every section of `demo`, and the comment above its `SECTIONS` lists what else changes with a section
 - `tests/` - CTest harnesses (`smoke_harness.c`, `deck_app_input_harness.c`, `package_manifest_harness.c`, `package_library_harness.c`, `timer_reload_harness.c`, `upload_parsing_harness.c`, `host_control_link_harness.c`), golden screenshots (`fixtures/golden/`), and benchmark baselines (`bench/baselines/`)
 - `vendor/quickjs`, `vendor/miniaudio` - git submodules; `docker-compose.yml` + `Dockerfile` - Vitasdk and Linux smoke images
 - `.agents/skills/` - repo skills (`vitadeck-build`, `vitadeck-emulator`, `vitadeck-smoke`, `vitadeck-bench`, `vitadeck-manual-testing`, `vitadeck-vdapp-upload`, `vitadeck-deck-app-init`, `vitadeck-host-control`) plus `comprehende` installed from `matemolnar8/comprehende` via the `skills` CLI (`skills-lock.json`) and `pages`, a repo-owned skill with its own publish script. `.claude/skills` symlinks here. Published via `npx skills add matemolnar8/vitadeck`.
 
 ## Setup
 
-- Node.js 24.16+ (`.nvmrc`; `fnm use` picks it up, and `scripts/agent-check.sh` switches to it through fnm on its own) and pnpm (pinned by `packageManager` in `js/package.json`). `pnpm --dir js install` once. Older Node bundles a corepack that cannot launch pnpm 11+ and fails with `Cannot find module .../bin/pnpm.cjs`.
+- Node.js 24.16+ (`.nvmrc`; `fnm use` picks it up, and `scripts/agent-check.sh` switches to it through fnm on its own) and pnpm (pinned by `packageManager` in `js/package.json`). `pnpm --dir js install` once. Older Node bundles a corepack that cannot launch pnpm 11+ and fails with `Cannot find module .../bin/pnpm.cjs`. The repo root has no `package.json`, so corepack run there picks its own pnpm and `pnpm --dir js install` fails with `ERR_PNPM_BAD_PM_VERSION`; run `corepack prepare pnpm@<packageManager version> --activate` once.
 - `git submodule update --init --recursive` if `vendor/quickjs/quickjs.c` or `vendor/miniaudio/miniaudio.c` is missing.
-- Host build needs CMake, Ninja, raylib 5.5, curl, OpenSSL, zlib (`brew install ninja raylib` on macOS; Ninja, raylib + OpenGL/X11 dev packages on Linux). Configure `out/` with `cmake --preset default`. A build directory keeps the generator it was configured with; delete an old Make `out/` before configuring it with a preset.
+- Host build needs CMake, Ninja, raylib 5.5, curl, OpenSSL, zlib (`brew install ninja raylib` on macOS; on Linux, Ninja and the OpenGL/X11 dev packages, plus raylib 5.5 built from source as the `Dockerfile` does when the distro does not package it, as on Ubuntu 26.04). Configure `out/` with `cmake --preset default`. A build directory keeps the generator it was configured with; delete an old Make `out/` before configuring it with a preset.
 - Vita build and Linux smoke run in Docker. Start Docker Desktop first.
 - The first CMake configure downloads the pinned runtime fonts and Twemoji images ([cmake/fonts.cmake](cmake/fonts.cmake), [cmake/twemoji.cmake](cmake/twemoji.cmake)) into the gitignored `assets/fonts/` and `assets/emoji/`; offline it warns, builds anyway with fallbacks (raylib's built-in font, missing-glyph boxes for CJK and Korean, a fallback glyph for emoji), and the next configure retries.
 - Uploading a Vita build (`upload_vita`, `upload_vpk`, `run`) reads the Vita's IP from `PSVITAIP` when CMake configures, e.g. `export PSVITAIP=192.168.1.177`.
 - Without the device, `scripts/vita3k.sh` builds the VPK and runs it in the [Vita3K](https://vita3k.org) emulator (macOS, Windows via Git Bash, Linux) with the example Deck Apps installed. New machine setup (Vita3K, Sony's shader compiler) and controls: [the `vitadeck-emulator` skill](.agents/skills/vitadeck-emulator/SKILL.md). Start is Enter in Vita3K, not F1.
-- Releases: [docs/releasing.md](docs/releasing.md).
+- Releases, and trying the SDK and companion as an author before they reach npm: [docs/releasing.md](docs/releasing.md).
 
 ## Footguns
 
@@ -51,17 +51,11 @@ When this file speaks:
 3. **Platform goldens.** `tests/fixtures/golden/Linux/` holds the only canonical goldens (ADR 0002). Refresh it only with `scripts/smoke-docker.sh update-golden`, never from a macOS run. Do not re-enable the `smoke` CTest label in the macOS ctest step.
 4. **Secrets in examples.** `js/examples/chat/src/genesys/genesys.local.ts` is gitignored and holds real credentials. Never commit it, never paste its contents, and never "fix" imports by renaming it.
 5. **Running from the wrong cwd.** The host resolves `vitadeck-data/` relative to the working directory (or `VITADECK_DATA_ROOT`). Run `./vitadeck` from `out/`, not the repo root.
-6. **Probing the Vita.** A bare connection such as `nc -z`, or a scan of VitaShell FTP (1337) and vitacompanion (1338), crashes those servers until the Vita restarts. Ask for the IP and wait until VitaShell's FTP server is running, then upload with curl. The `echo … | nc` lines in the `upload_vita` target and `scripts/bench.sh` send vitacompanion commands; they are not a probe.
+6. **Probing the Vita.** A bare connection such as `nc -z`, or a scan of VitaShell FTP (1337) and vitacompanion (1338), crashes those servers until the Vita restarts. Ask for the IP and wait until VitaShell's FTP server is running, then upload with one `curl -T` per file (or an upload target) and trust its exit code; a follow-up listing or size check crashes it too. The `echo … | nc` lines in the `upload_vita` target and `scripts/bench.sh` send vitacompanion commands; they are not a probe.
 
 ## Hit every surface
 
-The common defect is a change that works on the host and breaks the Vita, or works in one example and breaks the SDK contract.
-
-- **Targets.** Host (macOS/Linux) and Vita share `src/`. Anything touching threads, filesystem, networking, or GL belongs behind `src/platform/` or needs a Vita Docker build to prove it.
-- **Author contract.** `@vitadeck/sdk` and `@vitadeck/host-companion` are published. A change to either package's exports, types, CLI flags, scaffold template, or manifest shape is a breaking change for authors. Bump the Deck App Package Schema Version when the manifest shape changes.
-- **Inputs.** Vita buttons and host keyboard mappings (F1 Start, Enter confirm, Backspace back) must stay in sync in `src/ui/input.c` and in `CONTEXT.md`.
-- **Reverse states.** Upload needs cancel, install needs removal, Shell open needs Shell close. Check the failure paint, not just success.
-- **Docs.** If a change makes `CONTEXT.md`, an ADR, the SDK README, or a skill inaccurate, fix it in place. Do not append a second account.
+The common defect is a change that works on the host and breaks the Vita, or works in one example and breaks the SDK contract. [CODING_STANDARDS.md](CODING_STANDARDS.md) lists the surfaces a change must hold on (targets, author and manifest contracts, inputs, reverse states, ADRs, docs); reviews check every diff against it.
 
 ## Verifying
 
@@ -85,7 +79,7 @@ Individual commands: `pnpm --dir js tsc`, `pnpm --dir js test:cli`, `pnpm --dir 
 - Conventional titles, plain language: `fix(shell): upload screen shows bind failure`.
 - Body: the problem in a sentence or two, then how you fixed it, then which agent-check tier passed.
 - Review the diff with the `comprehende` skill (base is the merge-base with `main`, head is the branch tip), `export` it, then host the export with the `pages` skill using `--pr <number>`. Put the printed URL in the PR body. When the PR gets new commits, refresh the review and publish again to the same URL.
-- UI changes need before/after screenshots or an updated golden. Upload evidence to GitHub; do not commit PR-only images.
+- UI changes need before/after screenshots or an updated golden. Publish screenshots with the review export (the `pages` skill's `evidence/` folder); do not commit PR-only images.
 - One request is one PR.
 
 ## Documentation

@@ -31,7 +31,7 @@ After intentional visual changes:
 scripts/smoke-docker.sh update-golden
 ```
 
-Completion criterion: `tests/fixtures/golden/Linux/` is rewritten by the Dockerized Linux harness. Review the changed PNGs before committing. A new or renamed demo section also needs its entry in `PAGES` in `tests/smoke_harness.c`, and a changed section count needs `ROUNDS` in `tests/deck_app_input_harness.c`.
+Completion criterion: `tests/fixtures/golden/Linux/` is rewritten by the Dockerized Linux harness. Review the changed PNGs before committing. Adding, removing, renaming or reordering a demo section also changes the files the comment above `SECTIONS` in `js/examples/demo/src/App.tsx` lists.
 
 ## Notes
 
