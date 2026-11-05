@@ -40,6 +40,8 @@ INSTALLED="$FIXTURE/installed-deck-apps/$VDAPP_NAME"
 cp -R "$VDAPP_SRC" "$INSTALLED"
 cat "$SOURCE_DIR/tests/fixtures/demo_stubs.js" "$VDAPP_SRC/app.js" >"$INSTALLED/app.js"
 printf '%s' "$VDAPP_NAME" >"$FIXTURE/active-package.txt"
+# A non-ASCII link name, so the Shell golden shows Latin-1, punctuation and CJK fallback glyphs.
+printf '%s' '[{"id":"smoke","name":"Máté’s 日本 PC","url":"http://192.0.2.1:8790"}]' >"$FIXTURE/host-control-links.json"
 
 # Relative, so the stack trace on the Failure Screen golden does not depend on the build directory.
 cd "$BUILD_DIR"

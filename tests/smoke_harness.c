@@ -10,6 +10,7 @@
 #include "core/bootstrap.h"
 #include "core/js_runtime.h"
 #include "core/package_library.h"
+#include "shell/shell.h"
 #include "ui/input.h"
 #include "ui/instance_tree.h"
 
@@ -40,6 +41,7 @@ static const Page PAGES[] = {
 };
 
 #define FAILURE_SCREEN_SLUG "14-failure-screen"
+#define SHELL_HOME_SLUG "15-shell-home"
 
 static void fail(const char *message)
 {
@@ -64,6 +66,19 @@ static void settle(const VdBootstrap *bootstrap)
     double deadline = GetTime() + SETTLE_SEC;
     while (GetTime() < deadline)
         draw_frame(bootstrap, (GamepadSample){0});
+}
+
+// The Shell over the canvas, as the main loop draws it.
+static void settle_shell(const VdBootstrap *bootstrap, VdShell *shell)
+{
+    double deadline = GetTime() + SETTLE_SEC;
+    while (GetTime() < deadline) {
+        BeginDrawing();
+        ClearBackground(BLACK);
+        bootstrap_draw_deck_canvas(bootstrap);
+        shell_render(shell);
+        EndDrawing();
+    }
 }
 
 static bool wait_for_text(const VdBootstrap *bootstrap, const char *text)
@@ -214,6 +229,14 @@ int main(int argc, char *argv[])
     if (!wait_for_failure(&bootstrap)) fail("timed out waiting for the Deck App Failure Screen");
     settle(&bootstrap);
     if (!check_screenshot(FAILURE_SCREEN_SLUG, output_dir, golden_dir, update_golden)) failures++;
+
+    // The LAN Listener stays off, so no LAN address reaches the golden.
+    VdShell shell;
+    shell_init(&shell);
+    shell_show_home(&shell);
+    settle_shell(&bootstrap, &shell);
+    if (!check_screenshot(SHELL_HOME_SLUG, output_dir, golden_dir, update_golden)) failures++;
+    shell_shutdown(&shell);
 
     bootstrap_shutdown(&bootstrap);
 
