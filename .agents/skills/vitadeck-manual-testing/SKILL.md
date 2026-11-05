@@ -15,7 +15,7 @@ metadata:
    - Pick the one to run: `printf 'chat.vdapp\n' > out/vitadeck-data/active-package.txt`. Without this file the Shell opens with no Active Deck App.
 3. Without a desktop you can see (SSH, a locked session, ubuntu-pc), start a private display first: `Xvfb :77 -screen 0 1280x800x24 -nolisten tcp &`, then `export DISPLAY=:77` and `unset WAYLAND_DISPLAY`.
 4. Run from `out/`, not the repo root, under the machine-wide GUI lock so it does not overlap a benchmark, in the background with its log in a file: `../scripts/gui-run.sh ./vitadeck > /tmp/vitadeck.log 2>&1 &`.
-5. Drive the window with `computerUse` when you have it, otherwise with `scripts/gui-drive.sh` (`key F1`, `click <x> <y>`, `shot <file.png>`; `--help` lists the rest). Record only the final successful walkthrough.
+5. Drive the window with `computerUse` when you have it, otherwise with `../scripts/gui-drive.sh` (`key F1`, `click <x> <y>`, `shot <file.png>`; `--help` lists the rest). Record only the final successful walkthrough.
 
 ## Navigation map
 
@@ -61,11 +61,11 @@ Links persist in `out/vitadeck-data/host-control-links.json`; delete it to start
 ## Walkthrough recording pattern
 
 1. Complete all setup before recording. To start a Deck App from a clean state, delete `out/vitadeck-data/deck-app-data/<package>/storage.json`.
-2. Start recording the window rect from `scripts/gui-drive.sh rect` (`x,y,width,height`):
+2. Start recording the window rect from `../scripts/gui-drive.sh rect` (`x,y,width,height`):
    - Linux: `ffmpeg -loglevel error -y -f x11grab -draw_mouse 0 -framerate 30 -video_size <width>x<height> -i "$DISPLAY+<x>,<y>" -c:v libx264 -pix_fmt yuv420p take.mp4 &`; stop it with `kill -INT`.
    - macOS: `screencapture -x -v -V <seconds> -R<rect> take.mov`, then `avconvert --preset PresetHighestQuality --source take.mov --output take.mp4`.
    - Sound on Linux: record PipeWire's sink monitor with `pw-record --target <sink id from wpctl status> -P '{ stream.capture.sink=true }' take.wav`.
-3. Perform only the visual verification, with `computerUse` or `scripts/gui-drive.sh`.
+3. Perform only the visual verification, with `computerUse` or `../scripts/gui-drive.sh`.
 4. Save the recording only if the walkthrough succeeds; otherwise discard it, fix the issue, and retry.
 5. For font or text changes, verify both:
    - startup logs show the expected font/package loaded;
