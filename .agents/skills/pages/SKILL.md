@@ -14,6 +14,8 @@ Copy a static site onto this repository's `gh-pages` branch so it has a public U
 3. From the repo root, run `node --experimental-strip-types .agents/skills/pages/scripts/pages-review.ts publish --dir <folder>` with that dest. `--dir` may live outside the work tree. Other flags: append `--help`. Done when the command prints a URL.
 4. Give them that URL.
 
+PR screenshots go in `evidence/` inside the folder you publish; link them from the PR body as `<url>evidence/<file>`. A republish to the same dest replaces everything except `evidence/`, so a refreshed review keeps them.
+
 A 404 at the URL means Pages is off. Enable once in the GitHub repo: Settings, Pages, Deploy from a branch, `gh-pages`, `/`. The publish already succeeded.
 
 ## Remove

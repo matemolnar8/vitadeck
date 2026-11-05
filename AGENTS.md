@@ -85,7 +85,7 @@ Individual commands: `pnpm --dir js tsc`, `pnpm --dir js test:cli`, `pnpm --dir 
 - Conventional titles, plain language: `fix(shell): upload screen shows bind failure`.
 - Body: the problem in a sentence or two, then how you fixed it, then which agent-check tier passed.
 - Review the diff with the `comprehende` skill (base is the merge-base with `main`, head is the branch tip), `export` it, then host the export with the `pages` skill using `--pr <number>`. Put the printed URL in the PR body. When the PR gets new commits, refresh the review and publish again to the same URL.
-- UI changes need before/after screenshots or an updated golden. Upload evidence to GitHub; do not commit PR-only images.
+- UI changes need before/after screenshots or an updated golden. Publish screenshots with the review export (the `pages` skill's `evidence/` folder); do not commit PR-only images.
 - One request is one PR.
 
 ## Documentation
