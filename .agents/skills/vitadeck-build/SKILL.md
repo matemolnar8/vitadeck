@@ -56,7 +56,7 @@ The `upload_vita`, `upload_vpk`, and `run` targets send the build to a Vita over
 
 `upload_vpk` copies the VPK to `ux0:/download/` for a manual install. `upload_vita` (and `run`) stops the running app, uploads `eboot.bin`, the runtime and the fonts, then relaunches. It also uploads `assets/emoji/twemoji.zip` (about 4,000 PNGs in one 5 MB file), but only the first time per build directory and Vita IP and again when the images change, tracked by `out-vita/upload_emoji-<ip>.stamp`; delete that stamp to force a re-upload, e.g. after removing the app from the Vita.
 
-Do not probe the Vita first. A bare connection such as `nc -z` on VitaShell's FTP (1337) or vitacompanion (1338) crashes them until the Vita restarts. Ask for the IP, wait until VitaShell's FTP server is running, then run the upload target.
+Connect to the Vita only through the upload itself, per footgun 6 in `AGENTS.md`: no probe before it, no listing or size check after it.
 
 Without the device, run the VPK in the Vita3K emulator with `scripts/vita3k.sh` (skill `vitadeck-emulator`).
 

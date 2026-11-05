@@ -51,7 +51,7 @@ When this file speaks:
 3. **Platform goldens.** `tests/fixtures/golden/Linux/` holds the only canonical goldens (ADR 0002). Refresh it only with `scripts/smoke-docker.sh update-golden`, never from a macOS run. Do not re-enable the `smoke` CTest label in the macOS ctest step.
 4. **Secrets in examples.** `js/examples/chat/src/genesys/genesys.local.ts` is gitignored and holds real credentials. Never commit it, never paste its contents, and never "fix" imports by renaming it.
 5. **Running from the wrong cwd.** The host resolves `vitadeck-data/` relative to the working directory (or `VITADECK_DATA_ROOT`). Run `./vitadeck` from `out/`, not the repo root.
-6. **Probing the Vita.** A bare connection such as `nc -z`, or a scan of VitaShell FTP (1337) and vitacompanion (1338), crashes those servers until the Vita restarts. Ask for the IP and wait until VitaShell's FTP server is running, then upload with curl. The `echo … | nc` lines in the `upload_vita` target and `scripts/bench.sh` send vitacompanion commands; they are not a probe.
+6. **Probing the Vita.** A bare connection such as `nc -z`, or a scan of VitaShell FTP (1337) and vitacompanion (1338), crashes those servers until the Vita restarts. Ask for the IP and wait until VitaShell's FTP server is running, then upload with one `curl -T` per file (or an upload target) and trust its exit code; a follow-up listing or size check crashes it too. The `echo … | nc` lines in the `upload_vita` target and `scripts/bench.sh` send vitacompanion commands; they are not a probe.
 
 ## Hit every surface
 
