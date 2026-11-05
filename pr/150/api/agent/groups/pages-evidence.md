@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 72e2e3ce9d7c99bb8015c05d4fea7d41a9a69995` and `git rev-parse --verify f0d05d344a698b00618fe76f06d9e72e66b01637` in this repository.
+   Run `git rev-parse --verify 72e2e3ce9d7c99bb8015c05d4fea7d41a9a69995` and `git rev-parse --verify b0a30605c0c10bd3393bb263b9ce286e06f29813` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 72e2e3ce9d7c99bb8015c05d4fea7d41a9a69995 f0d05d344a698b00618fe76f06d9e72e66b01637 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 72e2e3ce9d7c99bb8015c05d4fea7d41a9a69995 b0a30605c0c10bd3393bb263b9ce286e06f29813 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,15 +25,15 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  72e2e3ce9d7c99bb8015c05d4fea7d41a9a69995
 
-head               f0d05d344a698b00618fe76f06d9e72e66b01637
+head               b0a30605c0c10bd3393bb263b9ce286e06f29813
 
 Named refs at pin: 72e2e3ce9d7c99bb8015c05d4fea7d41a9a69995 ... t3/retro-nav-docs
 
 Read the diff:
 
-git diff --find-renames 72e2e3ce9d7c99bb8015c05d4fea7d41a9a69995 f0d05d344a698b00618fe76f06d9e72e66b01637
+git diff --find-renames 72e2e3ce9d7c99bb8015c05d4fea7d41a9a69995 b0a30605c0c10bd3393bb263b9ce286e06f29813
 
-Review concern 05 of 09: Republish keeps evidence/ (`pages-evidence`)
+Review concern 05 of 11: Republish keeps evidence/ (`pages-evidence`)
 
 Part: Pages evidence
 
@@ -51,4 +51,4 @@ Old evidence files are never removed by a republish: a screenshot dropped from t
 Hunk refs for this concern:
 - .agents/skills/pages/scripts/pages-review.ts
 - .agents/skills/pages/SKILL.md
-- AGENTS.md@85+85
+- AGENTS.md@85+79

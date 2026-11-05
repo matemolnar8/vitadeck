@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 72e2e3ce9d7c99bb8015c05d4fea7d41a9a69995` and `git rev-parse --verify f0d05d344a698b00618fe76f06d9e72e66b01637` in this repository.
+   Run `git rev-parse --verify 72e2e3ce9d7c99bb8015c05d4fea7d41a9a69995` and `git rev-parse --verify b0a30605c0c10bd3393bb263b9ce286e06f29813` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,18 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  72e2e3ce9d7c99bb8015c05d4fea7d41a9a69995
 
-head               f0d05d344a698b00618fe76f06d9e72e66b01637
+head               b0a30605c0c10bd3393bb263b9ce286e06f29813
 
 Named refs at pin: 72e2e3ce9d7c99bb8015c05d4fea7d41a9a69995 ... t3/retro-nav-docs
 
 Read the diff:
 
-git diff --find-renames 72e2e3ce9d7c99bb8015c05d4fea7d41a9a69995 f0d05d344a698b00618fe76f06d9e72e66b01637
+git diff --find-renames 72e2e3ce9d7c99bb8015c05d4fea7d41a9a69995 b0a30605c0c10bd3393bb263b9ce286e06f29813
 
 Commits:
+- b0a30605 docs(skills): call gui-drive.sh from out/, where the testing steps run
+- 60f178d1 docs: move the review rules into CODING_STANDARDS.md
+- 3647cff5 docs: Ubuntu 26.04 setup and trying the SDK before it is on npm
 - f0d05d34 docs(skills): drive the host window without computerUse; move device lessons into the repo
 - 94a4dd4b fix(pages): keep a PR's evidence/ folder when republishing its review
 - c63e0375 fix(scripts): smoke-docker hands all its build output back, also on failure
@@ -54,7 +57,7 @@ A retro of recent agent sessions found agents lose time on stale or missing know
 
 The what (medium):
 
-Adds `scripts/gui-drive.sh` and rewrites the manual-testing skill around it, moves device lessons from agent memory into the repo docs, and fixes four traps: root-owned Docker output, a demo section count kept in three places, Pages republish deleting PR evidence, and a per-harness stb_ds implementation.
+Adds `scripts/gui-drive.sh` and rewrites the manual-testing skill around it, moves device lessons from agent memory into the repo docs, fixes four traps (root-owned Docker output, a demo section count kept in three places, Pages republish deleting PR evidence, a per-harness stb_ds implementation), corrects the Linux setup notes, documents trying unreleased packages, and moves the review rules into `CODING_STANDARDS.md`.
 
 ## Review concerns
 
@@ -100,7 +103,22 @@ Old evidence files are never removed by a republish: a screenshot dropped from t
 
 [groups/stb-ds.md](groups/stb-ds.md)
 
-### 07 Harnesses drop the define and the unused include (`mirrors-1`)
+### 07 Setup notes and the pre-release recipe (`setup-docs`)
+
+`AGENTS.md` Setup gains the corepack and raylib-from-source notes and points at the new "Try the packages before they are on npm" section of `docs/releasing.md`.
+
+[groups/setup-docs.md](groups/setup-docs.md)
+
+### 08 CODING_STANDARDS.md (`standards`)
+
+The "Hit every surface" rules move from `AGENTS.md` into `CODING_STANDARDS.md` with new ADR, manifest and glossary checks, and `AGENTS.md` keeps a one-paragraph pointer.
+
+Attention (tradeoff):
+Implementing agents no longer see the surface rules in their always-loaded context, only the pointer naming them. Reviews now carry those rules, so a miss surfaces in review rather than during implementation.
+
+[groups/standards.md](groups/standards.md)
+
+### 09 Harnesses drop the define and the unused include (`mirrors-1`)
 
 The same two-line removal of `#define STB_DS_IMPLEMENTATION` and `#include "stb_ds.h"` repeats; read one and skip the rest.
 
@@ -109,7 +127,7 @@ Depends on:
 
 [groups/mirrors-1.md](groups/mirrors-1.md)
 
-### 08 Harnesses drop the define (`mirrors-2`)
+### 10 Harnesses drop the define (`mirrors-2`)
 
 The same one-line removal of `#define STB_DS_IMPLEMENTATION` repeats; read one and skip the rest.
 
@@ -118,7 +136,7 @@ Depends on:
 
 [groups/mirrors-2.md](groups/mirrors-2.md)
 
-### 09 The implementation moves out of main.c (`mechanical`)
+### 11 The implementation moves out of main.c (`mechanical`)
 
 A pure move of the two implementation lines from `src/main.c` into `src/core/stb_ds.c`; safe to skip.
 
