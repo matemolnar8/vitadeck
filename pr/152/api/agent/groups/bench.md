@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify fcb9c6928d3a15b16fffaea3d7185875f5370fc2` and `git rev-parse --verify b620259d4c8c3c5c93bb958a11dcf4835da87d06` in this repository.
+   Run `git rev-parse --verify fcb9c6928d3a15b16fffaea3d7185875f5370fc2` and `git rev-parse --verify 6adf657dd6eff69bf072e747e9189193259b547c` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames fcb9c6928d3a15b16fffaea3d7185875f5370fc2 b620259d4c8c3c5c93bb958a11dcf4835da87d06 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames fcb9c6928d3a15b16fffaea3d7185875f5370fc2 6adf657dd6eff69bf072e747e9189193259b547c -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,13 +25,13 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  fcb9c6928d3a15b16fffaea3d7185875f5370fc2
 
-head               b620259d4c8c3c5c93bb958a11dcf4835da87d06
+head               6adf657dd6eff69bf072e747e9189193259b547c
 
 Named refs at pin: fcb9c692 ... HEAD
 
 Read the diff:
 
-git diff --find-renames fcb9c6928d3a15b16fffaea3d7185875f5370fc2 b620259d4c8c3c5c93bb958a11dcf4835da87d06
+git diff --find-renames fcb9c6928d3a15b16fffaea3d7185875f5370fc2 6adf657dd6eff69bf072e747e9189193259b547c
 
 Review concern 02 of 02: Benchmark the Shell frame (`bench`)
 
@@ -44,7 +44,7 @@ The what:
 The `shell` flag on `BenchScenario` makes `bench_shell_open` true, and `main.c` presses Start for the Shell whenever that differs from `shell_is_visible`, so `minesweeper-shell` measures the Shell over Minesweeper and later scenarios get it closed.
 
 Attention (risk):
-The re-recorded Vita3K baseline moves every scenario, not only `minesweeper-shell`. The PR says the base build shows the same drift on that Mac, so the old numbers no longer described it. The device baseline has no `minesweeper-shell` entry yet.
+The re-recorded Vita3K baseline moves every scenario, not only `minesweeper-shell`. The PR says the base build shows the same drift on that Mac, so the old numbers no longer described it. The device baseline moves within a few percent and gains `minesweeper-shell`.
 
 Hunk refs for this concern:
 - src/core/bench.c
@@ -53,3 +53,5 @@ Hunk refs for this concern:
 - .agents/skills/vitadeck-bench/SKILL.md
 - tests/bench/baselines/vita3k/meta.json
 - tests/bench/baselines/vita3k/result.json
+- tests/bench/baselines/vita/meta.json
+- tests/bench/baselines/vita/result.json

@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify fcb9c6928d3a15b16fffaea3d7185875f5370fc2` and `git rev-parse --verify b620259d4c8c3c5c93bb958a11dcf4835da87d06` in this repository.
+   Run `git rev-parse --verify fcb9c6928d3a15b16fffaea3d7185875f5370fc2` and `git rev-parse --verify 6adf657dd6eff69bf072e747e9189193259b547c` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,16 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  fcb9c6928d3a15b16fffaea3d7185875f5370fc2
 
-head               b620259d4c8c3c5c93bb958a11dcf4835da87d06
+head               6adf657dd6eff69bf072e747e9189193259b547c
 
 Named refs at pin: fcb9c692 ... HEAD
 
 Read the diff:
 
-git diff --find-renames fcb9c6928d3a15b16fffaea3d7185875f5370fc2 b620259d4c8c3c5c93bb958a11dcf4835da87d06
+git diff --find-renames fcb9c6928d3a15b16fffaea3d7185875f5370fc2 6adf657dd6eff69bf072e747e9189193259b547c
 
 Commits:
+- 6adf657d test(bench): re-record the Vita baseline with minesweeper-shell
 - b620259d fix(bench): initialize the shell field on every scenario
 - f869d239 test(bench): re-record the Vita3K baseline with the final blur
 - 1ad4ccae test(smoke): refresh the Shell golden for downsample-only blur
@@ -59,8 +60,8 @@ The what (small):
 
 While the Shell is open, the Deck App canvas renders into a render texture, `src/ui/blur.c` box-downsamples it to 1/16, and the result is stretched back under the Shell. A new `minesweeper-shell` Benchmark Mode scenario measures that frame.
 
-Look for:
-- The request asks to [benchmark the cost](source:s2). The PR measures it in Vita3K and on the host under llvmpipe ([PR #152](source:s1)), and neither models the Vita's GPU. The device run (`scripts/bench.sh vita`) has not happened, so the Vita fill cost of the extra render targets is unmeasured.
+Things to check:
+- The request asks to [make sure the cost isn't unnecessarily large](source:s2). On the Vita the blur adds about 4 ms of UI work per Shell frame, with no dropped frames. A frozen-backdrop variant measured cheaper than no blur at all ([PR #152](source:s1)), but it stops Deck App animation behind the Shell, so it is not in this PR.
 
 ## Review concerns
 
@@ -69,7 +70,7 @@ Look for:
 `draw_frame` in `src/main.c` and the smoke harness wrap `bootstrap_draw_deck_canvas` in `blur_begin`/`blur_end` while the Shell is visible, and `src/ui/blur.c` halves the captured canvas four times before stretching the 60×34 level over the screen.
 
 Attention (tradeoff):
-Each Shell frame now costs six render targets (full-size canvas, four 2x downsamples, the screen), each a GXM scene on the Vita. Dropping the upsample chain cut three scenes; the stretched 60×34 level is slightly blockier but sits under the Shell's alpha-200 tint. With the Shell hidden, `draw_frame` takes the old path.
+With the Shell open, the Vita spends 3.85 ms more wall time per frame in the `shell` span, and UI thread CPU rises from 38% to 48.6%. FPS stays at 59.4 with no dropped frames, but only about 7 ms of slack remains. `draw_frame` re-renders and re-blurs the Deck App every Shell frame so live apps stay live behind the tint; a backdrop frozen when the Shell opens measured 2.5 ms of UI work and 13% CPU.
 
 [groups/blur.md](groups/blur.md)
 
@@ -78,6 +79,6 @@ Each Shell frame now costs six render targets (full-size canvas, four 2x downsam
 The `shell` flag on `BenchScenario` makes `bench_shell_open` true, and `main.c` presses Start for the Shell whenever that differs from `shell_is_visible`, so `minesweeper-shell` measures the Shell over Minesweeper and later scenarios get it closed.
 
 Attention (risk):
-The re-recorded Vita3K baseline moves every scenario, not only `minesweeper-shell`. The PR says the base build shows the same drift on that Mac, so the old numbers no longer described it. The device baseline has no `minesweeper-shell` entry yet.
+The re-recorded Vita3K baseline moves every scenario, not only `minesweeper-shell`. The PR says the base build shows the same drift on that Mac, so the old numbers no longer described it. The device baseline moves within a few percent and gains `minesweeper-shell`.
 
 [groups/bench.md](groups/bench.md)
