@@ -155,8 +155,8 @@ static void draw_deck_app_failure_screen(const VdJsRuntime *runtime)
 
 void bootstrap_draw_deck_canvas(const VdBootstrap *bootstrap)
 {
-    // Every frame, with or without a Deck App: the Shell draws text after the canvas, and the glyphs it and these
-    // screens cache while drawing upload here, showing from the next frame.
+    // Every frame, with or without a Deck App: the Shell and these screens cache glyphs while drawing, and main draws
+    // the frame again to upload them here.
     text_begin_frame();
     text_upload_pages();
     if (!package_library_has_active_deck_app()) return;

@@ -29,7 +29,8 @@ void text_reset(void)
     glyph_cache_reset();
 }
 
-// Once per frame, before drawing: vitaGL copies the whole texture when one already drawn this frame changes.
+// Before drawing from the pages, and again when main redraws a frame for glyphs cached after this. vitaGL copies the
+// whole texture when one that recent frames drew from changes.
 void text_upload_pages(void)
 {
     int overflowed = glyph_cache_stats().overflowed;
@@ -59,6 +60,11 @@ void text_upload_pages(void)
         TraceLog(LOG_DEBUG, "TEXT: Glyph atlas page %d of %d added (%d KiB)", page + 1, VD_GLYPH_ATLAS_PAGE_MAX,
                  VD_GLYPH_ATLAS_PAGE_BYTES / 1024);
     }
+}
+
+bool text_pages_stale(void)
+{
+    return glyph_cache_has_dirty_page();
 }
 
 // Controls, zero width joiners and variation selectors.

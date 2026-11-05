@@ -38,9 +38,10 @@ const TextLines *text_lines(const ReactInstance *text);
 int text_align_offset(int box_width, int line_width, TextAlign align);
 
 // Each frame: text_begin_frame, then text_measure every string the frame draws, then text_upload_pages, then draw.
-// Glyphs first cached after the upload show from the next frame.
 void text_begin_frame(void);
 void text_upload_pages(void);
+// Glyphs were cached since the last text_upload_pages, so text drawn since then may be missing them.
+bool text_pages_stale(void);
 // Drops every cached glyph and atlas texture.
 void text_reset(void);
 

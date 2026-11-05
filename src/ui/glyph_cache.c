@@ -478,6 +478,14 @@ const unsigned char *glyph_cache_take_dirty_page(int page)
     return g_pages[page].pixels;
 }
 
+bool glyph_cache_has_dirty_page(void)
+{
+    for (int i = 0; i < g_page_count; i++) {
+        if (g_pages[i].dirty) return true;
+    }
+    return false;
+}
+
 VdGlyphCacheStats glyph_cache_stats(void)
 {
     return (VdGlyphCacheStats){g_page_count, (int)hmlen(g_glyphs), g_rasterised, g_overflowed};
