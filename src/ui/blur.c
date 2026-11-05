@@ -4,8 +4,9 @@
 #include <rlgl.h>
 #include <stdbool.h>
 
-// Each level halves the one before; bilinear filtering averages 2x2 texels on the way down and spreads them on the
-// way back up, so no shader is needed. The last level is 1/16 of the screen.
+// Each level halves the one before, and bilinear filtering averages 2x2 texels at each step, so no shader is needed.
+// The last level, 1/16 of the screen, is stretched back over it. Every level is a GXM scene on the Vita, so there is
+// no upsampling chain: under the Shell's tint it barely shows.
 #define BLUR_LEVELS 5
 
 static RenderTexture2D g_levels[BLUR_LEVELS];
@@ -16,6 +17,7 @@ static void load(void)
     for (int i = 0; i < BLUR_LEVELS; i++) {
         g_levels[i] = LoadRenderTexture(GetScreenWidth() >> i, GetScreenHeight() >> i);
         SetTextureFilter(g_levels[i].texture, TEXTURE_FILTER_BILINEAR);
+        SetTextureWrap(g_levels[i].texture, TEXTURE_WRAP_CLAMP);
     }
     g_loaded = true;
 }
@@ -33,13 +35,6 @@ static void copy(const RenderTexture2D *from, int to_width, int to_height)
     rlEnableColorBlend();
 }
 
-static void copy_to(const RenderTexture2D *from, const RenderTexture2D *to)
-{
-    BeginTextureMode(*to);
-    copy(from, to->texture.width, to->texture.height);
-    EndTextureMode();
-}
-
 void blur_begin(void)
 {
     if (!g_loaded) load();
@@ -50,11 +45,12 @@ void blur_begin(void)
 void blur_end(void)
 {
     EndTextureMode();
-    for (int i = 1; i < BLUR_LEVELS; i++)
-        copy_to(&g_levels[i - 1], &g_levels[i]);
-    for (int i = BLUR_LEVELS - 1; i > 1; i--)
-        copy_to(&g_levels[i], &g_levels[i - 1]);
-    copy(&g_levels[1], GetScreenWidth(), GetScreenHeight());
+    for (int i = 1; i < BLUR_LEVELS; i++) {
+        BeginTextureMode(g_levels[i]);
+        copy(&g_levels[i - 1], g_levels[i].texture.width, g_levels[i].texture.height);
+        EndTextureMode();
+    }
+    copy(&g_levels[BLUR_LEVELS - 1], GetScreenWidth(), GetScreenHeight());
 }
 
 void blur_unload(void)
