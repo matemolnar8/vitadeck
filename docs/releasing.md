@@ -16,3 +16,18 @@ The workflow fails before building anything if the tag differs from either packa
 npm authenticates the workflow with Trusted Publishing (OIDC), so the repo has no `NPM_TOKEN` secret. Each package needs a Trusted Publisher with owner `matemolnar8`, repository `vitadeck`, workflow filename `release.yml`, allowed to run `npm publish` (not only `npm stage publish`): on npmjs.com, open the package → Settings → Trusted Publisher → GitHub Actions, or run `npm trust github <package> --file release.yml --repo matemolnar8/vitadeck --allow-publish` (npm 11.15 or later, 2FA required).
 
 A Trusted Publisher needs the package to exist, so for a new package `npm trust github` first publishes a `0.0.0-stage` placeholder; nothing is published by hand. `latest` points at that placeholder until the first release. A new Trusted Publisher must publish within 2 days, so add it shortly before pushing the tag.
+
+## Try the packages before they are on npm
+
+To test the SDK and the companion the way an author gets them, pack both and install the tarballs into a throwaway prefix. A scaffold's own dependencies name the npm version, so point them at the tarballs too:
+
+```sh
+pnpm --dir js build
+D=$(mktemp -d)
+(cd js && pnpm --filter @vitadeck/sdk pack --pack-destination "$D" && pnpm --filter @vitadeck/host-companion pack --pack-destination "$D")
+npm install -g --prefix "$D/global" "$D"/vitadeck-sdk-*.tgz "$D"/vitadeck-host-companion-*.tgz
+export PATH="$D/global/bin:$PATH"
+cd "$D" && vitadeck create my-app --host-plugin && cd my-app
+npm pkg set "dependencies.@vitadeck/sdk=file:$(echo "$D"/vitadeck-sdk-*.tgz)" "devDependencies.@vitadeck/host-companion=file:$(echo "$D"/vitadeck-host-companion-*.tgz)"
+npm install && npm run build
+```
