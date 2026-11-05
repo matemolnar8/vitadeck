@@ -7,7 +7,7 @@ metadata:
 
 # VitaDeck smoke
 
-The smoke harness boots the demo Deck App (`js/examples/demo`), presses R through every section, then presses its "Throw an error" Button, comparing a screenshot of each page against `tests/fixtures/golden/Linux/`. `tests/fixtures/demo_stubs.js` is prepended to the demo bundle to pin `Date`, `getTime()` and `fetch`, so the Timers and fetch pages are stable.
+The smoke harness boots the demo Deck App (`js/examples/demo`), presses R through every section, then presses its "Throw an error" Button and opens the VitaDeck Shell over the Failure Screen, comparing a screenshot of each against `tests/fixtures/golden/Linux/`. `tests/fixtures/demo_stubs.js` is prepended to the demo bundle to pin `Date`, `getTime()` and `fetch`, so the Timers and fetch pages are stable.
 
 The Deck App input harness (`tests/deck_app_input_harness.c`) runs alongside it: it presses every Pad Button on every section of each example Deck App, then switches to the next, and fails naming the Deck App and button when a Deck App fails or its JS thread hangs. Both carry the `smoke` CTest label, which the macOS `ctest` step excludes.
 
