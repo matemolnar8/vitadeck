@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 77464ae1945fca65d55985db4fc3f4aa3bc38bff` and `git rev-parse --verify 3f548c17eb2121cd55faa11bab32ac0c8b499483` in this repository.
+   Run `git rev-parse --verify 77464ae1945fca65d55985db4fc3f4aa3bc38bff` and `git rev-parse --verify 2d3ee2e2d2f41b108a9b7a049a5df48bfc53fcb3` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,16 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  77464ae1945fca65d55985db4fc3f4aa3bc38bff
 
-head               3f548c17eb2121cd55faa11bab32ac0c8b499483
+head               2d3ee2e2d2f41b108a9b7a049a5df48bfc53fcb3
 
-Named refs at pin: 77464ae1945fca65d55985db4fc3f4aa3bc38bff ... 3f548c17eb2121cd55faa11bab32ac0c8b499483
+Named refs at pin: 77464ae1945fca65d55985db4fc3f4aa3bc38bff ... 2d3ee2e2d2f41b108a9b7a049a5df48bfc53fcb3
 
 Read the diff:
 
-git diff --find-renames 77464ae1945fca65d55985db4fc3f4aa3bc38bff 3f548c17eb2121cd55faa11bab32ac0c8b499483
+git diff --find-renames 77464ae1945fca65d55985db4fc3f4aa3bc38bff 2d3ee2e2d2f41b108a9b7a049a5df48bfc53fcb3
 
 Commits:
+- 2d3ee2e2 test(smoke): add a Shell Home golden with a non-ASCII link name
 - 3f548c17 feat(shell): draw Shell text with the Runtime Default Font
 
 Sources:
@@ -71,3 +72,12 @@ Depends on:
 - 01 Glyph upload every frame, and the bootstrap screens (`frame`)
 
 [groups/shell.md](groups/shell.md)
+
+### 03 Shell Home golden (`golden`)
+
+`smoke_harness.c` opens the Shell over the Failure Screen and screenshots it as `15-shell-home`, and `run_smoke_test.sh` seeds a Host Control Link named `Máté’s 日本 PC` so the golden covers Latin-1, punctuation and the CJK fallback font.
+
+Depends on:
+- 02 Shell draws through text_draw (`shell`)
+
+[groups/golden.md](groups/golden.md)

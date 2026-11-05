@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify 77464ae1945fca65d55985db4fc3f4aa3bc38bff` and `git rev-parse --verify 3f548c17eb2121cd55faa11bab32ac0c8b499483` in this repository.
+   Run `git rev-parse --verify 77464ae1945fca65d55985db4fc3f4aa3bc38bff` and `git rev-parse --verify 2d3ee2e2d2f41b108a9b7a049a5df48bfc53fcb3` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames 77464ae1945fca65d55985db4fc3f4aa3bc38bff 3f548c17eb2121cd55faa11bab32ac0c8b499483 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames 77464ae1945fca65d55985db4fc3f4aa3bc38bff 2d3ee2e2d2f41b108a9b7a049a5df48bfc53fcb3 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,15 +25,15 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  77464ae1945fca65d55985db4fc3f4aa3bc38bff
 
-head               3f548c17eb2121cd55faa11bab32ac0c8b499483
+head               2d3ee2e2d2f41b108a9b7a049a5df48bfc53fcb3
 
-Named refs at pin: 77464ae1945fca65d55985db4fc3f4aa3bc38bff ... 3f548c17eb2121cd55faa11bab32ac0c8b499483
+Named refs at pin: 77464ae1945fca65d55985db4fc3f4aa3bc38bff ... 2d3ee2e2d2f41b108a9b7a049a5df48bfc53fcb3
 
 Read the diff:
 
-git diff --find-renames 77464ae1945fca65d55985db4fc3f4aa3bc38bff 3f548c17eb2121cd55faa11bab32ac0c8b499483
+git diff --find-renames 77464ae1945fca65d55985db4fc3f4aa3bc38bff 2d3ee2e2d2f41b108a9b7a049a5df48bfc53fcb3
 
-Review concern 02 of 02: Shell draws through text_draw (`shell`)
+Review concern 02 of 03: Shell draws through text_draw (`shell`)
 
 The why:
 
