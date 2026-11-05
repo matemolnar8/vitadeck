@@ -40,6 +40,7 @@ Each one starts with a Deck App Runtime Restart, plays its setup script, warms u
 | `minesweeper-navigate` | React re-render and commit on every D-pad move (10 per second) |
 | `demo-text` | Wrapped Latin, CJK and emoji text |
 | `demo-scroll` | Native scrolling of a 40-row Scroll under the left stick, no React work |
+| `minesweeper-shell` | The VitaDeck Shell open over `minesweeper-idle`'s screen: Shell paint and the blurred backdrop |
 
 ## Reading the numbers
 

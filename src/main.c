@@ -5,6 +5,7 @@
 #include "core/js_runtime.h"
 #include "core/package_library.h"
 #include "shell/shell.h"
+#include "ui/blur.h"
 #include "ui/input.h"
 #include "ui/scroll.h"
 #include "ui/text.h"
@@ -17,7 +18,13 @@
 
 static void draw_frame(const VdBootstrap *bootstrap, VdShell *shell)
 {
+    if (!shell_is_visible(shell)) {
+        bootstrap_draw_deck_canvas(bootstrap);
+        return;
+    }
+    blur_begin();
     bootstrap_draw_deck_canvas(bootstrap);
+    blur_end();
     shell_render(shell);
 }
 
@@ -60,6 +67,9 @@ int main(int argc, char *argv[])
         if (!bench_update(&bootstrap.js_runtime, &request_runtime_restart)) break;
         shell_update(&shell, &request_runtime_restart);
         shell_poll_system_input(&shell, &request_runtime_restart);
+        if (bench_active() && bench_shell_open() != shell_is_visible(&shell)) {
+            shell_apply_system_input(&shell, &(VdShellInput){.start = true}, &request_runtime_restart);
+        }
         if (request_runtime_restart) {
             js_runtime_stop(&bootstrap.js_runtime);
             scroll_reset();

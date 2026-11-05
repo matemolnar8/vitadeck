@@ -9,6 +9,7 @@
 #include "core/js_runtime.h"
 #include "core/package_library.h"
 #include "shell/shell.h"
+#include "ui/blur.h"
 #include "ui/input.h"
 #include "ui/instance_tree.h"
 #include "demo_sections.h"
@@ -75,7 +76,9 @@ static void settle_shell(const VdBootstrap *bootstrap, VdShell *shell)
     while (GetTime() < deadline) {
         BeginDrawing();
         ClearBackground(BLACK);
+        blur_begin();
         bootstrap_draw_deck_canvas(bootstrap);
+        blur_end();
         shell_render(shell);
         EndDrawing();
     }

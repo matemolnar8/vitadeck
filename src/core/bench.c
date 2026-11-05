@@ -40,18 +40,22 @@ typedef struct {
     const char *setup;
     // Played over and over through warmup and measurement.
     const char *loop;
+    // The Shell stays open over the Deck App.
+    bool shell;
 } BenchScenario;
 
 static const BenchScenario SCENARIOS[] = {
     // 145 Buttons and a header that never change: the steady cost of a dense screen.
-    {"minesweeper-idle", "minesweeper.vdapp", NULL, NULL},
+    {"minesweeper-idle", "minesweeper.vdapp", NULL, NULL, false},
     // Focus walks the border of the 16x9 grid; every move re-renders the board through onFocus.
-    {"minesweeper-navigate", "minesweeper.vdapp", NULL, ">>>>>>>>>>>>>>>vvvvvvvv<<<<<<<<<<<<<<<^^^^^^^^"},
+    {"minesweeper-navigate", "minesweeper.vdapp", NULL, ">>>>>>>>>>>>>>>vvvvvvvv<<<<<<<<<<<<<<<^^^^^^^^", false},
     // Wrapped Latin, CJK and emoji text.
-    {"demo-text", "vitadeck-demo.vdapp", "r", NULL},
+    {"demo-text", "vitadeck-demo.vdapp", "r", NULL, false},
     // Focus moves from the section list into the Scroll section's list, which then glides down and up under the
     // left stick: native scrolling with no React work.
-    {"demo-scroll", "vitadeck-demo.vdapp", "rrrrrrrv>", "++++++++++----------"},
+    {"demo-scroll", "vitadeck-demo.vdapp", "rrrrrrrv>", "++++++++++----------", false},
+    // The Shell open over minesweeper-idle's screen: Shell paint and the backdrop behind it.
+    {"minesweeper-shell", "minesweeper.vdapp", NULL, NULL, true},
 };
 #define SCENARIO_COUNT ((int)(sizeof(SCENARIOS) / sizeof(SCENARIOS[0])))
 
@@ -616,6 +620,11 @@ bool bench_update(const VdJsRuntime *runtime, bool *request_runtime_restart)
         break;
     }
     return ui.state != STATE_DONE;
+}
+
+bool bench_shell_open(void)
+{
+    return g_active && ui.scenario && ui.scenario->shell;
 }
 
 void bench_apply_input(void)
