@@ -15,6 +15,9 @@ import { TextSection } from "./sections/TextSection";
 import { TimersSection } from "./sections/TimersSection";
 import { Label } from "./ui";
 
+// Adding, removing or reordering a section also updates DEMO_SECTION_COUNT in tests/demo_sections.h, PAGES in
+// tests/smoke_harness.c (then refresh the goldens), and the demo-* key scripts in src/core/bench.c, which press R
+// to reach a section by its index.
 const SECTIONS = [
   { name: "Rect & theme", Content: RectSection },
   { name: "Text", Content: TextSection },
