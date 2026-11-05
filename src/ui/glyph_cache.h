@@ -95,6 +95,7 @@ void glyph_cache_begin_frame(void);
 void glyph_cache_reset(void);
 // The page's pixels if they changed since the last call, else NULL.
 const unsigned char *glyph_cache_take_dirty_page(int page);
+bool glyph_cache_has_dirty_page(void);
 VdGlyphCacheStats glyph_cache_stats(void);
 
 // Decodes the codepoint at text, which must not be at its terminator, and sets length to the bytes it used.

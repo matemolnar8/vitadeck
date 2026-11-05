@@ -1,4 +1,5 @@
 #include <raylib.h>
+#include <rlgl.h>
 #include "core/bench.h"
 #include "core/bootstrap.h"
 #include "core/js_runtime.h"
@@ -6,12 +7,19 @@
 #include "shell/shell.h"
 #include "ui/input.h"
 #include "ui/scroll.h"
+#include "ui/text.h"
 
 #define return_defer(value)                                                                                            \
     do {                                                                                                               \
         result = (value);                                                                                              \
         goto defer;                                                                                                    \
     } while (0)
+
+static void draw_frame(const VdBootstrap *bootstrap, VdShell *shell)
+{
+    bootstrap_draw_deck_canvas(bootstrap);
+    shell_render(shell);
+}
 
 int main(int argc, char *argv[])
 {
@@ -90,8 +98,13 @@ int main(int argc, char *argv[])
         BeginDrawing();
         ClearBackground(BLACK);
         bench_frame_mark(VD_BENCH_FRAME_BEGIN);
-        bootstrap_draw_deck_canvas(&bootstrap);
-        shell_render(&shell);
+        draw_frame(&bootstrap, &shell);
+        // Text drawn before its glyphs upload, like the Shell's, would show with letters missing, so draw it again.
+        if (text_pages_stale()) {
+            rlDrawRenderBatchActive();
+            ClearBackground(BLACK);
+            draw_frame(&bootstrap, &shell);
+        }
         bench_frame_mark(VD_BENCH_FRAME_SHELL);
         EndDrawing();
         bench_frame_mark(VD_BENCH_FRAME_PRESENT);

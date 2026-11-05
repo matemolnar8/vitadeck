@@ -61,6 +61,11 @@ void text_upload_pages(void)
     }
 }
 
+bool text_pages_stale(void)
+{
+    return glyph_cache_has_dirty_page();
+}
+
 // Controls, zero width joiners and variation selectors.
 static bool draws_nothing(uint32_t codepoint)
 {
