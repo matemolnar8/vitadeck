@@ -60,6 +60,9 @@ int main(int argc, char *argv[])
         if (!bench_update(&bootstrap.js_runtime, &request_runtime_restart)) break;
         shell_update(&shell, &request_runtime_restart);
         shell_poll_system_input(&shell, &request_runtime_restart);
+        if (bench_active() && bench_shell_open() != shell_is_visible(&shell)) {
+            shell_apply_system_input(&shell, &(VdShellInput){.start = true}, &request_runtime_restart);
+        }
         if (request_runtime_restart) {
             js_runtime_stop(&bootstrap.js_runtime);
             scroll_reset();

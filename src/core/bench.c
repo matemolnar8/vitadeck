@@ -40,6 +40,8 @@ typedef struct {
     const char *setup;
     // Played over and over through warmup and measurement.
     const char *loop;
+    // The Shell stays open over the Deck App.
+    bool shell;
 } BenchScenario;
 
 static const BenchScenario SCENARIOS[] = {
@@ -52,6 +54,8 @@ static const BenchScenario SCENARIOS[] = {
     // Focus moves from the section list into the Scroll section's list, which then glides down and up under the
     // left stick: native scrolling with no React work.
     {"demo-scroll", "vitadeck-demo.vdapp", "rrrrrrrv>", "++++++++++----------"},
+    // The Shell open over minesweeper-idle's screen: Shell paint and the backdrop behind it.
+    {"minesweeper-shell", "minesweeper.vdapp", NULL, NULL, true},
 };
 #define SCENARIO_COUNT ((int)(sizeof(SCENARIOS) / sizeof(SCENARIOS[0])))
 
@@ -616,6 +620,11 @@ bool bench_update(const VdJsRuntime *runtime, bool *request_runtime_restart)
         break;
     }
     return ui.state != STATE_DONE;
+}
+
+bool bench_shell_open(void)
+{
+    return g_active && ui.scenario && ui.scenario->shell;
 }
 
 void bench_apply_input(void)

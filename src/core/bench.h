@@ -40,6 +40,8 @@ bool bench_active(void);
 // UI thread, first thing every frame. Advances the scenario and may ask for a Deck App Runtime Restart. Returns
 // false once every scenario ran and the result is written.
 bool bench_update(const VdJsRuntime *runtime, bool *request_runtime_restart);
+// UI thread: whether the running scenario wants the Shell open.
+bool bench_shell_open(void);
 // UI thread, in place of the input polls: applies this frame's scripted pad input.
 void bench_apply_input(void);
 void bench_frame_mark(VdBenchFrameSpan span);
