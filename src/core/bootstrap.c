@@ -9,6 +9,7 @@
 #include "core/package_manifest.h"
 #include "audio/sounds.h"
 #include "host_control/link.h"
+#include "ui/blur.h"
 #include "ui/fonts.h"
 #include "ui/images.h"
 #include "ui/instance_tree.h"
@@ -179,6 +180,7 @@ void bootstrap_shutdown(VdBootstrap *bootstrap)
     event_queue_shutdown();
     event_queue_destroy();
     if (bootstrap->window_open) {
+        blur_unload();
         CloseWindow();
         bootstrap->window_open = false;
     }

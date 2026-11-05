@@ -188,6 +188,7 @@ set(VITADECK_CORE_SOURCES
     src/ui/text.c
     src/ui/images.c
     src/ui/render.c
+    src/ui/blur.c
     src/ui/input.c
     src/ui/focus_nav.c
     src/ui/scroll.c
