@@ -5,7 +5,7 @@ Answer questions about this git change.
 When no question follows this paste, explain this change.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify fcb9c6928d3a15b16fffaea3d7185875f5370fc2` and `git rev-parse --verify f869d239cde93bf2f60ff7fe25f3c0e22a770d28` in this repository.
+   Run `git rev-parse --verify fcb9c6928d3a15b16fffaea3d7185875f5370fc2` and `git rev-parse --verify b620259d4c8c3c5c93bb958a11dcf4835da87d06` in this repository.
    Done when both objects exist.
 
 2. Choose the relevant review concerns.
@@ -24,15 +24,16 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  fcb9c6928d3a15b16fffaea3d7185875f5370fc2
 
-head               f869d239cde93bf2f60ff7fe25f3c0e22a770d28
+head               b620259d4c8c3c5c93bb958a11dcf4835da87d06
 
 Named refs at pin: fcb9c692 ... HEAD
 
 Read the diff:
 
-git diff --find-renames fcb9c6928d3a15b16fffaea3d7185875f5370fc2 f869d239cde93bf2f60ff7fe25f3c0e22a770d28
+git diff --find-renames fcb9c6928d3a15b16fffaea3d7185875f5370fc2 b620259d4c8c3c5c93bb958a11dcf4835da87d06
 
 Commits:
+- b620259d fix(bench): initialize the shell field on every scenario
 - f869d239 test(bench): re-record the Vita3K baseline with the final blur
 - 1ad4ccae test(smoke): refresh the Shell golden for downsample-only blur
 - d6a6fbf6 perf(shell): blur with downsampling alone, clamped at the edges

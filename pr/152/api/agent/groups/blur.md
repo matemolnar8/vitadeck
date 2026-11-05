@@ -5,12 +5,12 @@ Answer questions about this review concern.
 When no question follows this paste, explain this review concern.
 
 1. Resolve the pinned SHAs.
-   Run `git rev-parse --verify fcb9c6928d3a15b16fffaea3d7185875f5370fc2` and `git rev-parse --verify f869d239cde93bf2f60ff7fe25f3c0e22a770d28` in this repository.
+   Run `git rev-parse --verify fcb9c6928d3a15b16fffaea3d7185875f5370fc2` and `git rev-parse --verify b620259d4c8c3c5c93bb958a11dcf4835da87d06` in this repository.
    Done when both objects exist.
 
 2. Load the hunks.
    A hunk ref is a pointer into the live git diff at the pinned SHAs.
-   For each hunk ref, run `git diff --find-renames fcb9c6928d3a15b16fffaea3d7185875f5370fc2 f869d239cde93bf2f60ff7fe25f3c0e22a770d28 -- <path>` and keep the hunk whose header matches the @@ range.
+   For each hunk ref, run `git diff --find-renames fcb9c6928d3a15b16fffaea3d7185875f5370fc2 b620259d4c8c3c5c93bb958a11dcf4835da87d06 -- <path>` and keep the hunk whose header matches the @@ range.
    Done when every hunk ref has a matching live hunk.
 
 3. Answer from live git.
@@ -25,13 +25,13 @@ Origin: git@github.com:matemolnar8/vitadeck.git
 
 base (merge-base)  fcb9c6928d3a15b16fffaea3d7185875f5370fc2
 
-head               f869d239cde93bf2f60ff7fe25f3c0e22a770d28
+head               b620259d4c8c3c5c93bb958a11dcf4835da87d06
 
 Named refs at pin: fcb9c692 ... HEAD
 
 Read the diff:
 
-git diff --find-renames fcb9c6928d3a15b16fffaea3d7185875f5370fc2 f869d239cde93bf2f60ff7fe25f3c0e22a770d28
+git diff --find-renames fcb9c6928d3a15b16fffaea3d7185875f5370fc2 b620259d4c8c3c5c93bb958a11dcf4835da87d06
 
 Review concern 01 of 02: Blur the Deck App behind the Shell (`blur`)
 
