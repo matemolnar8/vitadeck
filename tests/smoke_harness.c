@@ -5,8 +5,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#define STB_DS_IMPLEMENTATION
-#include "stb_ds.h"
 #include "core/bootstrap.h"
 #include "core/js_runtime.h"
 #include "core/package_library.h"

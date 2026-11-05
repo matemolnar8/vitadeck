@@ -1,4 +1,3 @@
-#define STB_DS_IMPLEMENTATION
 #include <raylib.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -5,8 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define STB_DS_IMPLEMENTATION
-#include "stb_ds.h"
 #include "core/event_queue.h"
 #include "jslib/jslib.h"
 #include "quickjs.h"

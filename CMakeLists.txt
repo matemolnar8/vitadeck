@@ -177,6 +177,7 @@ set(VITADECK_CORE_SOURCES
     src/core/json.c
     src/core/package_manifest.c
     src/core/package_library.c
+    src/core/stb_ds.c
     src/core/util.c
     ${JSLIB_SOURCES}
     src/ui/instance_tree.c

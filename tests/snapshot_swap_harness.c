@@ -1,6 +1,5 @@
 // Regression test for #39: the JS thread mutates the back tree and swaps snapshots while the UI thread
 // hit-tests and collects focusables. Run under ASan to catch reads of a freed snapshot.
-#define STB_DS_IMPLEMENTATION
 #include "instance_fixture.h"
 #include "platform/thread.h"
 #include "ui/scroll.h"

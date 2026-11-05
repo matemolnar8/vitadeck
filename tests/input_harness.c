@@ -1,4 +1,3 @@
-#define STB_DS_IMPLEMENTATION
 #include "instance_fixture.h"
 #include "core/event_queue.h"
 #include "ui/input.h"

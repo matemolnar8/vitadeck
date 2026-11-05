@@ -1,4 +1,3 @@
-#define STB_DS_IMPLEMENTATION
 #include "instance_fixture.h"
 #include "ui/focus_nav.h"
 #include "ui/scroll.h"
