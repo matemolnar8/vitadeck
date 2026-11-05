@@ -2,6 +2,7 @@
 
 #include <raylib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "core/event_queue.h"
 #include "core/package_library.h"
@@ -12,6 +13,7 @@
 #include "ui/images.h"
 #include "ui/instance_tree.h"
 #include "ui/render.h"
+#include "ui/text.h"
 
 static bool load_active_package_assets(VdBootstrap *bootstrap, char *error, size_t error_size)
 {
@@ -105,29 +107,35 @@ void bootstrap_draw_loading_splash(void)
 {
     BeginDrawing();
     ClearBackground(BLACK);
-    if (package_library_has_active_deck_app()) DrawText("Loading...", 10, 10, 20, WHITE);
+    if (package_library_has_active_deck_app()) {
+        const VdFont *font = font_registry_get(VD_FONT_DEFAULT_NAME);
+        text_begin_frame();
+        text_measure(font, "Loading...", 20);
+        text_upload_pages();
+        text_draw(font, "Loading...", (Vector2){10, 10}, 20, WHITE);
+    }
     EndDrawing();
 }
 
 #define FAILURE_MARGIN 20
 
 // Draws up to max_lines of text, breaking at newlines and at the screen edge. Returns the y below the last line.
-static int draw_failure_lines(const char *text, int y, int font_size, Color color, int max_lines)
+static int draw_failure_lines(const VdFont *font, const char *text, int y, int font_size, Color color, int max_lines)
 {
-    const int max_width = VD_SCREEN_WIDTH - 2 * FAILURE_MARGIN;
+    const float max_width = VD_SCREEN_WIDTH - 2 * FAILURE_MARGIN;
     char line[256];
     for (int drawn = 0; *text && drawn < max_lines; drawn++) {
         size_t len = 0;
-        int width = 0;
-        while (text[len] && text[len] != '\n' && len < sizeof(line) - 1) {
-            char glyph[2] = {text[len], '\0'};
-            width += MeasureText(glyph, font_size) + font_size / 10;
-            if (width > max_width && len > 0) break;
-            line[len] = text[len];
-            len++;
+        float width = 0.0f;
+        while (text[len] && text[len] != '\n') {
+            int length = 0;
+            width += text_cluster_width(font, text + len, font_size, &length);
+            if ((width > max_width && len > 0) || len + (size_t)length >= sizeof(line)) break;
+            len += (size_t)length;
         }
+        memcpy(line, text, len);
         line[len] = '\0';
-        DrawText(line, FAILURE_MARGIN, y, font_size, color);
+        text_draw(font, line, (Vector2){FAILURE_MARGIN, (float)y}, font_size, color);
         y += font_size + 4;
         text += len;
         if (*text == '\n') text++;
@@ -137,21 +145,26 @@ static int draw_failure_lines(const char *text, int y, int font_size, Color colo
 
 static void draw_deck_app_failure_screen(const VdJsRuntime *runtime)
 {
-    DrawText("Deck App failed", FAILURE_MARGIN, FAILURE_MARGIN, 30, RED);
-    int y = draw_failure_lines(runtime->failure_message, FAILURE_MARGIN + 46, 20, RAYWHITE, 4);
-    draw_failure_lines(runtime->failure_stack, y + 12, 16, GRAY, 12);
-    DrawText("Press Start (F1) to open the VitaDeck Shell.", FAILURE_MARGIN, VD_SCREEN_HEIGHT - FAILURE_MARGIN - 20, 20,
-             RAYWHITE);
+    const VdFont *font = font_registry_get(VD_FONT_DEFAULT_NAME);
+    text_draw(font, "Deck App failed", (Vector2){FAILURE_MARGIN, FAILURE_MARGIN}, 30, RED);
+    int y = draw_failure_lines(font, runtime->failure_message, FAILURE_MARGIN + 46, 20, RAYWHITE, 4);
+    draw_failure_lines(font, runtime->failure_stack, y + 12, 16, GRAY, 12);
+    text_draw(font, "Press Start (F1) to open the VitaDeck Shell.",
+              (Vector2){FAILURE_MARGIN, VD_SCREEN_HEIGHT - FAILURE_MARGIN - 20}, 20, RAYWHITE);
 }
 
 void bootstrap_draw_deck_canvas(const VdBootstrap *bootstrap)
 {
+    // Every frame, with or without a Deck App: the Shell draws text after the canvas, and the glyphs it and these
+    // screens cache while drawing upload here, showing from the next frame.
+    text_begin_frame();
+    text_upload_pages();
     if (!package_library_has_active_deck_app()) return;
 
     if (js_runtime_failed(&bootstrap->js_runtime)) {
         draw_deck_app_failure_screen(&bootstrap->js_runtime);
     } else if (!js_runtime_is_ready(&bootstrap->js_runtime)) {
-        DrawText("Loading JavaScript...", 10, 10, 20, WHITE);
+        text_draw(font_registry_get(VD_FONT_DEFAULT_NAME), "Loading JavaScript...", (Vector2){10, 10}, 20, WHITE);
     } else {
         render_draw_list();
     }

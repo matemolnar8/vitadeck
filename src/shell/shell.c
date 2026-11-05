@@ -6,7 +6,9 @@
 #include "core/bootstrap.h"
 #include "core/package_library.h"
 #include "host_control/link.h"
+#include "ui/fonts.h"
 #include "ui/input.h"
+#include "ui/text.h"
 
 #define SHELL_INSET 24
 #define SHELL_PADDING (SHELL_INSET + 8)
@@ -35,14 +37,25 @@
 #define SHELL_X_CX (VD_SCREEN_WIDTH - SHELL_PADDING - 28)
 #define SHELL_TICK_CX (SHELL_X_CX - 80)
 
-static int shell_text_baseline_y(int row_top, int font_h)
+static void shell_text(const char *text, int x, int y, int font_size, Color color)
 {
-    return row_top + (SHELL_ROW_H - font_h) / 2;
+    text_draw(font_registry_get(VD_FONT_DEFAULT_NAME), text, (Vector2){(float)x, (float)y}, font_size, color);
+}
+
+static int shell_text_width(const char *text, int font_size)
+{
+    return (int)(text_measure(font_registry_get(VD_FONT_DEFAULT_NAME), text, font_size) + 0.5f);
+}
+
+// The top of a line of text centred in a row.
+static int shell_text_y(int row_top, int font_size)
+{
+    return row_top + (SHELL_ROW_H - text_line_height(font_registry_get(VD_FONT_DEFAULT_NAME), font_size)) / 2;
 }
 
 static void shell_draw_footer_hint(const char *hint)
 {
-    DrawText(hint, SHELL_PADDING, SHELL_FOOTER_Y, SHELL_FONT_CAPTION, GRAY);
+    shell_text(hint, SHELL_PADDING, SHELL_FOOTER_Y, SHELL_FONT_CAPTION, GRAY);
 }
 
 static bool gamepad_pressed(bool available, int button)
@@ -412,8 +425,8 @@ static void draw_tick_cell(int cx, int row_top, bool is_active, bool row_focused
     } else {
         Color hint = slot_focus ? RAYWHITE : (Color){160, 170, 190, 255};
         const char *go = "Run";
-        int ty = shell_text_baseline_y(row_top, SHELL_FONT_BODY);
-        DrawText(go, cx - MeasureText(go, SHELL_FONT_BODY) / 2, ty, SHELL_FONT_BODY, hint);
+        int ty = shell_text_y(row_top, SHELL_FONT_BODY);
+        shell_text(go, cx - shell_text_width(go, SHELL_FONT_BODY) / 2, ty, SHELL_FONT_BODY, hint);
     }
 }
 
@@ -429,8 +442,8 @@ static void draw_x_cell(int cx, int row_top, bool row_focused, bool col_focused)
     DrawRectangleLinesEx(r, 1.5f, (Color){140, 100, 100, 255});
     Color t = slot_focus ? (Color){255, 200, 200, 255} : (Color){200, 140, 140, 255};
     const char *label = " X ";
-    int ty = shell_text_baseline_y(row_top, SHELL_FONT_BODY);
-    DrawText(label, cx - MeasureText(label, SHELL_FONT_BODY) / 2, ty, SHELL_FONT_BODY, t);
+    int ty = shell_text_y(row_top, SHELL_FONT_BODY);
+    shell_text(label, cx - shell_text_width(label, SHELL_FONT_BODY) / 2, ty, SHELL_FONT_BODY, t);
 }
 
 static void draw_overflow_row(int row_top, bool points_up)
@@ -460,7 +473,7 @@ static void draw_message(const VdShell *shell)
 {
     if (shell->message[0] == '\0') return;
     int msg_y = SHELL_FOOTER_Y - SHELL_SPACE_MD - SHELL_FONT_BODY;
-    DrawText(shell->message, SHELL_PADDING, msg_y, SHELL_FONT_BODY, YELLOW);
+    shell_text(shell->message, SHELL_PADDING, msg_y, SHELL_FONT_BODY, YELLOW);
 }
 
 static void draw_host_control_entry(int text_y)
@@ -468,10 +481,10 @@ static void draw_host_control_entry(int text_y)
     VdHostControlLink links[VD_HOST_CONTROL_MAX_LINKS];
     int count = host_control_links_list(links, VD_HOST_CONTROL_MAX_LINKS);
     int x = SHELL_NAME_X + SHELL_SPACE_MD;
-    DrawText("Host Control", x, text_y, SHELL_FONT_BODY, RAYWHITE);
+    shell_text("Host Control", x, text_y, SHELL_FONT_BODY, RAYWHITE);
     int sub_y = text_y + SHELL_FONT_BODY + SHELL_SPACE_XS;
     if (count == 0) {
-        DrawText("Not linked", x, sub_y, SHELL_FONT_CAPTION, (Color){130, 140, 160, 255});
+        shell_text("Not linked", x, sub_y, SHELL_FONT_CAPTION, (Color){130, 140, 160, 255});
         return;
     }
     char caption[VD_HOST_CONTROL_NAME_MAX + 32];
@@ -480,44 +493,44 @@ static void draw_host_control_entry(int text_y)
     } else {
         snprintf(caption, sizeof(caption), "Linked: %s +%d", links[0].name, count - 1);
     }
-    DrawText(caption, x, sub_y, SHELL_FONT_CAPTION, GREEN);
+    shell_text(caption, x, sub_y, SHELL_FONT_CAPTION, GREEN);
 }
 
 static void draw_host_control_screen(VdShell *shell)
 {
-    DrawText("Host Control", SHELL_PADDING, SHELL_SECTION_Y, SHELL_FONT_BODY, GRAY);
+    shell_text("Host Control", SHELL_PADDING, SHELL_SECTION_Y, SHELL_FONT_BODY, GRAY);
 
     int y = SHELL_LIST_Y;
     if (lan_listener_is_running(&shell->listener)) {
         char line[160];
         snprintf(line, sizeof(line), "On the computer: vitadeck-host-companion link %s",
                  lan_listener_address(&shell->listener));
-        DrawText(line, SHELL_PADDING, y, SHELL_FONT_BODY, GREEN);
+        shell_text(line, SHELL_PADDING, y, SHELL_FONT_BODY, GREEN);
     } else {
-        DrawText("Not listening. Turn on Upload and link on the Home screen.", SHELL_PADDING, y, SHELL_FONT_BODY,
-                 RAYWHITE);
+        shell_text("Not listening. Turn on Upload and link on the Home screen.", SHELL_PADDING, y, SHELL_FONT_BODY,
+                   RAYWHITE);
     }
     y += SHELL_FONT_BODY + SHELL_SPACE_MD;
 
-    DrawText("Linked computers", SHELL_PADDING, y, SHELL_FONT_BODY, GRAY);
+    shell_text("Linked computers", SHELL_PADDING, y, SHELL_FONT_BODY, GRAY);
     y += SHELL_FONT_BODY + SHELL_SPACE_SM;
 
     VdHostControlLink links[VD_HOST_CONTROL_MAX_LINKS];
     int count = host_control_links_list(links, VD_HOST_CONTROL_MAX_LINKS);
     if (count == 0) {
-        DrawText("No computers linked yet.", SHELL_PADDING, y, SHELL_FONT_CAPTION, (Color){150, 160, 180, 255});
+        shell_text("No computers linked yet.", SHELL_PADDING, y, SHELL_FONT_CAPTION, (Color){150, 160, 180, 255});
     }
     int row_w = VD_SCREEN_WIDTH - SHELL_PADDING - SHELL_PADDING;
     for (int i = 0; i < count; i++) {
         bool focused = i == shell->host_control_focus;
         DrawRectangle(SHELL_PADDING, y, row_w, SHELL_ROW_H,
                       focused ? (Color){42, 52, 72, 255} : (Color){28, 34, 44, 255});
-        int text_y = shell_text_baseline_y(y, SHELL_FONT_BODY);
+        int text_y = shell_text_y(y, SHELL_FONT_BODY);
         int x = SHELL_NAME_X + SHELL_SPACE_MD;
-        DrawText(links[i].name, x, text_y, SHELL_FONT_BODY, RAYWHITE);
-        x += MeasureText(links[i].name, SHELL_FONT_BODY) + SHELL_SPACE_MD;
-        DrawText(links[i].url, x, shell_text_baseline_y(y, SHELL_FONT_CAPTION), SHELL_FONT_CAPTION,
-                 (Color){150, 160, 180, 255});
+        shell_text(links[i].name, x, text_y, SHELL_FONT_BODY, RAYWHITE);
+        x += shell_text_width(links[i].name, SHELL_FONT_BODY) + SHELL_SPACE_MD;
+        shell_text(links[i].url, x, shell_text_y(y, SHELL_FONT_CAPTION), SHELL_FONT_CAPTION,
+                   (Color){150, 160, 180, 255});
         y += SHELL_ROW_STEP;
     }
 
@@ -530,12 +543,12 @@ void shell_render(VdShell *shell)
     if (shell->state == VD_SHELL_HIDDEN) return;
     draw_panel();
 
-    DrawText("VitaDeck", SHELL_PADDING, SHELL_TITLE_Y, SHELL_FONT_TITLE, RAYWHITE);
+    shell_text("VitaDeck", SHELL_PADDING, SHELL_TITLE_Y, SHELL_FONT_TITLE, RAYWHITE);
     if (shell->state == VD_SHELL_HOST_CONTROL) {
         draw_host_control_screen(shell);
         return;
     }
-    DrawText("Deck Apps", SHELL_PADDING, SHELL_SECTION_Y, SHELL_FONT_BODY, GRAY);
+    shell_text("Deck Apps", SHELL_PADDING, SHELL_SECTION_Y, SHELL_FONT_BODY, GRAY);
 
     VdPackageInfo packages[VD_PACKAGE_LIST_MAX];
     int package_count = package_library_list(packages, VD_PACKAGE_LIST_MAX);
@@ -544,13 +557,14 @@ void shell_render(VdShell *shell)
     int list_top = SHELL_LIST_Y;
     if (package_count == 0) {
         int hint_y = SHELL_SECTION_Y + SHELL_FONT_BODY + SHELL_SPACE_XS;
-        DrawText("No Deck Apps installed yet.", SHELL_PADDING, hint_y, SHELL_FONT_CAPTION, (Color){150, 160, 180, 255});
+        shell_text("No Deck Apps installed yet.", SHELL_PADDING, hint_y, SHELL_FONT_CAPTION,
+                   (Color){150, 160, 180, 255});
         hint_y += SHELL_FONT_CAPTION + SHELL_SPACE_XS;
-        DrawText("Open the URL under Upload and link on another device on this network", SHELL_PADDING, hint_y,
-                 SHELL_FONT_CAPTION, (Color){130, 140, 160, 255});
+        shell_text("Open the URL under Upload and link on another device on this network", SHELL_PADDING, hint_y,
+                   SHELL_FONT_CAPTION, (Color){130, 140, 160, 255});
         hint_y += SHELL_FONT_CAPTION + SHELL_SPACE_XS;
-        DrawText("and upload a zip containing one .vdapp folder.", SHELL_PADDING, hint_y, SHELL_FONT_CAPTION,
-                 (Color){130, 140, 160, 255});
+        shell_text("and upload a zip containing one .vdapp folder.", SHELL_PADDING, hint_y, SHELL_FONT_CAPTION,
+                   (Color){130, 140, 160, 255});
         list_top = hint_y + SHELL_FONT_CAPTION + SHELL_SPACE_MD;
     }
 
@@ -577,27 +591,27 @@ void shell_render(VdShell *shell)
         if (listening) band_color = row_focus ? (Color){34, 64, 58, 255} : (Color){24, 48, 44, 255};
         DrawRectangle(SHELL_PADDING, row_top, row_w, band_h, band_color);
 
-        int text_y = shell_text_baseline_y(row_top, SHELL_FONT_BODY);
+        int text_y = shell_text_y(row_top, SHELL_FONT_BODY);
         if (row >= package_count) text_y = row_top + SHELL_SPACE_MD;
 
         if (row_is_host_control(row, package_count)) {
             draw_host_control_entry(text_y);
         } else if (listener_row) {
             int pad = SHELL_SPACE_MD;
-            DrawText("Upload and link", SHELL_NAME_X + pad, text_y, SHELL_FONT_BODY, listening ? GREEN : RAYWHITE);
+            shell_text("Upload and link", SHELL_NAME_X + pad, text_y, SHELL_FONT_BODY, listening ? GREEN : RAYWHITE);
             int sub_y = text_y + SHELL_FONT_BODY + SHELL_SPACE_XS;
             if (listening) {
-                DrawText(lan_listener_url(&shell->listener), SHELL_NAME_X + pad, sub_y, SHELL_FONT_CAPTION, GREEN);
+                shell_text(lan_listener_url(&shell->listener), SHELL_NAME_X + pad, sub_y, SHELL_FONT_CAPTION, GREEN);
             } else {
-                DrawText("Off. Confirm to listen", SHELL_NAME_X + pad, sub_y, SHELL_FONT_CAPTION,
-                         (Color){130, 140, 160, 255});
+                shell_text("Off. Confirm to listen", SHELL_NAME_X + pad, sub_y, SHELL_FONT_CAPTION,
+                           (Color){130, 140, 160, 255});
             }
         } else {
             const VdPackageInfo *pkg = &packages[row];
             char name_line[VD_DISPLAY_NAME_MAX + VD_VERSION_MAX + 12];
             snprintf(name_line, sizeof(name_line), "%s   %s", pkg->display_name, pkg->version);
             Color name_color = pkg->is_active ? GREEN : RAYWHITE;
-            DrawText(name_line, SHELL_NAME_X + SHELL_SPACE_MD, text_y, SHELL_FONT_BODY, name_color);
+            shell_text(name_line, SHELL_NAME_X + SHELL_SPACE_MD, text_y, SHELL_FONT_BODY, name_color);
             draw_tick_cell(SHELL_TICK_CX, row_top, pkg->is_active, row_focus, shell->focus_col == 0);
             if (row_focus && shell->focus_col == 0 && pkg->is_active) restart_focused = true;
             draw_x_cell(SHELL_X_CX, row_top, row_focus, shell->focus_col == 1);
@@ -612,9 +626,9 @@ void shell_render(VdShell *shell)
         int box_y = (int)(VD_SCREEN_HEIGHT * 0.40f);
         DrawRectangle(0, box_y, VD_SCREEN_WIDTH, 112, (Color){10, 12, 18, 255});
         int ly = box_y + SHELL_SPACE_MD;
-        DrawText(shell->remove_confirm_label, SHELL_PADDING, ly, SHELL_FONT_BODY, RAYWHITE);
-        DrawText("Confirm: remove · Back: cancel", SHELL_PADDING, ly + SHELL_FONT_BODY + SHELL_SPACE_SM,
-                 SHELL_FONT_CAPTION, GRAY);
+        shell_text(shell->remove_confirm_label, SHELL_PADDING, ly, SHELL_FONT_BODY, RAYWHITE);
+        shell_text("Confirm: remove · Back: cancel", SHELL_PADDING, ly + SHELL_FONT_BODY + SHELL_SPACE_SM,
+                   SHELL_FONT_CAPTION, GRAY);
     }
 
     draw_message(shell);
